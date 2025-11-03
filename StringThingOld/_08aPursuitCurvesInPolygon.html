@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Pursuit Curves in Polygon</title>
+<style>
+  body { background:#111; color:#eee; text-align:center; }
+  canvas { background:#000; display:block; margin:1rem auto; }
+  label { margin: 0 1rem; }
+</style>
+</head>
+<body>
+<h2>Pursuit Curves in Polygon</h2>
+<canvas id="canvas" width="600" height="600"></canvas>
+<div>
+  <label>Sides: <input id="sides" type="number" value="5" min="3" max="12"></label>
+  <label>Iterations: <input id="iters" type="number" value="200" min="10" max="2000"></label>
+  <label>Step (0–1): <input id="step" type="number" value="0.05" step="0.01" min="0.01" max="0.5"></label>
+  <label>Direction:
+    <select id="dir">
+      <option value="cw">Clockwise</option>
+      <option value="ccw">Counterclockwise</option>
+    </select>
+  </label>
+  <button onclick="draw()">Draw</button>
+</div>
+
+<script>
+function pursuitPolygon(ctx, sides, iterations, step, direction) {
+  const w = ctx.canvas.width, h = ctx.canvas.height;
+  const R = Math.min(w,h)*0.4;
+  const cx = w/2, cy = h/2;
+
+  // initial vertices
+  let pts = [];
+  for (let i=0;i<sides;i++){
+    let ang = 2*Math.PI*i/sides - Math.PI/2; // start pointing up
+    pts.push([cx+R*Math.cos(ang), cy+R*Math.sin(ang)]);
+  }
+
+  ctx.clearRect(0,0,w,h);
+  ctx.strokeStyle="lime";
+  ctx.lineWidth=1;
+
+  ctx.beginPath();
+  for (let k=0;k<iterations;k++){
+    // draw polygon path
+    ctx.moveTo(pts[0][0], pts[0][1]);
+    for (let i=1;i<sides;i++) ctx.lineTo(pts[i][0], pts[i][1]);
+    ctx.closePath();
+
+    // compute next positions
+    let next=[];
+    for (let i=0;i<sides;i++){
+      let j;
+      if (direction==="cw") j=(i+1)%sides;
+      else j=(i-1+sides)%sides;
+
+      let x=pts[i][0], y=pts[i][1];
+      let tx=pts[j][0], ty=pts[j][1];
+      let nx = x + step*(tx-x);
+      let ny = y + step*(ty-y);
+      next.push([nx,ny]);
+    }
+    pts=next;
+  }
+  ctx.stroke();
+}
+
+function draw(){
+  const ctx=document.getElementById("canvas").getContext("2d");
+  const sides=+document.getElementById("sides").value;
+  const iters=+document.getElementById("iters").value;
+  const step=+document.getElementById("step").value;
+  const dir=document.getElementById("dir").value;
+  pursuitPolygon(ctx,sides,iters,step,dir);
+}
+
+draw(); // initial render
+</script>
+</body>
+</html>

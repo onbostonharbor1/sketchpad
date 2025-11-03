@@ -1,0 +1,49 @@
+{
+  // === Editor appearance ===
+  "editor.fontSize": 14,
+  "editor.tabSize": 2,
+  "editor.insertSpaces": true,
+  "editor.wordWrap": "on",
+  "editor.minimap.enabled": false,
+  "workbench.iconTheme": "material-icon-theme",
+  "workbench.colorTheme": "Default Dark Modern",
+
+  // === Files & saving ===
+  "files.autoSave": "onWindowChange",
+  "files.trimTrailingWhitespace": true,
+  "files.insertFinalNewline": true,
+  "files.exclude": {
+    "**/.git": true,
+    "**/node_modules": true,
+    "**/dist": true
+  },
+
+  // === Emacs integration ===
+  "emacs-mcx.cursorStyle": "line",
+  "emacs-mcx.showMarkInStatusBar": true,
+  "emacs-mcx.useMetaPrefixEscape": false,
+
+  // === JavaScript / TypeScript ===
+  "javascript.updateImportsOnFileMove.enabled": "always",
+  "typescript.updateImportsOnFileMove.enabled": "always",
+  "eslint.format.enable": true,
+  "editor.defaultFormatter": "esbenp.prettier-vscode",
+  "[javascript]": {
+    "editor.formatOnSave": true
+  },
+  "[html]": {
+    "editor.formatOnSave": true
+  },
+  "[css]": {
+    "editor.formatOnSave": true
+  },
+
+  // === Terminal ===
+  "terminal.integrated.shellIntegration.enabled": true,
+  "terminal.integrated.scrollback": 5000,
+
+  // === Misc ===
+  "window.zoomLevel": 0,
+  "explorer.confirmDelete": false,
+  "explorer.confirmDragAndDrop": false
+}

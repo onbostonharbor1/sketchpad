@@ -1,0 +1,151 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>Curve Stitch on a 3-lobed Epitrochoid</title>
+<style>
+  html,body{margin:0;background:#e9eaec;height:100%}
+  canvas{display:block;margin:auto;background:#e9eaec}
+</style>
+</head>
+<body>
+<pre>
+  NOT SURE WHAT IS GOING ON HERE
+  
+Here’s a clean, self-contained sketch that makes the figure with
+curve-stitch chords on a smooth 3-lobed epitrochoid (rounded deltoid).
+
+Every stitch starts/ends on the same anchor curve; the “nails” (nodes)
+are spaced uniformly by arc-length so dots look evenly distributed.
+</pre>
+
+<canvas id="c" width="1000" height="1000"></canvas>
+
+<script>
+(() => {
+  const canvas = document.getElementById('c');
+  const ctx = canvas.getContext('2d');
+
+  // ---------- scene ----------
+  const W = canvas.width, H = canvas.height;
+  const CX = W/2, CY = H/2;
+
+  // draw support disk to match the photo vibe (optional)
+  (function drawDisk(){
+    const R = Math.min(W,H)*0.45;
+    const grad = ctx.createRadialGradient(CX, CY, R*0.2, CX, CY, R);
+    grad.addColorStop(0, '#f3f4f6');
+    grad.addColorStop(1, '#e1e2e5');
+    ctx.fillStyle = grad;
+    ctx.beginPath();
+    ctx.arc(CX, CY, R, 0, Math.PI*2);
+    ctx.fill();
+  })();
+
+  // ---------- anchor curve: 3-lobed epitrochoid (rounded deltoid) ----------
+  // Equations (no translate/rotate used; absolute coordinates):
+  // x(t) = (R + r) cos t - d cos(((R + r)/r) t)
+  // y(t) = (R + r) sin t - d sin(((R + r)/r) t)
+  // With R/r = 2  -> (R + r)/r = 3   (3 lobes), and 0 < d < r for smooth tips.
+
+  const Rbig = 200;       // R
+  const rsm  = 100;       // r   (R/r = 2 -> 3 lobes)
+  const doff = 70;        // d   (rounds the cusps; try 60–90)
+  const scale = 1.8;      // global scale to fit the disk
+  const k = (Rbig + rsm) / rsm; // = 3
+
+  function epiPoint(t) {
+    const x = (Rbig + rsm) * Math.cos(t) - doff * Math.cos(k*t);
+    const y = (Rbig + rsm) * Math.sin(t) - doff * Math.sin(k*t);
+    return [CX + scale*x, CY + scale*y];
+  }
+
+  // ---------- arc-length uniform sampling for "nails" ----------
+  const NODES = 210;           // number of nails around the curve
+  const OVER  = 6000;          // oversample for arc-length LUT
+
+  const lut = [];              // [{t, x, y, s}]   s = cumulative length
+  let s = 0;
+  let [x0, y0] = epiPoint(0);
+  lut.push({ t: 0, x: x0, y: y0, s: 0 });
+  for (let i = 1; i <= OVER; i++) {
+    const t = i * 2*Math.PI / OVER;
+    const [x, y] = epiPoint(t);
+    const dx = x - x0, dy = y - y0;
+    s += Math.hypot(dx, dy);
+    lut.push({ t, x, y, s });
+    x0 = x; y0 = y;
+  }
+  const totalLen = lut[lut.length - 1].s;
+
+  function pointAtArc(u) {           // u in [0,1] along curve by arc length
+    const target = u * totalLen;
+    // linear walk (fast enough at this size)
+    let i = 0;
+    while (i < lut.length && lut[i].s < target) i++;
+    const a = lut[i-1], b = lut[i] || lut[0];
+    const h = (target - a.s) / (b.s - a.s || 1);
+    return [a.x + h*(b.x-a.x), a.y + h*(b.y-a.y)];
+  }
+
+  const pts = [];
+  for (let i = 0; i < NODES; i++) pts.push(pointAtArc(i / NODES));
+
+  // ---------- stitching pattern ----------
+  // Constant skip gives the "string-art band". Two nearby skips create the layered swoop.
+  const SKIP_A = Math.round(NODES * 0.27);
+  const SKIP_B = Math.round(NODES * 0.33);
+
+  ctx.lineCap = 'round';
+  ctx.globalAlpha = 0.75;
+
+  function stitch(skip, alpha){
+    ctx.strokeStyle = `rgba(55,60,70,${alpha})`;
+    ctx.lineWidth = 1;
+    for (let i = 0; i < NODES; i++) {
+      const j = (i + skip) % NODES;
+      const [x1,y1] = pts[i];
+      const [x2,y2] = pts[j];
+      ctx.beginPath();
+      ctx.moveTo(x1,y1);
+      ctx.lineTo(x2,y2);
+      ctx.stroke();
+    }
+  }
+
+  stitch(SKIP_A, 0.35);
+  stitch(SKIP_B, 0.22);
+
+  // ---------- draw "nails" (nodes) ----------
+  ctx.fillStyle = '#cfd3d8';
+  for (const [x,y] of pts) {
+    ctx.beginPath();
+    ctx.arc(x, y, 2.2, 0, Math.PI*2);
+    ctx.fill();
+  }
+
+  // optional: show the anchor curve itself very faintly
+  (function faintCurve(){
+    ctx.strokeStyle = 'rgba(0,0,0,0.08)';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    for (let i=0;i<=OVER;i++){
+      const t = i * 2*Math.PI/OVER;
+      const [x,y] = epiPoint(t);
+      if (i===0) ctx.moveTo(x,y); else ctx.lineTo(x,y);
+    }
+    ctx.stroke();
+  })();
+
+})();
+</script>
+</body>
+</html>
+
+<!--
+    NODES: how many nails around the curve.
+    SKIP_A/B: how far each nail connects around the curve. Small changes shift the “drape”.
+    Rbig, rsm, doff: shape of the 3-lobed anchor. Keep Rbig/rsm ≈ 2 for three lobes; change that ratio to get more lobes (R/r = m-1 \Rightarrow m lobes), and adjust doff 0<d<r to control roundness.
+    scale: overall size on the disk
+-->
+

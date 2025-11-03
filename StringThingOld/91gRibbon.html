@@ -1,0 +1,102 @@
+<!--
+
+How this works
+
+
+
+    Creates two sets of points:
+        pts1: evenly spaced around a base circle.
+        pts2: a rotated, scaled copy of that circle.
+
+    Connects pts1[i] to pts2[(k*i) % n].
+    Overlapping lines create the darkened ribbon-like 3D swoop.
+
+
+
+
+
+
+🎨 How to tweak
+
+
+
+    Change n (more points = denser shading).
+    Change the mapping multiplier j = (i*7) % n → different swoops.
+    Adjust scale and offset in pts2 to rotate/stretch the ribbon.
+    Lower opacity (rgba(0,0,0,0.1–0.3)) to soften shading.
+
+Perfect — animation will make the ribbon feel like it’s alive and flowing.
+
+Here’s a JavaScript animated version of the curve stitch ribbon that continuously rotates and scales the second curve:
+-->
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Animated Curve Stitch Ribbon</title>
+  <style>
+    body { margin:0; background:#f8f8f8; display:flex; justify-content:center; align-items:center; height:100vh; }
+    canvas { background:transparent; }
+  </style>
+</head>
+<body>
+<canvas id="art" width="800" height="1000"></canvas>
+<script>
+const canvas = document.getElementById("art");
+const ctx = canvas.getContext("2d");
+const W = canvas.width, H = canvas.height;
+const cx = W/2, cy = H/2;
+
+// helper: generate circle points
+function circlePoints(n, R, offset=0, scale=1) {
+  let pts = [];
+  for (let i=0; i<n; i++) {
+    let a = 2*Math.PI * i/n + offset;
+    pts.push([
+      cx + scale*R*Math.cos(a),
+      cy + scale*R*Math.sin(a)
+    ]);
+  }
+  return pts;
+}
+
+function drawRibbon(time) {
+  ctx.clearRect(0,0,W,H);
+  
+  ctx.lineWidth = 0.25;
+  ctx.strokeStyle = "rgba(0,0,0,0.2)";
+  
+  const n = 1200;
+  const R = 250;
+
+  // base circle
+  let pts1 = circlePoints(n, R, 0, 1);
+
+  // animate rotation and scaling over time
+  let offset = time * 0.0004;           // slow rotation
+  let scale = 0.6 + 0.4*Math.sin(time*0.001); // pulsing scale
+
+  let pts2 = circlePoints(n, R*1.2, offset, scale);
+
+  for (let i=0; i<n; i++) {
+    let [x1,y1] = pts1[i];
+    let j = (i*7) % n; // mapping multiplier creates folds
+    let [x2,y2] = pts2[j];
+    
+    ctx.beginPath();
+    ctx.moveTo(x1,y1);
+    ctx.lineTo(x2,y2);
+    ctx.stroke();
+  }
+}
+
+function animate(time) {
+  drawRibbon(time);
+  requestAnimationFrame(animate);
+}
+
+animate(0);
+</script>
+</body>
+</html>
+

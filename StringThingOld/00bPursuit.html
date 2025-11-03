@@ -1,0 +1,109 @@
+<!doctype html>
+
+<html lang="en">
+
+<head>
+
+<meta charset="utf-8"/>
+
+<title>Pursuit Polygon Curve Stitch</title>
+<link rel="stylesheet" href="comments.css">
+<script>
+function toggleOverlay() {
+  const overlay = document.getElementById('overlay');
+  overlay.classList.toggle('hidden');
+}
+</script>
+
+</head>
+
+<body>
+<div id="overlay" class="discussion hidden">
+  <div class="overlay-bg"></div>
+  <div class="overlay-content">
+    <button onclick="toggleOverlay()">Close</button>
+<p>Here's a polygon-based pursuit curve figure (a hexagon in
+your image, where each side is stitched to the next with straight
+pursuit chords). We can generalize to any n-sided polygon, and add
+options for reflection across x or y axis — all without translate or
+rotate
+
+<p>Features:
+<ul>
+<li>Polygon sides (SIDES) — set to 6 for the hexagon in your example. Try
+4, 5, 7, etc. for other variations.
+
+<li>Reflection options (reflectX, reflectY) — flips across the canvas width or height.
+
+<li>No translate or rotate — coordinates are computed directly with
+trigonometry.
+</ul>
+
+<p>Pursuit curves — each side is subdivided and lines connect to the
+    corresponding subdivision two sides away, creating the “woven”
+    look
+</p>
+  </div>
+  </div>
+<button onclick="toggleOverlay()">Show Discussion</button>
+<canvas id="c" width="800" height="800"></canvas>
+<script>
+
+(() => {
+  const canvas = document.getElementById('c');
+  const ctx = canvas.getContext('2d');
+
+  const W = canvas.width, H = canvas.height;
+  const CX = W/2, CY = H/2;
+  const R  = W*0.38;   // polygon radius
+
+  // options
+  const SIDES = 6;     // number of polygon sides
+  const STEPS = 60;    // number of subdivisions per side
+  const reflectX = false;
+  const reflectY = false;
+
+  // background
+  ctx.fillStyle = "white";
+  ctx.fillRect(0,0,W,H);
+  ctx.lineWidth = 1;
+  ctx.strokeStyle = "blue";
+
+  // polygon vertices
+  function vertex(i) {
+    const theta = 2*Math.PI * i/SIDES - Math.PI/2; // start top
+    let x = CX + R*Math.cos(theta);
+    let y = CY + R*Math.sin(theta);
+    if (reflectX) x = W - x;
+    if (reflectY) y = H - y;
+    return [x,y];
+  }
+
+  const verts = [];
+  for (let i=0; i<SIDES; i++) verts.push(vertex(i));
+  // draw pursuit curves
+  for (let i=0; i<SIDES; i++) {
+    const v1 = verts[i];
+    const v2 = verts[(i+1)%SIDES];
+    const v3 = verts[(i+2)%SIDES]; // pursuit offset: curve towards next+1 vertex
+    const v4 = verts[(i+3)%SIDES];
+    for (let j=0; j<=STEPS; j++) {
+      const t = j/STEPS;
+      const x1 = v1[0] + (v2[0]-v1[0])*t;
+      const y1 = v1[1] + (v2[1]-v1[1])*t;
+      const x2 = v3[0] + (v4[0]-v3[0])*t;
+      const y2 = v3[1] + (v4[1]-v3[1])*t;
+      ctx.beginPath();
+      ctx.moveTo(x1,y1);
+      ctx.lineTo(x2,y2);
+      ctx.stroke();
+    }
+  }
+})();
+
+</script>
+</body>
+</html>
+
+
+  

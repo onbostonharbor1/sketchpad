@@ -1,0 +1,95 @@
+<!--
+    Here’s a standalone HTML file that draws rose curves using `<canvas>` and includes interactive controls to manipulate the number of lobes, amplitude, and resolution. It’s modular and inspectable—perfect for your architectural style
+-->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Rose Curve Drawer</title>
+  <style>
+    body {
+      font-family: sans-serif;
+      margin: 20px;
+      background: #f0f0f0;
+    }
+    canvas {
+      border: 1px solid #333;
+      background: white;
+    }
+    .controls {
+      margin-top: 10px;
+    }
+    .controls label {
+      display: block;
+      margin: 5px 0;
+    }
+  </style>
+</head>
+<body>
+  <h2>🌹 Rose Curve Visualizer</h2>
+  <canvas id="roseCanvas" width="500" height="500"></canvas>
+  <div class="controls">
+    <label>
+      Lobes (k): <input type="range" id="lobes" min="1" max="20" value="5" />
+      <span id="lobesVal">5</span>
+    </label>
+    <label>
+      Amplitude (a): <input type="range" id="amplitude" min="50" max="200" value="100" />
+      <span id="amplitudeVal">100</span>
+    </label>
+    <label>
+      Resolution: <input type="range" id="resolution" min="100" max="2000" value="1000" />
+      <span id="resolutionVal">1000</span>
+    </label>
+  </div>
+
+  <script>
+    const canvas = document.getElementById('roseCanvas');
+    const ctx = canvas.getContext('2d');
+    const lobesInput = document.getElementById('lobes');
+    const amplitudeInput = document.getElementById('amplitude');
+    const resolutionInput = document.getElementById('resolution');
+    const lobesVal = document.getElementById('lobesVal');
+    const amplitudeVal = document.getElementById('amplitudeVal');
+    const resolutionVal = document.getElementById('resolutionVal');
+
+    function drawRose(k, a, resolution) {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      ctx.save();
+      ctx.translate(canvas.width / 2, canvas.height / 2);
+      ctx.beginPath();
+      for (let i = 0; i <= resolution; i++) {
+        const theta = (i / resolution) * 2 * Math.PI;
+        const r = a * Math.cos(k * theta);
+        const x = r * Math.cos(theta);
+        const y = r * Math.sin(theta);
+        if (i === 0) {
+          ctx.moveTo(x, y);
+        } else {
+          ctx.lineTo(x, y);
+        }
+      }
+      ctx.strokeStyle = '#0077cc';
+      ctx.lineWidth = 2;
+      ctx.stroke();
+      ctx.restore();
+    }
+
+    function update() {
+      const k = parseInt(lobesInput.value);
+      const a = parseInt(amplitudeInput.value);
+      const resolution = parseInt(resolutionInput.value);
+      lobesVal.textContent = k;
+      amplitudeVal.textContent = a;
+      resolutionVal.textContent = resolution;
+      drawRose(k, a, resolution);
+    }
+
+    lobesInput.addEventListener('input', update);
+    amplitudeInput.addEventListener('input', update);
+    resolutionInput.addEventListener('input', update);
+
+    update(); // initial draw
+  </script>
+</body>
+</html>

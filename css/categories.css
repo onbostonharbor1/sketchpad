@@ -1,0 +1,76 @@
+/* ===========================================================
+   CATEGORIES LAYOUT
+   =========================================================== */
+
+/* Outer container for all categories */
+#categories {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  padding: 6px;
+}
+
+/* Individual category frame */
+.category-frame {
+  background-color: #ffffff;
+  border: 4px solid var(--blue-base);
+  border-radius: 10px;
+  width: 220px;
+  box-shadow: 3px 4px 6px rgba(0, 0, 0, 0.35);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Category header */
+.category-header {
+  background-color: var(--blue-mid);
+  color: #ffffff;
+  font-weight: 700;
+  font-size: 0.74rem;
+  padding: 4px 8px;
+  border-top-left-radius: 10px;
+  border-top-right-radius: 10px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+/* Category content area (scrollable list if long) */
+.category-content {
+  padding: 6px 8px;
+  font-size: 0.78rem;
+  color: #222;
+  overflow-y: auto;
+  max-height: 200px;
+}
+
+/* Individual item entries */
+.item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 3px 4px;
+  border-bottom: 1px solid #e4e4e4;
+  font-size: 0.78rem;
+  color: #333;
+  cursor: pointer;
+  transition: background-color 0.15s;
+}
+
+.item:last-child {
+  border-bottom: none;
+}
+
+.item:hover {
+  background-color: #e8f0fe;
+}
+
+/* Optional chevron icon (for future offcanvas use) */
+.item i.bi {
+  font-size: 0.9rem;
+  color: #666;
+  margin-left: 6px;
+}
+
+.category-frame { border: 4px solid var(--theme-base); }
+.category-header { background-color: var(--theme-mid); }

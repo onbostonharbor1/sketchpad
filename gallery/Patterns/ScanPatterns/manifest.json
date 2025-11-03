@@ -1,0 +1,123 @@
+[ 
+  { "filename": "Figure 158", "path": "ScanPatterns/Figure 158.jpg" } 
+, { "filename": "Figure1738", "path": "ScanPatterns/Figure1738.jpg" } 
+, { "filename": "Figure177", "path": "ScanPatterns/Figure177.jpg" } 
+, { "filename": "Figure204", "path": "ScanPatterns/Figure204.jpg" } 
+, { "filename": "Figure205", "path": "ScanPatterns/Figure205.jpg" } 
+, { "filename": "Figure209", "path": "ScanPatterns/Figure209.jpg" } 
+, { "filename": "Figure209a", "path": "ScanPatterns/Figure209a.jpg" } 
+, { "filename": "Figure239a", "path": "ScanPatterns/Figure239a.jpg" } 
+, { "filename": "Test 10c", "path": "ScanPatterns/Test 10c.jpg" } 
+, { "filename": "Test 27-10", "path": "ScanPatterns/Test 27-10.jpg" } 
+, { "filename": "Test 27-11", "path": "ScanPatterns/Test 27-11.jpg" } 
+, { "filename": "Test 27-12", "path": "ScanPatterns/Test 27-12.jpg" } 
+, { "filename": "Test 27-13", "path": "ScanPatterns/Test 27-13.jpg" } 
+, { "filename": "Test 27-14", "path": "ScanPatterns/Test 27-14.jpg" } 
+, { "filename": "Test 27-15", "path": "ScanPatterns/Test 27-15.jpg" } 
+, { "filename": "Test 27-17", "path": "ScanPatterns/Test 27-17.jpg" } 
+, { "filename": "Test 27-3", "path": "ScanPatterns/Test 27-3.jpg" } 
+, { "filename": "Test 27-4", "path": "ScanPatterns/Test 27-4.jpg" } 
+, { "filename": "Test 27-5 (2)", "path": "ScanPatterns/Test 27-5 (2).jpg" } 
+, { "filename": "Test 27-5", "path": "ScanPatterns/Test 27-5.jpg" } 
+, { "filename": "Test 27-6", "path": "ScanPatterns/Test 27-6.jpg" } 
+, { "filename": "Test 27-7", "path": "ScanPatterns/Test 27-7.jpg" } 
+, { "filename": "Test 27-8", "path": "ScanPatterns/Test 27-8.jpg" } 
+, { "filename": "Test 27-8a", "path": "ScanPatterns/Test 27-8a.jpg" } 
+, { "filename": "Test 27-9", "path": "ScanPatterns/Test 27-9.jpg" } 
+, { "filename": "Test 28-8", "path": "ScanPatterns/Test 28-8.jpg" } 
+, { "filename": "Test 28", "path": "ScanPatterns/Test 28.jpg" } 
+, { "filename": "Test 28a", "path": "ScanPatterns/Test 28a.jpg" } 
+, { "filename": "Test 28c", "path": "ScanPatterns/Test 28c.jpg" } 
+, { "filename": "Test 30", "path": "ScanPatterns/Test 30.jpg" } 
+, { "filename": "Test 31", "path": "ScanPatterns/Test 31.jpg" } 
+, { "filename": "Test 31a", "path": "ScanPatterns/Test 31a.jpg" } 
+, { "filename": "Test 32", "path": "ScanPatterns/Test 32.jpg" } 
+, { "filename": "Test 33", "path": "ScanPatterns/Test 33.jpg" } 
+, { "filename": "Test 34", "path": "ScanPatterns/Test 34.jpg" } 
+, { "filename": "Test 35", "path": "ScanPatterns/Test 35.jpg" } 
+, { "filename": "Test 36", "path": "ScanPatterns/Test 36.jpg" } 
+, { "filename": "Test38", "path": "ScanPatterns/Test38.jpg" } 
+, { "filename": "Test39", "path": "ScanPatterns/Test39.jpg" } 
+, { "filename": "Test40", "path": "ScanPatterns/Test40.jpg" } 
+, { "filename": "Test40a", "path": "ScanPatterns/Test40a.jpg" } 
+, { "filename": "Figure 085", "path": "ScanPatterns/Figure 085.png" } 
+, { "filename": "Figure 23", "path": "ScanPatterns/Figure 23.png" } 
+, { "filename": "Figure 28a", "path": "ScanPatterns/Figure 28a.png" } 
+, { "filename": "Figure 28b", "path": "ScanPatterns/Figure 28b.png" } 
+, { "filename": "Figure 60", "path": "ScanPatterns/Figure 60.png" } 
+, { "filename": "Figure 82", "path": "ScanPatterns/Figure 82.png" } 
+, { "filename": "Figure 83", "path": "ScanPatterns/Figure 83.png" } 
+, { "filename": "Figure 85", "path": "ScanPatterns/Figure 85.png" } 
+, { "filename": "Figure 99", "path": "ScanPatterns/Figure 99.png" } 
+, { "filename": "Test 01", "path": "ScanPatterns/Test 01.png" } 
+, { "filename": "Test 02", "path": "ScanPatterns/Test 02.png" } 
+, { "filename": "Test 03", "path": "ScanPatterns/Test 03.png" } 
+, { "filename": "Test 04", "path": "ScanPatterns/Test 04.png" } 
+, { "filename": "Test 06", "path": "ScanPatterns/Test 06.png" } 
+, { "filename": "Test 07", "path": "ScanPatterns/Test 07.png" } 
+, { "filename": "Test 08", "path": "ScanPatterns/Test 08.png" } 
+, { "filename": "Test 09", "path": "ScanPatterns/Test 09.png" } 
+, { "filename": "Test 10", "path": "ScanPatterns/Test 10.png" } 
+, { "filename": "Test 10a", "path": "ScanPatterns/Test 10a.png" } 
+, { "filename": "Test 11", "path": "ScanPatterns/Test 11.png" } 
+, { "filename": "Test 11a", "path": "ScanPatterns/Test 11a.png" } 
+, { "filename": "Test 12", "path": "ScanPatterns/Test 12.png" } 
+, { "filename": "Test 12a", "path": "ScanPatterns/Test 12a.png" } 
+, { "filename": "Test 12b", "path": "ScanPatterns/Test 12b.png" } 
+, { "filename": "Test 13", "path": "ScanPatterns/Test 13.png" } 
+, { "filename": "Test 14a", "path": "ScanPatterns/Test 14a.png" } 
+, { "filename": "Test 14b", "path": "ScanPatterns/Test 14b.png" } 
+, { "filename": "Test 14bb", "path": "ScanPatterns/Test 14bb.png" } 
+, { "filename": "Test 14c", "path": "ScanPatterns/Test 14c.png" } 
+, { "filename": "Test 14d", "path": "ScanPatterns/Test 14d.png" } 
+, { "filename": "Test 14e", "path": "ScanPatterns/Test 14e.png" } 
+, { "filename": "Test 16 crosshair", "path": "ScanPatterns/Test 16 crosshair.png" } 
+, { "filename": "Test 17", "path": "ScanPatterns/Test 17.png" } 
+, { "filename": "Test 17a", "path": "ScanPatterns/Test 17a.png" } 
+, { "filename": "Test 18a", "path": "ScanPatterns/Test 18a.png" } 
+, { "filename": "Test 18b", "path": "ScanPatterns/Test 18b.png" } 
+, { "filename": "Test 19", "path": "ScanPatterns/Test 19.png" } 
+, { "filename": "Test 20a", "path": "ScanPatterns/Test 20a.png" } 
+, { "filename": "Test 20b", "path": "ScanPatterns/Test 20b.png" } 
+, { "filename": "Test 20c", "path": "ScanPatterns/Test 20c.png" } 
+, { "filename": "Test 20d", "path": "ScanPatterns/Test 20d.png" } 
+, { "filename": "Test 22", "path": "ScanPatterns/Test 22.png" } 
+, { "filename": "Test 23-13", "path": "ScanPatterns/Test 23-13.png" } 
+, { "filename": "Test 23", "path": "ScanPatterns/Test 23.png" } 
+, { "filename": "Test 24-02", "path": "ScanPatterns/Test 24-02.png" } 
+, { "filename": "Test 24-10", "path": "ScanPatterns/Test 24-10.png" } 
+, { "filename": "Test 24-12", "path": "ScanPatterns/Test 24-12.png" } 
+, { "filename": "Test 24-13", "path": "ScanPatterns/Test 24-13.png" } 
+, { "filename": "Test 24-14", "path": "ScanPatterns/Test 24-14.png" } 
+, { "filename": "Test 24-15", "path": "ScanPatterns/Test 24-15.png" } 
+, { "filename": "Test 24-16", "path": "ScanPatterns/Test 24-16.png" } 
+, { "filename": "Test 24-17", "path": "ScanPatterns/Test 24-17.png" } 
+, { "filename": "Test 24-18", "path": "ScanPatterns/Test 24-18.png" } 
+, { "filename": "Test 24-19", "path": "ScanPatterns/Test 24-19.png" } 
+, { "filename": "Test 24-20", "path": "ScanPatterns/Test 24-20.png" } 
+, { "filename": "Test 24-21", "path": "ScanPatterns/Test 24-21.png" } 
+, { "filename": "Test 24-22", "path": "ScanPatterns/Test 24-22.png" } 
+, { "filename": "Test 24-23", "path": "ScanPatterns/Test 24-23.png" } 
+, { "filename": "Test 24-24", "path": "ScanPatterns/Test 24-24.png" } 
+, { "filename": "Test 24-25 (2)", "path": "ScanPatterns/Test 24-25 (2).png" } 
+, { "filename": "Test 24-25", "path": "ScanPatterns/Test 24-25.png" } 
+, { "filename": "Test 24-26", "path": "ScanPatterns/Test 24-26.png" } 
+, { "filename": "Test 24-27", "path": "ScanPatterns/Test 24-27.png" } 
+, { "filename": "Test 24-28", "path": "ScanPatterns/Test 24-28.png" } 
+, { "filename": "Test 24-3", "path": "ScanPatterns/Test 24-3.png" } 
+, { "filename": "Test 24-4", "path": "ScanPatterns/Test 24-4.png" } 
+, { "filename": "Test 24-5", "path": "ScanPatterns/Test 24-5.png" } 
+, { "filename": "Test 24-6", "path": "ScanPatterns/Test 24-6.png" } 
+, { "filename": "Test 24-9", "path": "ScanPatterns/Test 24-9.png" } 
+, { "filename": "Test 24", "path": "ScanPatterns/Test 24.png" } 
+, { "filename": "Test 24a", "path": "ScanPatterns/Test 24a.png" } 
+, { "filename": "Test 26", "path": "ScanPatterns/Test 26.png" } 
+, { "filename": "Test 27 17", "path": "ScanPatterns/Test 27 17.png" } 
+, { "filename": "Test 27-1", "path": "ScanPatterns/Test 27-1.png" } 
+, { "filename": "Test 27-2", "path": "ScanPatterns/Test 27-2.png" } 
+, { "filename": "Test 32a", "path": "ScanPatterns/Test 32a.png" } 
+, { "filename": "Test 4a", "path": "ScanPatterns/Test 4a.png" } 
+, { "filename": "Test 4b", "path": "ScanPatterns/Test 4b.png" } 
+, { "filename": "Test 4c", "path": "ScanPatterns/Test 4c.png" } 
+, { "filename": "Test 9", "path": "ScanPatterns/Test 9.png" } 
+] 

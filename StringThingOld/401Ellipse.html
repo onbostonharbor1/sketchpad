@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Ellipse Points — Angle vs Arc-Length Spacing</title>
+<style>
+  :root {
+    --bg: #0f1116; --panel: #151923; --ink: #e8ecf1; --sub: #9aa6b2;
+    --accent: #60a5fa; --accent2: #f59e0b; --grid: #1f2430; --dot: #f97316;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--ink);
+         font: 14px/1.4 ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial;
+         display: grid; grid-template-columns: 320px 1fr; height: 100vh; }
+  aside { background: var(--panel); padding: 16px; border-right: 1px solid #202636; overflow:auto; }
+  h1 { font-size: 18px; margin: 0 0 8px; }
+  fieldset { border: 1px solid #263044; border-radius: 12px; padding: 10px 12px; margin: 8px 0; }
+  legend { padding: 0 6px; color: var(--sub); }
+  label { display: grid; grid-template-columns: 1fr auto; gap: 8px; align-items: center; margin: 6px 0; }
+  input[type="range"], input[type="number"], select { width: 160px; }
+  #canvas { width: 100%; height: 100vh; display: block; background: #0b0d12; }
+  .small { color: var(--sub); font-size: 12px; }
+  button { background:#1f2636; color:var(--ink); border:1px solid #2a354d; padding:8px 10px; border-radius:10px; cursor:pointer; }
+  button:hover{ background:#27324a; }
+</style>
+</head>
+<body>
+  <aside>
+    <h1>Ellipse Points — Angle vs Arc-Length</h1>
+    <fieldset>
+      <legend>Geometry</legend>
+      <label>Width (w)<input id="w" type="range" min="60" max="1000" value="600" step="2"></label>
+      <label>Height (h)<input id="h" type="range" min="60" max="1000" value="360" step="2"></label>
+      <label>Rotation (°)<input id="rot" type="range" min="-180" max="180" value="30" step="1"></label>
+      <label>Center X<input id="cx" type="range" min="-300" max="300" value="0" step="1"></label>
+      <label>Center Y<input id="cy" type="range" min="-300" max="300" value="0" step="1"></label>
+    </fieldset>
+    <fieldset>
+      <legend>Points</legend>
+      <label>Count (N)<input id="N" type="range" min="3" max="600" value="120" step="1"></label>
+      <label>Spacing
+        <select id="mode">
+          <option value="angle">Equal angle</option>
+          <option value="arc" selected>Equal arc-length</option>
+        </select>
+      </label>
+      <label>Show dots<input id="showDots" type="checkbox" checked></label>
+      <label>Line width<input id="lw" type="range" min="0.3" max="4" step="0.1" value="1.2"></label>
+    </fieldset>
+    <fieldset>
+      <legend>Actions</legend>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+        <button id="save">Save PNG</button>
+        <button id="copy">Copy Points</button>
+      </div>
+      <p class="small">Copy Points puts the generated array on your clipboard as JSON.</p>
+    </fieldset>
+    <p class="small">Tip: Switch to <b>Equal angle</b> to see denser points near the ellipse ends; <b>Equal arc-length</b> evens the distances.</p>
+  </aside>
+  <canvas id="canvas"></canvas>
+<script>
+const canvas = document.getElementById('canvas');
+const ctx = canvas.getContext('2d');
+function fitCanvas(){
+  const dpr = Math.max(1, window.devicePixelRatio||1);
+  canvas.width = Math.floor(canvas.clientWidth * dpr);
+  canvas.height = Math.floor(canvas.clientHeight * dpr);
+  ctx.setTransform(dpr,0,0,dpr,0,0);
+}
+window.addEventListener('resize', ()=>{ fitCanvas(); draw(); });
+fitCanvas();
+/**
+ * Return N points on the circumference of a rotated ellipse, joined in order.
+ * @param {number} w width of ellipse (major = w/2)
+ * @param {number} h height of ellipse (minor = h/2)
+ * @param {number} cx center x (canvas coords)
+ * @param {number} cy center y (canvas coords)
+ * @param {number} rotDeg rotation in degrees (CCW)
+ * @param {number} N number of points
+ * @param {"angle"|"arc"} mode spacing mode
+ * @returns {{x:number,y:number}[]} array of points
+ */
+function getEllipsePoints(w,h,cx,cy,rotDeg,N,mode='angle'){
+  const a = w/2, b = h/2;
+  const rot = rotDeg * Math.PI/180;
+  const cosR = Math.cos(rot), sinR = Math.sin(rot);
+  // unrotated param point -> rotated+translated
+  function P(t){
+    const x0 = a*Math.cos(t), y0 = b*Math.sin(t);
+    return {
+      x: cx + x0*cosR - y0*sinR,
+      y: cy + x0*sinR + y0*cosR
+    };
+  }
+  if (mode === 'angle'){
+    const pts = new Array(N);
+    for(let i=0;i<N;i++){
+      const t = i * 2*Math.PI / N;
+      pts[i] = P(t);
+    }
+    return pts;
+  }
+  // Equal arc-length spacing (approximation by dense sampling + search)
+  const M = Math.max(2048, N*16); // dense angle samples
+  const X = new Array(M+1);
+  const S = new Float64Array(M+1); // cumulative length
+  let cum = 0;
+  let prev = null;
+  for (let i=0;i<=M;i++){
+    const t = i * 2*Math.PI / M;
+    const p = P(t);
+    X[i] = p;
+    if (prev){
+      cum += Math.hypot(p.x - prev.x, p.y - prev.y);
+    }
+    S[i] = cum;
+    prev = p;
+  }
+  const total = S[M];
+  const seg = total / N;
+  function atLength(L){
+    // binary search for segment where cumulative length crosses L
+    let lo=0, hi=M;
+    while (lo < hi){
+      const mid = (lo+hi)>>>1;
+      if (S[mid] < L) lo = mid+1; else hi = mid;
+    }
+    if (lo === 0) return X[0];
+    const k = lo;
+    const s0 = S[k-1], s1 = S[k];
+    const p0 = X[k-1], p1 = X[k];
+    const u = (L - s0) / Math.max(1e-9, (s1 - s0));
+    return { x: p0.x + u*(p1.x - p0.x), y: p0.y + u*(p1.y - p0.y) };
+  }
+  const pts = new Array(N);
+  for (let i=0;i<N;i++){
+    pts[i] = atLength(i*seg);
+  }
+  return pts;
+}
+// UI elements
+const wInp = document.getElementById('w');
+const hInp = document.getElementById('h');
+const rotInp = document.getElementById('rot');
+const NInp = document.getElementById('N');
+const cxInp = document.getElementById('cx');
+const cyInp = document.getElementById('cy');
+const modeSel = document.getElementById('mode');
+const showDots = document.getElementById('showDots');
+const lwInp = document.getElementById('lw');
+function draw(){
+  const w = +wInp.value, h = +hInp.value;
+  const rot = +rotInp.value;
+  const N = +NInp.value;
+  const cx = canvas.width/(window.devicePixelRatio||1)/2 + (+cxInp.value);
+  const cy = canvas.height/(window.devicePixelRatio||1)/2 + (+cyInp.value);
+  const mode = modeSel.value;
+  const lw = +lwInp.value;
+  ctx.clearRect(0,0,canvas.width, canvas.height);
+  // subtle grid
+  ctx.save();
+  ctx.globalAlpha = 0.25;
+  ctx.strokeStyle = getComputedStyle(document.documentElement).getPropertyValue('--grid') || '#1f2430';
+  ctx.lineWidth = 1;
+  const W = canvas.width/(window.devicePixelRatio||1);
+  const H = canvas.height/(window.devicePixelRatio||1);
+  for(let x=0;x<=W;x+=50){ ctx.beginPath(); ctx.moveTo(x,0); ctx.lineTo(x,H); ctx.stroke(); }
+  for(let y=0;y<=H;y+=50){ ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(W,y); ctx.stroke(); }
+  ctx.restore();
+  // compute points
+  const pts = getEllipsePoints(w,h,cx,cy,rot,N,mode);
+  // ellipse outline (native ellipse path for crisp outline)
+  ctx.save();
+  ctx.translate(cx,cy);
+  ctx.rotate(rot*Math.PI/180);
+  ctx.beginPath();
+  if (ctx.ellipse){
+    ctx.ellipse(0,0,w/2,h/2,0,0,Math.PI*2);
+  } else {
+    const M=720;
+    for(let i=0;i<=M;i++){
+      const t = i*2*Math.PI/M;
+      const x=(w/2)*Math.cos(t), y=(h/2)*Math.sin(t);
+      if(i===0) ctx.moveTo(x,y); else ctx.lineTo(x,y);
+    }
+  }
+  ctx.lineWidth = lw+0.6;
+  ctx.strokeStyle = 'rgba(96,165,250,0.35)';
+  ctx.stroke();
+  ctx.restore();
+  // connect points in order
+  ctx.lineWidth = lw;
+  ctx.strokeStyle = '#60a5fa';
+  ctx.beginPath();
+  for(let i=0;i<pts.length;i++){
+    const p = pts[i];
+    if(i===0) ctx.moveTo(p.x,p.y); else ctx.lineTo(p.x,p.y);
+  }
+  ctx.closePath();
+  ctx.stroke();
+  // draw points
+  if (showDots.checked){
+    ctx.fillStyle = '#f59e0b';
+    for (const p of pts){
+      ctx.beginPath();
+      ctx.arc(p.x,p.y,2.3,0,Math.PI*2);
+      ctx.fill();
+    }
+  }
+  // expose latest points
+  window.__lastPoints = pts;
+}
+for (const el of [wInp,hInp,rotInp,NInp,cxInp,cyInp,modeSel,showDots,lwInp]){
+  el.addEventListener('input', draw);
+}
+// Save and copy
+document.getElementById('save').addEventListener('click', ()=>{
+  const link = document.createElement('a');
+  link.download = 'ellipse_points.png';
+  link.href = canvas.toDataURL('image/png');
+  link.click();
+});
+document.getElementById('copy').addEventListener('click', async ()=>{
+  const pts = (window.__lastPoints||[]).map(p=>({x:+p.x.toFixed(3), y:+p.y.toFixed(3)}));
+  const txt = JSON.stringify(pts);
+  try {
+    await navigator.clipboard.writeText(txt);
+    alert('Points copied to clipboard ('+pts.length+' points).');
+  } catch (e){
+    alert('Copy failed. Points printed in console.');
+    console.log(txt);
+  }
+});
+draw();
+</script>
+</body>
+</html>

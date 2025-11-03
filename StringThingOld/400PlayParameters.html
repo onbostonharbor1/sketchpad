@@ -1,0 +1,132 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Parametric Curve Playground</title>
+  <style>
+    body { font-family: sans-serif; margin: 20px; }
+    canvas { border: 1px solid #333; display: block; margin-bottom: 20px; cursor: crosshair; }
+    .controls { margin-bottom: 20px; }
+    label { display: block; margin: 5px 0; }
+    .gallery img { width: 100px; margin: 5px; border: 1px solid #ccc; }
+  </style>
+</head>
+<body>
+  <h1>🧠 Parametric Curve Playground</h1>
+  <canvas id="canvas" width="600" height="600"></canvas>
+  <div class="controls">
+    <label>Preset:
+      <select id="preset">
+        <option value="cardioid">Cardioid</option>
+        <option value="rose">Rose</option>
+        <option value="spiral">Spiral</option>
+        <option value="lemniscate">Lemniscate</option>
+      </select>
+    </label>
+    <label>Offset: <input type="range" id="offset" min="0" max="200" value="50"></label>
+    <label>Frequency: <input type="range" id="frequency" min="1" max="10" value="3"></label>
+    <label>Radius: <input type="range" id="radius" min="50" max="300" value="150"></label>
+    <label><input type="checkbox" id="animate"> Animate Rotation</label>
+    <button id="saveImage">📸 Save Image</button>
+  </div>
+  <h2>🖼️ Gallery</h2>
+  <div class="gallery" id="gallery"></div>
+  <script>
+    const canvas = document.getElementById('canvas');
+    const ctx = canvas.getContext('2d');
+    const presetSelect = document.getElementById('preset');
+    const offsetSlider = document.getElementById('offset');
+    const freqSlider = document.getElementById('frequency');
+    const radiusSlider = document.getElementById('radius');
+    const animateCheckbox = document.getElementById('animate');
+    const saveBtn = document.getElementById('saveImage');
+    const gallery = document.getElementById('gallery');
+    let angleOffset = 0;
+    let dragging = false;
+    let dragPoint = null;
+    function polarToCartesian(r, theta) {
+      return {
+        x: canvas.width / 2 + r * Math.cos(theta),
+        y: canvas.height / 2 + r * Math.sin(theta)
+      };
+    }
+    function getCurvePoints(preset, offset, freq, radius) {
+      const points = [];
+      for (let t = 0; t < Math.PI * 2; t += 0.01) {
+        let r;
+        switch (preset) {
+          case 'cardioid': r = radius * (1 - Math.sin(t * freq)); break;
+          case 'rose': r = radius * Math.cos(freq * t); break;
+          case 'spiral': r = offset + radius * t / (2 * Math.PI); break;
+          case 'lemniscate': r = radius * Math.sqrt(Math.abs(Math.cos(2 * t))); break;
+        }
+        points.push(polarToCartesian(r, t + angleOffset));
+      }
+      return points;
+    }
+    function drawCurve() {
+      const preset = presetSelect.value;
+      const offset = parseFloat(offsetSlider.value);
+      const freq = parseFloat(freqSlider.value);
+      const radius = parseFloat(radiusSlider.value);
+      const points = getCurvePoints(preset, offset, freq, radius);
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      ctx.beginPath();
+      points.forEach((pt, i) => {
+        ctx.strokeStyle = `hsl(${(i / points.length) * 360}, 100%, 50%)`;
+        if (i === 0) ctx.moveTo(pt.x, pt.y);
+        else ctx.lineTo(pt.x, pt.y);
+      });
+      ctx.stroke();
+      // Draw draggable control point
+      ctx.fillStyle = 'black';
+      ctx.beginPath();
+      ctx.arc(canvas.width / 2, canvas.height / 2, 5, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    function animate() {
+      if (animateCheckbox.checked) {
+        angleOffset += 0.01;
+        drawCurve();
+        requestAnimationFrame(animate);
+      }
+    }
+    canvas.addEventListener('mousedown', (e) => {
+      const rect = canvas.getBoundingClientRect();
+      const x = e.clientX - rect.left;
+      const y = e.clientY - rect.top;
+      const dx = x - canvas.width / 2;
+      const dy = y - canvas.height / 2;
+      if (Math.sqrt(dx * dx + dy * dy) < 10) {
+        dragging = true;
+      }
+    });
+    canvas.addEventListener('mousemove', (e) => {
+      if (dragging) {
+        const rect = canvas.getBoundingClientRect();
+        const x = e.clientX - rect.left;
+        const y = e.clientY - rect.top;
+        const dx = x - canvas.width / 2;
+        const dy = y - canvas.height / 2;
+        const newRadius = Math.sqrt(dx * dx + dy * dy);
+        radiusSlider.value = Math.min(Math.max(newRadius, 50), 300);
+        drawCurve();
+      }
+    });
+    canvas.addEventListener('mouseup', () => dragging = false);
+    saveBtn.addEventListener('click', () => {
+      const img = new Image();
+      img.src = canvas.toDataURL();
+      gallery.appendChild(img);
+    });
+    [presetSelect, offsetSlider, freqSlider, radiusSlider].forEach(el => {
+      el.addEventListener('input', drawCurve);
+    });
+    animateCheckbox.addEventListener('change', () => {
+      if (animateCheckbox.checked) animate();
+    });
+    drawCurve();
+  </script>
+</body>
+</html>

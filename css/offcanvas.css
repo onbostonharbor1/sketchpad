@@ -1,0 +1,133 @@
+/* ===========================================================
+   OFFCANVAS STYLING — MATCH CATEGORY STYLE
+   =========================================================== */
+
+#offcanvasPanel {
+  background-color: #ffffff;
+  border-left: 4px solid var(--theme-base);
+  box-shadow: -3px 4px 6px rgba(0, 0, 0, 0.35);
+  border-top-left-radius: 10px;
+  border-bottom-left-radius: 10px;
+}
+
+/* Header: identical look to .category-header */
+.offcanvas-header {
+  background-color: var(--theme-mid);
+  color: #ffffff;
+  font-weight: 700;
+  font-size: 0.74rem;
+  padding: 4px 8px;
+  border-top-left-radius: 10px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid rgba(255,255,255,0.25);
+}
+
+/* Title text */
+.offcanvas-title {
+  font-size: inherit;
+  font-weight: inherit;
+  margin: 0;
+}
+
+/* Body: same font and spacing as .category-content */
+.offcanvas-body {
+  background-color: #ffffff;
+  padding: 6px 8px;
+  font-size: 0.78rem;
+  color: #222;
+  overflow-y: auto;
+}
+
+/* Item rows inside offcanvas — mirror .item */
+.offcanvas-body .btn,
+.offcanvas-body .item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 3px 4px;
+  border-bottom: 1px solid #e4e4e4;
+  font-size: 0.78rem;
+  color: #333;
+  cursor: pointer;
+  background-color: #fff;
+  border-radius: 0;
+  width: 100%;
+  text-align: left;
+  transition: background-color 0.15s;
+}
+
+.offcanvas-body .btn:last-child,
+.offcanvas-body .item:last-child {
+  border-bottom: none;
+}
+
+.offcanvas-body .btn:hover,
+.offcanvas-body .item:hover {
+  background-color: #e8f0fe;
+}
+
+/* Keep close button aligned visually */
+.offcanvas-header .btn-close {
+  filter: invert(1) brightness(200%);
+  opacity: 0.9;
+}
+/* ===========================================================
+   END OFFCANVAS STYLING BLOCK
+   =========================================================== */
+
+.item-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 4px 8px;
+  border-bottom: 1px solid #ddd;
+  cursor: pointer;
+}
+
+.item-label {
+  flex: 1;
+  user-select: none;
+}
+
+.item-expand {
+  flex: 0 0 20px;
+  text-align: right;
+  color: var(--blue-base);
+  cursor: pointer;
+}
+
+.item-expand:hover {
+  color: var(--blue-accent);
+}
+
+/* ===========================================================
+   UNIFY BUTTON LOOK WITH CATEGORY ITEMS
+   =========================================================== */
+
+.offcanvas-body .btn.btn-outline-primary {
+  all: unset;                        /* remove Bootstrap defaults */
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+  padding: 3px 4px;
+  border-bottom: 1px solid #e4e4e4;
+  font-size: 0.78rem;
+  color: #333;
+  cursor: pointer;
+  background-color: #fff;
+  transition: background-color 0.15s;
+  border-radius: 0;
+  box-sizing: border-box;
+}
+
+.offcanvas-body .btn.btn-outline-primary:hover {
+  background-color: #e8f0fe;
+}
+
+.offcanvas-body .btn.btn-outline-primary:last-child {
+  border-bottom: none;
+}

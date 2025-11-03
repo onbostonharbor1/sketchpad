@@ -1,0 +1,61 @@
+<!--
+Excellent — let’s scaffold a lightweight canvas rendering loop and symbolic overlay for your standalone Strophoid module. This will give you a clean, inspectable space to explore the curve’s geometry and paradoxical behavior.
+---
+  🧱 File: `strophoid.html
+  -->`
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Strophoid Explorer</title>
+  <style>
+    canvas { border: 1px solid #ccc; display: block; margin: 1em auto; }
+    #discussion {
+      position: absolute;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      background: rgba(255,255,255,0.6);
+      display: none;
+      z-index: 10;
+      padding: 2em;
+      font-family: sans-serif;
+    }
+    #toggleBtn { position: absolute; top: 10px; right: 10px; z-index: 20; }
+  </style>
+</head>
+<body>
+  <button id="toggleBtn">Show Discussion</button>
+  <div id="discussion">
+    <h2>Strophoid: A Paradox Engine</h2>
+    <p>The strophoid is a curve with a node at the origin, symmetric yet divergent. It’s defined by a geometric construction involving a pole, a fixed point, and a rotating line...</p>
+    <button onclick="toggleDiscussion()">Close</button>
+  </div>
+  <canvas id="strophoidCanvas" width="800" height="600"></canvas>
+  <script type="module">
+    import { strophoidParametric } from './strophoid.js';
+    const canvas = document.getElementById('strophoidCanvas');
+    const ctx = canvas.getContext('2d');
+    function drawStrophoid(a = 100, steps = 500) {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      ctx.save();
+      ctx.translate(canvas.width / 2, canvas.height / 2);
+      ctx.scale(1, -1); // Flip Y axis
+      ctx.beginPath();
+      for (let i = -5; i <= 5; i += 10 / steps) {
+        const { x, y } = strophoidParametric(i, a);
+        if (i === -5) ctx.moveTo(x, y);
+        else ctx.lineTo(x, y);
+      }
+      ctx.strokeStyle = 'blue';
+      ctx.lineWidth = 2;
+      ctx.stroke();
+      ctx.restore();
+    }
+    drawStrophoid();
+    window.toggleDiscussion = function () {
+      const d = document.getElementById('discussion');
+      d.style.display = d.style.display === 'none' ? 'block' : 'none';
+    };
+  </script>
+</body>
+</html>
+

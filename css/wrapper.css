@@ -1,0 +1,318 @@
+    body {
+      margin: 0;
+      font-family: system-ui, sans-serif;
+    }
+
+    #wrapper {
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+      width: 100%;
+    }
+
+    /* Tabs bar at top */
+    /* === ADJUST TAB AREA BACKGROUND AND TEXT COLOR === */
+
+    /* Make the area behind the tabs white */
+    #tabs {
+	background-color: #ffffff;
+    }
+
+    /* Default tab text color */
+    .nav-tabs .nav-link {
+	color: #000000;
+    }
+
+    /* Active tab text color (also black) */
+    .nav-tabs .nav-link.active {
+	color: #000000;
+    }
+
+
+    /* Below tabs: control + main */
+    #content {
+      flex: 1;
+      display: flex;
+      width: 100%;
+    }
+    /* Left control area */
+    #control {
+	width: 300px;
+	background-color: var(--theme-tint);
+	height: 600px;
+	display: flex;
+	flex-direction: column;
+	padding: 10px;
+	box-sizing: border-box;
+    }
+
+#buttons {
+  padding: 4px 8px;
+  border-bottom: 1px solid var(--outline);
+  background-color: #f9f9f9;
+}
+
+#buttons button {
+  margin-right: 6px;
+}
+
+    #action {
+      flex: 1;
+	background-color: var(--theme-tint);
+      padding: 8px;
+      overflow-y: auto;
+    }
+
+    /* Right main area */
+    #main {
+      flex: 1;
+      background: #fafafa;
+      padding: 10px;
+      box-sizing: border-box;
+      display: flex;
+      flex-direction: column;
+    }
+
+    #subtabs, #caption, #text, #sketchpad {
+/*      margin-bottom: 10px; 
+      padding: 8px; 
+      border: 1px solid #ccc; */
+    }
+
+/* ===========================================================
+   PATTERNS CAPTION BAR
+   Displays current pattern title + Prev/Next/Save buttons
+   =========================================================== */
+
+#caption {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 4px 10px;
+  border-top: 2px solid var(--blue-base);
+  background-color: #f8f8f8;
+  font-weight: 600;
+  font-size: 0.9rem;
+  color: #222;
+}
+
+.caption-title {
+  font-weight: bold;
+  font-size: .9rem;
+}
+
+.caption-buttons {
+  display: flex;
+  gap: 8px;
+}
+
+.caption-buttons button {
+  padding: 2px 10px;
+  border: 1px solid var(--blue-base);
+  border-radius: 6px;
+  background-color: #fff;
+  cursor: pointer;
+  font-size: 0.9em;
+}
+
+.caption-buttons button:hover {
+  background-color: var(--theme-tint);
+}
+
+
+
+    #sketchpad {
+      flex: 1;
+      background: white;
+    }
+
+/* ===========================================================
+   DRAW PARAMETERS PANEL STYLING
+   (layout + color harmonization)
+   =========================================================== */
+
+.draw-controls {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  color: #222;  /* softer dark text */
+}
+
+.draw-controls label {
+  align-self: center;
+  font-size: 0.9rem;
+}
+
+.draw-controls input,
+.draw-controls select {
+  background-color: #ffffff;
+  color: #111;
+  border: 1px solid var(--theme-divider);
+  border-radius: 4px;
+  padding: 2px 4px;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.draw-controls .ctrl-readout {
+  color: #000;
+  font-weight: 600;
+  margin-left: 6px;
+}
+
+/* ===========================================================
+   FINAL COMPACT RANGE LAYOUT
+   =========================================================== */
+.ctrl-field {
+  display: grid;
+  grid-template-columns: 60px 1fr; /* smaller label column */
+  align-items: start;
+  column-gap: 6px;
+  margin-bottom: 10px;
+  padding-left: 4px;
+}
+
+.ctrl-field label {
+  text-align: right;
+  font-size: 0.9rem;
+  font-weight: normal;
+  line-height: 1.2;
+  color: #222;
+}
+
+/* stack min/current/max above slider */
+.ctrl-range-wrapper {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+}
+
+.ctrl-range-values {
+  display: flex;
+  justify-content: space-between;  /* ← forces left, middle, right on one row */
+  align-items: center;
+  width: 100%;
+  font-size: 0.7em;
+  color: #222;
+  line-height: 1.2;
+  margin-bottom: 2px;
+  white-space: nowrap;
+}
+
+.ctrl-range-values .ctrl-readout {
+  flex: 1;
+  text-align: center;
+  font-weight: normal;
+}
+
+/* slider fills full width */
+.ctrl-range-wrapper input[type="range"] {
+  width: 100%;
+  box-sizing: border-box;
+}
+
+/* ===========================================================
+   Align range labels vertically with slider (not value row)
+   =========================================================== */
+.ctrl-field:has(.ctrl-range-wrapper) {
+  align-items: end;       /* bottom-align within the row */
+}
+
+.ctrl-field:has(.ctrl-range-wrapper) label {
+  align-self: center;     /* centers the label with the slider */
+  padding-top: 14px;      /* fine-tune vertical offset */
+}
+
+
+/* ===========================================================
+   THUMBNAIL PANEL (Patterns → Action)
+   Compact 6×10 grid, 36px thumbnails, scrollable if overflow
+   =========================================================== */
+.thumb-panel {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 6px;
+  padding: 6px;
+  background-color: #fafafa;
+  border-top: 1px solid var(--outline);
+  overflow-y: auto;
+  max-height: calc(36px * 10 + 6px * 9 + 12px); /* ~10 rows incl. gaps */
+}
+
+.thumb-box {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  font-size: 0.7rem;
+  color: #333;
+}
+
+.thumb-image {
+  width: 36px;
+  height: 36px;
+  object-fit: cover;
+  border: 1px solid var(--blue-base);
+  border-radius: 4px;
+  background-color: white;
+  cursor: pointer;
+  transition: transform 0.15s;
+}
+
+.thumb-image:hover {
+  transform: scale(1.1);
+  border-color: var(--theme-accent, var(--blue-base));
+}
+
+.thumb-label {
+  margin-top: 2px;
+  font-size: 0.65rem;
+}
+
+/* ===========================================================
+   Make script controls identical to draw controls
+   =========================================================== */
+
+/* ===========================================================
+   Align Script controls visually with Draw tab
+   =========================================================== */
+
+#action .draw-controls,
+#action .draw-controls label,
+#action .draw-controls input,
+#action .draw-controls select,
+#action .draw-controls span {
+  font-size: 0.9rem;
+  color: inherit;
+  background: none;
+  border: none;
+  box-shadow: none;
+}
+
+/* shrink the numeric labels above range sliders */
+.draw-controls .ctrl-range-values span,
+#action .draw-controls .ctrl-range-values span {
+  font-size: 0.9em !important;
+  line-height: 1.0;
+}
+
+/* emphasize dropdown (select) controls slightly */
+.draw-controls select,
+#action .draw-controls select {
+  border: 1px solid var(--outline);
+  border-radius: 4px;
+  background-color: #fff;
+  padding: 2px 4px;
+  box-shadow: 0 0 2px rgba(0,0,0,0.08);
+}
+
+/* Correct checkbox alignment in control column */
+.ctrl-field input[type="checkbox"] {
+  width: auto !important;         /* stop it from stretching */
+  justify-self: start !important; /* align to left edge */
+  margin-left: 0 !important;
+}
+
+
+
+
+

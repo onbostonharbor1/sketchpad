@@ -1,0 +1,452 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Radial Petal Outlines — Modes: half / total / outline / adaptive (commented)</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <style>
+    /* Visual styling for the demo UI and canvas */
+    :root{--bg:#f7f7fb;--panel:#fff;--muted:#666}
+    html,body{height:100%;margin:0;background:var(--bg);font-family:Inter,system-ui,Segoe UI,Roboto,Arial}
+    .wrap{max-width:1080px;margin:20px auto;display:flex;gap:18px;align-items:flex-start;padding:16px}
+    .controls{width:360px;background:var(--panel);padding:14px;border-radius:10px;box-shadow:0 6px 20px rgba(0,0,0,.06)}
+    .control{display:flex;gap:10px;align-items:center;margin-bottom:12px}
+    .control label{width:150px;color:var(--muted);font-size:13px}
+    .control input[type=range], .control select{flex:1}
+    .value{width:56px;text-align:right;font-variant-numeric:tabular-nums}
+    canvas{background:#fff;border-radius:10px;box-shadow:0 6px 20px rgba(0,0,0,.04);display:block}
+    h1{margin:0 0 12px 0;font-size:18px}
+    .footer{color:var(--muted);font-size:13px;margin-top:8px}
+    .row { display:flex; gap:8px; align-items:center; }
+    .small { font-size:12px; color:var(--muted); }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <!-- Controls panel: interactive inputs for parameters -->
+    <div class="controls" role="region" aria-label="Controls">
+      <h1>Radial Petal Outlines — Segments Mode (commented)</h1>
+
+      <!-- Petal Count -->
+      <div class="control">
+        <label for="petals">Petal Count</label>
+        <input id="petals" type="range" min="3" max="48" value="8" />
+        <div class="value" id="petals-val">8</div>
+      </div>
+
+      <!-- Radius -->
+      <div class="control">
+        <label for="radius">Radius</label>
+        <input id="radius" type="range" min="20" max="380" value="140" />
+        <div class="value" id="radius-val">140</div>
+      </div>
+
+      <!-- Curvature: shapes how "pointy" petals become and feeds control point generation -->
+      <div class="control">
+        <label for="curvature">Curvature</label>
+        <input id="curvature" type="range" min="0.0" max="1.5" step="0.01" value="0.6" />
+        <div class="value" id="curvature-val">0.60</div>
+      </div>
+
+      <!-- Control point scale: multiplies control point distance from axis for stronger/weaker bulge -->
+      <div class="control">
+        <label for="cp-scale">Control Point Scale</label>
+        <input id="cp-scale" type="range" min="0" max="2" step="0.01" value="0.9" />
+        <div class="value" id="cp-scale-val">0.90</div>
+      </div>
+
+      <!-- Mode selector: determines how the segments slider is interpreted -->
+      <div class="control">
+        <label for="seg-mode">Segments Mode</label>
+        <select id="seg-mode">
+          <option value="half">half (segments per half-bezier)</option>
+          <option value="total">total (total segments per petal)</option>
+          <option value="outline">outline (samples across complete outline)</option>
+          <option value="adaptive">adaptive (subdivide by tolerance)</option>
+        </select>
+        <div style="width:56px"></div>
+      </div>
+
+      <!-- Segments slider: numeric meaning depends on above mode -->
+      <div class="control">
+        <label for="segments">Segments / Slider</label>
+        <input id="segments" type="range" min="1" max="240" value="24" />
+        <div class="value" id="segments-val">24</div>
+      </div>
+
+      <!-- Stroke color -->
+      <div class="control">
+        <label for="color">Color</label>
+        <input id="color" type="color" value="#ff4fa3" />
+        <div style="width:56px"></div>
+      </div>
+
+      <!-- Debug toggle: shows sample points so you can verify sampling behavior -->
+      <div class="control">
+        <label for="debug">Debug Points</label>
+        <div class="row">
+          <input id="debug" type="checkbox" />
+          <div class="small">show sample points</div>
+        </div>
+      </div>
+
+      <div class="footer">
+        Modes: half = N per half-bezier; total = N total split between halves; outline = N samples across full edge; adaptive = subdivision tolerance from slider.
+      </div>
+    </div>
+
+    <!-- Canvas area where petals are drawn -->
+    <div>
+      <canvas id="canvas" width="780" height="780" style="width:780px;height:780px"></canvas>
+    </div>
+  </div>
+
+  <script>
+    /**************************************************************************
+     * Radial Petal Outlines — Extensive Comments
+     *
+     * Overview:
+     * - Each petal is defined by two cubic Beziers (left and right halves).
+     * - The two halves meet at the tip; the inner endpoint sits slightly away from the center.
+     * - Sampling strategies (modes) determine how many straight segments approximate each half.
+     * - UI provides control over petal count, radius, curvature, control-point scale,
+     *   sampling mode, and slider that maps to modes in different ways.
+     *
+     * Key functions:
+     * - computePetalBeziers: returns world-space control points for left/right cubics.
+     * - cubic: evaluate cubic Bezier at t in [0,1].
+     * - subdivideCubic: recursive adaptive subdivision collecting points until chord error <= tol.
+     * - drawPetal: draws one petal using the selected sampling mode.
+     *
+     * Important design choices:
+     * - Petal inner radius is a small fraction of the full radius to avoid all curves meeting at center.
+     * - cpScale multiplies control point offsets to make curvature visually adjustable independent of 'curvature'.
+     * - The adaptive mode maps slider to a numerical tolerance; higher slider means tighter tolerance.
+     **************************************************************************/
+
+    // DOM elements and cached handles
+    const canvas = document.getElementById('canvas');
+    const ctx = canvas.getContext('2d');
+
+    const petalsInput = document.getElementById('petals');
+    const radiusInput = document.getElementById('radius');
+    const curvatureInput = document.getElementById('curvature');
+    const cpScaleInput = document.getElementById('cp-scale');
+    const segModeSelect = document.getElementById('seg-mode');
+    const segmentsInput = document.getElementById('segments');
+    const colorInput = document.getElementById('color');
+    const debugInput = document.getElementById('debug');
+
+    const petalsVal = document.getElementById('petals-val');
+    const radiusVal = document.getElementById('radius-val');
+    const curvatureVal = document.getElementById('curvature-val');
+    const cpScaleVal = document.getElementById('cp-scale-val');
+    const segmentsVal = document.getElementById('segments-val');
+
+    // Resize canvas to be DPI-aware. We set canvas.width/height to CSS size * devicePixelRatio
+    function resizeCanvas() {
+      const dpr = Math.max(1, window.devicePixelRatio || 1);
+      const cssW = canvas.clientWidth;
+      const cssH = canvas.clientHeight;
+      canvas.width = Math.round(cssW * dpr);
+      canvas.height = Math.round(cssH * dpr);
+      // Set transform so drawing commands use CSS pixels
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    }
+    window.addEventListener('resize', () => scheduleDraw());
+
+    // Evaluate cubic Bezier at parameter t ∈ [0, 1]
+    // p0..p3 are objects: { x, y }
+    function cubic(p0, p1, p2, p3, t) {
+      const u = 1 - t;
+      const tt = t * t;
+      const uu = u * u;
+      const uuu = uu * u;
+      const ttt = tt * t;
+      return {
+        x: uuu * p0.x + 3 * uu * t * p1.x + 3 * u * tt * p2.x + ttt * p3.x,
+        y: uuu * p0.y + 3 * uu * t * p1.y + 3 * u * tt * p2.y + ttt * p3.y
+      };
+    }
+
+    // Basic helpers
+    function mid(a, b) { return { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 }; }
+    function clamp(v, a, b) { return Math.min(b, Math.max(a, v)); }
+
+    // Compute chord error: distance from point b to line a-c
+    // Used as a simple curvature metric for adaptive subdivision
+    function chordError(a, b, c) {
+      const vx = c.x - a.x, vy = c.y - a.y;
+      const n2 = vx * vx + vy * vy;
+      if (n2 === 0) return Math.hypot(b.x - a.x, b.y - a.y);
+      const proj = ((b.x - a.x) * vx + (b.y - a.y) * vy) / n2;
+      const px = a.x + proj * vx, py = a.y + proj * vy;
+      return Math.hypot(b.x - px, b.y - py);
+    }
+
+    // computePetalBeziers
+    // - cx,cy: center of canvas
+    // - baseAngle: direction the petal's centerline points outward (radians)
+    // - radius: target outer radius for the petal tip (in CSS pixels)
+    // - curvature: user knob influencing control point scale (0..1.5 nominal)
+    // - petalInnerRadius: small radius where the petal begins (avoid all petals meeting at origin)
+    // - cpScale: additional multiplier applied to control point base distance for stronger/weaker bulge
+    //
+    // Returns two objects: left and right, each with cubic control points p0..p3 in world coordinates.
+    function computePetalBeziers(cx, cy, baseAngle, radius, curvature, petalInnerRadius, cpScale) {
+      // Local coordinates: axis points along +Y; x axis is perpendicular to axis.
+      const innerY = petalInnerRadius;
+      const tipY = radius;
+
+      // cpBase is the main control-point distance sideways; scales with radius so shape scales visually.
+      const cpBase = clamp(curvature, 0, 2) * radius * cpScale;
+
+      // Two factors to place two control points along the Y axis between inner and tip
+      const cp1Factor = 0.9; // outer control closer to tip
+      const cp2Factor = 0.5; // inner control closer to inner point
+
+      const cpInnerY = innerY + (tipY - innerY) * 0.28;
+      const cpOuterY = innerY + (tipY - innerY) * 0.64;
+
+      // Define left half local control points (mirror for right half)
+      const L0 = { x: -0.0001, y: innerY };               // near center (small x jitter for numeric stability)
+      const L1 = { x: -cpBase * cp2Factor, y: cpInnerY }; // inner control
+      const L2 = { x: -cpBase * cp1Factor, y: cpOuterY }; // outer control
+      const L3 = { x: 0, y: tipY };                       // tip (shared between halves)
+
+      const R0 = { x: 0.0001, y: innerY };
+      const R1 = { x: cpBase * cp1Factor, y: cpOuterY };
+      const R2 = { x: cpBase * cp2Factor, y: cpInnerY };
+      const R3 = { x: 0, y: tipY };
+
+      // Rotate local coordinates to world coordinates based on baseAngle,
+      // then translate by center (cx, cy).
+      function toWorld(p) {
+        const a = baseAngle;
+        const x = p.x * Math.cos(a) - p.y * Math.sin(a);
+        const y = p.x * Math.sin(a) + p.y * Math.cos(a);
+        return { x: cx + x, y: cy + y };
+      }
+
+      return {
+        left: { p0: toWorld(L0), p1: toWorld(L1), p2: toWorld(L2), p3: toWorld(L3) },
+        right: { p0: toWorld(R0), p1: toWorld(R1), p2: toWorld(R2), p3: toWorld(R3) }
+      };
+    }
+
+    // Adaptive cubic subdivision.
+    // Recursively subdivide the cubic defined by p0..p3 and push points (p0..pn) into out array.
+    // We push p0 for each accepted segment, final p3 is appended by the caller where needed.
+    function subdivideCubic(p0, p1, p2, p3, tol, out) {
+      // Quick curvature check using control points' distance to baseline p0-p3
+      const e1 = chordError(p0, p1, p3);
+      const e2 = chordError(p0, p2, p3);
+      if (Math.max(e1, e2) <= tol) {
+        // Curve is close to line p0-p3; accept p0 and stop
+        out.push(p0);
+        return;
+      }
+      // Otherwise subdivide using de Casteljau and recurse
+      const p01 = mid(p0, p1);
+      const p12 = mid(p1, p2);
+      const p23 = mid(p2, p3);
+      const p012 = mid(p01, p12);
+      const p123 = mid(p12, p23);
+      const p0123 = mid(p012, p123);
+      subdivideCubic(p0, p01, p012, p0123, tol, out);
+      subdivideCubic(p0123, p123, p23, p3, tol, out);
+    }
+
+    // Map slider/mode to a concrete sampling plan.
+    // Returns an object with mode and parameters to use when drawing one petal.
+    // - 'half': { mode: 'half', segmentsPerHalf }
+    // - 'outline': { mode: 'outline', totalSamples } (samples across full outline left->tip->right)
+    // - 'adaptive': { mode: 'adaptive', tol } (tolerance)
+    // - 'total': implemented as 'half' with split
+    function computeSampling(segMode, sliderValue) {
+      const s = Math.max(1, Math.min(240, Math.round(sliderValue)));
+      if (segMode === 'half') {
+        return { mode: 'half', segmentsPerHalf: s };
+      }
+      if (segMode === 'total') {
+        const half = Math.max(1, Math.ceil(s / 2));
+        return { mode: 'half', segmentsPerHalf: half };
+      }
+      if (segMode === 'outline') {
+        const total = Math.max(2, s);
+        return { mode: 'outline', totalSamples: total };
+      }
+      if (segMode === 'adaptive') {
+        // Map slider 1..240 to tolerance 1e-1 .. 1e-5 (non-linear mapping to give usable control)
+        const tol = 1e-1 * Math.pow(10, -((s - 1) / 60));
+        return { mode: 'adaptive', tol };
+      }
+      return { mode: 'half', segmentsPerHalf: s };
+    }
+
+    // drawPoint: small circle used when debug mode enabled to visualize sample points
+    function drawPoint(x, y) {
+      ctx.fillStyle = 'rgba(0,0,0,0.12)';
+      ctx.beginPath();
+      ctx.arc(x, y, 1.25, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    // drawPetal: draws one petal using the chosen sampling strategy
+    // - cx, cy: canvas center
+    // - baseAngle: central axis angle for this petal
+    // - radius: outer radius for petal tip
+    // - curvature: influences control points
+    // - segmentsSlider: numeric slider value (meaning changes by segMode)
+    // - cpScale: manual multiplier for control-point distance
+    // - segMode: mode string
+    // - color: stroke color
+    // - debugPoints: boolean to draw small sample dots
+    function drawPetal(cx, cy, baseAngle, radius, curvature, segmentsSlider, cpScale, segMode, color, debugPoints) {
+      // inner radius keeps petal from literally starting at canvas center
+      const petalInnerRadius = Math.max(2, radius * 0.08);
+
+      // get computed cubic control points in world space
+      const beziers = computePetalBeziers(cx, cy, baseAngle, radius, curvature, petalInnerRadius, cpScale);
+
+      ctx.strokeStyle = color;
+      ctx.lineWidth = 1;
+      ctx.lineJoin = 'round';
+
+      // compute sampling plan from UI
+      const sampling = computeSampling(segMode, segmentsSlider);
+
+      // Mode: half (sample left and right halves with segmentsPerHalf points each)
+      if (sampling.mode === 'half') {
+        const segPerHalf = sampling.segmentsPerHalf;
+        ctx.beginPath();
+        // left half: t = 0..1
+        for (let i = 0; i <= segPerHalf; i++) {
+          const t = i / segPerHalf;
+          const pt = cubic(beziers.left.p0, beziers.left.p1, beziers.left.p2, beziers.left.p3, t);
+          if (i === 0) ctx.moveTo(pt.x, pt.y); else ctx.lineTo(pt.x, pt.y);
+          if (debugPoints) drawPoint(pt.x, pt.y);
+        }
+        // right half: sampled in reverse so outline goes left->tip->right continuously
+        for (let i = segPerHalf; i >= 0; i--) {
+          const t = i / segPerHalf;
+          const pt = cubic(beziers.right.p0, beziers.right.p1, beziers.right.p2, beziers.right.p3, t);
+          ctx.lineTo(pt.x, pt.y);
+          if (debugPoints) drawPoint(pt.x, pt.y);
+        }
+        ctx.stroke();
+        return;
+      }
+
+      // Mode: outline (sample totalSamples across the full edge)
+      if (sampling.mode === 'outline') {
+        const total = sampling.totalSamples;
+        ctx.beginPath();
+        for (let i = 0; i <= total; i++) {
+          const t = i / total; // 0..1
+          // Map t to left half for 0..0.5 and to right half for 0.5..1
+          // Left runs 0..0.5 -> tt = (t * 2) ; Right runs 0.5..1 -> tt = 1 - ((t - 0.5) * 2)
+          let tt, side;
+          if (t <= 0.5) { tt = t * 2; side = 'left'; }
+          else { tt = 1 - (t - 0.5) * 2; side = 'right'; } // ensures tip is sampled at middle
+          const pt = cubic(beziers[side].p0, beziers[side].p1, beziers[side].p2, beziers[side].p3, tt);
+          if (i === 0) ctx.moveTo(pt.x, pt.y); else ctx.lineTo(pt.x, pt.y);
+          if (debugPoints) drawPoint(pt.x, pt.y);
+        }
+        ctx.stroke();
+        return;
+      }
+
+      // Mode: adaptive (use chord-error subdivision)
+      if (sampling.mode === 'adaptive') {
+        const tol = sampling.tol;
+        // Collect left half adaptive samples; subdivideCubic pushes p0..pN-1; we push p3 (tip) explicitly
+        const ptsLeft = [];
+        subdivideCubic(beziers.left.p0, beziers.left.p1, beziers.left.p2, beziers.left.p3, tol, ptsLeft);
+        ptsLeft.push(beziers.left.p3); // ensure tip included
+
+        const ptsRight = [];
+        subdivideCubic(beziers.right.p0, beziers.right.p1, beziers.right.p2, beziers.right.p3, tol, ptsRight);
+        ptsRight.push(beziers.right.p3);
+
+        // Stroke left points forward then right points in reverse to form closed outline
+        ctx.beginPath();
+        for (let i = 0; i < ptsLeft.length; i++) {
+          const p = ptsLeft[i];
+          if (i === 0) ctx.moveTo(p.x, p.y); else ctx.lineTo(p.x, p.y);
+          if (debugPoints) drawPoint(p.x, p.y);
+        }
+        for (let i = ptsRight.length - 1; i >= 0; i--) {
+          const p = ptsRight[i];
+          ctx.lineTo(p.x, p.y);
+          if (debugPoints) drawPoint(p.x, p.y);
+        }
+        ctx.stroke();
+        return;
+      }
+    }
+
+    // drawScene: clear and draw all petals according to current UI values
+    function drawScene() {
+      updateLabels();
+      resizeCanvas();
+
+      // Read UI values and clamp to safe ranges
+      const petals = Math.max(1, parseInt(petalsInput.value, 10));
+      const radius = Math.max(2, parseInt(radiusInput.value, 10));
+      const curvature = Math.max(0, parseFloat(curvatureInput.value));
+      const cpScale = Math.max(0, parseFloat(cpScaleInput.value));
+      const segMode = segModeSelect.value;
+      const segmentsSlider = Math.max(1, parseInt(segmentsInput.value, 10));
+      const color = colorInput.value;
+      const debugPoints = debugInput.checked;
+
+      // Canvas center
+      const cx = canvas.clientWidth / 2;
+      const cy = canvas.clientHeight / 2;
+
+      // Clear canvas
+      ctx.clearRect(0, 0, canvas.clientWidth, canvas.clientHeight);
+
+      // Compute per-petal rotation and draw each petal
+      const anglePerPetal = (2 * Math.PI) / petals;
+      const baseRotation = -Math.PI / 2; // rotate so first petal points up
+
+      for (let i = 0; i < petals; i++) {
+        const baseAngle = baseRotation + i * anglePerPetal;
+        drawPetal(cx, cy, baseAngle, radius, curvature, segmentsSlider, cpScale, segMode, color, debugPoints);
+      }
+    }
+
+    // updateLabels: reflect numeric UI values next to sliders (helps verify slider changes)
+    function updateLabels() {
+      petalsVal.textContent = petalsInput.value;
+      radiusVal.textContent = radiusInput.value;
+      curvatureVal.textContent = Number(curvatureInput.value).toFixed(2);
+      cpScaleVal.textContent = Number(cpScaleInput.value).toFixed(2);
+      segmentsVal.textContent = segmentsInput.value;
+    }
+
+    // scheduleDraw with rAF for smooth updates and to avoid redundant draws
+    let rafScheduled = false;
+    function scheduleDraw() {
+      if (rafScheduled) return;
+      rafScheduled = true;
+      requestAnimationFrame(() => {
+        rafScheduled = false;
+        drawScene();
+      });
+    }
+
+    // Wire input events to schedule draws
+    [petalsInput, radiusInput, curvatureInput, cpScaleInput, segModeSelect, segmentsInput, colorInput, debugInput].forEach(el => {
+      el.addEventListener('input', scheduleDraw);
+    });
+
+    // Initial render
+    resizeCanvas();
+    drawScene();
+
+  </script>
+</body>
+</html>

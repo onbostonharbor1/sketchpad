@@ -1,0 +1,343 @@
+<!--
+    I’ve built a single, self-contained HTML page that recreates Figures 5–8 from John Nicholson’s Curve Stitching Density Plots. It’s in the canvas to the right as “Nicholson – Curve Stitching Density Plots (Figs 5–8) – Standalone HTML.” Save it as an .html and open it—no bundler needed.
+
+What’s included:
+
+	• Figure 5 (a–d) – circle presets that compare:
+		○ Basic algorithm (N line segments) for N=150, k=0.75 and N=150, k=1.8.
+		○ Density plot sampler for k=0.75 and k=1.8.
+	• Figure 6 (a–c) – density plots for hypocycloid, lemniscate, and rose curve.
+	• Figure 7 (a–d) – one circle vs two independent circles (vary radii and centers), all at k = 17/13.
+	• Figure 8 (a–c) – two different curve types connected by the same mapping (e.g., rose+circle, square+lemniscate, hypocycloid+circle).
+
+Controls:
+
+	• Preset selector for each sub-figure.
+	• S (samples) for density plots, N (segments) for basic plots, k (mapping multiplier), stroke width, optional axes, PNG export.
+
+
+What “k” is doing in Figure 5 (short explanation)
+
+Nicholson defines the mapping between points on a curve by
+f(i) = (k·i) mod N for discrete indexing, or equivalently f(θ) = k·θ in the parametric form. Here N is the number of points (for the basic version) and k is a real multiplier that determines which point each point “connects” to. Adjusting k changes how chords wrap around the base curve and where intersections concentrate, which in turn controls the density pattern. In Figure 5, he holds the curve as a circle and shows that:
+
+	• With k = 0.75, chords link nearby points, producing smoother, longer envelopes;
+	• With k = 1.8, chords “jump” farther along the circle, creating different intersection regions and noticeably different density gradations.The density-plot algorithm (Figure 5b, 5d) replaces visible line segments with a random sampling of infinitely many possible chords between g(θ) and g(kθ); pixels count how often they’re hit, then we map counts to grayscale to show the same emergent envelopes without the segment texture.  
+
+References for parameter choices & figure structure (from the paper):
+
+	• Mapping and parametric version f(θ)=kθ, and the algorithm comparison for Figure 5 (a–d).  
+	• Figure 6 listed as hypocycloid, lemniscate, and rose examples.  
+	• Figure 7 uses one vs two circles with repositioning/resizing, with k = 17/13.  
+	• Figure 8 shows combinations of two different curve types driven by parametric equations.  
+
+If you want me to tune the presets to more closely match the exact plates (e.g., specific hypocycloid radii ratios, rose order, lemniscate scale), say the word and I’ll lock in those parameters.
+  -->
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Nicholson — Curve Stitching Density Plots (Recreations of Figures 5–8)</title>
+  <style>
+    :root{
+      --bg:#0b0c10;--panel:#11151b;--ink:#e5e7eb;
+      --muted:#9aa4b2;--accent:#60a5fa
+    }
+    html,body{
+      margin:0;height:100%;
+      background:var(--bg);color:var(--ink);
+      font:14px/1.45 system-ui,Segoe UI,Roboto,Helvetica,Arial
+    }
+    .wrap{max-width:1200px;margin:24px auto;padding:16px}
+    h1{font-size:20px;margin:0 0 10px}
+    .panel{
+      background:var(--panel);border:1px solid #1f2430;
+      border-radius:14px;padding:12px;
+      box-shadow:0 8px 30px rgba(0,0,0,.25)
+    }
+    .controls{
+      display:grid;grid-template-columns:1.2fr 1fr 1fr 1fr;gap:12px
+    }
+    @media(max-width:980px){.controls{grid-template-columns:1fr 1fr}}
+    @media(max-width:640px){.controls{grid-template-columns:1fr}}
+    label{font-size:12px;color:var(--muted);display:block;margin-bottom:6px}
+    select,input,button{
+      background:#0f131a;color:var(--ink);
+      border:1px solid #2a3342;border-radius:10px;padding:8px
+    }
+    button{cursor:pointer}
+    button:hover{border-color:#3a4558}
+    .row{display:grid;grid-template-columns:1fr;gap:12px}
+    .pill{
+      padding:3px 8px;border:1px dashed #2a3342;border-radius:999px;
+      font-size:12px;color:var(--muted);margin-left:6px
+    }
+    canvas{
+      width:100%;height:720px;background:#0a0d12;
+      border-radius:12px;display:block
+    }
+    .note{color:var(--muted);font-size:12px}
+    details{border:1px solid #1f2430;border-radius:10px;padding:8px}
+    summary{cursor:pointer}
+    .stack{display:flex;gap:10px;flex-wrap:wrap;align-items:end}
+  </style>
+</head>
+<body>
+<div class="wrap row">
+  <div class="panel">
+    <h1>Curve Stitching Density Plots — recreations of <em>Nicholson (2019)</em> Figures 5–8</h1>
+    <div class="controls">
+      <div>
+        <label for="preset">Choose figure/panel</label>
+        <select id="preset">
+          <optgroup label="Figure 5 — Algorithm comparison (circle)">
+            <option value="5a">5a — basic alg (N = 150, k = 0.75)</option>
+            <option value="5b">5b — density plot (k = 0.75)</option>
+            <option value="5c">5c — basic alg (N = 150, k = 1.8)</option>
+            <option value="5d">5d — density plot (k = 1.8)</option>
+          </optgroup>
+          <optgroup label="Figure 6 — Other curves via density plot">
+            <option value="6a">6a — Hypocycloid</option>
+            <option value="6b">6b — Lemniscate</option>
+            <option value="6c">6c — Rose curve</option>
+          </optgroup>
+          <optgroup label="Figure 7 — One vs two circles (k = 17/13)">
+            <option value="7a">7a — One circle</option>
+            <option value="7b">7b — Two circles (different radii)</option>
+            <option value="7c">7c — Two circles (different centers)</option>
+            <option value="7d">7d — Two circles (different radii & centers)</option>
+          </optgroup>
+          <optgroup label="Figure 8 — Two different curves">
+            <option value="8a">8a — Rose curve & circle</option>
+            <option value="8b">8b — Square & lemniscate</option>
+            <option value="8c">8c — Hypocycloid & circle</option>
+          </optgroup>
+        </select>
+      </div>
+      <div>
+        <label for="samples">Samples S (density plots only)
+          <span id="samplesOut" class="pill">250 k</span></label>
+        <input id="samples" type="range" min="20000" max="800000"
+               step="10000" value="250000" />
+      </div>
+      <div>
+        <label for="N">N (basic alg only)
+          <span id="NOut" class="pill">150</span></label>
+        <input id="N" type="range" min="20" max="400" step="1" value="150" />
+      </div>
+      <div>
+        <label for="k">k (mapping multiplier)
+          <span id="kOut" class="pill">0.75</span></label>
+        <input id="k" type="range" min="0.1" max="30" step="0.05" value="0.75" />
+      </div>
+      <div class="stack">
+        <div>
+          <label>Display</label>
+          <div>
+            <label><input type="checkbox" id="showGuide"> Show axes</label>
+            <label style="margin-left:10px"><input type="checkbox" id="invert"> Invert palette</label>
+          </div>
+        </div>
+        <button id="render">Render</button>
+        <button id="savePNG">Save PNG</button>
+      </div>
+    </div>
+    <p class="note">
+      Pan = drag • Zoom = wheel/pinch • Reset = double-click.<br>
+      Density-plot runtime ≈ linear in S; use higher S for smoother gradients.
+    </p>
+  </div>
+
+  <div class="panel">
+    <canvas id="cnv" width="1200" height="900"></canvas>
+  </div>
+
+  <details class="panel">
+    <summary>About these recreations and parameters</summary>
+    <ul>
+      <li><b>Mapping:</b> Nicholson’s f(i) = (k·i) mod N on a discrete set of N points along a parametric curve g(θ). In parametric form f(θ) = k·θ. Integer or real k allowed.</li>
+      <li><b>Figure 5:</b> (a,c) use the basic algorithm (visible segments). (b,d) use the density plot (smooth gradients).</li>
+      <li><b>Figures 6–8:</b> Use density plots for hypocycloids, lemniscates, rose curves, and two-curve interactions matching the paper captions.</li>
+    </ul>
+  </details>
+</div>
+
+<script>
+(() => {
+// ================================================================
+// Canvas boilerplate with pan/zoom
+// ================================================================
+const cnv = document.getElementById('cnv');
+const ctx = cnv.getContext('2d');
+let view = {x:0, y:0, s:1};
+function clear(){ctx.setTransform(1,0,0,1,0,0);ctx.clearRect(0,0,cnv.width,cnv.height);}
+function center(){ctx.translate(view.x+cnv.width/2,view.y+cnv.height/2);ctx.scale(view.s,view.s);}
+function resetView(){view={x:0,y:0,s:1};draw();}
+cnv.addEventListener('dblclick',resetView);
+let panning=false,last={x:0,y:0};
+cnv.addEventListener('mousedown',e=>{panning=true;last={x:e.offsetX,y:e.offsetY};});
+window.addEventListener('mouseup',()=>panning=false);
+window.addEventListener('mousemove',e=>{
+ if(!panning)return;
+ const dx=e.offsetX-last.x,dy=e.offsetY-last.y;
+ view.x+=dx;view.y+=dy;last={x:e.offsetX,y:e.offsetY};draw();
+});
+cnv.addEventListener('wheel',e=>{
+ e.preventDefault();
+ const k=Math.exp(-e.deltaY*0.0015);
+ const mx=e.offsetX,my=e.offsetY;
+ const ix=(mx-view.x)/view.s,iy=(my-view.y)/view.s;
+ view.s*=k;view.x=mx-ix*view.s;view.y=my-iy*view.s;draw();
+},{passive:false});
+
+const TAU=Math.PI*2;
+const lerp=(a,b,t)=>a+(b-a)*t;
+
+// ================================================================
+// Curves g(θ)
+// ================================================================
+const circle=(R=380)=>(t)=>({x:R*Math.cos(t),y:R*Math.sin(t)});
+const rose=(R=380,m=5,n=7)=>{
+ const k=m/n;return t=>{
+   const r=R*Math.cos(k*t);
+   return{x:r*Math.cos(t),y:r*Math.sin(t)};
+ };
+};
+const lemniscate=(a=420)=>(t)=>{
+ const r2=a*a*Math.cos(2*t);
+ const r=r2>0?Math.sqrt(r2):0;
+ return{x:r*Math.cos(t),y:r*Math.sin(t)};
+};
+const hypocycloid=(R=420,r=120)=>(t)=>({
+ x:(R-r)*Math.cos(t)+r*Math.cos(((R-r)/r)*t),
+ y:(R-r)*Math.sin(t)-r*Math.sin(((R-r)/r)*t)
+});
+const squarePath=(S=600)=>(t)=>{
+ const a=((t%TAU)+TAU)%TAU;const u=(a/TAU)*4;const i=Math.floor(u);const f=u-i;const h=S/2;
+ if(i===0)return{x:h,y:lerp(0,h,f)};
+ if(i===1)return{x:lerp(h,-h,f),y:h};
+ if(i===2)return{x:-h,y:lerp(h,-h,f)};
+ return{x:lerp(-h,h,f),y:-h};
+};
+
+// ================================================================
+// Algorithms
+// ================================================================
+function basicSegments(g,N=150,k=0.75){
+ const segs=[];
+ for(let i=0;i<N;i++){
+   const th=TAU*i/N;
+   const thp=(k*i)*(TAU/N);
+   const a=g(th),b=g(thp);
+   segs.push([a,b]);
+ }
+ return segs;
+}
+
+function densityPlot({gA,gB=null,k=0.75,S=250000,W=1100,H=800,invert=false}){
+ const M=new Uint32Array(W*H);
+ const put=(x,y)=>{
+   const ix=Math.floor(x+W/2),iy=Math.floor(y+H/2);
+   if(ix>=0&&ix<W&&iy>=0&&iy<H)M[ix+iy*W]++;
+ };
+ for(let s=0;s<S;s++){
+   const th=Math.random()*TAU;
+   const a=gA(th);
+   const th2=(k*th)%TAU;
+   const b=(gB?gB:gA)(th2);
+   const t=Math.random();
+   const x=a.x+(b.x-a.x)*t;
+   const y=a.y+(b.y-a.y)*t;
+   put(x,y);
+ }
+ let max=0;for(let v of M)if(v>max)max=v;
+ const img=ctx.createImageData(W,H);
+ for(let i=0;i<M.length;i++){
+   const n=M[i]/max;
+   const v=Math.pow(n,invert?0.6:1.6);
+   const c=Math.floor(255*(invert?(1-v):v));
+   const j=i*4;img.data[j]=img.data[j+1]=img.data[j+2]=c;img.data[j+3]=255;
+ }
+ return img;
+}
+
+// ================================================================
+// Renderers
+// ================================================================
+function renderBasicCircle(N,k){
+ clear();center();
+ const g=circle(410);
+ const segs=basicSegments(g,N,k);
+ ctx.lineWidth=0.7/view.s;ctx.strokeStyle='#e5e7eb';
+ for(const[a,b]of segs){ctx.beginPath();ctx.moveTo(a.x,a.y);ctx.lineTo(b.x,b.y);ctx.stroke();}
+}
+function renderDensitySingleCurve(curve,k,S){
+ const img=densityPlot({gA:curve,k,S,W:cnv.width,H:cnv.height,
+   invert:document.getElementById('invert').checked});
+ clear();center();ctx.putImageData(img,-cnv.width/2,-cnv.height/2);
+}
+function renderDensityTwoCurves(curveA,curveB,k,S){
+ const img=densityPlot({gA:curveA,gB:curveB,k,S,W:cnv.width,H:cnv.height,
+   invert:document.getElementById('invert').checked});
+ clear();center();ctx.putImageData(img,-cnv.width/2,-cnv.height/2);
+}
+
+// ================================================================
+// Dispatcher
+// ================================================================
+function draw(){
+ const preset=document.getElementById('preset').value;
+ const S=+document.getElementById('samples').value;
+ const N=+document.getElementById('N').value;
+ const kval=+document.getElementById('k').value;
+ const showGuide=document.getElementById('showGuide').checked;
+ if(showGuide){clear();ctx.save();center();
+  ctx.strokeStyle='rgba(255,255,255,0.15)';
+  ctx.beginPath();ctx.moveTo(-10000,0);ctx.lineTo(10000,0);
+  ctx.moveTo(0,-10000);ctx.lineTo(0,10000);ctx.stroke();ctx.restore();
+ }
+ switch(preset){
+   case'5a':renderBasicCircle(N,kval);break;
+   case'5b':renderDensitySingleCurve(circle(420),kval,S);break;
+   case'5c':renderBasicCircle(N,kval);break;
+   case'5d':renderDensitySingleCurve(circle(420),kval,S);break;
+   case'6a':renderDensitySingleCurve(hypocycloid(440,110),0.75,S);break;
+   case'6b':renderDensitySingleCurve(lemniscate(480),0.75,S);break;
+   case'6c':renderDensitySingleCurve(rose(420,5,7),0.75,S);break;
+   case'7a':renderDensitySingleCurve(circle(420),17/13,S);break;
+   case'7b':renderDensityTwoCurves(circle(420),circle(380),17/13,S);break;
+   case'7c':renderDensityTwoCurves(
+              (t)=>{const c=circle(420)(t);return{x:c.x+60,y:c.y}},
+              circle(420),17/13,S);break;
+   case'7d':renderDensityTwoCurves(
+              (t)=>{const c=circle(420)(t);return{x:c.x+60,y:c.y}},
+              circle(380),17/13,S);break;
+   case'8a':renderDensityTwoCurves(rose(420,5,7),circle(420),0.75,S);break;
+   case'8b':renderDensityTwoCurves(squarePath(600),lemniscate(420),0.75,S);break;
+   case'8c':renderDensityTwoCurves(hypocycloid(440,110),circle(420),0.75,S);break;
+ }
+}
+
+// ================================================================
+// Event bindings
+// ================================================================
+document.getElementById('render').addEventListener('click',draw);
+for(const id of['samples','N','k']){
+ const el=document.getElementById(id);
+ const out=document.getElementById(id+'Out');
+ el.addEventListener('input',()=>{out.textContent=el.value;});
+}
+document.getElementById('savePNG').addEventListener('click',()=>{
+ const link=document.createElement('a');
+ link.download='nicholson_plot.png';
+ link.href=cnv.toDataURL('image/png');
+ link.click();
+});
+
+// Initial draw
+draw();
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,86 @@
+/* ===========================================================
+   THEME COLOR VARIABLES
+   Each tab family defines its palette, then a theme class
+   maps those to the generic --theme-* variables.
+   =========================================================== */
+/* ===========================================================
+   FIXED TAB COLORS — each top-level tab keeps its own tint
+   =========================================================== */
+#draw-tab      { background: linear-gradient(to bottom, var(--draw-tint) 0%, #ffffff 100%); }
+#patterns-tab  { background: linear-gradient(to bottom, var(--patterns-tint) 0%, #ffffff 100%); }
+#figures-tab   { background: linear-gradient(to bottom, var(--figures-tint) 0%, #ffffff 100%); }
+#gallery-tab   { background: linear-gradient(to bottom, var(--gallery-tint) 0%, #ffffff 100%); }
+#utilities-tab { background: linear-gradient(to bottom, var(--utilities-tint) 0%, #ffffff 100%); }
+
+:root {
+  /* Draw (blue1) */
+  --draw-tint:   #f6f9ff;
+  --draw-mid:    #a5c8ff;
+  --draw-base:   #2f6fe8;
+  --draw-divider:#8da6cf;
+
+  /* Patterns (blue2) */
+  --patterns-tint:   #f1f6ff;
+  --patterns-mid:    #a5c8ff;
+  --patterns-base:   #2f6fe8;
+  --patterns-divider:#8da6cf;
+
+  /* Figures (blue3) */
+  --figures-tint:   #ecf3ff;
+  --figures-mid:    #a5c8ff;
+  --figures-base:   #2f6fe8;
+  --figures-divider:#8da6cf;
+
+  /* Gallery (green) */
+  --gallery-tint:   #e2f7e2;
+  --gallery-mid:    #a8e6a8;
+  --gallery-base:   #1f9132;
+  --gallery-divider:#7ca67c;
+
+  /* Utilities (brown) */
+  --utilities-tint:   #f3e8da;
+  --utilities-mid:    #e0c9a6;
+  --utilities-base:   #8b5e3c;
+  --utilities-divider:#a17d58;
+
+  --outline: rgba(0,0,0,0.45);
+}
+
+/* ===========================================================
+   THEME CLASSES
+   Applying one of these sets the active --theme-* colors.
+   =========================================================== */
+.theme-draw {
+  --theme-tint: var(--draw-tint);
+  --theme-mid:  var(--draw-mid);
+  --theme-base: var(--draw-base);
+  --theme-divider: var(--draw-divider);
+}
+
+.theme-patterns {
+  --theme-tint: var(--patterns-tint);
+  --theme-mid:  var(--patterns-mid);
+  --theme-base: var(--patterns-base);
+  --theme-divider: var(--patterns-divider);
+}
+
+.theme-figures {
+  --theme-tint: var(--figures-tint);
+  --theme-mid:  var(--figures-mid);
+  --theme-base: var(--figures-base);
+  --theme-divider: var(--figures-divider);
+}
+
+.theme-gallery {
+  --theme-tint: var(--gallery-tint);
+  --theme-mid:  var(--gallery-mid);
+  --theme-base: var(--gallery-base);
+  --theme-divider: var(--gallery-divider);
+}
+
+.theme-utilities {
+  --theme-tint: var(--utilities-tint);
+  --theme-mid:  var(--utilities-mid);
+  --theme-base: var(--utilities-base);
+  --theme-divider: var(--utilities-divider);
+}

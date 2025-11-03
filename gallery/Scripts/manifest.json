@@ -1,0 +1,7 @@
+[ 
+      { "filename": "fig1",        "path": "fig1.js",        "title": "Four Touches" } 
+    , { "filename": "ellipseDemo", "path": "ellipseDemo.js", "title": "Ellipse Demo"} 
+    , { "filename": "fig2",        "path": "fig2.js",        "title": "Corner to Midpoint"} 
+    , { "filename": "fig3",        "path": "fig3.js",        "title": "Overlapping Corners" } 
+    , { "filename": "fig4",        "path": "fig4.js",        "title": "Four Inverse Stars" } 
+] 

@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Curve Stitch — Bow-Tie Ellipse Weave</title>
+<style>
+  :root {
+    --bg: #0f0f12;
+    --panel: #15151b;
+    --ink: #e6e6f0;
+    --accent: #a855f7; /* purple */
+    --outline: #ef4444; /* red */
+  }
+  html, body { height: 100%; }
+  body {
+    margin: 0; background: var(--bg); color: var(--ink);
+    font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, Apple Color Emoji, Segoe UI Emoji;
+    display: grid; grid-template-columns: 320px 1fr; gap: 0;
+  }
+  aside {
+    background: var(--panel); padding: 18px; box-shadow: inset -1px 0 0 #222;
+    display: flex; flex-direction: column; gap: 14px;
+  }
+  h1 { font-size: 18px; margin: 0 0 8px; }
+  fieldset { border: 1px solid #2a2a34; border-radius: 10px; padding: 10px 12px; }
+  legend { padding: 0 6px; color: #bbb; }
+  label { display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 10px; margin: 6px 0; }
+  input[type="range"] { width: 160px; }
+  .row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  button {
+    background: #2d2d3a; border: 1px solid #3a3a48; color: var(--ink);
+    padding: 10px 12px; border-radius: 10px; cursor: pointer;
+  }
+  button:hover { background: #353545; }
+  #canvas { width: 100%; height: 100vh; display: block; }
+  footer { font-size: 12px; color: #9aa; }
+  .small { font-size: 12px; color:#9aa; text-align:center; }
+</style>
+</head>
+<body>
+  <aside>
+    <h1>Curve Stitch — Bow-Tie Ellipse Weave</h1>
+    <fieldset>
+      <legend>Geometry</legend>
+      <label>Width (a*2)<input id="w" type="range" min="100" max="900" value="520" step="2"></label>
+      <label>Height (b*2)<input id="h" type="range" min="100" max="900" value="820" step="2"></label>
+      <label>Rotation A (°)<input id="rotA" type="range" min="-90" max="90" value="45" step="1"></label>
+      <label>Rotation B (°)<input id="rotB" type="range" min="-90" max="90" value="-45" step="1"></label>
+      <label>Center X<input id="cx" type="range" min="-200" max="200" value="0" step="1"></label>
+      <label>Center Y<input id="cy" type="range" min="-200" max="200" value="0" step="1"></label>
+    </fieldset>
+    <fieldset>
+      <legend>Stitching</legend>
+      <label>Points per ellipse<input id="N" type="range" min="40" max="600" value="220" step="2"></label>
+      <label>Chord offset (k)<input id="k" type="range" min="1" max="80" value="22" step="1"></label>
+      <label>Bundles opacity<input id="alpha" type="range" min="0.05" max="1" value="0.5" step="0.05"></label>
+      <label>Line width<input id="lw" type="range" min="0.3" max="3" value="1" step="0.1"></label>
+    </fieldset>
+    <fieldset>
+      <legend>Colors</legend>
+      <div class="row">
+        <label>Strings<input id="colStrings" type="color" value="#6B46C1"></label>
+        <label>Outline<input id="colOutline" type="color" value="#EF4444"></label>
+      </div>
+      <label>Outline width<input id="olw" type="range" min="1" max="8" value="4" step="0.5"></label>
+    </fieldset>
+    <div class="row">
+      <button id="reset">Reset View</button>
+      <button id="save">Save PNG</button>
+    </div>
+    <footer>
+      <p class="small">Tip: tweak width/height and k to morph the weave. The default matches the sample image closely.</p>
+    </footer>
+  </aside>
+  <canvas id="canvas"></canvas>
+
+<script>
+const canvas = document.getElementById('canvas');
+const ctx = canvas.getContext('2d');
+
+function fitCanvas() {
+  const dpr = Math.max(1, window.devicePixelRatio || 1);
+  canvas.width = Math.floor(canvas.clientWidth * dpr);
+  canvas.height = Math.floor(canvas.clientHeight * dpr);
+  ctx.setTransform(dpr,0,0,dpr,0,0); // draw in CSS pixels
+}
+window.addEventListener('resize', () => { fitCanvas(); draw(); });
+fitCanvas();
+
+// Utility: ellipse point set
+function ellipsePoints(w, h, cx, cy, rotDeg, N) {
+  const a = w/2, b = h/2, rot = rotDeg * Math.PI/180;
+  const cosR = Math.cos(rot), sinR = Math.sin(rot);
+  const pts = new Array(N);
+  for (let i=0;i<N;i++) {
+    const t = i * 2*Math.PI / N;
+    const x0 = a*Math.cos(t), y0 = b*Math.sin(t);
+    const xr = x0*cosR - y0*sinR;
+    const yr = x0*sinR + y0*cosR;
+    pts[i] = [cx + xr, cy + yr];
+  }
+  return pts;
+}
+
+// Draw outline of an ellipse
+function drawEllipseOutline(w,h,cx,cy,rotDeg,color,lw) {
+  const a=w/2, b=h/2, rot = rotDeg*Math.PI/180;
+  ctx.save();
+  ctx.translate(cx,cy);
+  ctx.rotate(rot);
+  ctx.beginPath();
+  // High-res ellipse via native method
+  if (ctx.ellipse) {
+    ctx.ellipse(0,0,a,b,0,0,Math.PI*2);
+  } else {
+    // fallback parametric
+    const N=512;
+    for(let i=0;i<=N;i++){
+      const t = i*2*Math.PI/N;
+      const x=a*Math.cos(t), y=b*Math.sin(t);
+      if(i===0) ctx.moveTo(x,y); else ctx.lineTo(x,y);
+    }
+  }
+  ctx.lineWidth = lw;
+  ctx.strokeStyle = color;
+  ctx.stroke();
+  ctx.restore();
+}
+
+// Stitch between points with a fixed offset k (mod N)
+function stitchOffset(pts, k, color, lw, alpha=0.5) {
+  const N = pts.length;
+  ctx.globalAlpha = alpha;
+  ctx.strokeStyle = color;
+  ctx.lineWidth = lw;
+  ctx.beginPath();
+  for (let i=0;i<N;i++) {
+    const j = (i + k) % N;
+    ctx.moveTo(pts[i][0], pts[i][1]);
+    ctx.lineTo(pts[j][0], pts[j][1]);
+  }
+  ctx.stroke();
+  ctx.globalAlpha = 1;
+}
+
+// Combine two ellipses: cross-weave look
+function drawWeave() {
+  const w = +wInp.value, h = +hInp.value;
+  const rotA = +rotAInp.value, rotB = +rotBInp.value;
+  const N = +NInp.value, k = +kInp.value;
+  const cx = canvas.width / (window.devicePixelRatio||1) / 2 + (+cxInp.value);
+  const cy = canvas.height / (window.devicePixelRatio||1) / 2 + (+cyInp.value);
+  const colorStrings = colStrings.value;
+  const colorOutline = colOutline.value;
+  const lw = +lwInp.value, olw = +olwInp.value;
+  const alpha = +alphaInp.value;
+
+  ctx.clearRect(0,0,canvas.width, canvas.height);
+
+  // Points on two rotated ellipses sharing center
+  const A = ellipsePoints(w,h,cx,cy,rotA,N);
+  const B = ellipsePoints(w,h,cx,cy,rotB,N);
+
+  // Weave style: connect points from A to offset points on B, and vice versa
+  ctx.lineCap = 'round';
+  ctx.lineJoin = 'round';
+
+  // bundle 1: A -> B with +k
+  ctx.beginPath();
+  ctx.globalAlpha = alpha;
+  ctx.strokeStyle = colorStrings;
+  ctx.lineWidth = lw;
+  for (let i=0;i<N;i++) {
+    const j = (i + k) % N;
+    ctx.moveTo(A[i][0], A[i][1]);
+    ctx.lineTo(B[j][0], B[j][1]);
+  }
+  ctx.stroke();
+
+  // bundle 2: A -> B with -k (symmetry)
+  ctx.beginPath();
+  for (let i=0;i<N;i++) {
+    const j = (i - k + N) % N;
+    ctx.moveTo(A[i][0], A[i][1]);
+    ctx.lineTo(B[j][0], B[j][1]);
+  }
+  ctx.stroke();
+  ctx.globalAlpha = 1;
+
+  // Optional intra-ellipse stitch to thicken centers
+  stitchOffset(A, k, colorStrings, lw, alpha*0.8);
+  stitchOffset(B, k, colorStrings, lw, alpha*0.8);
+
+  // Outline on top (matches sample look)
+  drawEllipseOutline(w,h,cx,cy,rotA,colorOutline,olw);
+}
+
+const wInp = document.getElementById('w');
+const hInp = document.getElementById('h');
+const rotAInp = document.getElementById('rotA');
+const rotBInp = document.getElementById('rotB');
+const NInp = document.getElementById('N');
+const kInp = document.getElementById('k');
+const cxInp = document.getElementById('cx');
+const cyInp = document.getElementById('cy');
+const lwInp = document.getElementById('lw');
+const alphaInp = document.getElementById('alpha');
+const colStrings = document.getElementById('colStrings');
+const colOutline = document.getElementById('colOutline');
+const olw = document.getElementById('olw');
+
+for (const el of [wInp,hInp,rotAInp,rotBInp,NInp,kInp,cxInp,cyInp,lwInp,alphaInp,colStrings,colOutline,olw]){
+  el.addEventListener('input', drawWeave);
+}
+
+document.getElementById('reset').addEventListener('click', ()=>{
+  cxInp.value = 0; cyInp.value = 0; drawWeave();
+});
+
+document.getElementById('save').addEventListener('click', ()=>{
+  const link = document.createElement('a');
+  link.download = 'curve_stitch_weave.png';
+  link.href = canvas.toDataURL('image/png');
+  link.click();
+});
+
+function draw(){ drawWeave(); }
+draw();
+</script>
+</body>
+</html>

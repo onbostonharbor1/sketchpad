@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Yin Yang Curve Stitching</title>
+<style>
+  body { margin: 0; display: flex; justify-content: center; align-items: center; min-height: 100vh; background-color: #f0f0f0; }
+  canvas { border: 1px solid black; }
+</style>
+</head>
+<body>
+<canvas id="yinYangCanvas"></canvas>
+
+<script>
+const canvas = document.getElementById('yinYangCanvas');
+const ctx = canvas.getContext('2d');
+
+const size = 400; // Size of the canvas and the overall yin yang symbol
+canvas.width = size;
+canvas.height = size;
+
+const centerX = size / 2;
+const centerY = size / 2;
+const radius = size * 0.4; // Radius of the main circle
+
+const numLines = 100; // Number of lines to draw for the curve stitching effect
+
+// Function to draw a circle
+function drawCircle(x, y, r, color) {
+    ctx.beginPath();
+    ctx.arc(x, y, r, 0, Math.PI * 2);
+    ctx.fillStyle = color;
+    ctx.fill();
+} 
+
+// Function to draw the curved line separating the black and white halves
+   function drawSeparatingCurve() {
+       for (let i = 0; i <= numLines; i++) {
+	   const t = i / numLines; // Parameter from 0 to 1
+
+	   // Points on the top semicircle
+	   const x1 = centerX + radius * Math.cos(Math.PI * t);
+	   const y1 = centerY - radius * Math.sin(Math.PI * t);
+	   
+	   // Points on the bottom semicircle
+	   const x2 = centerX + radius * Math.cos(Math.PI * t);
+	   const y2 = centerY + radius * Math.sin(Math.PI * t);
+	   
+	   // Points for the "S" curve
+	   const sCurveX1 = centerX - radius / 2 * Math.cos(Math.PI * t);
+	   const sCurveY1 = centerY + radius / 2 * Math.sin(Math.PI * t);
+	   
+	   const sCurveX2 = centerX + radius / 2 * Math.cos(Math.PI * t);
+	   const sCurveY2 = centerY - radius / 2 * Math.sin(Math.PI * t);
+	   
+	   ctx.beginPath();
+	   //  Draw the curve stitching lines - connect points to create
+	   // the "S" curve
+	   //  This part will involve connecting calculated points to form
+	   // the illusion of a smooth S curve through line segments
+	   // Example: connecting points on the opposing sides of the yin
+	   // yang to achieve the curve stitching effect
+	   // Adjust these connections to create the desired shape
+	   ctx.moveTo(centerX + radius * Math.cos(Math.PI * t),
+		      centerY + radius * Math.sin(Math.PI * t));
+	   ctx.lineTo(centerX - radius * Math.cos(Math.PI * t),
+		      centerY - radius * Math.sin(Math.PI * t));
+
+	   ctx.strokeStyle = "gray"; // Color of the stitching lines
+	   ctx.stroke();
+       }
+   }
+
+ctx.font = "12px Arial";
+ctx.fillStyle = "blue";
+ctx.fillText("Stitch 1", 180, 20);
+
+
+ctx.strokeStyle = "black";
+ctx.arc(centerX, centerY, radius, 0, 2*Math.PI);
+ctx.stroke();
+
+// Draw the main circle
+drawCircle(centerX, centerY, radius, 'white'); 
+
+// Draw the black half of the yin yang
+ctx.beginPath();
+
+// Left half
+ctx.arc(centerX, centerY, radius,
+	Math.PI / 2, 3 * Math.PI / 2, true); 
+
+// Upper semicircle of the black half
+ctx.arc(centerX, centerY - radius / 2,
+	radius / 2, Math.PI / 2, 3 * Math.PI / 2, false); 
+
+// Lower semicircle of the black half
+ctx.arc(centerX, centerY + radius / 2, radius / 2,
+	3 * Math.PI / 2, Math.PI / 2, false); 
+ctx.fillStyle = 'black';
+ctx.fill();
+ctx.closePath();
+
+
+// Draw the separating curved line with curve stitching (lines)
+drawSeparatingCurve();
+
+// Draw the "dots" or "eyes" of the yin yang
+// White dot
+drawCircle(centerX, centerY - radius / 2, radius * 0.15, 'black'); 
+
+// Black dot
+drawCircle(centerX, centerY + radius / 2, radius * 0.15, 'white');
+
+</script>
+</body>
+</html>

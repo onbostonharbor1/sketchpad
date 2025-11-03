@@ -1,0 +1,28 @@
+{
+  "recommendations": [
+    // --- Core development ---
+    "ms-vscode.vscode-typescript-next",
+    "dbaeumer.vscode-eslint",
+    "esbenp.prettier-vscode",
+    "ecmel.vscode-html-css",
+    "ritwickdey.liveserver",
+
+    // --- Workflow helpers ---
+    "christian-kohler.path-intellisense",
+    "formulahendry.auto-rename-tag",
+    "coenraads.bracket-pair-color-dl",
+    "eamodio.gitlens",
+    "usernamehw.errorlens",
+
+    // --- Node / web ecosystem ---
+    "christian-kohler.npm-intellisense",
+    "antfu.vite",
+    "raathigeshan.dexiejs-snippets",
+
+    // --- Personal comfort ---
+    "VSCodeEmacs.emacs",
+    "naumovs.color-highlight",
+    "pkief.material-icon-theme",
+    "Gruntfuggly.todo-tree"
+  ]
+}
