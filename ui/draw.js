@@ -320,6 +320,12 @@ function drawActiveTab() {
     const thing = entry.create(params);
     entry.draw(thing);
     console.log(`✅ Redrew ${entry.name}`);
+      // --- Display registry info in shared offcanvas ---
+//      showSharedOffcanvas(
+//	  `Draw Registry: ${entry.name}`,
+//	  JSON.stringify(entry, null, 2)
+//      );
+
   } catch (err) {
     console.error(`❌ Error redrawing ${entry.name}:`, err);
   }
@@ -404,7 +410,21 @@ function setDrawCaption() {
 function setDrawCaptionContent(entry) {
   const captionDiv = document.getElementById("caption");
   if (!captionDiv) throw new Error("setDrawCaptionContent: #caption not found");
-  captionDiv.textContent = entry.name || "(untitled)";
+    captionDiv.innerHTML = `
+            <span class="caption-title">${entry.name || "(untitled)"}</span>
+            <div class="caption-buttons">
+               <button class="btn btn-sm btn-outline-secondary">Show Script</button>
+            </div>
+       `;
+
+    const btn = captionDiv.querySelector("button");
+    btn.addEventListener("click", () => {
+	showSharedOffcanvas(
+	    `Draw Registry: ${entry.name}`,
+	    JSON.stringify(entry, null, 2)
+	);
+    });
+
 } // end setDrawCaptionContent
 
 

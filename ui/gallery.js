@@ -15,7 +15,7 @@
 // renderGalleryThumbnails(tab, category)  – load thumbnails for given tab/category
 // renderGalleryScripts()                  – list executable scripts, no thumbnails
 // showGalleryScript(entry)                – execute selected script and display output
-// setActiveGalleryItem(category, entry)   – record active gallery item in uiState
+// setActiveItem(category, entry)   – record active gallery item in uiState
 // setGalleryCategories()                  – populate Categories view for Gallery tab
 // setGallerySubtabs()                     – create or reuse subtab bar with "Categories"
 // showGalleryImage(tab, category, path)   – display selected image in #sketchpad
@@ -147,40 +147,6 @@ async function setGalleryCategories() {
 
   console.log("✅ Gallery categories displayed");
 } // end setGalleryCategories
-
-/* ------------------------------------------------------------
-   loadManifestGroup(basePath)
-   Loads all manifest.json files within a gallery subdirectory.
-
-   Arguments:
-     basePath – relative path to gallery subdir (e.g., ./gallery/Ideabook)
-
-   Returns:
-     Object mapping category → manifest array.
------------------------------------------------------------- */
-async function loadManifestGroup(basePath) {
-  try {
-    const dirs = await loadDirectoryRegistry(basePath);
-    if (!dirs) throw new Error("Missing or invalid directoryRegistry.json");
-
-    const allData = await Promise.all(
-      dirs.map(async cat => {
-        const manifest = await loadManifest(basePath, cat);
-        return { category: cat, items: manifest || [] };
-      })
-    );
-
-    const grouped = {};
-    allData.forEach(group => {
-      grouped[group.category] = group.items;
-    });
-    return grouped;
-
-  } catch (err) {
-    console.error(`Failed to load manifest group for ${basePath}:`, err);
-    return {};
-  }
-} // end loadManifestGroup
 
 
 /* ------------------------------------------------------------
@@ -485,7 +451,7 @@ async function renderGalleryScripts(scriptName = null) {
       }
 
       // --- Display selected script ---
-      setActiveGalleryItem("Scripts", entry);
+      setActiveItem("Scripts", entry);
       await showGalleryScript(entry);
       updateGalleryCaption(SCRIPTS);
       
@@ -534,7 +500,7 @@ function drawGalleryThumbnails(tab, category, manifest) {
         uiState.galleryIndex = { ideabook: 0, patterns: 0, scripts: 0 };
       uiState.galleryIndex[tab.toLowerCase()] = i;
       showGalleryImage(tab, category, path);
-      setActiveGalleryItem(category, entry);
+      setActiveItem(category, entry);
       updateGalleryCaption(tab);
     });
 
@@ -551,7 +517,7 @@ function drawGalleryThumbnails(tab, category, manifest) {
   const entry = manifest[idx] ?? manifest[0];
   if (entry?.path) {
     showGalleryImage(tab, category, entry.path);
-    setActiveGalleryItem(category, entry);
+    setActiveItem(category, entry);
   }
 
   updateGalleryCaption(tab);
@@ -782,39 +748,6 @@ async function showNextGalleryItem(tab) {
   updateGalleryCaption(tab);
 } // end showNextGalleryItem
 
-
-/* ------------------------------------------------------------
-   setActiveGalleryItem(category, entry)
-   Records the active gallery category and current item.
------------------------------------------------------------- */
-function setActiveGalleryItem(category, entry) {
-  uiState.activeCategory = category;
-  uiState.activeGalleryItem = entry;
-} // end setActiveGalleryItem
-
-
-/* ------------------------------------------------------------
-   showOffcanvas(title, text)
-   Displays text in the existing #offcanvasPanel.
-   Used for viewing script source.
------------------------------------------------------------- */
-function showOffcanvas(title, text) {
-  const panel = document.getElementById("offcanvasPanel");
-  const hdr = panel.querySelector(".offcanvas-title");
-  const body = panel.querySelector(".offcanvas-body");
-
-  hdr.textContent = title;
-
-  const pre = document.createElement("pre");
-  pre.style.whiteSpace = "pre-wrap";
-  pre.textContent = text;
-
-  body.innerHTML = "";
-  body.appendChild(pre);
-
-  const off = bootstrap.Offcanvas.getOrCreateInstance(panel);
-  off.show();
-} // end showOffcanvas
 
 function redrawActiveScript() {
   if (!window.scriptInfo || typeof window.scriptInfo.draw !== "function") return;

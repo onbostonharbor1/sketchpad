@@ -13,21 +13,17 @@
 // saveTabState(tabName)        – serialize current tab before leaving
 // window.addEventListener()    – initialize UI on page load
 
-
-
 /* ------------------------------------------------------------
    Registry of all tab div-controllers
    Each entry points to the *Divs object defined in that tab's file.
 ------------------------------------------------------------ */
 const allDivSets = {
-  draw:      drawDivs,
-  patterns:  patternsDivs,
-  figures:   figuresDivs,
-  gallery:   galleryDivs,
-  utilities: utilitiesDivs
+  draw: drawDivs,
+  patterns: patternsDivs,
+  figures: figuresDivs,
+  gallery: galleryDivs,
+  utilities: utilityDivs,
 }; // end allDivSets
-
-
 
 /* ===========================================================
    TAB STATE SAVE / RESTORE HANDLERS
@@ -44,16 +40,17 @@ const allDivSets = {
 function saveTabState(tabName) {
   switch (tabName) {
     case "draw":
-      if (typeof saveDrawState === "function") uiState.drawSavedState = saveDrawState();
+      if (typeof saveDrawState === "function")
+        uiState.drawSavedState = saveDrawState();
       break;
     case "patterns":
-      if (typeof savePatternsState === "function") uiState.patternsSavedState = savePatternsState();
+      if (typeof savePatternsState === "function")
+        uiState.patternsSavedState = savePatternsState();
       break;
     default:
       break;
   }
 } // end saveTabState
-
 
 /* ------------------------------------------------------------
    restoreTabState(tabName)
@@ -76,7 +73,10 @@ function restoreTabState(tabName) {
       }
       break;
     case "patterns":
-      if (uiState.patternsSavedState && typeof restorePatternsState === "function") {
+      if (
+        uiState.patternsSavedState &&
+        typeof restorePatternsState === "function"
+      ) {
         restorePatternsState(uiState.patternsSavedState);
         return true;
       }
@@ -87,7 +87,6 @@ function restoreTabState(tabName) {
   return false; // no prior state
 } // end restoreTabState
 
-
 /* ------------------------------------------------------------
    activateTab(tabKey)
    Clears all divs and reassigns current setter functions
@@ -97,7 +96,7 @@ function restoreTabState(tabName) {
      tabKey – string key of the tab being activated
 ------------------------------------------------------------ */
 function activateTab(tabKey) {
-    clearDivs("subtabs");
+  clearDivs("subtabs");
 
   activeDivs = allDivSets[tabKey] || {};
 
@@ -110,16 +109,15 @@ function activateTab(tabKey) {
     "theme-gallery",
     "theme-utilities"
   );
-  if (activeDivs.theme)
-    wrapper.classList.add(activeDivs.theme);
+  if (activeDivs.theme) wrapper.classList.add(activeDivs.theme);
 
   // assign local references
-  uiState.setAction    = activeDivs.action    || null;
-  uiState.setButtons   = activeDivs.buttons   || null;
-  uiState.setCaption   = activeDivs.caption   || null;
+  uiState.setAction = activeDivs.action || null;
+  uiState.setButtons = activeDivs.buttons || null;
+  uiState.setCaption = activeDivs.caption || null;
   uiState.setSketchpad = activeDivs.sketchpad || null;
-  uiState.setSubtabs   = activeDivs.subtabs   || null;
-  uiState.setText      = activeDivs.text      || null;
+  uiState.setSubtabs = activeDivs.subtabs || null;
+  uiState.setText = activeDivs.text || null;
 
   // populate only the divs listed for this tab
   if (Array.isArray(activeDivs.activeDivs)) {
@@ -144,29 +142,26 @@ function activateTab(tabKey) {
   if (!restored) {
     switch (tabKey) {
       case "draw":
-        if (typeof initDrawTab === "function") initDrawTab();
+        initDrawTab();
         break;
       case "patterns":
-        if (typeof initPatternsTab === "function") initPatternsTab();
+        initPatternsTab();
         break;
       case "figures":
-        if (typeof initFiguresTab === "function") initFiguresTab();
+        initFiguresTab();
         break;
       case "gallery":
-        if (typeof initGalleryTab === "function") initGalleryTab();
+        initGalleryTab();
         break;
       case "utilities":
-        if (typeof initUtilitiesTab === "function") initUtilitiesTab();
+        initUtilityTab();
         break;
     }
   }
 
   // update active tab
   uiState.activeTab = tabKey;
-
 } // end activateTab
-
-
 
 /* ------------------------------------------------------------
    handleTabChange(tabId)
@@ -181,11 +176,11 @@ function handleTabChange(event) {
   const tabId = event?.target?.id || event;
 
   const map = {
-    "draw-tab":      "draw",
-    "patterns-tab":  "patterns",
-    "figures-tab":   "figures",
-    "gallery-tab":   "gallery",
-    "utilities-tab": "utilities"
+    "draw-tab": "draw",
+    "patterns-tab": "patterns",
+    "figures-tab": "figures",
+    "gallery-tab": "gallery",
+    "utilities-tab": "utilities",
   };
 
   const tabKey = map[tabId];
@@ -202,6 +197,102 @@ function handleTabChange(event) {
 } // end handleTabChange
 
 /* ------------------------------------------------------------
+   setCaptionBar(targetDivId, entry, showScriptHandler)
+   Shared caption builder for Utility and Gallery tabs.
+   - targetDivId: "caption" or another container id
+   - entry: manifest entry with title, filename, path, subtab, etc.
+   - showScriptHandler: function(title, path) to handle "Show Script" click
+------------------------------------------------------------ */
+function setCaptionBar(targetDivId, entry, showScriptHandler) {
+  const el = document.getElementById(targetDivId);
+  if (!el) throw new Error(`setCaptionBar: #${targetDivId} not found`);
+
+  el.style.display = "flex";
+  el.style.justifyContent = "space-between";
+  el.style.alignItems = "center";
+  el.innerHTML = "";
+
+  if (!entry) return;
+
+  const title = document.createElement("span");
+  title.className = "caption-title";
+  title.textContent = entry.title || entry.filename || "(untitled)";
+  el.appendChild(title);
+
+  const buttonsDiv = document.createElement("div");
+  buttonsDiv.className = "caption-buttons";
+
+  const btnShow = document.createElement("button");
+  btnShow.textContent = "Show Script";
+  btnShow.addEventListener("click", () => {
+    if (typeof showScriptHandler === "function") {
+      showScriptHandler(
+        entry.title || entry.filename,
+        entry.path,
+        entry.subtab
+      );
+    }
+  });
+  buttonsDiv.appendChild(btnShow);
+
+  el.appendChild(buttonsDiv);
+} // end setCaptionBar
+
+/* ------------------------------------------------------------
+   initOffcanvasHandler()
+   Initializes the shared offcanvas panel used by Gallery
+   and Utility tabs. Creates or reuses Bootstrap instance.
+------------------------------------------------------------ */
+function initOffcanvasHandler() {
+  const panel = document.getElementById("offcanvasPanel");
+  if (!panel) {
+    console.warn("initOffcanvasHandler: #offcanvasPanel not found");
+    return;
+  }
+
+  // initialize Bootstrap offcanvas once
+  const offcanvas = bootstrap.Offcanvas.getOrCreateInstance(panel);
+
+  // close button already uses data-bs-dismiss="offcanvas"
+  // this ensures Esc key and backdrop click also work
+  panel.addEventListener("hidden.bs.offcanvas", () => {
+    console.log("Offcanvas closed");
+  });
+
+  // optional: expose global reference
+  window.sharedOffcanvas = offcanvas;
+} // end initOffcanvasHandler
+
+/* ------------------------------------------------------------
+   showSharedOffcanvas(title, text)
+   ------------------------------------------------------------
+   Displays text (e.g., script source, manifest entry, or notes)
+   inside the shared offcanvas panel. Used by multiple tabs.
+------------------------------------------------------------ */
+function showSharedOffcanvas(title, text) {
+  const panel = document.getElementById("offcanvasPanel");
+  if (!panel) throw new Error("showSharedOffcanvas: #offcanvasPanel not found");
+
+  const titleEl = panel.querySelector(".offcanvas-title");
+  const body = panel.querySelector(".offcanvas-body");
+  if (!titleEl || !body) return;
+
+  titleEl.textContent = title || "(untitled)";
+  body.innerHTML = `<pre style="white-space:pre-wrap;">${
+    text || "(empty)"
+  }</pre>`;
+
+  try {
+    const offcanvas = bootstrap.Offcanvas.getOrCreateInstance(panel);
+    offcanvas.show();
+  } catch (err) {
+    panel.classList.add("show");
+    panel.style.visibility = "visible";
+    panel.style.opacity = "1";
+  }
+} // end showSharedOffcanvas
+
+/* ------------------------------------------------------------
    Initialize UI on first load.
    Adds event listeners to main tab buttons and activates
    the Draw tab by default.
@@ -210,12 +301,12 @@ function handleTabChange(event) {
      (none)
 ------------------------------------------------------------ */
 window.addEventListener("DOMContentLoaded", () => {
-    // attach tab listeners
-    const tabButtons = document.querySelectorAll("#mainTabs .nav-link");
-    tabButtons.forEach(btn => {
-        btn.addEventListener("click", () => handleTabChange(btn.id));
-    });
+  // attach tab listeners
+  const tabButtons = document.querySelectorAll("#mainTabs .nav-link");
+  tabButtons.forEach((btn) => {
+    btn.addEventListener("click", () => handleTabChange(btn.id));
+  });
 
-    // initial state: Draw tab active
-    activateTab("draw");
+  // initial state: Draw tab active
+  activateTab("draw");
 }); // end DOMContentLoaded

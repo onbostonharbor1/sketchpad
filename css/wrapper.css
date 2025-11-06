@@ -1,50 +1,49 @@
-    body {
-      margin: 0;
-      font-family: system-ui, sans-serif;
-    }
+body {
+  margin: 0;
+  font-family: system-ui, sans-serif;
+}
 
-    #wrapper {
-      display: flex;
-      flex-direction: column;
-      height: 100vh;
-      width: 100%;
-    }
+#wrapper {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  width: 100%;
+}
 
-    /* Tabs bar at top */
-    /* === ADJUST TAB AREA BACKGROUND AND TEXT COLOR === */
+/* Tabs bar at top */
+/* === ADJUST TAB AREA BACKGROUND AND TEXT COLOR === */
 
-    /* Make the area behind the tabs white */
-    #tabs {
-	background-color: #ffffff;
-    }
+/* Make the area behind the tabs white */
+#tabs {
+  background-color: #ffffff;
+}
 
-    /* Default tab text color */
-    .nav-tabs .nav-link {
-	color: #000000;
-    }
+/* Default tab text color */
+.nav-tabs .nav-link {
+  color: #000000;
+}
 
-    /* Active tab text color (also black) */
-    .nav-tabs .nav-link.active {
-	color: #000000;
-    }
+/* Active tab text color (also black) */
+.nav-tabs .nav-link.active {
+  color: #000000;
+}
 
-
-    /* Below tabs: control + main */
-    #content {
-      flex: 1;
-      display: flex;
-      width: 100%;
-    }
-    /* Left control area */
-    #control {
-	width: 300px;
-	background-color: var(--theme-tint);
-	height: 600px;
-	display: flex;
-	flex-direction: column;
-	padding: 10px;
-	box-sizing: border-box;
-    }
+/* Below tabs: control + main */
+#content {
+  flex: 1;
+  display: flex;
+  width: 100%;
+}
+/* Left control area */
+#control {
+  width: 300px;
+  background-color: var(--theme-tint);
+  height: 600px;
+  display: flex;
+  flex-direction: column;
+  padding: 10px;
+  box-sizing: border-box;
+}
 
 #buttons {
   padding: 4px 8px;
@@ -56,28 +55,31 @@
   margin-right: 6px;
 }
 
-    #action {
-      flex: 1;
-	background-color: var(--theme-tint);
+#action {
+  flex: 1;
+  background-color: var(--theme-tint);
+  padding: 8px;
+  overflow-y: auto;
+}
+
+/* Right main area */
+#main {
+  flex: 1;
+  background: #fafafa;
+  padding: 10px;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+}
+
+#subtabs,
+#caption,
+#text,
+#sketchpad {
+  /*      margin-bottom: 10px;
       padding: 8px;
-      overflow-y: auto;
-    }
-
-    /* Right main area */
-    #main {
-      flex: 1;
-      background: #fafafa;
-      padding: 10px;
-      box-sizing: border-box;
-      display: flex;
-      flex-direction: column;
-    }
-
-    #subtabs, #caption, #text, #sketchpad {
-/*      margin-bottom: 10px; 
-      padding: 8px; 
       border: 1px solid #ccc; */
-    }
+}
 
 /* ===========================================================
    PATTERNS CAPTION BAR
@@ -98,7 +100,7 @@
 
 .caption-title {
   font-weight: bold;
-  font-size: .9rem;
+  font-size: 0.9rem;
 }
 
 .caption-buttons {
@@ -106,25 +108,31 @@
   gap: 8px;
 }
 
+/* ===========================================================
+   CAPTION BUTTONS — unified, theme-aware styling
+   =========================================================== */
 .caption-buttons button {
   padding: 2px 10px;
-  border: 1px solid var(--blue-base);
+  border: 1px solid var(--theme-base);
   border-radius: 6px;
   background-color: #fff;
+  color: #000;
   cursor: pointer;
   font-size: 0.9em;
+  transition: background-color 0.2s ease, color 0.2s ease,
+    border-color 0.2s ease;
 }
 
 .caption-buttons button:hover {
-  background-color: var(--theme-tint);
+  color: #fff;
+  background-color: var(--theme-base);
+  border-color: var(--theme-base);
 }
 
-
-
-    #sketchpad {
-      flex: 1;
-      background: white;
-    }
+#sketchpad {
+  flex: 1;
+  background: white;
+}
 
 /* ===========================================================
    DRAW PARAMETERS PANEL STYLING
@@ -135,7 +143,7 @@
   display: flex;
   flex-direction: column;
   gap: 4px;
-  color: #222;  /* softer dark text */
+  color: #222; /* softer dark text */
 }
 
 .draw-controls label {
@@ -158,6 +166,18 @@
   color: #000;
   font-weight: 600;
   margin-left: 6px;
+}
+
+#text pre {
+  font-size: 0.75rem;
+  line-height: 1.3;
+}
+
+/* smaller validation message text */
+#validationResults {
+  font-size: 0.8rem;
+  line-height: 1.2;
+  margin-bottom: 8px;
 }
 
 /* ===========================================================
@@ -189,7 +209,7 @@
 
 .ctrl-range-values {
   display: flex;
-  justify-content: space-between;  /* ← forces left, middle, right on one row */
+  justify-content: space-between; /* ← forces left, middle, right on one row */
   align-items: center;
   width: 100%;
   font-size: 0.7em;
@@ -215,14 +235,21 @@
    Align range labels vertically with slider (not value row)
    =========================================================== */
 .ctrl-field:has(.ctrl-range-wrapper) {
-  align-items: end;       /* bottom-align within the row */
+  align-items: end; /* bottom-align within the row */
 }
 
 .ctrl-field:has(.ctrl-range-wrapper) label {
-  align-self: center;     /* centers the label with the slider */
-  padding-top: 14px;      /* fine-tune vertical offset */
+  align-self: center; /* centers the label with the slider */
+  padding-top: 14px; /* fine-tune vertical offset */
 }
-
+/* Force visible background on text parameter controls */
+input.ctrl-text[type="text"] {
+  background-color: #ffffff !important; /* white or pick your color */
+  color: #000000 !important;
+  border: 1px solid #888 !important;
+  border-radius: 4px;
+  padding: 2px 4px;
+}
 
 /* ===========================================================
    THUMBNAIL PANEL (Patterns → Action)
@@ -292,7 +319,7 @@
 .draw-controls .ctrl-range-values span,
 #action .draw-controls .ctrl-range-values span {
   font-size: 0.9em !important;
-  line-height: 1.0;
+  line-height: 1;
 }
 
 /* emphasize dropdown (select) controls slightly */
@@ -302,17 +329,12 @@
   border-radius: 4px;
   background-color: #fff;
   padding: 2px 4px;
-  box-shadow: 0 0 2px rgba(0,0,0,0.08);
+  box-shadow: 0 0 2px rgba(0, 0, 0, 0.08);
 }
 
 /* Correct checkbox alignment in control column */
 .ctrl-field input[type="checkbox"] {
-  width: auto !important;         /* stop it from stretching */
+  width: auto !important; /* stop it from stretching */
   justify-self: start !important; /* align to left edge */
   margin-left: 0 !important;
 }
-
-
-
-
-

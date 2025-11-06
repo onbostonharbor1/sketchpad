@@ -1,10 +1,10 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <title>Sketchpad Layout</title>
+  <head>
+    <meta charset="UTF-8" />
+    <title>Sketchpad Layout</title>
 
-  <!-- ===========================================================
+    <!-- ===========================================================
        DIV STRUCTURE
        -----------------------------------------------------------
        wrapper
@@ -21,7 +21,7 @@
               └── offcanvasPanel
                     ├── offcanvas-header
                     └── offcanvas=body
-  ============================================================ 
+  ============================================================
   Generated / Dynamic Div Structure (Draw Tab)
   ------------------------------------------------------------
    These divs are dynamically populated by draw.js and exist
@@ -88,96 +88,145 @@
    These nodes are recreated or cleared as subtabs change.
    ============================================================ -->
 
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
-<link rel="stylesheet" href="./css/wrapper.css">
-<link rel="stylesheet" href="./css/themes.css">
-<link rel="stylesheet" href="./css/tabs.css">
-<link rel="stylesheet" href="./css/categories.css">
-<link rel="stylesheet" href="./css/offcanvas.css">
-</head>
-<body>
+    <link
+      href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="./css/wrapper.css" />
+    <link rel="stylesheet" href="./css/themes.css" />
+    <link rel="stylesheet" href="./css/tabs.css" />
+    <link rel="stylesheet" href="./css/categories.css" />
+    <link rel="stylesheet" href="./css/offcanvas.css" />
+  </head>
+  <body>
+    <div id="wrapper">
+      <div id="tabs">
+        <ul class="nav nav-tabs" id="mainTabs" role="tablist">
+          <li class="nav-item" role="presentation">
+            <button
+              class="nav-link active"
+              id="draw-tab"
+              data-bs-toggle="tab"
+              data-bs-target="#draw"
+              type="button"
+              role="tab"
+            >
+              Draw
+            </button>
+          </li>
+          <li class="nav-item" role="presentation">
+            <button
+              class="nav-link"
+              id="patterns-tab"
+              data-bs-toggle="tab"
+              data-bs-target="#patterns"
+              type="button"
+              role="tab"
+            >
+              Patterns
+            </button>
+          </li>
+          <li class="nav-item" role="presentation">
+            <button
+              class="nav-link"
+              id="figures-tab"
+              data-bs-toggle="tab"
+              data-bs-target="#figures"
+              type="button"
+              role="tab"
+            >
+              Figures
+            </button>
+          </li>
+          <li class="nav-item" role="presentation">
+            <button
+              class="nav-link"
+              id="gallery-tab"
+              data-bs-toggle="tab"
+              data-bs-target="#gallery"
+              type="button"
+              role="tab"
+            >
+              Gallery
+            </button>
+          </li>
+          <li class="nav-item" role="presentation">
+            <button
+              class="nav-link"
+              id="utilities-tab"
+              data-bs-toggle="tab"
+              data-bs-target="#utilities"
+              type="button"
+              role="tab"
+            >
+              Utilities
+            </button>
+          </li>
+        </ul>
+      </div>
 
-  <div id="wrapper">
+      <div id="content">
+        <div id="control">
+          <div id="buttons">TBD</div>
+          <div id="action">TBD</div>
+        </div>
 
-    <div id="tabs">
-      <ul class="nav nav-tabs" id="mainTabs" role="tablist">
-        <li class="nav-item" role="presentation">
-          <button class="nav-link active" id="draw-tab" data-bs-toggle="tab" data-bs-target="#draw" type="button" role="tab">Draw</button>
-        </li>
-        <li class="nav-item" role="presentation">
-          <button class="nav-link" id="patterns-tab" data-bs-toggle="tab" data-bs-target="#patterns" type="button" role="tab">Patterns</button>
-        </li>
-        <li class="nav-item" role="presentation">
-          <button class="nav-link" id="figures-tab" data-bs-toggle="tab" data-bs-target="#figures" type="button" role="tab">Figures</button>
-        </li>
-        <li class="nav-item" role="presentation">
-          <button class="nav-link" id="gallery-tab" data-bs-toggle="tab" data-bs-target="#gallery" type="button" role="tab">Gallery</button>
-        </li>
-        <li class="nav-item" role="presentation">
-          <button class="nav-link" id="utilities-tab" data-bs-toggle="tab" data-bs-target="#utilities" type="button" role="tab">Utilities</button>
-        </li>
-      </ul>
+        <div id="main">
+          <div id="subtabs">TBD</div>
+          <div id="caption">TBD</div>
+          <div id="text">TBD</div>
+          <div id="sketchpad">TBD</div>
+        </div>
+
+        <div id="offcanvasPanel" class="offcanvas offcanvas-end" tabindex="-1">
+          <div class="offcanvas-header">
+            <h6 class="offcanvas-title">TBD</h6>
+            <button
+              type="button"
+              class="btn-close"
+              data-bs-dismiss="offcanvas"
+              aria-label="Close"
+            ></button>
+          </div>
+          <div class="offcanvas-body">TBD</div>
+        </div>
+      </div>
     </div>
+    <!-- Files from the "Draw" side -->
+    <script src="./draw/drawState.js"></script>
+    <script src="./draw/drawRedefines.js"></script>
+    <script src="./draw/classes.js"></script>
+    <script src="./draw/ellipse.js"></script>
+    <script src="./draw/draw_utilities.js"></script>
+    <script src="./draw/drawRegular.js"></script>
 
-    <div id="content">
+    <!-- One drawRegistry file for each drawing routine  -->
+    <script src="./drawRegistry/regularPolygon.js"></script>
+    <script src="./drawRegistry/inverseStar.js"></script>
+    <script src="./drawRegistry/bird.js"></script>
+    <script src="./drawRegistry/boxes.js"></script>
+    <script src="./drawRegistry/ellipse.js"></script>
+    <script src="./drawRegistry/lissajous.js"></script>
+    <script src="./drawRegistry/nautilus.js"></script>
+    <script src="./drawRegistry/regularPursuit.js"></script>
 
-      <div id="control">
-        <div id="buttons">TBD</div>
-        <div id="action">TBD</div>
-      </div>
+    <!-- Object whose members are the drawRegistry files  -->
+    <script src="./drawRegistry/drawRegistry.js"></script>
 
-      <div id="main">
-        <div id="subtabs">TBD</div>
-        <div id="caption">TBD</div>
-        <div id="text">TBD</div>
-        <div id="sketchpad">TBD</div>
-      </div>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 
-      <div id="offcanvasPanel" class="offcanvas offcanvas-end" tabindex="-1">
-	<div class="offcanvas-header">
-	  <h6 class="offcanvas-title">TBD</h6>
-	  <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Close"></button>
-	</div>
-	<div class="offcanvas-body">TBD</div>
-      </div>
-    </div>
+    <!-- tab modules -->
+    <script src="./ui/uiState.js"></script>
+    <script src="./ui/parameterControls.js"></script>
+    <script src="./ui/draw.js"></script>
+    <script src="./ui/patterns.js"></script>
+    <script src="./ui/gallery.js"></script>
+    <script src="./ui/figures.js"></script>
+    <script src="./ui/utilities.js"></script>
 
-  </div>
-  <!-- Files from the "Draw" side -->
-  <script src="./draw/drawState.js"></script>
-  <script src="./draw/drawRedefines.js"></script>
-  <script src="./draw/classes.js"></script>
-  <script src="./draw/draw_utilities.js"></script>
-  <script src="./draw/drawRegular.js"></script>  
-
-  <!-- One drawRegistry file for each drawing routine  -->
-  <script src="./drawRegistry/regularPolygon.js"></script>
-  <script src="./drawRegistry/inverseStar.js"></script>
-  <script src="./drawRegistry/bird.js"></script>
-  <script src="./drawRegistry/boxes.js"></script>
-  <script src="./drawRegistry/ellipse.js"></script>
-  <script src="./drawRegistry/lissajous.js"></script>
-  <script src="./drawRegistry/nautilus.js"></script>
-  <script src="./drawRegistry/regularPursuit.js"></script>
-  
-  <!-- Object whose members are the drawRegistry files  -->
-  <script src="./drawRegistry/drawRegistry.js"></script>
-
-  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
-
-  <!-- tab modules -->
-  <script src="./ui/uiState.js"></script>
-  <script src="./ui/parameterControls.js"></script>
-  <script src="./ui/draw.js"></script>
-  <script src="./ui/patterns.js"></script>
-  <script src="./ui/gallery.js"></script>
-  <script src="./ui/figures.js"></script>
-  <script src="./ui/utilities.js"></script>
-
-  <!-- Manipulate UI and tabs -->
-  <script src="./ui/ui_utilities.js"></script>
-  <script src="./ui/setUI.js"></script>
-  <script src="./ui/offcanvas.js"></script>
-
-</body>
+    <!-- Manipulate UI and tabs -->
+    <script src="./ui/ui_utilities.js"></script>
+    <script src="./ui/setUI.js"></script>
+    <script src="./ui/offcanvas.js"></script>
+  </body>
 </html>

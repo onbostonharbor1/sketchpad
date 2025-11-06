@@ -6,16 +6,19 @@
    - Optionally renders the controls in the #action area.
    - Delegates to a tab-specific data builder.
 =========================================================== */
-function buildParameterControls(sourceInfo, targetTabId = "tab-generic", render = true) {
+function buildParameterControls(
+  sourceInfo,
+  targetTabId = "tab-generic",
+  render = true
+) {
   // Determine which data builder to use
   let controlData = [];
 
-    if (targetTabId.startsWith("tab-scripts")) {
-	controlData = buildScriptParameterData(sourceInfo);
-    }
-    else if (targetTabId.startsWith("tab-draw")) {
-	controlData = buildDrawParameterData(sourceInfo);
-    }
+  if (targetTabId.startsWith("tab-scripts")) {
+    controlData = buildScriptParameterData(sourceInfo);
+  } else if (targetTabId.startsWith("tab-draw")) {
+    controlData = buildDrawParameterData(sourceInfo);
+  }
 
   // Render if requested
   if (render) {
@@ -24,7 +27,6 @@ function buildParameterControls(sourceInfo, targetTabId = "tab-generic", render 
 
   return controlData;
 } // end buildParameterControls
-
 
 /* ===========================================================
    buildDrawParameterData(tabState)
@@ -40,7 +42,7 @@ function buildDrawParameterData(tabState) {
   const keys = Object.keys(schema);
   if (keys.length === 0) return [];
 
-  return keys.map(key => {
+  return keys.map((key) => {
     const def = schema[key];
     const value = tabState.parameters?.[key] ?? def.default ?? "";
     return {
@@ -52,11 +54,10 @@ function buildDrawParameterData(tabState) {
       step: def.step ?? null,
       options: def.options ?? null,
       value: value,
-      default: def.default ?? null
+      default: def.default ?? null,
     };
   });
 } // end buildDrawParameterData
-
 
 /* ===========================================================
    buildScriptParameterData(sourceInfo)
@@ -71,7 +72,7 @@ function buildScriptParameterData(sourceInfo) {
   const keys = Object.keys(schema);
   if (keys.length === 0) return [];
 
-  return keys.map(key => {
+  return keys.map((key) => {
     const def = schema[key];
     const value = sourceInfo.parameters?.[key] ?? def.default ?? "";
     return {
@@ -83,11 +84,10 @@ function buildScriptParameterData(sourceInfo) {
       step: def.step ?? null,
       options: def.options ?? null,
       value: value,
-      default: def.default ?? null
+      default: def.default ?? null,
     };
   });
 } // end buildScriptParameterData
-
 
 /* ===========================================================
    renderParameterControls(sourceInfo, controlData, targetTabId)
@@ -95,11 +95,13 @@ function buildScriptParameterData(sourceInfo) {
    Generic renderer. Creates and inserts controls into DOM.
    Uses the appropriate per-tab control builder.
 =========================================================== */
-function renderParameterControls(sourceInfo, controlData,
-				 targetTabId = "tab-generic") {
+function renderParameterControls(
+  sourceInfo,
+  controlData,
+  targetTabId = "tab-generic"
+) {
   const actionDiv = document.getElementById("action");
-  if (!actionDiv)
-    throw new Error("renderParameterControls: #action not found");
+  if (!actionDiv) throw new Error("renderParameterControls: #action not found");
 
   actionDiv.innerHTML = "";
   const controlsDiv = document.createElement("div");
@@ -113,20 +115,20 @@ function renderParameterControls(sourceInfo, controlData,
   }
 
   // delegate to specific control builder
-    controlData.forEach(item => {
-	const schemaSource =
-	      sourceInfo.controls || sourceInfo.drawRegistry?.controls || {};
-	const def = schemaSource[item.key];
-	
-	const field = buildSingleControl(
-	    sourceInfo,
-	    item.key,
-	    def,
-	    item.value,
-	    targetTabId
-	);
-	controlsDiv.appendChild(field);
-    });
+  controlData.forEach((item) => {
+    const schemaSource =
+      sourceInfo.controls || sourceInfo.drawRegistry?.controls || {};
+    const def = schemaSource[item.key];
+
+    const field = buildSingleControl(
+      sourceInfo,
+      item.key,
+      def,
+      item.value,
+      targetTabId
+    );
+    controlsDiv.appendChild(field);
+  });
 }
 
 /* ------------------------------------------------------------
@@ -152,10 +154,16 @@ function buildSingleControl(info, key, def, value, tabId) {
     case "select":
       setSelectControl(field, label, def, value, info, key, tabId);
       break;
+
+    case "pointPicker":
+      setPointPickerControl(field, label, def, value, info, key, tabId);
+      break;
+
     case "color":
     case "colorPicker":
       setColorControl(field, label, def, value, info, key, tabId);
       break;
+    case "text":
     default:
       setDefaultControl(field, label, def, value, info, key, tabId);
       break;
@@ -163,7 +171,6 @@ function buildSingleControl(info, key, def, value, tabId) {
 
   return field;
 } // end buildSingleControl
-
 
 /* ------------------------------------------------------------
    setRangeControl()
@@ -173,45 +180,43 @@ function setRangeControl(field, label, def, value, info, key, tabId) {
   wrapper.className = "ctrl-range-wrapper";
 
   const row = document.createElement("div");
-    row.className = "ctrl-range-values";
+  row.className = "ctrl-range-values";
 
-    const minSpan = document.createElement("span");
-    minSpan.textContent = def.min ?? 0;
-    
-    const readout = document.createElement("span");
-    readout.className = "ctrl-readout";
-    readout.textContent = value;
+  const minSpan = document.createElement("span");
+  minSpan.textContent = def.min ?? 0;
 
-    const maxSpan = document.createElement("span");
-    maxSpan.textContent = def.max ?? 100;
+  const readout = document.createElement("span");
+  readout.className = "ctrl-readout";
+  readout.textContent = value;
 
-    row.appendChild(minSpan);
-    row.appendChild(readout);
-    row.appendChild(maxSpan);
+  const maxSpan = document.createElement("span");
+  maxSpan.textContent = def.max ?? 100;
 
-    const input = document.createElement("input");
-    input.type = "range";
-    input.min = def.min ?? 0;
-    input.max = def.max ?? 100;
-    input.step = def.step ?? 1;
-    input.value = value;
-    input.id = tabId + "-" + key;
-    input.className = "ctrl-range";
+  row.appendChild(minSpan);
+  row.appendChild(readout);
+  row.appendChild(maxSpan);
 
-    input.addEventListener("input", () => {
-	const newVal = parseFloat(input.value);
-	readout.textContent = newVal;
-	info.parameters[key] = newVal;
-	if (typeof info.redrawHandler === "function")
-	    info.redrawHandler();
-    });
-    wrapper.appendChild(row);
+  const input = document.createElement("input");
+  input.type = "range";
+  input.min = def.min ?? 0;
+  input.max = def.max ?? 100;
+  input.step = def.step ?? 1;
+  input.value = value;
+  input.id = tabId + "-" + key;
+  input.className = "ctrl-range";
+
+  input.addEventListener("input", () => {
+    const newVal = parseFloat(input.value);
+    readout.textContent = newVal;
+    info.parameters[key] = newVal;
+    if (typeof info.redrawHandler === "function") info.redrawHandler();
+  });
+  wrapper.appendChild(row);
   wrapper.appendChild(input);
 
   field.appendChild(label);
   field.appendChild(wrapper);
 } // end setRangeControl
-
 
 /* ------------------------------------------------------------
    setCheckboxControl()
@@ -223,64 +228,134 @@ function setCheckboxControl(field, label, def, value, info, key, tabId) {
   input.id = tabId + "-" + key;
   input.className = "ctrl-check";
 
-    input.addEventListener("change", () => {
-	info.parameters[key] = input.checked;
-	if (typeof info.redrawHandler === "function")
-	    info.redrawHandler();
-    });
+  input.addEventListener("change", () => {
+    info.parameters[key] = input.checked;
+    if (typeof info.redrawHandler === "function") info.redrawHandler();
+  });
 
-    field.appendChild(label);
-    field.appendChild(input);
+  field.appendChild(label);
+  field.appendChild(input);
 } // end setCheckboxControl
-
 
 /* ------------------------------------------------------------
    setSelectControl()
 ------------------------------------------------------------ */
 function setSelectControl(field, label, def, value, info, key, tabId) {
-    const select = document.createElement("select");
-    select.id = tabId + "-" + key;
-    select.className = "ctrl-select";
+  const select = document.createElement("select");
+  select.id = tabId + "-" + key;
+  select.className = "ctrl-select";
 
-    (def.options || []).forEach(opt => {
-	const o = document.createElement("option");
-	o.value = opt;
-	o.textContent = opt;
-	if (opt === value) o.selected = true;
-	select.appendChild(o);
-    });
-    
-    select.addEventListener("change", () => {
-	info.parameters[key] = select.value;
-	if (typeof info.redrawHandler === "function")
-	    info.redrawHandler();
-    });
+  (def.options || []).forEach((opt) => {
+    const o = document.createElement("option");
+    o.value = opt;
+    o.textContent = opt;
+    if (opt === value) o.selected = true;
+    select.appendChild(o);
+  });
 
-    field.appendChild(label);
-    field.appendChild(select);
+  select.addEventListener("change", () => {
+    info.parameters[key] = select.value;
+    if (typeof info.redrawHandler === "function") info.redrawHandler();
+  });
+
+  field.appendChild(label);
+  field.appendChild(select);
 } // end setSelectControl
-
 
 /* ------------------------------------------------------------
    setColorControl()
 ------------------------------------------------------------ */
 function setColorControl(field, label, def, value, info, key, tabId) {
-    const input = document.createElement("input");
-    input.type = "color";
-    input.value = value || "#000000";
-    input.id = tabId + "-" + key;
-    input.className = "ctrl-color";
+  const input = document.createElement("input");
+  input.type = "color";
+  input.value = value || "#000000";
+  input.id = tabId + "-" + key;
+  input.className = "ctrl-color";
 
-    input.addEventListener("input", () => {
-	info.parameters[key] = input.value;
-	if (typeof info.redrawHandler === "function")
-	    info.redrawHandler();
-    });
+  input.addEventListener("input", () => {
+    info.parameters[key] = input.value;
+    if (typeof info.redrawHandler === "function") info.redrawHandler();
+  });
 
-    field.appendChild(label);
-    field.appendChild(input);
+  field.appendChild(label);
+  field.appendChild(input);
 } // end setColorControl
 
+/* ------------------------------------------------------------
+   setPointPickerControl()
+   Creates a draggable point overlay on the canvas.
+   Updates { x, y } in info.parameters[key] and calls redrawHandler().
+------------------------------------------------------------ */
+function setPointPickerControl(field, label, def, value, info, key, tabId) {
+  // Build coordinate readout
+  const readout = document.createElement("input");
+  readout.type = "text";
+  readout.readOnly = true;
+  readout.className = "ctrl-text";
+  readout.value = `${Math.round(value.x)}, ${Math.round(value.y)}`;
+  readout.id = tabId + "-" + key;
+
+  // Get canvas and create dot overlay
+  const canvas = document.getElementById("sharedCanvas");
+  if (!canvas) {
+    field.appendChild(label);
+    field.appendChild(readout);
+    console.warn("pointPicker: sharedCanvas not found");
+    return;
+  }
+
+  // Create a positioned container on top of the canvas
+  const container = canvas.parentElement || document.body;
+  const rect = canvas.getBoundingClientRect();
+
+  const dot = document.createElement("div");
+  dot.style.position = "absolute";
+  dot.style.width = "10px";
+  dot.style.height = "10px";
+  dot.style.borderRadius = "50%";
+  dot.style.background = "red";
+  dot.style.cursor = "grab";
+  dot.style.pointerEvents = "auto";
+  dot.style.left = rect.left + value.x - 5 + "px";
+  dot.style.top = rect.top + value.y - 5 + "px";
+  dot.style.zIndex = 2000;
+  dot.draggable = false;
+
+  container.appendChild(dot);
+
+  let isDragging = false;
+
+  const onMouseMove = (e) => {
+    if (!isDragging) return;
+    e.preventDefault();
+    const newX = e.clientX - rect.left;
+    const newY = e.clientY - rect.top;
+    dot.style.left = rect.left + newX - 5 + "px";
+    dot.style.top = rect.top + newY - 5 + "px";
+    info.parameters[key] = { x: newX, y: newY };
+    readout.value = `${Math.round(newX)}, ${Math.round(newY)}`;
+    if (typeof info.redrawHandler === "function") info.redrawHandler();
+  };
+
+  dot.addEventListener("mousedown", (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    isDragging = true;
+    dot.style.cursor = "grabbing";
+  });
+
+  window.addEventListener("mouseup", () => {
+    if (isDragging) {
+      isDragging = false;
+      dot.style.cursor = "grab";
+    }
+  });
+
+  window.addEventListener("mousemove", onMouseMove, { passive: false });
+
+  field.appendChild(label);
+  field.appendChild(readout);
+} // end setPointPickerControl
 
 /* ------------------------------------------------------------
    setDefaultControl()
@@ -292,12 +367,12 @@ function setDefaultControl(field, label, def, value, info, key, tabId) {
   input.id = tabId + "-" + key;
   input.className = "ctrl-text";
 
-    input.addEventListener("input", () => {
-	const newVal = input.type === "number" ? parseFloat(input.value) : input.value;
-	info.parameters[key] = newVal;
-	if (typeof info.redrawHandler === "function")
-	    info.redrawHandler();
-    });
+  input.addEventListener("input", () => {
+    const newVal =
+      input.type === "number" ? parseFloat(input.value) : input.value;
+    info.parameters[key] = newVal;
+    if (typeof info.redrawHandler === "function") info.redrawHandler();
+  });
 
   field.appendChild(label);
   field.appendChild(input);

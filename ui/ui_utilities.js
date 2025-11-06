@@ -105,3 +105,94 @@ async function loadDirectoryRegistry(basePath) {
 async function loadManifest(basePath, category) {
   return await loadJSON(`${basePath}/${category}/manifest.json`);
 } // end loadManifest
+
+/* ------------------------------------------------------------
+   loadManifestGroup(basePath)
+   Loads all manifest.json files within a gallery subdirectory.
+
+   Arguments:
+     basePath – relative path to gallery subdir (e.g., ./gallery/Ideabook)
+
+   Returns:
+     Object mapping category → manifest array.
+------------------------------------------------------------ */
+async function loadManifestGroup(basePath) {
+  try {
+    const dirs = await loadDirectoryRegistry(basePath);
+    if (!dirs) throw new Error("Missing or invalid directoryRegistry.json");
+
+    const allData = await Promise.all(
+      dirs.map(async cat => {
+        const manifest = await loadManifest(basePath, cat);
+        return { category: cat, items: manifest || [] };
+      })
+    );
+
+    const grouped = {};
+    allData.forEach(group => {
+      grouped[group.category] = group.items;
+    });
+    return grouped;
+
+  } catch (err) {
+    console.error(`Failed to load manifest group for ${basePath}:`, err);
+    return {};
+  }
+} // end loadManifestGroup
+
+/* ------------------------------------------------------------
+   showOffcanvas(title, text)
+   Displays text in the existing #offcanvasPanel.
+   Used for viewing script source.
+------------------------------------------------------------ */
+function showOffcanvas(title, text) {
+  const panel = document.getElementById("offcanvasPanel");
+  const hdr = panel.querySelector(".offcanvas-title");
+  const body = panel.querySelector(".offcanvas-body");
+
+  hdr.textContent = title;
+
+  const pre = document.createElement("pre");
+  pre.style.whiteSpace = "pre-wrap";
+  pre.textContent = text;
+
+  body.innerHTML = "";
+  body.appendChild(pre);
+
+  const off = bootstrap.Offcanvas.getOrCreateInstance(panel);
+  off.show();
+} // end showOffcanvas
+
+/* ------------------------------------------------------------
+   showOffcanvas(title, text)
+   Displays text in the existing #offcanvasPanel.
+   Used for viewing script source.
+------------------------------------------------------------ */
+function showOffcanvas(title, text) {
+  const panel = document.getElementById("offcanvasPanel");
+  const hdr = panel.querySelector(".offcanvas-title");
+  const body = panel.querySelector(".offcanvas-body");
+
+  hdr.textContent = title;
+
+  const pre = document.createElement("pre");
+  pre.style.whiteSpace = "pre-wrap";
+  pre.textContent = text;
+
+  body.innerHTML = "";
+  body.appendChild(pre);
+
+  const off = bootstrap.Offcanvas.getOrCreateInstance(panel);
+  off.show();
+} // end showOffcanvas
+
+/* ------------------------------------------------------------
+   setActiveItem(category, entry)
+   Records the active gallery category and current item.
+------------------------------------------------------------ */
+function setActiveItem(category, entry) {
+  uiState.activeCategory = category;
+  uiState.activeGalleryItem = entry;
+} // end setActiveItem
+
+
