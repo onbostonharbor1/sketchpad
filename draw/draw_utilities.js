@@ -1,7 +1,9 @@
 // createNodes
 // displayPoint
 // drawCircle
+// drawLines
 // drawLine
+// drawALine
 // drawNodes
 // drawParabs
 // getPreviousIndex (obsolete?)
@@ -20,7 +22,6 @@ const toDegrees = (rad) => rad * (180 / Math.PI);
 /////////////////////////////////////////////////////////////////
 // createNodes
 /////////////////////////////////////////////////////////////////
-/* OK */
 function createNodes(thing) {
   const nodes = [];
   const { midpoint, radius, numNodes, rotate, xScale, yScale } = thing;
@@ -43,7 +44,6 @@ function createNodes(thing) {
   return nodes;
 }
 
-/* OK */
 function drawNodes(nodes, color) {
   for (let i = 0; i < nodes.length; i++) {
     let j = (i + 1) % nodes.length;
@@ -51,7 +51,6 @@ function drawNodes(nodes, color) {
   }
 }
 
-/* OK */
 function drawParabs(thing, parabs) {
   for (let parab of parabs) {
     if (parab.length == 3) parab.splice(1, 0, parab[1]);
@@ -63,7 +62,6 @@ function drawParabs(thing, parabs) {
   }
 }
 
-/* OK */
 function displayPoint(pt, color = "yellow") {
   /**
    * Draws a circle on the canvas with a default radius of 2 and a default color of yellow.
@@ -80,7 +78,6 @@ function displayPoint(pt, color = "yellow") {
   ctx.fill();
 }
 
-/* OK */
 function drawCircle(midpoint, radius, color = "black", width = 1) {
   save();
   ctx.strokeStyle = color;
@@ -91,7 +88,23 @@ function drawCircle(midpoint, radius, color = "black", width = 1) {
   restore();
 } // end drawCircle
 
-/* OK */
+
+function drawLines(thing, lines) {
+  for (let i = 0; i < lines.length; i++) {
+    drawLine(lines[i].start, lines[i].end, thing.color, thing.lineWidth);
+  }
+}
+
+function drawALine(color = "blue", lineWidth = 1, line) {
+  // Defensive check: ensure line has valid structure
+  if (!line || !line.start || !line.end) {
+    console.error("drawALine: invalid Line object", line);
+    return;
+  }
+  drawLine(line.start, line.end, color, lineWidth);
+} // end drawALine
+
+
 function drawLine(point1, point2, color = "blue", lineWidth = 1) {
   //    pt1 = numbersToPoints(point1);
   //    pt2 = numbersToPoints(point2);
@@ -109,7 +122,6 @@ function drawLine(point1, point2, color = "blue", lineWidth = 1) {
   restore();
 } // end drawLine
 
-/* OK */
 function printCircNum(pt, num = 9999) {
   drawCircle(pt, 8, "black");
   save();
@@ -123,7 +135,6 @@ function printCircNum(pt, num = 9999) {
   restore();
 }
 
-/* OK */
 function printTitle(text = "No Title") {
   drawState.currentTitle = text;
   //   updateOverlayTitle(); // Sync overlay if present
@@ -149,7 +160,8 @@ function printTitle(text = "No Title") {
 //  ctx.restore();
 //}
 
-/* OK */
+// stitcher
+//    returns an array of lines
 function stitcher(arm1, arm2) {
   if (arm1.length > arm2.length) {
     [arm1, arm2] = [arm2, arm1];
@@ -162,6 +174,8 @@ function stitcher(arm1, arm2) {
 }
 
 /**
+ * PTSONLINE
+ *
  * Generate equally spaced points along a line segment,
  * using transforms stored in thing.lineTransform.
  *
@@ -174,7 +188,6 @@ function stitcher(arm1, arm2) {
  * @param {Line} line - line with start and end Points
  * @returns {Point[]} array of generated points
  */
-/* */
 function ptsOnLine(thing, line) {
   const { numSteps } = thing;
   if (numSteps <= 0) return [];
@@ -240,7 +253,6 @@ function ptsOnLine(thing, line) {
   return ptsOnStraightLine(start, end, numSteps);
 }
 
-/* ?? */
 function getPreviousIndex(i, length) {
   return i === 0 ? length - 1 : i - 1;
 }
@@ -248,7 +260,6 @@ function getPreviousIndex(i, length) {
 //////////////////////////////////////////////////////////////////
 // numbersToPoints
 //////////////////////////////////////////////////////////////////
-/* ok */
 function numbersToPoints(coords) {
   if (Array.isArray(coords)) {
     let nodes = [];

@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Test</title>
+    <script src="./classes/classes.js"></script>
+    <script src="./draw/draw_utilities.js"></script>
+    <script src="./draw/drawRegular.js"></script>
+    <script src="./draw/drawRedefines.js"></script>
+
+<body>
+<div style="position: absolute; top: 50px; left: 50px;">
+<canvas id="StringThing" width="1000" height="800"></canvas>
+</div>
+      <script>
+let drawState = {
+    currentTitle:    "", 
+    currentFileName: "",
+    dot:             false,
+    final:           false,
+    newLine:         10,
+    pts:             [],
+    ctr:             0
+}
+
+var theCanvas = document.getElementById("StringThing");
+var context   = theCanvas.getContext("2d"); 
+let ctx       = context;
+ctx.clearRect(0,0,theCanvas.width,theCanvas.height);
+
+function parabolaTest() {
+    let s = {color: "green"};
+    let thing = new StringThing(s);
+    let line1 = new Line(new Point(20,20),  new Point(20,300));
+    let line2 = new Line(new Point(20,300), new Point(300,300));
+    drawAParab(thing, line1, line2);
+}
+
+function parabolaTestOld() {
+
+    let pts = [new Point(20,20),
+	       new Point(20,300),
+	       new Point(300,300)];
+    drawParab(thing, pts);
+}
+parabolaTest();
+
+
+	</script>
+</body>
+</html>

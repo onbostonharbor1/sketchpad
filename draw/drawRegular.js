@@ -3,7 +3,6 @@
 // createLinesFromNodesOuter
 // createParab
 // createParabs
-// drawLines (move to draw_utilities?)
 // drawManyParabs
 // drawParab
 //
@@ -39,12 +38,6 @@ function createLinesFromNodesOuter(nodes) {
   return lines;
 }
 
-function drawLines(thing, lines) {
-  for (let i = 0; i < lines.length; i++) {
-    drawLine(lines[i].start, lines[i].end, thing.color, thing.lineWidth);
-  }
-}
-
 function createParab(arm1, arm2) {
   if (arm1.length > arm2.length) {
     [arm1, arm2] = [arm2, arm1];
@@ -68,17 +61,30 @@ function drawManyParabs(thing, parabs) {
   parabs.forEach((parab) => drawParab(thing, parab));
 }
 
+function drawAParab(thing, line1, line2) {
+    const pts = [line1.start, line1.end, line2.start, line2.end];
+    drawParab(thing,pts);
+}
+
+// drawParab
+//   Note saving, setting to 0, then restoring
+//   lineTransform. This is because transformations
+//   only happen on the 2nd line.
 function drawParab(thing, pts) {
-  if (pts.length == 3) pts.splice(1, 0, pts[1]);
-  const line1 = new Line(pts[0], pts[1]);
-  const line2 = new Line(pts[2], pts[3]);
-  let lineTransform = thing.lineTransform;
-  thing.lineTransform = 0;
-  let arm1 = ptsOnLine(thing, line1);
-  thing.lineTransform = lineTransform;
-  let arm2 = ptsOnLine(thing, line2);
-  const parab = createParab(arm1, arm2);
-  drawLines(thing, parab);
+    if (pts.length == 3)
+	pts.splice(1, 0, pts[1]);
+    // build lines
+    const line1 = new Line(pts[0], pts[1]);
+    const line2 = new Line(pts[2], pts[3]);
+    // build arms
+    let lineTransform = thing.lineTransform;
+    thing.lineTransform = 0;
+    let arm1 = ptsOnLine(thing, line1);
+    thing.lineTransform = lineTransform;
+    let arm2 = ptsOnLine(thing, line2);
+    // 
+    const parab = createParab(arm1, arm2);
+    drawLines(thing, parab);
 }
 
 function drawCircularParabola(thing) {

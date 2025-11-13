@@ -284,6 +284,11 @@ async function loadAndRunPattern(path) {
 
   updatePatternsCaption();
   setPatternsThumbnails(uiState.activePattern.category);
+    setPatternsCaptionContent({
+	filename: uiState.activePattern.filename,
+	path
+    });
+
 } // end loadAndRunPattern
 
 
@@ -444,6 +449,34 @@ function updatePatternsCaption() {
   capDiv.appendChild(title);
   capDiv.appendChild(btnGroup);
 } // end updatePatternsCaption
+
+/* ===========================================================
+   setPatternsCaptionContent(entry)
+   Displays the pattern’s title and adds a "Show Script" button
+   that opens the script source in the shared offcanvas.
+=========================================================== */
+function setPatternsCaptionContent(entry) {
+  const captionDiv = document.getElementById("caption");
+  if (!captionDiv) throw new Error("setPatternsCaptionContent: #caption not found");
+  captionDiv.innerHTML = `
+    <span class="caption-title">${entry.filename || "(untitled pattern)"}</span>
+    <div class="caption-buttons">
+      <button class="btn btn-sm btn-outline-secondary">Show Script</button>
+    </div>
+  `;
+
+  const btn = captionDiv.querySelector("button");
+  btn.addEventListener("click", async () => {
+    try {
+      const resp = await fetch(`./patterns/${entry.path}`);
+      if (!resp.ok) throw new Error(`HTTP ${resp.status} for ${entry.path}`);
+      const code = await resp.text();
+      showSharedOffcanvas(entry.filename, code);
+    } catch (err) {
+      showSharedOffcanvas("Error", `Failed to load ${entry.path}: ${err.message}`);
+    }
+  });
+} // end setPatternsCaptionContent
 
 
 /* ===========================================================

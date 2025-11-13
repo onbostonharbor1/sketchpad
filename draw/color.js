@@ -53,7 +53,6 @@ const calculateTintAndShade = (
     };
 };
 
-//NOT USED
 function colourNameToHex(color)
 {
     color = color.toLowerCase();

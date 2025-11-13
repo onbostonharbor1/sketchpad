@@ -7,7 +7,6 @@
    ------------------------------------------------------------ */
 
 // activateTab(tabKey)          – switch to selected top-level tab
-// clearDivs(args)              – clear core divs (optionally one more)
 // handleTabChange(tabId)       – translate clicked tab id to internal key
 // restoreTabState(tabName)     – rebuild previous state for tab if saved
 // saveTabState(tabName)        – serialize current tab before leaving
@@ -195,102 +194,6 @@ function handleTabChange(event) {
   // --- Switch to the requested tab ---
   activateTab(tabKey);
 } // end handleTabChange
-
-/* ------------------------------------------------------------
-   setCaptionBar(targetDivId, entry, showScriptHandler)
-   Shared caption builder for Utility and Gallery tabs.
-   - targetDivId: "caption" or another container id
-   - entry: manifest entry with title, filename, path, subtab, etc.
-   - showScriptHandler: function(title, path) to handle "Show Script" click
------------------------------------------------------------- */
-function setCaptionBar(targetDivId, entry, showScriptHandler) {
-  const el = document.getElementById(targetDivId);
-  if (!el) throw new Error(`setCaptionBar: #${targetDivId} not found`);
-
-  el.style.display = "flex";
-  el.style.justifyContent = "space-between";
-  el.style.alignItems = "center";
-  el.innerHTML = "";
-
-  if (!entry) return;
-
-  const title = document.createElement("span");
-  title.className = "caption-title";
-  title.textContent = entry.title || entry.filename || "(untitled)";
-  el.appendChild(title);
-
-  const buttonsDiv = document.createElement("div");
-  buttonsDiv.className = "caption-buttons";
-
-  const btnShow = document.createElement("button");
-  btnShow.textContent = "Show Script";
-  btnShow.addEventListener("click", () => {
-    if (typeof showScriptHandler === "function") {
-      showScriptHandler(
-        entry.title || entry.filename,
-        entry.path,
-        entry.subtab
-      );
-    }
-  });
-  buttonsDiv.appendChild(btnShow);
-
-  el.appendChild(buttonsDiv);
-} // end setCaptionBar
-
-/* ------------------------------------------------------------
-   initOffcanvasHandler()
-   Initializes the shared offcanvas panel used by Gallery
-   and Utility tabs. Creates or reuses Bootstrap instance.
------------------------------------------------------------- */
-function initOffcanvasHandler() {
-  const panel = document.getElementById("offcanvasPanel");
-  if (!panel) {
-    console.warn("initOffcanvasHandler: #offcanvasPanel not found");
-    return;
-  }
-
-  // initialize Bootstrap offcanvas once
-  const offcanvas = bootstrap.Offcanvas.getOrCreateInstance(panel);
-
-  // close button already uses data-bs-dismiss="offcanvas"
-  // this ensures Esc key and backdrop click also work
-  panel.addEventListener("hidden.bs.offcanvas", () => {
-    console.log("Offcanvas closed");
-  });
-
-  // optional: expose global reference
-  window.sharedOffcanvas = offcanvas;
-} // end initOffcanvasHandler
-
-/* ------------------------------------------------------------
-   showSharedOffcanvas(title, text)
-   ------------------------------------------------------------
-   Displays text (e.g., script source, manifest entry, or notes)
-   inside the shared offcanvas panel. Used by multiple tabs.
------------------------------------------------------------- */
-function showSharedOffcanvas(title, text) {
-  const panel = document.getElementById("offcanvasPanel");
-  if (!panel) throw new Error("showSharedOffcanvas: #offcanvasPanel not found");
-
-  const titleEl = panel.querySelector(".offcanvas-title");
-  const body = panel.querySelector(".offcanvas-body");
-  if (!titleEl || !body) return;
-
-  titleEl.textContent = title || "(untitled)";
-  body.innerHTML = `<pre style="white-space:pre-wrap;">${
-    text || "(empty)"
-  }</pre>`;
-
-  try {
-    const offcanvas = bootstrap.Offcanvas.getOrCreateInstance(panel);
-    offcanvas.show();
-  } catch (err) {
-    panel.classList.add("show");
-    panel.style.visibility = "visible";
-    panel.style.opacity = "1";
-  }
-} // end showSharedOffcanvas
 
 /* ------------------------------------------------------------
    Initialize UI on first load.

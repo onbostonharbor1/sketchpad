@@ -235,12 +235,15 @@ function addDrawSubtab(item) {
   const entry = item.entry;
   if (!entry) throw new Error(`addDrawSubtab: missing drawRegistry entry for ${item.name}`);
 
+    // Initialize once, up front (fail fast if missing)
+    entry.init();
+    
   uiState.drawTabs[tabId] = {
     type:         "object",
     drawRegistry: entry,
     dirty:        false,
     // ✅ use real numeric defaults
-    parameters:   structuredClone(entry.params || {}) 
+    parameters:   entry.params
   };
 
   uiState.activeDrawTab = tabId;
@@ -282,7 +285,7 @@ function drawActiveTab() {
   if (!info || info.type !== "object" || !info.drawRegistry) return;
 
   const entry = info.drawRegistry;
-  const params = info.parameters || {};
+//  const params = info.parameters || {};
 
   // --- Set caption title ---
   setDrawCaptionContent(entry);
@@ -316,16 +319,11 @@ function drawActiveTab() {
   buildParameterControls(state, "tab-draw", true);
 
   // draw after controls exist
-  try {
-    const thing = entry.create(params);
-    entry.draw(thing);
-    console.log(`✅ Redrew ${entry.name}`);
-      // --- Display registry info in shared offcanvas ---
-//      showSharedOffcanvas(
-//	  `Draw Registry: ${entry.name}`,
-//	  JSON.stringify(entry, null, 2)
-//      );
-
+    try {
+	const params = state.parameters = entry.params;
+	entry.update(params);        // apply new values from controls
+      entry.draw();                // draw from this.elements
+      console.log(`✅ Redrew ${entry.name}`);
   } catch (err) {
     console.error(`❌ Error redrawing ${entry.name}:`, err);
   }

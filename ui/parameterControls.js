@@ -281,13 +281,29 @@ function setColorControl(field, label, def, value, info, key, tabId) {
   field.appendChild(input);
 } // end setColorControl
 
+
 /* ------------------------------------------------------------
-   setPointPickerControl()
-   Creates a draggable point overlay on the canvas.
-   Updates { x, y } in info.parameters[key] and calls redrawHandler().
+   setDefaultControl()
 ------------------------------------------------------------ */
+function setDefaultControl(field, label, def, value, info, key, tabId) {
+  const input = document.createElement("input");
+  input.type = def.type || "text";
+  input.value = value;
+  input.id = tabId + "-" + key;
+  input.className = "ctrl-text";
+
+  input.addEventListener("input", () => {
+    const newVal =
+      input.type === "number" ? parseFloat(input.value) : input.value;
+    info.parameters[key] = newVal;
+    if (typeof info.redrawHandler === "function") info.redrawHandler();
+  });
+
+  field.appendChild(label);
+  field.appendChild(input);
+} // end setDefaultControl
+
 function setPointPickerControl(field, label, def, value, info, key, tabId) {
-  // Build coordinate readout
   const readout = document.createElement("input");
   readout.type = "text";
   readout.readOnly = true;
@@ -295,32 +311,17 @@ function setPointPickerControl(field, label, def, value, info, key, tabId) {
   readout.value = `${Math.round(value.x)}, ${Math.round(value.y)}`;
   readout.id = tabId + "-" + key;
 
-  // Get canvas and create dot overlay
   const canvas = document.getElementById("sharedCanvas");
-  if (!canvas) {
-    field.appendChild(label);
-    field.appendChild(readout);
-    console.warn("pointPicker: sharedCanvas not found");
-    return;
-  }
-
-  // Create a positioned container on top of the canvas
-  const container = canvas.parentElement || document.body;
+const container = document.getElementById("sketchpad");
   const rect = canvas.getBoundingClientRect();
 
   const dot = document.createElement("div");
+  dot.className = "point-picker-dot";
+  dot.id = `dot-${key}`;
   dot.style.position = "absolute";
-  dot.style.width = "10px";
-  dot.style.height = "10px";
-  dot.style.borderRadius = "50%";
-  dot.style.background = "red";
+  dot.style.left = value.x - 5 + "px";
+  dot.style.top  = value.y - 5 + "px";
   dot.style.cursor = "grab";
-  dot.style.pointerEvents = "auto";
-  dot.style.left = rect.left + value.x - 5 + "px";
-  dot.style.top = rect.top + value.y - 5 + "px";
-  dot.style.zIndex = 2000;
-  dot.draggable = false;
-
   container.appendChild(dot);
 
   let isDragging = false;
@@ -328,13 +329,22 @@ function setPointPickerControl(field, label, def, value, info, key, tabId) {
   const onMouseMove = (e) => {
     if (!isDragging) return;
     e.preventDefault();
+
+    // compute coordinates relative to canvas
+    const rect = canvas.getBoundingClientRect();
     const newX = e.clientX - rect.left;
     const newY = e.clientY - rect.top;
-    dot.style.left = rect.left + newX - 5 + "px";
-    dot.style.top = rect.top + newY - 5 + "px";
-    info.parameters[key] = { x: newX, y: newY };
+
+    dot.style.left = newX - 5 + "px";
+    dot.style.top  = newY - 5 + "px";
+
+    info.parameters[key].x = newX;
+    info.parameters[key].y = newY;
     readout.value = `${Math.round(newX)}, ${Math.round(newY)}`;
-    if (typeof info.redrawHandler === "function") info.redrawHandler();
+
+    if (typeof info.redrawHandler === "function") {
+      info.redrawHandler();
+    }
   };
 
   dot.addEventListener("mousedown", (e) => {
@@ -357,23 +367,6 @@ function setPointPickerControl(field, label, def, value, info, key, tabId) {
   field.appendChild(readout);
 } // end setPointPickerControl
 
-/* ------------------------------------------------------------
-   setDefaultControl()
------------------------------------------------------------- */
-function setDefaultControl(field, label, def, value, info, key, tabId) {
-  const input = document.createElement("input");
-  input.type = def.type || "text";
-  input.value = value;
-  input.id = tabId + "-" + key;
-  input.className = "ctrl-text";
 
-  input.addEventListener("input", () => {
-    const newVal =
-      input.type === "number" ? parseFloat(input.value) : input.value;
-    info.parameters[key] = newVal;
-    if (typeof info.redrawHandler === "function") info.redrawHandler();
-  });
 
-  field.appendChild(label);
-  field.appendChild(input);
-} // end setDefaultControl
+

@@ -1,81 +1,80 @@
-/*
-  Template for new drawRegistry entries
-  -------------------------------------
-  Each entry defines how an object is constructed, drawn, and exposed to the UI.
-  It is self-contained and discoverable by category and tags.
-*/
+/* drawRegistry_TEMPLATE.js
+   ------------------------------------------------------------
+   Minimal template for new drawRegistry entries.
+   Based on current two-line pattern.
+   ------------------------------------------------------------ */
 
 window.drawRegistry_TEMPLATE = {
-  // --- Identity and classification ---
-  name:        "Template Figure",      // Display name
-  id:          "templateFigure",       // Unique identifier (optional but useful)
-  version:     0.1,                    // Increment when params or logic change
-  category:    "prototype",            // Used by Draw tab to group categories
-  tags:        ["template", "demo"],   // For search and filtering
-  firstOrder:  true,                   // Whether it’s a base figure
-  source:      "internal",             // Reference or author/source
-  description: "Demonstration of the registry entry pattern.",
+  name: "Template Figure",
+  id: "templateFigure",
+  version: 0.1,
+  category: "prototype",
+  tags: ["template"],
+  description: "Simplified template for new drawRegistry entries.",
 
-  // --- Visual styling ---
-  background:  null,                   // Optional background style or color
-  overlays:    [],                     // Overlay drawings (none by default)
-  transforms:  [],                     // Geometric or visual transforms
-  style: {
-    fill:       false,                 // Whether fill is applied
-    fillColor:  "none",                // Fill color
-    blendMode:  "source-over",         // Canvas composite mode
-    palette:    ["#0044cc"],           // Optional color sequence
-  },
+  background: null,
+  overlays: [],
+  transforms: [],
+  elements: null,
 
-  // --- Parameter defaults (for create/reset) ---
+  // --- Default parameters ---
   params: {
-    midpoint:  { x: 300, y: 300 },
-    radius:    120,
-    numNodes:  6,
-    rotate:    0,
-    color:     "#0044cc",
-    lineWidth: 2,
+    pt1: { x: 200, y: 200 },
+    pt2: { x: 400, y: 400 },
+    midpoint: null,
+    color: "#0044cc",
+    lineWidth: 2
   },
 
-  // --- UI metadata for control generation ---
+  // --- UI controls ---
   controls: {
-    midpoint:  { widget: "pointPicker", label: "Center Point" },
-    radius:    { widget: "range", min: 10,  max: 400, step: 5,  label: "Radius" },
-    numNodes:  { widget: "range", min: 3,   max: 20,  step: 1,  label: "Number of Nodes" },
-    rotate:    { widget: "range", min: 0,   max: 360, step: 5,  label: "Rotation (°)" },
-    color:     { widget: "colorPicker", label: "Line Color" },
-    lineWidth: { widget: "range", min: 1,   max: 10,  step: 1,  label: "Line Width" }
+    pt1: { widget: "pointPicker", label: "Start Point:" },
+    pt2: { widget: "pointPicker", label: "End Point:" },
+    midpoint: { widget: "pointPicker", label: "Midpoint:" },
+    color: { widget: "colorPicker", label: "Color:" },
+    lineWidth: { widget: "range", min: 0.5, max: 4, step: 0.5, label: "Width:" }
   },
 
-  // Optional explicit ordering of control appearance
-  uiOrder: ["radius", "numNodes", "rotate", "color", "lineWidth"],
+  // --- Initialize geometry and style ---
+  init() {
+    const p = this.params;
+    const line = new Line(new Point(p.pt1.x, p.pt1.y), new Point(p.pt2.x, p.pt2.y));
+    p.midpoint = line.midpoint();
+    const style = new StringThing({ color: p.color, lineWidth: p.lineWidth });
+    this.elements = { line, style };
+  }, // end init
 
-  // --- Factory: instantiate a StringThing or related object ---
-  create(overrides = {}) {
-    const merged = Object.assign({}, this.params, overrides);
+  // --- Update geometry from controls ---
+  update(params) {
+    const p = this.params;
+    const { line, style } = this.elements;
 
-    // Normalize midpoint into a Point instance
-    if (!(merged.midpoint instanceof Point)) {
-      merged.midpoint = new Point(merged.midpoint.x, merged.midpoint.y);
+    const incomingMid = new Point(params.midpoint.x, params.midpoint.y);
+    const prevMid = line.midpoint();
+
+    if (!incomingMid.isSame(prevMid)) {
+      line.moveMidpointTo(incomingMid);
+    } else {
+      line.setStart(new Point(params.pt1.x, params.pt1.y));
+      line.setEnd(new Point(params.pt2.x, params.pt2.y));
     }
 
-    // Return a StringThing (or subclass) with these parameters
-    return new StringThing(merged);
-  },
+    const mid = line.midpoint();
+    p.pt1 = line.startPt();
+    p.pt2 = line.endPt();
+    p.midpoint = mid;
 
-  // --- Draw routine (delegate to draw function) ---
-  draw(thing) {
-    // Replace with the actual drawing implementation
-    // e.g., drawRegularPolygon(thing);
-    console.warn(`Draw method not implemented for ${this.name}`);
-  },
+    style.color = params.color;
+    style.lineWidth = Number(params.lineWidth);
 
-  // --- Optional dependency listing (future use) ---
-  dependencies: [],
+    params.pt1 = line.startPt();
+    params.pt2 = line.endPt();
+    params.midpoint = mid;
+  }, // end update
 
-  // --- Optional variants (for UI selection) ---
-  variants: ["default"],
-
-  // --- Optional helper ---
-  notes: "This is a template registry definition for new draw types."
+  // --- Draw on canvas ---
+  draw() {
+    const { line, style } = this.elements;
+    drawALine(line, style.color, style.lineWidth);
+  } // end draw
 };

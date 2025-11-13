@@ -140,6 +140,13 @@ class Point {
 	)
     }
 
+    get midpoint() {
+	return new Point(
+	    (this.start.x + this.end.x) / 2,
+	    (this.start.y + this.end.y) / 2
+	);
+    }
+    
     toArray() {
 	return [this.x, this.y];
     }
@@ -159,13 +166,25 @@ class Line {
 	return [half1, half2];
     }
 
-
     midpoint() {
 	return new Point(
 	    (this.start.x + this.end.x) / 2,
 	    (this.start.y + this.end.y) / 2
-	)
+	);
     }
+    
+moveMidpointTo(newMidpoint) {
+  const currentMid = this.midpoint();
+  const dx = newMidpoint.x - currentMid.x;
+  const dy = newMidpoint.y - currentMid.y;
+
+  // mutate existing points instead of reassigning
+  this.start.x += dx;
+  this.start.y += dy;
+  this.end.x += dx;
+  this.end.y += dy;
+} // end moveMidpointTo
+
 
     reversed() {
 	return new Line(this.end, this.start);
@@ -228,7 +247,7 @@ class Line {
 
     rotateAtEnd(angleRadians) {
 	const newStart = this.start.rotateAround(this.end, angleRadians);
-	return new Line(this.newStart, this.end);
+	return new Line(newStart, this.end);
     }
     
     shortenEnd(amount) {
@@ -294,12 +313,5 @@ class Line {
 
 	return new Point(x, y);
     }
-
-	// other possibilitis are: length, nngle (relatie to the
-	// horizontal, slope, translt,
-	// should add containsPoint(pt) boolean if a point is on
-	// a line segment
-    
-
 
 }

@@ -72,6 +72,10 @@ body {
   flex-direction: column;
 }
 
+#sketchpad {
+  position: relative;    /* make it the coordinate system for dots */
+}
+
 #subtabs,
 #caption,
 #text,
@@ -80,6 +84,12 @@ body {
       padding: 8px;
       border: 1px solid #ccc; */
 }
+
+#sharedCanvas {
+  position: static;        
+  z-index: auto;
+}
+
 
 /* ===========================================================
    PATTERNS CAPTION BAR
@@ -338,3 +348,23 @@ input.ctrl-text[type="text"] {
   justify-self: start !important; /* align to left edge */
   margin-left: 0 !important;
 }
+
+.point-picker-dot {
+  position: absolute;
+  width: 10px;
+  height: 10px;
+  background: red;
+  border-radius: 50%;
+  pointer-events: auto;
+  z-index: 2;         /* above the canvas */
+}
+
+/* Style readonly coordinate fields to look like display boxes */
+#action .draw-controls input.ctrl-text[readonly] {
+  background: transparent !important;
+  border: none !important;
+  color: #222 !important;
+  box-shadow: none !important;
+  cursor: default;
+}
+
