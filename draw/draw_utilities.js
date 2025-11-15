@@ -15,6 +15,22 @@
 // stitcher
 // toDegrees
 // toRadians
+import { Point, Line } from "../classes/classes.js";
+import { drawState }   from "./drawState.js";
+
+import {
+  beginPath,
+  arc,
+  closePath,
+  fill,
+  fillText,
+  fillRect,
+  lineTo,
+  moveTo,
+  restore,
+  save,
+  stroke
+} from "../draw/drawRedefines.js";
 
 const toRadians = (deg) => deg * (Math.PI / 180);
 const toDegrees = (rad) => rad * (180 / Math.PI);
@@ -42,13 +58,6 @@ function createNodes(thing) {
   }
 
   return nodes;
-}
-
-function drawNodes(nodes, color) {
-  for (let i = 0; i < nodes.length; i++) {
-    let j = (i + 1) % nodes.length;
-    drawLine(nodes[i], nodes[j], color);
-  }
 }
 
 function drawParabs(thing, parabs) {
@@ -88,12 +97,30 @@ function drawCircle(midpoint, radius, color = "black", width = 1) {
   restore();
 } // end drawCircle
 
-
-function drawLines(thing, lines) {
-  for (let i = 0; i < lines.length; i++) {
-    drawLine(lines[i].start, lines[i].end, thing.color, thing.lineWidth);
-  }
+function drawNodes(thing, nodes) {
+    const { color, lineWidth } = thing;
+    const len = nodes.length;
+    for (let i = 0; i < len; i++) {
+	let j = i+1;
+	j = j % len;
+        drawLine(nodes[i], nodes[j], color, lineWidth);
+    }
 }
+
+function drawLines(thing, lines, close = false) {
+    const { color, lineWidth } = thing;
+
+    for (let i = 0; i < lines.length; i++) {
+        drawLine(lines[i].start, lines[i].end, color, lineWidth);
+    }
+
+    if (close && lines.length > 1) {
+        const first = lines[0].start;
+        const last  = lines[lines.length - 1].end;
+        drawLine(last, first, color, lineWidth);
+    }
+} // end drawLines
+
 
 function drawALine(color = "blue", lineWidth = 1, line) {
   // Defensive check: ensure line has valid structure
@@ -219,17 +246,16 @@ function ptsOnLine(thing, line) {
     return ptsOnStraightLine(start, end, numSteps);
   }
 
-  const mid = start.midpointBetween(end);
-  const baseAngle = Math.atan2(end.y - start.y, end.x - start.x);
-  const halfLen = start.lengthBetween(end) / 2;
-
+    const mid = start.midpointBetween(end);
+    const baseAngle = Math.atan2(end.y - start.y, end.x - start.x);
+  const halfLen = start.distanceTo(end) / 2;
   if (type === "flexAtMiddle") {
-    // bend point off to the side, but endpoints fixed
-    const bendPt = deflectPoint(
-      mid,
-      baseAngle + Math.PI / 2,
-      halfLen * Math.sin(angleRad)
-    );
+      // bend point off to the side, but endpoints fixed
+      const bendPt = deflectPoint(
+	  mid,
+	  baseAngle + Math.PI / 2,
+	  halfLen * Math.sin(angleRad)
+      );
 
     const firstHalf = ptsOnStraightLine(
       start,
@@ -244,7 +270,7 @@ function ptsOnLine(thing, line) {
     // bend point becomes new endpoint
     const bendPt = deflectPoint(mid, baseAngle + angleRad, halfLen);
 
-    const firstHalf = ptsOnStraightLine(start, mid, Math.floor(numSteps / 2));
+    const firstHalf  = ptsOnStraightLine(start, mid, Math.floor(numSteps / 2));
     const secondHalf = ptsOnStraightLine(mid, bendPt, Math.ceil(numSteps / 2));
     return [...firstHalf, ...secondHalf.slice(1)];
   }
@@ -275,3 +301,22 @@ function numbersToPoints(coords) {
   if (typeof coords == "number") return drawState.pts[coords];
   else return coords;
 }
+
+export {
+  toRadians,
+  toDegrees,
+  createNodes,
+  drawParabs,
+  displayPoint,
+  drawCircle,
+  drawNodes,
+  drawLines,
+  drawALine,
+  drawLine,
+  printCircNum,
+  printTitle,
+  stitcher,
+  ptsOnLine,
+  getPreviousIndex,
+  numbersToPoints
+};

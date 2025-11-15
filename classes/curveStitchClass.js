@@ -1,4 +1,6 @@
-class CurveStitch {
+import { Point } from "./classes.js";
+
+export class CurveStitch {
     constructor (s= {}) {
 	const defaults = {
             both:        false,                    // check this one out

@@ -4,10 +4,12 @@
     <meta charset="UTF-8" />
     <title>Test</title>
     <script src="./classes/classes.js"></script>
+    <script src="./classes/ellipseClass.js"></script>
     <script src="./draw/draw_utilities.js"></script>
     <script src="./draw/drawRegular.js"></script>
+    <script src="./draw/ellipse.js"></script>
     <script src="./draw/drawRedefines.js"></script>
-
+</head>
 <body>
 <div style="position: absolute; top: 50px; left: 50px;">
 <canvas id="StringThing" width="1000" height="800"></canvas>
@@ -28,24 +30,59 @@ var context   = theCanvas.getContext("2d");
 let ctx       = context;
 ctx.clearRect(0,0,theCanvas.width,theCanvas.height);
 
-function parabolaTest() {
-    let s = {color: "green"};
-    let thing = new StringThing(s);
-    let line1 = new Line(new Point(20,20),  new Point(20,300));
-    let line2 = new Line(new Point(20,300), new Point(300,300));
-    drawAParab(thing, line1, line2);
-}
+//function drawLinesAllAround(ptArray, skip = 1, color = "blue") {
+//  const s = { pts: ptArray, skip, color };
+//  _drawLines(s);
+//} // end drawLinesAllAround
+//
+//function drawLines(ptArray, start = 0, end = ptArray.length,
+//		   color = "blue", close = false) {
+//    const s = { pts: ptArray, start, end, skip: 1, color, close };
+//    _drawLines(s);
+//} // end drawLines
+//
+//function drawNodes(points, color = "blue") {
+//    const s = { pts: points, close: true, color };
+//    _drawLines(s);
+//} // end drawNodes
+//
+//function _drawLines(s) {
+//    const start = s.start ?? 0;
+//    const end   = s.end   ?? s.pts.length;
+//    const skip  = s.skip  ?? 1;
+//    const color = s.color ?? "blue";
+//    const close = s.close ?? false;
+//    const chop  = s.chop  ?? false;
+//
+//    for (let i = start; i < end; i++) {
+//	let j = i + skip;
+//	if (chop && j >= s.pts.length) return;
+//	j = j % s.pts.length;
+//	drawLine(s.pts[i], s.pts[j], color);
+//    }
+//
+//    if (close && s.pts.length > 1) {
+//	drawLine(s.pts[0], s.pts[(end - 1) % s.pts.length], color);
+//    }
+//} // end _drawLines
 
-function parabolaTestOld() {
+   function test17() {
+//	printTitle("Test 17: Ellipse");
+       s = { midpoint: new Point(300,150),
+	      color:    "blue",
+	      skip:     30,
+	      ellipse:  {a: 500, b: 250},
+	     numNodes: 120,
+	     endSkip:   20,
+	     startSkip: 10,
+	     withinCirc: TAPER,
+	      rotate:   0
+	    };
+	thing = new Ellipse(s);
+        drawInEllipse(thing);
+   }
 
-    let pts = [new Point(20,20),
-	       new Point(20,300),
-	       new Point(300,300)];
-    drawParab(thing, pts);
-}
-parabolaTest();
-
-
+test17();
 	</script>
 </body>
 </html>

@@ -2,7 +2,7 @@
 window.drawRegistry = Object.assign({}, {
     bird:           window.drawRegistry_bird,
     boxes:          window.drawRegistry_boxes,
-    ellipse:        window.drawRegistry_ellipse,
+    inEllipse:      window.drawRegistry_inEllipse,
     inverseStar:    window.drawRegistry_inverseStar,
     line:           window.drawRegistry_line,
     lines2:         window.drawRegistry_2lines,

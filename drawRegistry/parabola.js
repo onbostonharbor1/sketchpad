@@ -4,6 +4,8 @@
    Lifecycle identical to 2lines: init, update, draw.
    Only the draw() method differs — calls drawAParab().
    ------------------------------------------------------------ */
+import { Line, Point, StringThing } from "../classes/classes.js";
+import { drawAParab }               from "../draw/drawRegular.js";
 
 window.drawRegistry_parabola = {
   name:        "Parabola",

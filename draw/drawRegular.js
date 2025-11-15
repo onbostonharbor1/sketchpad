@@ -12,6 +12,9 @@
 // drawRegularPolygon
 // drawRegularPolygonCorner
 // drawRegularPolygonTouch
+import { Line, Point, StringThing }       from "../classes/classes.js";
+import { createNodes, drawLines, drawParabs, drawNodes,
+	 ptsOnLine, stitcher, getPreviousIndex }            from "./draw_utilities.js";
 
 function createArms(thing, lines) {
   const arms = [];
@@ -119,7 +122,7 @@ function drawInnerStar(thing) {
   const arms = createArms(thing, lines);
   const parabs = [];
   for (let i = 0; i < arms.length; i++) {
-    j = (i + 1) % arms.length;
+    let j = (i + 1) % arms.length;
     parabs.push(stitcher(arms[i], arms[j].toReversed()));
   }
   drawParabs(thing, parabs);
@@ -153,7 +156,7 @@ function drawRegularPolygon(thing) {
   const arms = createArms(thing, lines);
   const parabs = [];
   for (let i = 0; i < arms.length; i++) {
-    j = (i + 1) % arms.length;
+    let j = (i + 1) % arms.length;
     parabs.push(stitcher(arms[i], arms[j]));
   }
   drawParabs(thing, parabs);
@@ -199,3 +202,15 @@ function drawRegularPolygonTouch(thing) {
   }
   drawParabs(thing, parabs);
 }
+
+export {
+    drawAParab,
+    drawCircularParabola,
+    drawInnerStar,
+    drawInverseStar,
+    drawManyParabs,
+    drawParab,
+    drawRegularPolygon,
+    drawRegularPolygonCorner,
+    drawRegularPolygonTouch
+};

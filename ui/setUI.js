@@ -16,6 +16,20 @@
    Registry of all tab div-controllers
    Each entry points to the *Divs object defined in that tab's file.
 ------------------------------------------------------------ */
+import { drawDivs }        from "./draw.js";
+import { initDrawTab }     from "./draw.js";
+import { patternsDivs }    from "./patterns.js";
+import { initPatternsTab } from "./patterns.js";
+import { figuresDivs }     from "./figures.js";
+import { initFiguresTab }  from "./figures.js";
+import { galleryDivs }     from "./gallery.js";
+import { initGalleryTab }  from "./gallery.js";
+import { utilityDivs }     from "./utilities.js";
+import { initUtilityTab }  from "./utilities.js";
+import { clearDivs }       from "./ui_utilities.js";
+
+let activeDivs = {};
+
 const allDivSets = {
   draw: drawDivs,
   patterns: patternsDivs,
@@ -42,10 +56,9 @@ function saveTabState(tabName) {
       if (typeof saveDrawState === "function")
         uiState.drawSavedState = saveDrawState();
       break;
-    case "patterns":
-      if (typeof savePatternsState === "function")
-        uiState.patternsSavedState = savePatternsState();
-      break;
+
+    // Patterns save removed
+
     default:
       break;
   }
@@ -71,19 +84,13 @@ function restoreTabState(tabName) {
         return true;
       }
       break;
-    case "patterns":
-      if (
-        uiState.patternsSavedState &&
-        typeof restorePatternsState === "function"
-      ) {
-        restorePatternsState(uiState.patternsSavedState);
-        return true;
-      }
-      break;
+
+    // Patterns restore removed
+
     default:
       break;
   }
-  return false; // no prior state
+  return false;
 } // end restoreTabState
 
 /* ------------------------------------------------------------
@@ -97,9 +104,8 @@ function restoreTabState(tabName) {
 function activateTab(tabKey) {
   clearDivs("subtabs");
 
-  activeDivs = allDivSets[tabKey] || {};
+  const activeDivs = allDivSets[tabKey] || {};
 
-  // apply theme
   const wrapper = document.getElementById("wrapper");
   wrapper.classList.remove(
     "theme-draw",
@@ -110,55 +116,55 @@ function activateTab(tabKey) {
   );
   if (activeDivs.theme) wrapper.classList.add(activeDivs.theme);
 
-  // assign local references
-  uiState.setAction = activeDivs.action || null;
-  uiState.setButtons = activeDivs.buttons || null;
-  uiState.setCaption = activeDivs.caption || null;
+  uiState.setAction    = activeDivs.action    || null;
+  uiState.setButtons   = activeDivs.buttons   || null;
+  uiState.setCaption   = activeDivs.caption   || null;
   uiState.setSketchpad = activeDivs.sketchpad || null;
-  uiState.setSubtabs = activeDivs.subtabs || null;
-  uiState.setText = activeDivs.text || null;
+  uiState.setSubtabs   = activeDivs.subtabs   || null;
+  uiState.setText      = activeDivs.text      || null;
 
-  // populate only the divs listed for this tab
   if (Array.isArray(activeDivs.activeDivs)) {
     if (activeDivs.activeDivs.includes("buttons") && uiState.setButtons)
       uiState.setButtons();
+
     if (activeDivs.activeDivs.includes("action") && uiState.setAction)
       uiState.setAction();
-    if (activeDivs.activeDivs.includes("subtabs") && uiState.setSubtabs)
-      uiState.setSubtabs();
+
     if (activeDivs.activeDivs.includes("caption") && uiState.setCaption)
       uiState.setCaption();
+
     if (activeDivs.activeDivs.includes("text") && uiState.setText)
       uiState.setText();
+
     if (activeDivs.activeDivs.includes("sketchpad") && uiState.setSketchpad)
       uiState.setSketchpad();
+
+    // Do NOT call setSubtabs here.
   }
 
-  // --- Restore saved state if available ---
-  const restored = restoreTabState(tabKey);
+  switch (tabKey) {
+  case "draw":
+    // First restore the saved Draw state (if any)
+    const restored = restoreTabState("draw");
 
-  // --- Call tab-specific initializer if needed ---
-  if (!restored) {
-    switch (tabKey) {
-      case "draw":
-        initDrawTab();
-        break;
-      case "patterns":
-        initPatternsTab();
-        break;
-      case "figures":
-        initFiguresTab();
-        break;
-      case "gallery":
-        initGalleryTab();
-        break;
-      case "utilities":
-        initUtilityTab();
-        break;
-    }
+    // THEN run initDrawTab
+    initDrawTab(restored);
+
+    // Skip the bottom restoreTabState call since we already restored
+    uiState.activeTab = "draw";
+    return;
+  case "patterns":
+      initPatternsTab(); break;
+  case "figures":
+      initFiguresTab();  break;
+  case "gallery":
+      initGalleryTab();  break;
+  case "utilities":
+      initUtilityTab();  break;
   }
 
-  // update active tab
+  restoreTabState(tabKey);
+
   uiState.activeTab = tabKey;
 } // end activateTab
 

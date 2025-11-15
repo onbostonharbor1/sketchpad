@@ -1,11 +1,10 @@
-                   ///////////////////////////////////
-                   // test 2:  DRAW REGULAR POLYGON
-                   ///////////////////////////////////
-(
-    function fig3() {
-	printTitle("Draw Regular Polygon");
-	//	gl.dot = true;
-	s={numSteps:     20,
+import { Line, Point, StringThing } from "../../classes/classes.js";
+import { printTitle } from "../../draw/draw_utilities.js";
+import { drawRegularPolygon } from "../../draw/drawRegular.js";
+
+export function runPattern() {
+    printTitle("Draw Regular Polygon");
+    let s={numSteps:     20,
 	   midpoint:     new Point(200,200),
 	   //	     lineWidth:    .5,
 	   //	     rotate:       45,
@@ -15,8 +14,7 @@
 	   //	     yScale:     .5,
 	   color:        "green",
 	   numNodes:     4 };
-	thing = new StringThing(s);
-	drawRegularPolygon(thing);
-    }
-)();
+    let thing = new StringThing(s);
+    drawRegularPolygon(thing);
+}
 

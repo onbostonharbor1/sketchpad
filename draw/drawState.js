@@ -30,7 +30,7 @@ Object.defineProperty(window, "ctx", {
 }); // end global ctx getter
 
 
-let drawState = {
+export let drawState = {
     currentTitle:    "", 
     currentFileName: "",
     dot:             false,

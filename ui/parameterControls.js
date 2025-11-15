@@ -6,7 +6,7 @@
    - Optionally renders the controls in the #action area.
    - Delegates to a tab-specific data builder.
 =========================================================== */
-function buildParameterControls(
+export function buildParameterControls(
   sourceInfo,
   targetTabId = "tab-generic",
   render = true
@@ -247,14 +247,27 @@ function setSelectControl(field, label, def, value, info, key, tabId) {
 
   (def.options || []).forEach((opt) => {
     const o = document.createElement("option");
-    o.value = opt;
-    o.textContent = opt;
-    if (opt === value) o.selected = true;
+
+    // allow either string or object with { value, label }
+    if (typeof opt === "object" && opt !== null) {
+      o.value = opt.value;
+      o.textContent = opt.label ?? String(opt.value);
+      if (opt.value === value) o.selected = true;
+    } else {
+      o.value = opt;
+      o.textContent = opt;
+      if (opt === value) o.selected = true;
+    }
+
     select.appendChild(o);
   });
 
   select.addEventListener("change", () => {
-    info.parameters[key] = select.value;
+    // convert numeric strings back to numbers automatically
+    const raw = select.value;
+    const num = !isNaN(raw) && raw.trim() !== "" ? Number(raw) : raw;
+    info.parameters[key] = num;
+
     if (typeof info.redrawHandler === "function") info.redrawHandler();
   });
 

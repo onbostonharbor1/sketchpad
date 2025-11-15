@@ -27,26 +27,23 @@
 // setGallerySketchpad(), setGallerySubtabs(), setGalleryText()
 //                                          – clear corresponding divs
 
+import { renderCategories, showSharedOffcanvas, clearDivs,
+         loadDirectoryRegistry, loadManifest, loadManifestGroup,
+         setActiveItem, setCaptionBar }
+                      from "./ui_utilities.js";
+import { uiState }    from "./uiState.js";
+import { printTitle } from "../draw/draw_utilities.js";
+import { Line, Point, StringThing }
+                      from "../classes/classes.js";
 const IDEABOOK = "Ideabook";
 const PATTERNS = "Patterns";
 const SCRIPTS  = "Scripts";
 
 /* ------------------------------------------------------------
    initGalleryTab()
-   Initializes the Gallery tab when activated.
-   Rebuilds the subtab bar and restores any previously
-   created subtabs (Ideabook, Patterns, Scripts) from cache.
+------------------------------------------------------------ */
 
-   Arguments:
-     (none)
------------------------------------------------------------- */
-/* ------------------------------------------------------------
-   initGalleryTab()
-   Initializes the Gallery tab when activated.
-   Rebuilds any previously created subtabs (Ideabook, Patterns,
-   Scripts) from uiState.galleryTabs.
------------------------------------------------------------- */
-async function initGalleryTab() {
+export async function initGalleryTab() {
   clearDivs();
   setGallerySubtabs();
 
@@ -76,24 +73,16 @@ async function initGalleryTab() {
 /* ------------------------------------------------------------
    setGallerySubtabs()
    Creates the Gallery subtab bar if missing.
-   Adds the "Categories" button and binds its click handler.
-
-   Arguments:
-     (none)
 ------------------------------------------------------------ */
 function setGallerySubtabs() {
   let el = document.getElementById("subtabs");
   if (!el) throw new Error("setGallerySubtabs: #subtabs not found");
 
-  // reuse existing subtab bar if it already exists
-  let bar = document.getElementById("gallerySubtabBar");
-  if (bar) return;
-
-  // otherwise create new subtab bar
+  // Always rebuild to avoid phantom id issues
   el.innerHTML = "";
-  bar = document.createElement("ul");
+
+  const bar = document.createElement("ul");
   bar.className = "nav nav-tabs gallery-subtabs";
-  bar.id = "gallerySubtabBar";
   el.appendChild(bar);
 
   // create and attach the Categories button
@@ -113,11 +102,6 @@ function setGallerySubtabs() {
 
 /* ------------------------------------------------------------
    setGalleryCategories()
-   Populates the Categories view.
-   Loads Ideabook and Patterns directories and builds category frames.
-
-   Arguments:
-     (none)
 ------------------------------------------------------------ */
 async function setGalleryCategories() {
   const textDiv = document.getElementById("text");
@@ -151,18 +135,12 @@ async function setGalleryCategories() {
 
 /* ------------------------------------------------------------
    renderGalleryCategories(container, data)
-   Builds the category frames for Ideabook, Patterns, and Scripts.
-
-   Arguments:
-     container – parent element for category display
-     data      – object containing category names and lists
 ------------------------------------------------------------ */
 function renderGalleryCategories(container, data) {
   container.innerHTML = "";
   const wrapper = document.createElement("div");
   wrapper.id = "categories";
 
-  // helper for each category section
   function addFrame(title, list) {
     const frame = document.createElement("div");
     frame.className = "category-frame";
@@ -186,12 +164,10 @@ function renderGalleryCategories(container, data) {
         const row = document.createElement("div");
         row.className = "item";
 
-        // if manifest entry is an object, prefer title over filename
         if (typeof entry === "object" && entry !== null) {
           row.textContent = entry.title || entry.filename || "(untitled)";
           row.dataset.filename = entry.filename || "";
         } else {
-          // legacy case: entry is a plain string
           row.textContent = entry;
           row.dataset.filename = entry;
         }
@@ -213,62 +189,44 @@ function renderGalleryCategories(container, data) {
 
 /* ------------------------------------------------------------
    addGalleryHandler(tab, container)
-   Attaches click handlers for category items.
-   When an item is clicked, its thumbnails (or script list) are rendered.
-
-   Arguments:
-     tab        – one of IDEABOOK or PATTERNS or SCRIPTS
-     container  – DOM element containing category frames
 ------------------------------------------------------------ */
 function addGalleryHandler(tab, container) {
-  // determine which frame to target
   const index = (tab === IDEABOOK) ? 1 : (tab === PATTERNS) ? 2 : 3;
   const frame = container.querySelector(`.category-frame:nth-child(${index})`);
   if (!frame) return;
 
-  // attach listeners to each category row
-    frame.querySelectorAll(".item").forEach(row => {
-	row.addEventListener("click", async () => {
-	    const cat = row.textContent.trim();
-	    if (!cat || cat === "(empty)") return;
-	    
-	    const textDiv = document.getElementById("text");
-	    if (textDiv) textDiv.innerHTML = "";
-	    
-	    addGallerySubtab({ name: tab });
-	    
-	    if (tab === SCRIPTS) {
-		const scriptName = row.dataset.filename || row.textContent.trim();
-		await renderGalleryScripts(scriptName);
-	    } else {
-		renderGalleryThumbnails(tab, cat);
-	    }
-	});
+  frame.querySelectorAll(".item").forEach(row => {
+    row.addEventListener("click", async () => {
+      const cat = row.textContent.trim();
+      if (!cat || cat === "(empty)") return;
+
+      const textDiv = document.getElementById("text");
+      if (textDiv) textDiv.innerHTML = "";
+
+      addGallerySubtab({ name: tab });
+
+      if (tab === SCRIPTS) {
+        const scriptName = row.dataset.filename || row.textContent.trim();
+        await renderGalleryScripts(scriptName);
+      } else {
+        renderGalleryThumbnails(tab, cat);
+      }
     });
+  });
 
 } // end addGalleryHandler
 
 
 /* ------------------------------------------------------------
    addGallerySubtab(item)
-   Creates a subtab button (Ideabook, Patterns, or Scripts).
-
-   Arguments:
-     item – object with { name } property
------------------------------------------------------------- */
-/* ------------------------------------------------------------
-   addGallerySubtab(item)
-   Creates a subtab button (Ideabook, Patterns, or Scripts)
-   and records it in uiState.galleryTabs for restoration.
 ------------------------------------------------------------ */
 function addGallerySubtab(item) {
-  const bar = document.getElementById("gallerySubtabBar");
+  const bar = document.querySelector("#subtabs ul");
   if (!bar) throw new Error("addGallerySubtab: subtab bar not found");
 
   const tabId = "tab-" + item.name.toLowerCase();
   let btn = bar.querySelector(`[data-tab-id="${tabId}"]`);
 
-  // create if missing
   if (!btn) {
     const li = document.createElement("li");
     li.className = "nav-item";
@@ -280,11 +238,9 @@ function addGallerySubtab(item) {
     li.appendChild(btn);
     bar.appendChild(li);
 
-    // record created subtab for restoration
     uiState.galleryTabs[tabId] = { name: item.name };
   }
 
-  // highlight active button
   bar.querySelectorAll(".nav-link").forEach(b => b.classList.remove("active"));
   btn.classList.add("active");
   uiState.activeGalleryTab = tabId;
@@ -293,25 +249,18 @@ function addGallerySubtab(item) {
 
 /* ------------------------------------------------------------
    switchGalleryTab(tabId)
-   Switches between Gallery subtabs and restores cached data.
-
-   Arguments:
-     tabId – string (e.g., "tab-ideabook")
 ------------------------------------------------------------ */
 async function switchGalleryTab(tabId) {
   uiState.activeGalleryTab = tabId;
   clearDivs();
 
-  // --- Handle Categories tab separately ---
   if (tabId === "tab-categories") {
     await setGalleryCategories();
     return;
   }
 
-  // --- Derive subtab key ---
   const key = tabId.replace("tab-", "");
 
-  // --- Fetch or reuse cached manifest ---
   let manifestInfo = uiState.manifests.gallery[key];
   if (!manifestInfo) {
     console.log("Loading new manifest for", key);
@@ -340,7 +289,6 @@ async function switchGalleryTab(tabId) {
     console.log("Using cached manifest for", key);
   }
 
-  // --- Redisplay based on selected subtab ---
   if (key === "ideabook") {
     addGallerySubtab({ name: IDEABOOK });
     renderGalleryThumbnails(IDEABOOK, Object.keys(manifestInfo)[0]);
@@ -352,28 +300,22 @@ async function switchGalleryTab(tabId) {
     await renderGalleryScripts();
   }
 
-  // --- Update button highlighting ---
-  const buttons = document.querySelectorAll("#gallerySubtabBar .nav-link");
-  buttons.forEach(b => b.classList.remove("active"));
-  const activeBtn = document.querySelector(`[data-tab-id="${tabId}"]`);
-  if (activeBtn) activeBtn.classList.add("active");
+  const bar = document.querySelector("#subtabs ul");
+  if (bar) {
+    bar.querySelectorAll(".nav-link").forEach(b => b.classList.remove("active"));
+    const activeBtn = bar.querySelector(`[data-tab-id="${tabId}"]`);
+    if (activeBtn) activeBtn.classList.add("active");
+  }
 } // end switchGalleryTab
 
 
 /* ------------------------------------------------------------
    renderGalleryThumbnails(tab, category)
-   Displays thumbnails for a given Gallery subtab and category.
-   Uses cached manifest if available, otherwise fetches from disk.
-
-   Arguments:
-     tab       – one of IDEABOOK or PATTERNS
-     category  – name of the category folder
 ------------------------------------------------------------ */
 async function renderGalleryThumbnails(tab, category) {
   const actDiv = document.getElementById("action");
   actDiv.innerHTML = "<p>Loading thumbnails...</p>";
 
-  // --- Check cache first ---
   let cached;
   if (tab === IDEABOOK)
     cached = uiState.manifests.gallery.ideabook?.[category];
@@ -387,7 +329,6 @@ async function renderGalleryThumbnails(tab, category) {
     return;
   }
 
-  // --- Otherwise load manifest via helper ---
   try {
     const manifest = await loadManifest(`./gallery/${tab}`, category);
     if (!Array.isArray(manifest) || manifest.length === 0) {
@@ -395,7 +336,6 @@ async function renderGalleryThumbnails(tab, category) {
       return;
     }
 
-    // --- Cache manifest ---
     if (tab === IDEABOOK) {
       uiState.manifests.gallery.ideabook ??= {};
       uiState.manifests.gallery.ideabook[category] = manifest;
@@ -416,74 +356,57 @@ async function renderGalleryThumbnails(tab, category) {
 
 /* ------------------------------------------------------------
    renderGalleryScripts()
-   For the Scripts subtab, nothing is displayed in #action.
-   Execution happens immediately when switching to Scripts.
 ------------------------------------------------------------ */
-
-async function renderGalleryScripts(scriptName = null) {
+function renderGalleryScripts(scriptName = null) {
   const actDiv = document.getElementById("action");
   actDiv.innerHTML = "";
 
-  try {
-      // --- Fetch or reuse cached manifest ---
+  (async function () {
+    try {
       let manifest = uiState.manifests.gallery.scripts;
       if (!manifest) {
-	  manifest = await loadManifest("./gallery", "Scripts");
-	  if (!manifest) throw new Error("Missing or invalid Scripts manifest");
-	  uiState.manifests.gallery.scripts = manifest;
+        manifest = await loadManifest("./gallery", "Scripts");
+        if (!manifest) throw new Error("Missing or invalid Scripts manifest");
+        uiState.manifests.gallery.scripts = manifest;
       }
 
       uiState.activeManifest = manifest;
 
-      // --- Determine which entry to show ---
       let idx = 0;
       if (scriptName) {
-	  idx = manifest.findIndex(e => e.filename === scriptName);
-	  if (idx < 0) idx = 0;
+        idx = manifest.findIndex(e => e.filename === scriptName);
+        if (idx < 0) idx = 0;
       } else {
-	  idx = uiState.galleryIndex?.scripts ?? 0;
+        idx = uiState.galleryIndex?.scripts ?? 0;
       }
 
       const entry = manifest[idx] ?? manifest[0];
       if (!entry) {
-	  console.warn("No script entries found in manifest.");
-	  return;
+        console.warn("No script entries found in manifest.");
+        return;
       }
 
-      // --- Display selected script ---
       setActiveItem("Scripts", entry);
       await showGalleryScript(entry);
       updateGalleryCaption(SCRIPTS);
-      
-      // --- Show parameter controls if defined ---
-      if (window.scriptInfo) {
-	  window.scriptInfo.redrawHandler = redrawActiveScript;
-	  buildParameterControls(window.scriptInfo, "tab-scripts", true);
-      }
-  } catch (err) {
+
+    } catch (err) {
       console.error("renderGalleryScripts failed:", err);
       actDiv.innerHTML = `<p style="color:red;">
-                        Error loading or executing Scripts manifest</p>`;
-  }
+                          Error loading or executing Scripts manifest</p>`;
+    }
+  })();
 } // end renderGalleryScripts
 
 
 /* ------------------------------------------------------------
    drawGalleryThumbnails(tab, category, manifest)
-   Builds a unified thumbnail panel for any Gallery subtab.
-   Restores previously viewed image using stored galleryIndex.
-
-   Arguments:
-     tab       – IDEABOOK or PATTERNS
-     category  – current category name
-     manifest  – array of manifest entries
 ------------------------------------------------------------ */
 function drawGalleryThumbnails(tab, category, manifest) {
   const actDiv = document.getElementById("action");
   const panel = document.createElement("div");
   panel.className = "thumb-panel";
 
-  // create thumbnails
   manifest.forEach((entry, i) => {
     const { filename, path } = entry;
     const thumbBox = document.createElement("div");
@@ -511,7 +434,6 @@ function drawGalleryThumbnails(tab, category, manifest) {
   actDiv.innerHTML = "";
   actDiv.appendChild(panel);
 
-  // restore previously viewed image
   const key = tab.toLowerCase();
   const idx = uiState.galleryIndex[key] ?? 0;
   const entry = manifest[idx] ?? manifest[0];
@@ -523,14 +445,9 @@ function drawGalleryThumbnails(tab, category, manifest) {
   updateGalleryCaption(tab);
 } // end drawGalleryThumbnails
 
+
 /* ------------------------------------------------------------
    showGalleryImage(tab, category, path)
-   Displays selected image in the main sketchpad area.
-
-   Arguments:
-     tab       – one of IDEABOOK / PATTERNS / SCRIPTS
-     category  – folder name
-     path      – image path relative to gallery/<tab>
 ------------------------------------------------------------ */
 function showGalleryImage(tab, category, path) {
   const sketch = document.getElementById("sketchpad");
@@ -550,92 +467,64 @@ function showGalleryImage(tab, category, path) {
 
 /* ------------------------------------------------------------
    showGalleryScript(entry)
-   Executes a .js script from gallery/Scripts and displays its output.
-   The script is dynamically loaded into the DOM.
-   The offcanvas panel may be opened separately to show its source.
-
-   Arguments:
-     entry – manifest entry { filename, path, title? }
+------------------------------------------------------------ */
+/* ------------------------------------------------------------
+   showGalleryScript(entry)
+   Now detects patternMeta/initPattern/drawPattern for controls.
 ------------------------------------------------------------ */
 async function showGalleryScript(entry) {
   const sketchDiv = document.getElementById("sketchpad");
-
-  // === STEP 1: Attach shared canvas ===
   sketchDiv.innerHTML = "";
   sketchDiv.appendChild(window.drawCanvas);
 
-  const localCtx = ctx;
+  ctx.fillStyle = "#ffffff";
+  ctx.fillRect(0, 0, drawCanvas.width, drawCanvas.height);
 
-  // === STEP 2: Clear the drawing area ===
-  localCtx.fillStyle = "#ffffff";
-  localCtx.fillRect(0, 0, drawCanvas.width, drawCanvas.height);
+  try {
+    const moduleUrl = `/gallery/Scripts/${entry.path}`;
+    const mod = await import(moduleUrl);
 
-  // === STEP 3: Load and execute script ===
-  // === STEP 3: Load and execute script ===
-    try {
-	// add cache-buster so browser fetches a fresh copy
-	const resp = await fetch(`./gallery/Scripts/${entry.path}?t=${Date.now()}`);
-	if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
-	
-	const code = await resp.text();
+    // --- NEW: parameterized script?
+    if (mod.patternMeta && mod.initPattern && mod.drawPattern) {
+      printTitle(mod.patternMeta.title || entry.title || entry.filename);
 
-	// clear old scriptInfo before running new script
-	delete window.scriptInfo;
-	
-	// evaluate new script source
-	eval(code);
+      const params = mod.initPattern();
 
-	// draw using its registered function
-	if (window.scriptInfo && typeof window.scriptInfo.draw === "function") {
-	    window.scriptInfo.draw(window.scriptInfo.parameters);
-	}
+      // build a simple control panel
+      const actionDiv = document.getElementById("action");
+      actionDiv.innerHTML = "";
+      buildScriptControls(mod.patternMeta, params, actionDiv, () => {
+        mod.drawPattern(params);
+      });
 
-	// rebuild controls every time a script runs
-	const actionDiv = document.getElementById("action");
-	if (actionDiv) actionDiv.innerHTML = "";
-	if (window.scriptInfo) {
-	    window.scriptInfo.redrawHandler = redrawActiveScript;
-	    buildParameterControls(window.scriptInfo, "tab-scripts", true);
-	}
-	console.log(`✅ Executed ${entry.filename}`);
-    } catch (err) {
-	console.error("Script execution error:", err);
-	sketchDiv.innerHTML = `<p style="color:red;">
-                 Error executing ${entry.filename}</p>`;
-	return;
+      mod.drawPattern(params);
+    }
+    else {
+      // legacy script
+      if (!mod.runPattern)
+        throw new Error(`runPattern() not found in ${moduleUrl}`);
+
+      await mod.runPattern();
+    }
+
+  } catch (err) {
+    console.error("Script execution error:", err);
+    sketchDiv.innerHTML = `<p style="color:red;">
+                 Error executing ${entry.filename}: ${err.message}</p>`;
+    return;
   }
 
-
-  // === STEP 4: Update UI state ===
   uiState.activeScript = {
     filename: entry.filename,
-    path: entry.path
+    path: entry.path,
+    title: entry.title || entry.filename
   };
 
-  updateGalleryCaption(SCRIPTS);
-
-  // === STEP 5: Rebuild parameter controls if script defines them ===
-  const actionDiv = document.getElementById("action");
-  if (actionDiv) actionDiv.innerHTML = ""; // clear any prior controls
-
-if (window.scriptInfo) {
-  window.scriptInfo.redrawHandler = redrawActiveScript;
-  buildParameterControls(window.scriptInfo, "tab-scripts", true);
-}
-    
-
+  updateGalleryCaption("Scripts");
 } // end showGalleryScript
-
-
 
 /* ------------------------------------------------------------
    updateGalleryCaption(tab)
-   Builds the caption bar for a subtab.
-   Displays current title and Prev/Next buttons.
-   For Scripts, adds a "Show Script" button to open the offcanvas panel.
-
-   Arguments:
-     tab – name of subtab ("Ideabook", "Patterns", or "Scripts")
 ------------------------------------------------------------ */
 function updateGalleryCaption(tab) {
   const capDiv = document.getElementById("caption");
@@ -658,11 +547,9 @@ function updateGalleryCaption(tab) {
     return b;
   };
 
-  // unified navigation handlers
   btnGroup.appendChild(makeBtn("Prev", () => showPrevGalleryItem(tab)));
   btnGroup.appendChild(makeBtn("Next", () => showNextGalleryItem(tab)));
 
-  // add Show Script only for Scripts subtab
   if (tab === SCRIPTS) {
     btnGroup.appendChild(makeBtn("Show Script", async () => {
       const entry = uiState.activeGalleryItem;
@@ -673,7 +560,8 @@ function updateGalleryCaption(tab) {
           const text = await res.text();
           showOffcanvas(entry.title || entry.filename, text);
         } else {
-          showOffcanvas(entry.title || entry.filename, `Unable to load script: HTTP ${res.status}`);
+          showOffcanvas(entry.title || entry.filename,
+                        `Unable to load script: HTTP ${res.status}`);
         }
       } catch (err) {
         showOffcanvas(entry.title || entry.filename, `Error: ${err.message}`);
@@ -687,9 +575,10 @@ function updateGalleryCaption(tab) {
 
 /* ------------------------------------------------------------
    showPrevGalleryItem(tab)
-   Displays the previous item for the given subtab.
 ------------------------------------------------------------ */
 async function showPrevGalleryItem(tab) {
+    setGalleryAction();   // always clear action area on navigation
+
   const manifest = uiState.activeManifest;
   if (!manifest) return;
 
@@ -700,29 +589,26 @@ async function showPrevGalleryItem(tab) {
   const entry = manifest[prevIdx];
   uiState.activeGalleryItem = entry;
 
-    if (!uiState.galleryIndex)
-	uiState.galleryIndex = { ideabook: 0, patterns: 0, scripts: 0 };
-    uiState.galleryIndex[tab.toLowerCase()] = prevIdx;
+  if (!uiState.galleryIndex)
+    uiState.galleryIndex = { ideabook: 0, patterns: 0, scripts: 0 };
+  uiState.galleryIndex[tab.toLowerCase()] = prevIdx;
 
-    if (tab === SCRIPTS) {
-	await showGalleryScript(entry);
-	if (window.scriptInfo) {
-	    window.scriptInfo.redrawHandler = redrawActiveScript;
-	    buildParameterControls(window.scriptInfo, "tab-scripts", true);
-	}
-    } else {
-	showGalleryImage(tab, uiState.activeCategory, entry.path);
-    }
+  if (tab === SCRIPTS) {
+    await showGalleryScript(entry);
+  } else {
+    showGalleryImage(tab, uiState.activeCategory, entry.path);
+  }
 
-    updateGalleryCaption(tab);
+  updateGalleryCaption(tab);
 } // end showPrevGalleryItem
 
 
 /* ------------------------------------------------------------
    showNextGalleryItem(tab)
-   Displays the next item for the given subtab.
 ------------------------------------------------------------ */
 async function showNextGalleryItem(tab) {
+    setGalleryAction();   // always clear action area on navigation
+
   const manifest = uiState.activeManifest;
   if (!manifest) return;
 
@@ -733,36 +619,140 @@ async function showNextGalleryItem(tab) {
   const entry = manifest[nextIdx];
   uiState.activeGalleryItem = entry;
 
-  if (!uiState.galleryIndex) uiState.galleryIndex = { ideabook: 0, patterns: 0, scripts: 0 };
+  if (!uiState.galleryIndex)
+    uiState.galleryIndex = { ideabook: 0, patterns: 0, scripts: 0 };
   uiState.galleryIndex[tab.toLowerCase()] = nextIdx;
 
-    if (tab === SCRIPTS) {
-	await showGalleryScript(entry);
-	if (window.scriptInfo) {
-	    buildScriptParameterControls(window.scriptInfo, "tab-scripts");
-	}
-    } else {
-	showGalleryImage(tab, uiState.activeCategory, entry.path);
-    }
+  if (tab === SCRIPTS) {
+    await showGalleryScript(entry);
+  } else {
+    showGalleryImage(tab, uiState.activeCategory, entry.path);
+  }
 
   updateGalleryCaption(tab);
 } // end showNextGalleryItem
 
 
-function redrawActiveScript() {
-  if (!window.scriptInfo || typeof window.scriptInfo.draw !== "function") return;
-  try {
-    window.scriptInfo.draw(window.scriptInfo.parameters);
-  } catch (err) {
-    console.error("redrawActiveScript failed:", err);
-  }
-} // end redrawActiveScript
+//function redrawActiveScript() {
+//  if (!window.scriptInfo || typeof window.scriptInfo.draw !== "function") return;
+//  try {
+//    window.scriptInfo.draw(window.scriptInfo.parameters);
+//  } catch (err) {
+//    console.error("redrawActiveScript failed:", err);
+//  }
+//} // end redrawActiveScript
+
+function buildScriptControls(meta, params, panel, onChange) {
+  const box = document.createElement("div");
+  box.className = "script-controls";
+
+  meta.parameters.forEach(def => {
+    const row = document.createElement("div");
+    row.className = "script-control-row";
+
+    const label = document.createElement("label");
+    label.textContent = def.label;
+
+    let input;
+
+    // ------------------------
+    // widget: "range"
+    // ------------------------
+    if (def.widget === "range") {
+      input = document.createElement("input");
+      input.type = "range";
+      input.min = def.min;
+      input.max = def.max;
+      input.step = def.step;
+      input.value = params[def.key];
+
+      // Add live number readout
+      const readout = document.createElement("span");
+      readout.className = "script-control-readout";
+      readout.textContent = params[def.key];
+
+      input.addEventListener("input", () => {
+        params[def.key] = Number(input.value);
+        readout.textContent = input.value;
+        onChange();
+      });
+
+      row.appendChild(label);
+      row.appendChild(input);
+      row.appendChild(readout);
+      box.appendChild(row);
+      return; // skip remaining types for this param
+    }
+
+    // ------------------------
+    // widget: "checkbox"
+    // ------------------------
+    if (def.widget === "checkbox") {
+      input = document.createElement("input");
+      input.type = "checkbox";
+      input.checked = params[def.key];
+
+      input.addEventListener("input", () => {
+        params[def.key] = input.checked;
+        onChange();
+      });
+
+      row.appendChild(label);
+      row.appendChild(input);
+      box.appendChild(row);
+      return;
+    }
+
+    // ------------------------
+    // widget: "select"
+    // ------------------------
+    if (def.widget === "select") {
+      input = document.createElement("select");
+
+      def.options.forEach(optVal => {
+        const opt = document.createElement("option");
+        opt.value = optVal;
+        opt.textContent = optVal;
+        if (optVal === params[def.key]) opt.selected = true;
+        input.appendChild(opt);
+      });
+
+      input.addEventListener("input", () => {
+        params[def.key] = input.value;
+        onChange();
+      });
+
+      row.appendChild(label);
+      row.appendChild(input);
+      box.appendChild(row);
+      return;
+    }
+
+    // ------------------------
+    // fallback: plain text
+    // ------------------------
+    input = document.createElement("input");
+    input.type = "text";
+    input.value = params[def.key];
+
+    input.addEventListener("input", () => {
+      params[def.key] = input.value;
+      onChange();
+    });
+
+    row.appendChild(label);
+    row.appendChild(input);
+    box.appendChild(row);
+  });
+
+  panel.appendChild(box);
+} // end buildScriptControls
+
 
 /* ------------------------------------------------------------
    galleryDivs
-   Div mapping for Gallery tab used by setUI().
 ------------------------------------------------------------ */
-const galleryDivs = {
+export const galleryDivs = {
   activeDivs: ["subtabs"],
   theme: "theme-gallery",
   action: setGalleryAction,
@@ -776,7 +766,6 @@ const galleryDivs = {
 
 /* ------------------------------------------------------------
    Minimal placeholder setters
-   Clears the corresponding divs when switching tabs.
 ------------------------------------------------------------ */
 function setGalleryAction() {
   const el = document.getElementById("action");

@@ -1,37 +1,42 @@
-                   ///////////////////////////////////
-                   // test 2:  DRAW REGULAR POLYGON TOUCH
-                   ///////////////////////////////////
+import { Line, Point }     from "../../classes/classes.js";
+import { CurveStitch }     from "../../classes/curveStitchClass.js";
+import { drawInverseStar } from "../../draw/drawRegular.js";
+import { printTitle }      from "../../draw/draw_utilities.js";
 
-(
-    function figures1() {
-	printTitle("Draw Regular Polygon Touch");
-	//	gl.dot = true;
-	s={numSteps:     20,
-	   midpoint:     new Point(150,150),
-	   //	     lineWidth:    .5,
-	   //	     rotate:       45,
-	   radius:       100,
-	   //	     yIncrement:   .8,
-	   //	     xScale:     1.2,
-	   //	     yScale:     .5,
-	   color:        "green",
-	   numNodes:     4 };
-	thing = new StringThing(s);
-	drawRegularPolygonTouch(thing);
+export function runPattern() {
 
-	thing.color = "blue";
-	thing.midpoint = new Point(400,150);
-	thing.numNodes = 5;
-	drawRegularPolygonTouch(thing);
+    printTitle("Four Inverse Stars");
+    let s = {midpoint: new Point(125,125),
+	     radius:   100,
+	     color:    "blue"};
+    let thing = new CurveStitch(s);
+    drawInverseStar(thing);
 
-    	thing.color = "red";
-	thing.midpoint = new Point(150,400);
-	thing.numNodes = 6;
-	drawRegularPolygonTouch(thing);
+    // add rotation
+    s = {midpoint: new Point(350,125),
+	 radius:   100,
+	 rotate:   45,
+	 color:    "green"};
+    thing = new CurveStitch(s);
+    drawInverseStar(thing);
 
-    	thing.color = "violet";
-	thing.midpoint = new Point(400,400);
-	thing.numNodes = 8;
-	drawRegularPolygonTouch(thing);
-    }
-)();
+    // change nodes
+    s = {midpoint: new Point(450,450),
+	 radius:   100,
+	 rotate:   45,
+	 numNodes: 8,
+	 color:    "orange"};
+    thing = new CurveStitch(s);
+    drawInverseStar(thing);
+
+    // add scale
+    s = {midpoint: new Point(175,450),
+	 radius:   100,
+	 xScale:   1.5,
+	 yScale:   1.2,
+	 color:    "red"};
+    thing = new CurveStitch(s);
+    drawInverseStar(thing);
+}
+
+

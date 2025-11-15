@@ -282,3 +282,18 @@ function showSharedOffcanvas(title, text) {
   }
 } // end showSharedOffcanvas
 
+export {
+  renderCategories,
+  clearDivs,
+  loadJSON,
+  loadDirectoryRegistry,
+  loadManifest,
+  loadManifestGroup,
+  showOffcanvas,
+  setActiveItem,
+  setCaptionBar,
+  initOffcanvasHandler,
+  showSharedOffcanvas
+};
+
+

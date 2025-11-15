@@ -6,26 +6,34 @@
 //                0 (FULL)        =full circle 
 //                1 (TAPER)       =start and end taper 
 //                2 (START_TAPER)
-//                1 (END_TAPER)   
+//                3 (END_TAPER)   
+
+import { Point } from "./classes.js";
+
+export const START_END   = -1;
+export const FULL        = 0;
+export const TAPER       = 1;
+export const START_TAPER = 2;
+export const END_TAPER   = 3;
 
 
-const FULL        = 0;
-const TAPER       = 1;
-const START_TAPER = 2;
-const END_TAPER   = 3;
-
-
-class Ellipse {
+export class Ellipse {
     constructor(s = {}) {
         const defaults = {
+            color:       "black",
+            lineWidth:   1,
+
             ellipse:     { a: s.radius || 200, b: s.radius || 200 },
             midpoint:    new Point(200, 200),
-            numSteps:    20,
+            numNodes:    150,
             startSkip:   0,
             endSkip:     0,
             radius:      200,
-            skip:        10,                    // perhaps rename to chordLength
+	    rotate:      0,
+            chordLength: 10,
             withinCirc:  FULL,
+	    xScale:      1,
+	    yScale:      1
 	};
 
 	const merged = Object.assign({}, defaults, s);

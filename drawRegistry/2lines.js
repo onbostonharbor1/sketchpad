@@ -3,6 +3,8 @@
    Two independent lines with a shared style.
    Follows deterministic lifecycle: init, update, draw.
    ------------------------------------------------------------ */
+import { Line, Point, StringThing }      from "../classes/classes.js";
+import { drawALine } from "../draw/draw_utilities.js";
 
 window.drawRegistry_2lines = {
   name:        "Two Lines",

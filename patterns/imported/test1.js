@@ -1,12 +1,15 @@
-test1();
+import { Line, Point }     from "../../classes/classes.js";
+import { CurveStitch }     from "../../classes/curveStitchClass.js";
+import { drawInverseStar } from "../../draw/drawRegular.js";
+import { printTitle }      from "../../draw/draw_utilities.js";
 
-function test1() {
+export function runPattern() {
 
-    printTitle("Inverse Star");
+    printTitle("Four Inverse Stars");
     let s = {midpoint: new Point(125,125),
 	     radius:   100,
 	     color:    "blue"};
-    let thing = new StringThing(s);
+    let thing = new CurveStitch(s);
     drawInverseStar(thing);
 
     // add rotation
@@ -14,7 +17,7 @@ function test1() {
 	 radius:   100,
 	 rotate:   45,
 	 color:    "green"};
-    thing = new StringThing(s);
+    thing = new CurveStitch(s);
     drawInverseStar(thing);
 
     // change nodes
@@ -23,7 +26,7 @@ function test1() {
 	 rotate:   45,
 	 numNodes: 8,
 	 color:    "orange"};
-    thing = new StringThing(s);
+    thing = new CurveStitch(s);
     drawInverseStar(thing);
 
     // add scale
@@ -32,7 +35,8 @@ function test1() {
 	 xScale:   1.5,
 	 yScale:   1.2,
 	 color:    "red"};
-    thing = new StringThing(s);
+    thing = new CurveStitch(s);
     drawInverseStar(thing);
 }
+
 

@@ -27,30 +27,34 @@
 // setDrawText()                    – show default Categories view in #text
 // switchTab(tabId)                 – activate selected subtab and redraw
 
+import { clearDivs, renderCategories, showSharedOffcanvas }
+                                  from "./ui_utilities.js";
+import { buildParameterControls } from "./parameterControls.js";
+import { drawInEllipse }          from "../draw/ellipse.js";
+import { uiState }   from "./uiState.js";
+
+const DEFAULT_DRAW_SUBTAB = "tab-categories";
 
 /* ===========================================================
    initDrawTab()
-   Called when the Draw top-level tab becomes active.
-   Clears all draw divs, builds subtabs, and activates Categories.
-
-   Arguments:
-     (none)
 =========================================================== */
-function initDrawTab() {
-  clearDivs();
-  setDrawSubtabs();              // builds bar with a single Categories tab
-  uiState.activeDrawTab = "tab-categories";
-  // Display Categories immediately
-  setDrawCategories();
-} // end initDrawTab
+/* ===========================================================
+   initDrawTab()
+=========================================================== */
+export function initDrawTab(restored = false) {
 
+  clearDivs();
+
+  // Rebuild the subtab bar from existing uiState if available,
+  // or create default Categories if this is the first time.
+  setDrawSubtabs();
+
+  const activeId = uiState.activeDrawTab || DEFAULT_DRAW_SUBTAB;
+  switchTab(activeId);
+} // end initDrawTab
 
 /* ===========================================================
    setDrawSubtabs()
-   Always rebuilds the subtab bar with a single tab: Categories.
-
-   Arguments:
-     (none)
 =========================================================== */
 function setDrawSubtabs() {
   const el = document.getElementById("subtabs");
@@ -59,22 +63,42 @@ function setDrawSubtabs() {
   el.innerHTML = "";
   const bar = document.createElement("ul");
   bar.className = "nav nav-tabs draw-subtabs";
-  bar.id = "drawSubtabBar";
   el.appendChild(bar);
 
-  addDrawSubtab({ name: "Categories" });
+  const existing = uiState.drawTabs;
+  const ids = existing ? Object.keys(existing) : [];
+
+  // If there is no existing state, start with Categories
+  if (!ids.length) {
+    addDrawSubtab({ name: "Categories" });
+    return;
+  }
+
+  // Otherwise rebuild tabs from existing uiState.drawTabs
+  ids.forEach(id => {
+    const info = existing[id];
+    if (!info) return;
+
+    let name;
+    if (info.type === "categories") {
+      name = "Categories";
+    } else if (info.drawRegistry && info.drawRegistry.name) {
+      name = info.drawRegistry.name;
+    } else {
+      name = id.replace(/^tab-/, "");
+    }
+
+    addDrawSubtab({ name: name, entry: info.drawRegistry });
+  });
 } // end setDrawSubtabs
+
 
 
 /* ===========================================================
    switchTab(tabId)
-   Activates a subtab and redraws its content.
-
-   Arguments:
-     tabId – string identifier of the tab to activate
 =========================================================== */
 function switchTab(tabId) {
-  const bar = document.getElementById("drawSubtabBar");
+  const bar = document.querySelector("#subtabs ul");
   if (!bar) return;
 
   bar.querySelectorAll(".nav-link").forEach(b => b.classList.remove("active"));
@@ -94,69 +118,47 @@ function switchTab(tabId) {
   }
 } // end switchTab
 
-
 /* ===========================================================
    deleteTab(tabId)
-   Removes a tab, selects right neighbor else left,
-   else rebuilds Categories.
-
-   Arguments:
-     tabId – string identifier of the tab to delete
 =========================================================== */
 function deleteTab(tabId) {
-  const bar = document.getElementById("drawSubtabBar");
+  const bar = document.querySelector("#subtabs ul");
   if (!bar) return;
 
   const btns = Array.from(bar.querySelectorAll(".nav-link"));
   const idx = btns.findIndex(b => b.dataset.tabId === tabId);
   if (idx === -1) return;
 
-  // Remove DOM button
   const li = btns[idx].parentElement;
   if (li) li.remove();
 
-  // Remove state
   delete uiState.drawTabs[tabId];
 
-  // Choose neighbor tab
   const neighbor = btns[idx + 1] || btns[idx - 1];
   if (neighbor) {
     switchTab(neighbor.dataset.tabId);
   } else {
-    // None left → rebuild baseline Categories
     setDrawSubtabs();
   }
 } // end deleteTab
 
-
 /* ===========================================================
    markTabDirty(tabId)
-   Marks a tab as modified by adding an asterisk.
-
-   Arguments:
-     tabId – string identifier of the tab to mark dirty
 =========================================================== */
 function markTabDirty(tabId) {
   const info = uiState.drawTabs[tabId];
   if (!info) return;
-  if (info.dirty) return; // already marked
+  if (info.dirty) return;
 
   info.dirty = true;
   const btn = document.querySelector(`[data-tab-id="${tabId}"]`);
   if (!btn) return;
 
-  // Add a small visual indicator
   btn.textContent = btn.textContent + " *";
 } // end markTabDirty
 
-
 /* ===========================================================
    markTabClean(tabId)
-   Removes the dirty mark (“*”) from the tab label.
-   (Currently unused, reserved for future.)
-
-   Arguments:
-     tabId – string identifier of the tab to clean
 =========================================================== */
 function markTabClean(tabId) {
   const info = uiState.drawTabs[tabId];
@@ -169,28 +171,17 @@ function markTabClean(tabId) {
   btn.textContent = btn.textContent.replace(/\s\*$/, "");
 } // end markTabClean
 
-
 /* ===========================================================
    addDrawSubtab(item)
-   Creates a new subtab for the selected draw object or category.
-   For draw objects, stores all information in uiState.drawTabs
-   and uses drawActiveTab() as the unified draw path.
-
-   Arguments:
-     item – object containing:
-              name: display name for tab
-              entry: drawRegistry entry (required for draw objects)
 =========================================================== */
 function addDrawSubtab(item) {
-  const bar = document.getElementById("drawSubtabBar");
+  const bar = document.querySelector("#subtabs ul");
   if (!bar) throw new Error("addDrawSubtab: subtab bar not found");
 
   const tabId = "tab-" + item.name.replace(/\s+/g, "-").toLowerCase();
 
-  // deactivate any current tab
   bar.querySelectorAll(".nav-link").forEach(btn => btn.classList.remove("active"));
 
-  // build new tab button
   const li = document.createElement("li");
   li.className = "nav-item";
 
@@ -200,29 +191,26 @@ function addDrawSubtab(item) {
 
   btn.addEventListener("click", () => switchTab(tabId));
 
-  // inner span to hold text + optional close button
   const labelSpan = document.createElement("span");
   labelSpan.textContent = item.name;
   labelSpan.className = "tab-label";
   btn.appendChild(labelSpan);
     
-  // --- Add delete button only for draw object tabs ---
   if (item.name !== "Categories") {
     const closeBtn = document.createElement("span");
     closeBtn.textContent = "×";
     closeBtn.className = "tab-close";
     closeBtn.title = "Close tab";
     closeBtn.addEventListener("click", (e) => {
-      e.stopPropagation();  // prevent tab switch
+      e.stopPropagation();
       deleteTab(tabId);
     });
     btn.appendChild(closeBtn);
-  }   // end add delete button
+  }
 
   li.appendChild(btn);
   bar.appendChild(li);
 
-  // --- Categories tab ---
   if (item.name === "Categories") {
     uiState.drawTabs[tabId] = { type: "categories" };
     uiState.activeDrawTab = tabId;
@@ -231,53 +219,34 @@ function addDrawSubtab(item) {
     return;
   }
 
-  // --- Normal draw object tab ---
   const entry = item.entry;
   if (!entry) throw new Error(`addDrawSubtab: missing drawRegistry entry for ${item.name}`);
 
-    // Initialize once, up front (fail fast if missing)
-    entry.init();
+  entry.init();
     
   uiState.drawTabs[tabId] = {
     type:         "object",
     drawRegistry: entry,
     dirty:        false,
-    // ✅ use real numeric defaults
     parameters:   entry.params
   };
 
   uiState.activeDrawTab = tabId;
   clearDivs();
-  drawActiveTab(); // unified draw path
-
+  drawActiveTab();
 } // end addDrawSubtab
 
 /* ===========================================================
    setDrawSketchpad(item)
-   Dispatcher used only for first-time activation of a tab.
-   Delegates drawing to drawActiveTab() so there is a
-   single source of truth for rendering logic.
-
-   Arguments:
-     item – object containing:
-              name: tab name
-              entry: reference to drawRegistry entry
 =========================================================== */
 function setDrawSketchpad(item) {
   const tabId = "tab-" + item.name.replace(/\s+/g, "-").toLowerCase();
   uiState.activeDrawTab = tabId;
-  drawActiveTab(); // single unified drawing path
+  drawActiveTab();
 } // end setDrawSketchpad
-
 
 /* ===========================================================
    drawActiveTab()
-   Handles drawing for the currently active draw object tab.
-   Retrieves its parameters, builds its controls, clears canvas,
-   and executes the drawRegistry entry’s create() and draw().
-
-   Arguments:
-     (none)
 =========================================================== */
 function drawActiveTab() {
   const tabId = uiState.activeDrawTab;
@@ -285,15 +254,10 @@ function drawActiveTab() {
   if (!info || info.type !== "object" || !info.drawRegistry) return;
 
   const entry = info.drawRegistry;
-//  const params = info.parameters || {};
 
-  // --- Set caption title ---
   setDrawCaptionContent(entry);
+  setDrawButtons();
 
-  // --- Set buttons
-  setDrawButtons();    
-
-  // make sure the canvas is visible before building controls
   const sketchpadDiv = document.getElementById("sketchpad");
   if (!sketchpadDiv)
     throw new Error("drawActiveTab: #sketchpad div not found");
@@ -308,34 +272,25 @@ function drawActiveTab() {
     throw new Error("drawActiveTab: window.ctx not found");
   localCtx.clearRect(0, 0, canvas.width, canvas.height);
 
-  // --- Single authoritative source ---
   const state = uiState.drawTabs[tabId];
   if (!state) throw new Error("buildParameterControls: tab state missing");
 
-  // attach redraw handler so generic controls can trigger drawActiveTab()
   state.redrawHandler = drawActiveTab;
 
-  // build unified parameter controls
   buildParameterControls(state, "tab-draw", true);
 
-  // draw after controls exist
-    try {
-	const params = state.parameters = entry.params;
-	entry.update(params);        // apply new values from controls
-      entry.draw();                // draw from this.elements
-      console.log(`✅ Redrew ${entry.name}`);
+  try {
+    const params = state.parameters = entry.params;
+    entry.update(params);
+    entry.draw();
+    console.log(`✅ Redrew ${entry.name}`);
   } catch (err) {
     console.error(`❌ Error redrawing ${entry.name}:`, err);
   }
 } // end drawActiveTab
 
-
 /* ===========================================================
    clearCanvas()
-   Clears the global canvas using window.ctx.
-
-   Arguments:
-     (none)
 =========================================================== */
 function clearCanvas() {
   const canvas = window.drawCanvas;
@@ -345,27 +300,16 @@ function clearCanvas() {
   localCtx.clearRect(0, 0, canvas.width, canvas.height);
 } // end clearCanvas
 
-
 /* ===========================================================
    setDrawAction()
-   Clears #action div to prevent undefined reference errors.
-
-   Arguments:
-     (none)
 =========================================================== */
 function setDrawAction() {
   const el = document.getElementById("action");
   if (el) el.innerHTML = "";
 } // end setDrawAction
 
-
 /* ===========================================================
    setDrawButtons()
-   Displays contextual buttons for the Draw tab.
-   Shows "Dup" only when a draw object tab is active.
-
-   Arguments:
-     (none)
 =========================================================== */
 function setDrawButtons() {
   const el = document.getElementById("buttons");
@@ -374,7 +318,7 @@ function setDrawButtons() {
 
   const tabId = uiState.activeDrawTab;
   const info = uiState.drawTabs[tabId];
-  if (!info || info.type !== "object") return; // nothing for Categories
+  if (!info || info.type !== "object") return;
 
   const dupBtn = document.createElement("button");
   dupBtn.textContent = "Dup";
@@ -383,27 +327,16 @@ function setDrawButtons() {
   el.appendChild(dupBtn);
 } // end setDrawButtons
 
-
 /* ===========================================================
    setDrawCaption()
-   Clears the caption area before new content is added.
-
-   Arguments:
-     (none)
 =========================================================== */
 function setDrawCaption() {
   const el = document.getElementById("caption");
   if (el) el.innerHTML = "";
 } // end setDrawCaption
 
-
 /* ===========================================================
    setDrawCaptionContent(entry)
-   Displays the draw object's title in the caption div.
-   Called only for draw object tabs.
-
-   Arguments:
-     entry – drawRegistry entry containing a “name” property
 =========================================================== */
 function setDrawCaptionContent(entry) {
   const captionDiv = document.getElementById("caption");
@@ -425,27 +358,15 @@ function setDrawCaptionContent(entry) {
 
 } // end setDrawCaptionContent
 
-
 /* ===========================================================
    setDrawText()
-   Default view for Draw tab is Categories in #text.
-
-   Arguments:
-     (none)
 =========================================================== */
 function setDrawText() {
-  // Default view for Draw tab is Categories in #text
   setDrawCategories();
 } // end setDrawText
 
-
 /* ===========================================================
    copyActiveDrawObject()
-   Duplicates the active draw object tab and its current parameters.
-   The new tab title gets "(Copy)" or "(Copy n)" appended.
-
-   Arguments:
-     (none)
 =========================================================== */
 function copyActiveDrawObject() {
   const tabId = uiState.activeDrawTab;
@@ -455,13 +376,11 @@ function copyActiveDrawObject() {
   const entry = info.drawRegistry;
   const newParams = structuredClone(info.parameters);
 
-  // --- Determine base name and next available copy number ---
   const baseName = entry.name.replace(/\s*\(Copy.*\)$/i, "").trim();
   const existingNames = Object.values(uiState.drawTabs)
     .filter(t => t.type === "object" && t.drawRegistry?.name?.startsWith(baseName))
     .map(t => t.drawRegistry.name);
 
-  // Find the highest existing copy number
   let nextNumber = 1;
   existingNames.forEach(name => {
     const match = name.match(/\(Copy\s*(\d*)\)$/i);
@@ -473,7 +392,6 @@ function copyActiveDrawObject() {
 
   const newName = nextNumber === 1 ? `${baseName} (Copy)` : `${baseName} (Copy ${nextNumber})`;
 
-  // --- Create the new item and tab ---
   const newItem = {
     name: newName,
     entry: { ...entry, name: newName, params: newParams }
@@ -482,54 +400,36 @@ function copyActiveDrawObject() {
   addDrawSubtab(newItem);
 } // end copyActiveDrawObject
 
-
 /* ===========================================================
    setDrawCategories()
-   Populates the Draw tab categories using drawRegistry data.
-   Clicking an item opens a new subtab and displays its name
-   in the sketchpad div. Also confirms ctx existence.
-
-   Arguments:
-     (none)
 =========================================================== */
 function setDrawCategories() {
 
-  // --- Build category data from registry ---
   const raw = grabDrawData();
   const organized = organizeDrawCategories(raw);
 
-  // --- Bind click handlers ---
   const bound = bindDrawCategoryItems(organized, item => () => {
-    // Create a new subtab for the selected item
     addDrawSubtab({ name: item.name, entry: item.entry });
+  });
 
-  }); // end clickFactory
-
-  // --- Convert bound object into array for renderer ---
   const categoriesArray = Object.entries(bound).map(([key, items]) => ({
     title: key,
     items: items.map(it => ({
       name: it.name,
-      hasSubitems: false, // or true later when you add sub-options
+      hasSubitems: false,
       onClick: it.onClick
     }))
   }));
 
-  // --- Render categories ---
   renderCategories("text", categoriesArray, 
-                   (item) => item.onClick?.(),  // use stored handler
-                   null                          // no expand handler yet
+                   (item) => item.onClick?.(),
+                   null
                   );
 
 } // end setDrawCategories
 
 /* ===========================================================
    grabDrawData()
-   Collects all draw objects from window.drawRegistry.
-   Returns an array of entries with key, name, category, and reference.
-
-   Arguments:
-     (none)
 =========================================================== */
 function grabDrawData() {
   const registry = window.drawRegistry || {};
@@ -539,41 +439,32 @@ function grabDrawData() {
     if (!entry || typeof entry !== "object") return;
 
     result.push({
-      key,                            // e.g., "inverseStar"
-      name: entry.name || key,        // human-readable label
+      key,
+      name: entry.name || key,
       category: entry.category || "uncategorized",
-      entry                           // full registry reference
+      entry
     });
   });
 
   return result;
 } // end grabDrawData
 
-
 /* ===========================================================
    organizeDrawCategories(rawData)
-   Groups registry entries into alphabetical categories,
-   sorting both categories and items (case-insensitive).
-
-   Arguments:
-     rawData – array of registry entry objects (from grabDrawData)
 =========================================================== */
 function organizeDrawCategories(rawData = []) {
   const grouped = {};
 
-  // --- Group entries by category ---
   rawData.forEach(item => {
     const cat = item.category || "uncategorized";
     if (!grouped[cat]) grouped[cat] = [];
     grouped[cat].push(item);
   });
 
-  // --- Sort categories alphabetically (case-insensitive) ---
   const sortedCategories = Object.keys(grouped).sort((a, b) =>
     a.toLowerCase().localeCompare(b.toLowerCase())
   );
 
-  // --- Sort items within each category (case-insensitive) ---
   const organized = {};
   sortedCategories.forEach(cat => {
     organized[cat] = grouped[cat].sort((a, b) =>
@@ -584,29 +475,19 @@ function organizeDrawCategories(rawData = []) {
   return organized;
 } // end organizeDrawCategories
 
-
 /* ===========================================================
-   bindDrawCategoryItems(data, clickFactory)
-   Attaches a click handler to each item using clickFactory.
-   Returns a new structure ready for UI rendering.
-
-   Arguments:
-     data – object of {category: [items]} pairs
-     clickFactory – optional function(item) returning a click handler
+   bindDrawCategoryItems()
 =========================================================== */
 function bindDrawCategoryItems(data = {}, clickFactory = null) {
   const bound = {};
 
   Object.entries(data).forEach(([cat, items]) => {
     bound[cat] = items.map(item => {
-      // Create a shallow copy so we don't modify originals
       const newItem = { ...item };
 
-      // Attach handler if clickFactory provided
       if (typeof clickFactory === "function") {
         newItem.onClick = clickFactory(item);
       } else {
-        // Default handler if none provided (for testing)
         newItem.onClick = () => console.log(`Clicked: ${item.name}`);
       }
 
@@ -619,17 +500,11 @@ function bindDrawCategoryItems(data = {}, clickFactory = null) {
 
 /* ===========================================================
    saveDrawState()
-   Serializes uiState.drawTabs and active tab info for saving.
-   Returns a plain object suitable for storage.
-
-   Arguments:
-     (none)
 =========================================================== */
 function saveDrawState() {
   const shallowTabs = {};
 
   for (const [id, info] of Object.entries(uiState.drawTabs || {})) {
-    // find the key in window.drawRegistry that matches this entry
     let key = null;
     if (info.drawRegistry) {
       for (const [k, v] of Object.entries(window.drawRegistry || {})) {
@@ -644,7 +519,7 @@ function saveDrawState() {
       type: info.type,
       dirty: info.dirty,
       parameters: structuredClone(info.parameters || {}),
-      drawRegistry: key, // store the actual registry key, not name
+      drawRegistry: key,
     };
   }
 
@@ -657,18 +532,12 @@ function saveDrawState() {
   return state;
 } // end saveDrawState
 
-
 /* ===========================================================
-   restoreDrawState(saved)
-   Restores previously saved Draw tab state.
-
-   Arguments:
-     saved – object returned from saveDrawState()
+   restoreDrawState()
 =========================================================== */
 function restoreDrawState(saved) {
   if (!saved) return;
 
-  // rebuild uiState.drawTabs from saved
   uiState.drawTabs = {};
   for (const [id, info] of Object.entries(saved.drawTabs || {})) {
     const entry =
@@ -681,12 +550,14 @@ function restoreDrawState(saved) {
   const targetTab = saved.activeDrawTab || null;
   uiState.activeDrawTab = targetTab;
 
-  // clear any existing subtabs and rebuild them all
-  const bar = document.getElementById("drawSubtabBar");
-  if (bar) bar.innerHTML = "";
-  else setDrawSubtabs(); // ensure container exists
+  const el = document.getElementById("subtabs");
+  if (!el) throw new Error("restoreDrawState: #subtabs not found");
+  el.innerHTML = "";
 
-  // recreate each subtab button
+  const bar = document.createElement("ul");
+  bar.className = "nav nav-tabs draw-subtabs";
+  el.appendChild(bar);
+
   for (const [id, info] of Object.entries(uiState.drawTabs)) {
     const name =
       info.type === "categories"
@@ -695,7 +566,6 @@ function restoreDrawState(saved) {
     addDrawSubtab({ name, entry: info.drawRegistry });
   }
 
-  // now safely switch to the saved active tab
   if (targetTab && typeof switchTab === "function") {
     console.log("🔄 Restoring Draw tab:", targetTab);
     switchTab(targetTab);
@@ -707,11 +577,10 @@ function restoreDrawState(saved) {
   console.log("✅ Restored Draw state:", saved);
 } // end restoreDrawState
 
-
 /* ------------------------------------------------------------
    Final drawDivs dispatcher (overwrites placeholder)
 ------------------------------------------------------------ */
-window.drawDivs = {
+export const drawDivs = {
   activeDivs: ["subtabs"],
   theme: "theme-draw",
 

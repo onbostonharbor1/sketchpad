@@ -1,11 +1,10 @@
+import { Line, Point, StringThing } from "../../classes/classes.js";
+import { printTitle } from "../../draw/draw_utilities.js";
+import { drawRegularPolygonCorner } from "../../draw/drawRegular.js";
                    ///////////////////////////////////
-                   // test 2:  DRAW REGULAR POLYGON CORNER
-                   ///////////////////////////////////
-(
-    function fig2() {
-	printTitle("Draw Regular Polygon Corner");
-	//	gl.dot = true;
-	s={numSteps:     20,
+export function runPattern() {
+    printTitle("Draw Regular Polygon Corner");
+    let s={numSteps:     20,
 	   midpoint:     new Point(200,200),
 	   //	     lineWidth:    .5,
 	   //	     rotate:       45,
@@ -15,7 +14,6 @@
 	   //	     yScale:     .5,
 	   color:        "green",
 	   numNodes:     4 };
-	thing = new StringThing(s);
-	drawRegularPolygonCorner(thing);
-    }
-)();
+    let thing = new StringThing(s);
+    drawRegularPolygonCorner(thing);
+}

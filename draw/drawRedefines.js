@@ -1,3 +1,5 @@
+import { drawState } from "./drawState.js";
+
 //////////////////////////////////////////////////////////////////
 // Replace: moveTo, lineTo, beginPath, closePath, stroke
 //////////////////////////////////////////////////////////////////
@@ -54,4 +56,17 @@ function stroke(){
 }
 
 
+export {
+  beginPath,
+  arc,
+  closePath,
+  fill,
+  fillText,
+  fillRect,
+  lineTo,
+  moveTo,
+  restore,
+  save,
+  stroke
+};
 

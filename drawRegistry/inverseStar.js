@@ -3,6 +3,10 @@
    New lifecycle form (init, update, draw)
    Using Point objects created at runtime.
    ------------------------------------------------------------ */
+import { Line, Point }     from "../classes/classes.js";
+import { CurveStitch }     from "../classes/curveStitchClass.js";
+import { drawInverseStar } from "../draw/drawRegular.js";
+import { createNodes } from "../draw/draw_utilities.js";
 
 window.drawRegistry_inverseStar = {
     name:         "Inverse Star",
@@ -48,14 +52,14 @@ window.drawRegistry_inverseStar = {
   },
 
   // ==========================================================
-  // 1. init() – build the persistent StringThing
+  // 1. init() – build the persistent CurveStitch
   // ==========================================================
   init() {
     // Ensure midpoint is a Point object
     const p = this.params.midpoint;
     if (!(p instanceof Point)) this.params.midpoint = new Point(p.x, p.y);
 
-    this.elements = { element: new StringThing(this.params) };
+    this.elements = { element: new CurveStitch(this.params) };
   }, // end init
 
   // ==========================================================
@@ -77,10 +81,10 @@ window.drawRegistry_inverseStar = {
   }, // end update
 
   // ==========================================================
-  // 3. draw() – render using existing StringThing
+  // 3. draw() – render using existing CurveStitch
   // ==========================================================
   draw() {
-    const e = this.elements.element;
-    drawInverseStar(e);
+    const thing = this.elements.element;
+    drawInverseStar(thing);
   } // end draw
 };

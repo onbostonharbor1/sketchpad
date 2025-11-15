@@ -1,6 +1,18 @@
 [ 
-  { "filename": "fig1", "path": "circles/fig1.js" } 
-, { "filename": "fig2", "path": "circles/fig2.js" } 
-, { "filename": "fig3", "path": "circles/fig3.js" } 
-, { "filename": "fig4", "path": "circles/fig4.js" } 
+    { "filename": "circle",      "path": "circles/circle.js",
+      "title":    "Circle: FULL"}, 
+    { "filename": "ellipseFull",       "path": "circles/ellipseFull.js",
+      "title":    "Ellipse: FULL"}, 
+    { "filename": "ellipseEndTaper",   "path": "circles/ellipseEndTaper.js",
+      "title":    "Ellipse: END_TAPER"}, 
+    { "filename": "ellipseStartEnd"  , "path": "circles/ellipseStartEnd.js",
+      "title":    "Ellipse: START_END"}, 
+    { "filename": "ellipseStartTaper", "path": "circles/ellipseStartTaper.js", 
+      "title":    "Ellipse: START_TAPER"}, 
+    { "filename": "ellipseTaper",      "path": "circles/ellipseTaper.js",
+      "title":    "Ellipse: TAPER"}, 
+    { "filename": "skippingPositive",  "path": "circles/skippingPositive.js",
+      "title":    "Skipping Positive"}, 
+    { "filename": "skippingNegative",  "path": "circles/skippingNegative.js",
+      "title":    "Skipping Negative"}
 ] 

@@ -1,72 +1,79 @@
-/* ------------------------------------------------------------
-   validateDrawRegistry.js
-   ------------------------------------------------------------
-   Tools → Validation → Validate Draw Registry
-   When selected, switches to Result subtab and uses
-   parameterControls.js to display a dropdown listing all
-   drawRegistry entries. Selecting an entry validates it and
-   displays the results.
------------------------------------------------------------- */
-function validateDrawRegistry() {
-  console.log("🧩 validateDrawRegistry() invoked");
+/* ===========================================================
+   validateDrawRegistry.js  – Tools script (runPattern version)
+   -----------------------------------------------------------
+   Displays a dropdown listing all drawRegistry entries.
+   Selecting an entry validates it and prints the results into #text.
+=========================================================== */
+
+export function runPattern() {
+  console.log("🧩 validateDrawRegistry() runPattern invoked");
 
   const actionDiv = document.getElementById("action");
   const textDiv = document.getElementById("text");
+
   if (!actionDiv || !textDiv) {
     console.error("validateDrawRegistry: missing #action or #text");
     return;
   }
 
-  // clear display areas
-  textDiv.innerHTML = "";
+  // clear output panels
   actionDiv.innerHTML = "";
-
-  // --- Build dropdown control using parameterControls.js ---
-  const sourceInfo = {
-    parameters: { target: Object.keys(window.drawRegistry)[0] },
-    controls: {
-      target: {
-        widget: "select",
-        label: "Validate:",
-        options: Object.keys(window.drawRegistry)
-      }
-    },
-    redrawHandler: () => runDrawRegistryValidation(sourceInfo)
-  };
-
-    renderParameterControls(sourceInfo, [
-	{
-	    key: "target",
-	    label: "Validate:",
-	    widget: "select",
-	    options: Object.keys(window.drawRegistry),
-	    value: Object.keys(window.drawRegistry)[0]
-	}
-    ], "tab-tools");
-
-
-  // initial run
-  runDrawRegistryValidation(sourceInfo);
-} // end validateDrawRegistry
-
-
-/* ------------------------------------------------------------
-   runDrawRegistryValidation(sourceInfo)
-   Performs structural validation on selected drawRegistry entry.
------------------------------------------------------------- */
-function runDrawRegistryValidation(sourceInfo) {
-  const textDiv = document.getElementById("text");
   textDiv.innerHTML = "";
 
-  const key = sourceInfo.parameters.target;
-  const reg = window.drawRegistry[key];
+  // ---------------------------------------------------------
+  // Build dropdown using ONLY existing ctrl-field CSS
+  // ---------------------------------------------------------
+  const keys = Object.keys(window.drawRegistry);
+  const params = { target: keys[0] };
 
+  const row = document.createElement("div");
+  row.className = "ctrl-field";
+
+  const label = document.createElement("label");
+  label.textContent = "Validate:";
+
+  const select = document.createElement("select");
+
+  keys.forEach(k => {
+    const opt = document.createElement("option");
+    opt.value = k;
+    opt.textContent = k;
+    select.appendChild(opt);
+  });
+
+  select.value = params.target;
+
+  select.addEventListener("input", () => {
+    params.target = select.value;
+    validate(params.target, textDiv);
+  });
+
+  row.appendChild(label);
+  row.appendChild(select);
+  actionDiv.appendChild(row);
+
+  // ---------------------------------------------------------
+  // Initial validation
+  // ---------------------------------------------------------
+  validate(params.target, textDiv);
+
+  return null;
+} // end runPattern
+
+
+/* ===========================================================
+   validate(target, textDiv)
+   Core validation logic moved into its own helper function.
+=========================================================== */
+function validate(key, textDiv) {
+  textDiv.innerHTML = "";
+
+  const reg = window.drawRegistry[key];
   if (!reg) {
     textDiv.textContent = `No drawRegistry entry named "${key}"`;
     return;
   }
 
-  // --- create results section ---
   const resultsDiv = document.createElement("div");
   resultsDiv.id = "validationResults";
   textDiv.appendChild(resultsDiv);
@@ -97,6 +104,7 @@ function runDrawRegistryValidation(sourceInfo) {
   if (typeof reg.draw !== "function")
     lines.push({ msg: "❌ draw is not a function", ok: false });
 
+  // Append results
   lines.forEach(l => {
     const p = document.createElement("div");
     p.textContent = l.msg;
@@ -104,14 +112,11 @@ function runDrawRegistryValidation(sourceInfo) {
     resultsDiv.appendChild(p);
   });
 
-  const hr = document.createElement("hr");
-  hr.style.margin = "6px 0";
-  resultsDiv.appendChild(hr);
+  resultsDiv.appendChild(document.createElement("hr"));
 
-  // --- pretty print registry below ---
+  // Pretty-print registry object
   const pre = document.createElement("pre");
   pre.textContent = JSON.stringify(reg, null, 2);
   pre.style.whiteSpace = "pre-wrap";
   textDiv.appendChild(pre);
-} // end runDrawRegistryValidation
-
+} // end validate

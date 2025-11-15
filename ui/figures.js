@@ -5,6 +5,11 @@
    a simple "TBD" message indicating its future purpose.
    ------------------------------------------------------------ */
 
+import { uiState }   from "./uiState.js";
+
+export function initFiguresTab() {
+    ;
+}
 /* ------------------------------------------------------------
    Individual placeholder functions
 ------------------------------------------------------------ */
@@ -41,7 +46,7 @@ function setFiguresSketchpad() {
 /* ------------------------------------------------------------
    figuresDivs object mapping div names to their setter functions
 ------------------------------------------------------------ */
-const figuresDivs = {
+export const figuresDivs = {
     activeDivs: ["buttons", "action", "caption", "text", "sketchpad", "subtabs"],
     theme:      "theme-figures",
   buttons: setFiguresButtons,

@@ -1,12 +1,20 @@
 [ 
-  { "filename": "test1", "path": "curve_stitch/test1.js" } 
-, { "filename": "test2", "path": "curve_stitch/test2.js" } 
-, { "filename": "test3", "path": "curve_stitch/test3.js" } 
-, { "filename": "test4", "path": "curve_stitch/test4.js" } 
-, { "filename": "test5", "path": "curve_stitch/test5.js" } 
-, { "filename": "test6", "path": "curve_stitch/test6.js" } 
-, { "filename": "test7", "path": "curve_stitch/test7.js" } 
-, { "filename": "test8", "path": "curve_stitch/test8.js" } 
-, { "filename": "test9", "path": "curve_stitch/test9.js" } 
-, { "filename": "testDrawRegistry", "path": "curve_stitch/testDrawRegistry.js" } 
+    { "filename": "fourInverseStar",  "path": "curve_stitch/fourInverseStar.js",
+      "title":    "Four Inverse Stars"},
+    { "filename": "regularPolygon",   "path": "curve_stitch/regularPolygon.js",
+      "title":    "Regular Polygon"},
+    { "filename": "innerStar",        "path": "curve_stitch/innerStar.js",
+      "title":    "Inner Star"},
+    { "filename": "regularTouching",  "path": "curve_stitch/regularTouching.js",
+      "title":    "Regular Polygon Touching"},
+    { "filename": "regularCorners",   "path": "curve_stitch/regularCorners.js",
+      "title":    "Regular Polycon Corners"},
+    { "filename": "inverseCurved",    "path": "curve_stitch/inverseCurved.js",
+      "title":    "Circular Inverse Star"},
+    { "filename": "twoParabolas",     "path": "curve_stitch/twoParabolas.js",
+      "title":    "Two Parabolas"},
+    { "filename": "twoMoreParabolas", "path": "curve_stitch/twoMoreParabolas.js",
+      "title":    "Two Parabolas & Twist" } ,
+    { "filename": "twistedBentArms",  "path": "curve_stitch/twistedBentArms.js",
+      "title":    "Twisted & Bent Parabola"} 
 ] 

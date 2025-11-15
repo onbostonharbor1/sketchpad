@@ -183,12 +183,12 @@ class Line {
 	return [half1, half2];
     }
 
-midpoint() {
+    midpoint() {
 	return new Point(
 	    (this.start.x + this.end.x) / 2,
 	    (this.start.y + this.end.y) / 2
 	);
-}
+    }
     
     moveMidpointTo(newMidpoint) {
 	const currentMid = this.midpoint();
@@ -327,3 +327,4 @@ midpoint() {
     }
 
 }
+export { Point, Line, StringThing };

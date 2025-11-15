@@ -3,6 +3,8 @@
    New lifecycle form (init, update, draw)
    Midpoint work is done first; endpoints updated only if needed.
    ------------------------------------------------------------ */
+import { Line, Point, StringThing }      from "../classes/classes.js";
+import { drawALine } from "../draw/draw_utilities.js";
 
 window.drawRegistry_line = {
   name:        "Line",
