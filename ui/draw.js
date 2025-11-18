@@ -5,50 +5,19 @@
    and redraws from uiState.drawTabs.
    ------------------------------------------------------------ */
 
-// addDrawSubtab(item)              – create and activate a new subtab
-// clearCanvas()                    – clear the shared canvas area
-// copyActiveDrawObject()           – duplicate the current draw object tab
-// deleteTab(tabId)                 – close subtab and switch neighbor
-// drawActiveTab()                  – render the active object with parameters
-// initDrawTab()                    – initialize Draw tab and display categories
-// markTabClean(tabId)              – clear dirty mark (future use)
-// markTabDirty(tabId)              – mark tab as modified
-// restoreDrawState()               – rebuild Draw tab state from saved data
-// saveDrawState()                  – serialize Draw tab state for saving
-// setDrawAction()                  – clear #action area (placeholder)
-// setDrawButtons()                 – display context buttons (Dup etc.)
-// setDrawCaption()                 – clear caption area
-// setDrawCaptionContent(entry)     – display object title in caption
-// setDrawCategories()              – build and display category grid
-//    bindDrawCategoryItems()       – attach click handlers to category items
-//    grabDrawData()                – gather registry entries
-//    organizeDrawCategories()      – sort and group registry items
-// setDrawSketchpad(item)           – initial dispatcher for object drawing
-// setDrawText()                    – show default Categories view in #text
-// switchTab(tabId)                 – activate selected subtab and redraw
-
-import { clearDivs, renderCategories, showSharedOffcanvas }
-                                  from "./ui_utilities.js";
+import { renderCategories } from "./categories.js";
+import { clearDivs, showSharedOffcanvas } from "./ui_utilities.js";
 import { buildParameterControls } from "./parameterControls.js";
-import { drawInEllipse }          from "../draw/ellipse.js";
-import { uiState }   from "./uiState.js";
+import { uiState } from "./uiState.js";
 
 const DEFAULT_DRAW_SUBTAB = "tab-categories";
 
 /* ===========================================================
    initDrawTab()
 =========================================================== */
-/* ===========================================================
-   initDrawTab()
-=========================================================== */
 export function initDrawTab(restored = false) {
-
   clearDivs();
-
-  // Rebuild the subtab bar from existing uiState if available,
-  // or create default Categories if this is the first time.
   setDrawSubtabs();
-
   const activeId = uiState.activeDrawTab || DEFAULT_DRAW_SUBTAB;
   switchTab(activeId);
 } // end initDrawTab
@@ -68,14 +37,12 @@ function setDrawSubtabs() {
   const existing = uiState.drawTabs;
   const ids = existing ? Object.keys(existing) : [];
 
-  // If there is no existing state, start with Categories
   if (!ids.length) {
     addDrawSubtab({ name: "Categories" });
     return;
   }
 
-  // Otherwise rebuild tabs from existing uiState.drawTabs
-  ids.forEach(id => {
+  ids.forEach((id) => {
     const info = existing[id];
     if (!info) return;
 
@@ -92,8 +59,6 @@ function setDrawSubtabs() {
   });
 } // end setDrawSubtabs
 
-
-
 /* ===========================================================
    switchTab(tabId)
 =========================================================== */
@@ -101,7 +66,9 @@ function switchTab(tabId) {
   const bar = document.querySelector("#subtabs ul");
   if (!bar) return;
 
-  bar.querySelectorAll(".nav-link").forEach(b => b.classList.remove("active"));
+  bar
+    .querySelectorAll(".nav-link")
+    .forEach((b) => b.classList.remove("active"));
   const btn = bar.querySelector(`[data-tab-id="${tabId}"]`);
   if (btn) btn.classList.add("active");
 
@@ -126,7 +93,7 @@ function deleteTab(tabId) {
   if (!bar) return;
 
   const btns = Array.from(bar.querySelectorAll(".nav-link"));
-  const idx = btns.findIndex(b => b.dataset.tabId === tabId);
+  const idx = btns.findIndex((b) => b.dataset.tabId === tabId);
   if (idx === -1) return;
 
   const li = btns[idx].parentElement;
@@ -174,13 +141,15 @@ function markTabClean(tabId) {
 /* ===========================================================
    addDrawSubtab(item)
 =========================================================== */
-function addDrawSubtab(item) {
+export function addDrawSubtab(item) {
   const bar = document.querySelector("#subtabs ul");
   if (!bar) throw new Error("addDrawSubtab: subtab bar not found");
 
   const tabId = "tab-" + item.name.replace(/\s+/g, "-").toLowerCase();
 
-  bar.querySelectorAll(".nav-link").forEach(btn => btn.classList.remove("active"));
+  bar
+    .querySelectorAll(".nav-link")
+    .forEach((btn) => btn.classList.remove("active"));
 
   const li = document.createElement("li");
   li.className = "nav-item";
@@ -195,7 +164,7 @@ function addDrawSubtab(item) {
   labelSpan.textContent = item.name;
   labelSpan.className = "tab-label";
   btn.appendChild(labelSpan);
-    
+
   if (item.name !== "Categories") {
     const closeBtn = document.createElement("span");
     closeBtn.textContent = "×";
@@ -220,15 +189,18 @@ function addDrawSubtab(item) {
   }
 
   const entry = item.entry;
-  if (!entry) throw new Error(`addDrawSubtab: missing drawRegistry entry for ${item.name}`);
+  if (!entry)
+    throw new Error(
+      "addDrawSubtab: missing drawRegistry entry for " + item.name
+    );
 
   entry.init();
-    
+
   uiState.drawTabs[tabId] = {
-    type:         "object",
+    type: "object",
     drawRegistry: entry,
-    dirty:        false,
-    parameters:   entry.params
+    dirty: false,
+    parameters: entry.params,
   };
 
   uiState.activeDrawTab = tabId;
@@ -237,9 +209,9 @@ function addDrawSubtab(item) {
 } // end addDrawSubtab
 
 /* ===========================================================
-   setDrawSketchpad(item)
+   setDrawSketchpad()
 =========================================================== */
-function setDrawSketchpad(item) {
+export function setDrawSketchpad(item) {
   const tabId = "tab-" + item.name.replace(/\s+/g, "-").toLowerCase();
   uiState.activeDrawTab = tabId;
   drawActiveTab();
@@ -248,7 +220,7 @@ function setDrawSketchpad(item) {
 /* ===========================================================
    drawActiveTab()
 =========================================================== */
-function drawActiveTab() {
+export function drawActiveTab() {
   const tabId = uiState.activeDrawTab;
   const info = uiState.drawTabs[tabId];
   if (!info || info.type !== "object" || !info.drawRegistry) return;
@@ -259,33 +231,31 @@ function drawActiveTab() {
   setDrawButtons();
 
   const sketchpadDiv = document.getElementById("sketchpad");
-  if (!sketchpadDiv)
-    throw new Error("drawActiveTab: #sketchpad div not found");
+  if (!sketchpadDiv) throw new Error("drawActiveTab: #sketchpad div not found");
   sketchpadDiv.innerHTML = "";
   const canvas = window.drawCanvas;
   if (!canvas)
-    throw new Error("drawActiveTab: window.drawCanvas not initialized");    
+    throw new Error("drawActiveTab: window.drawCanvas not initialized");
   sketchpadDiv.appendChild(canvas);
 
   const localCtx = window.ctx;
-  if (!localCtx)
-    throw new Error("drawActiveTab: window.ctx not found");
+  if (!localCtx) throw new Error("drawActiveTab: window.ctx not found");
   localCtx.clearRect(0, 0, canvas.width, canvas.height);
 
   const state = uiState.drawTabs[tabId];
-  if (!state) throw new Error("buildParameterControls: tab state missing");
+  if (!state) throw new Error("drawActiveTab: tab state missing");
 
   state.redrawHandler = drawActiveTab;
 
   buildParameterControls(state, "tab-draw", true);
 
   try {
-    const params = state.parameters = entry.params;
+    const params = (state.parameters = entry.params);
     entry.update(params);
     entry.draw();
-    console.log(`✅ Redrew ${entry.name}`);
+    console.log("✅ Redrew " + entry.name);
   } catch (err) {
-    console.error(`❌ Error redrawing ${entry.name}:`, err);
+    console.error("❌ Error redrawing " + entry.name + ":", err);
   }
 } // end drawActiveTab
 
@@ -341,27 +311,27 @@ function setDrawCaption() {
 function setDrawCaptionContent(entry) {
   const captionDiv = document.getElementById("caption");
   if (!captionDiv) throw new Error("setDrawCaptionContent: #caption not found");
-    captionDiv.innerHTML = `
-            <span class="caption-title">${entry.name || "(untitled)"}</span>
-            <div class="caption-buttons">
-               <button class="btn btn-sm btn-outline-secondary">Show Script</button>
-            </div>
-       `;
+  captionDiv.innerHTML =
+    '<span class="caption-title">' +
+    (entry.name || "(untitled)") +
+    "</span>" +
+    '<div class="caption-buttons">' +
+    '<button class="btn btn-sm btn-outline-secondary">Show Script</button>' +
+    "</div>";
 
-    const btn = captionDiv.querySelector("button");
-    btn.addEventListener("click", () => {
-	showSharedOffcanvas(
-	    `Draw Registry: ${entry.name}`,
-	    JSON.stringify(entry, null, 2)
-	);
-    });
-
+  const btn = captionDiv.querySelector("button");
+  btn.addEventListener("click", () => {
+    showSharedOffcanvas(
+      "Draw Registry: " + entry.name,
+      JSON.stringify(entry, null, 2)
+    );
+  });
 } // end setDrawCaptionContent
 
 /* ===========================================================
    setDrawText()
 =========================================================== */
-function setDrawText() {
+export function setDrawText() {
   setDrawCategories();
 } // end setDrawText
 
@@ -378,23 +348,32 @@ function copyActiveDrawObject() {
 
   const baseName = entry.name.replace(/\s*\(Copy.*\)$/i, "").trim();
   const existingNames = Object.values(uiState.drawTabs)
-    .filter(t => t.type === "object" && t.drawRegistry?.name?.startsWith(baseName))
-    .map(t => t.drawRegistry.name);
+    .filter(
+      (t) =>
+        t.type === "object" &&
+        t.drawRegistry &&
+        t.drawRegistry.name &&
+        t.drawRegistry.name.startsWith(baseName)
+    )
+    .map((t) => t.drawRegistry.name);
 
   let nextNumber = 1;
-  existingNames.forEach(name => {
+  existingNames.forEach((name) => {
     const match = name.match(/\(Copy\s*(\d*)\)$/i);
     if (match) {
-      const num = parseInt(match[1] || "1");
+      const num = parseInt(match[1] || "1", 10);
       if (num >= nextNumber) nextNumber = num + 1;
     }
   });
 
-  const newName = nextNumber === 1 ? `${baseName} (Copy)` : `${baseName} (Copy ${nextNumber})`;
+  const newName =
+    nextNumber === 1
+      ? baseName + " (Copy)"
+      : baseName + " (Copy " + nextNumber + ")";
 
   const newItem = {
     name: newName,
-    entry: { ...entry, name: newName, params: newParams }
+    entry: { ...entry, name: newName, params: newParams },
   };
 
   addDrawSubtab(newItem);
@@ -403,29 +382,31 @@ function copyActiveDrawObject() {
 /* ===========================================================
    setDrawCategories()
 =========================================================== */
-function setDrawCategories() {
-
+export function setDrawCategories() {
   const raw = grabDrawData();
   const organized = organizeDrawCategories(raw);
 
-  const bound = bindDrawCategoryItems(organized, item => () => {
+  const bound = bindDrawCategoryItems(organized, (item) => () => {
     addDrawSubtab({ name: item.name, entry: item.entry });
   });
 
   const categoriesArray = Object.entries(bound).map(([key, items]) => ({
     title: key,
-    items: items.map(it => ({
+    items: items.map((it) => ({
       name: it.name,
       hasSubitems: false,
-      onClick: it.onClick
-    }))
+      onClick: it.onClick,
+    })),
   }));
 
-  renderCategories("text", categoriesArray, 
-                   (item) => item.onClick?.(),
-                   null
-                  );
-
+  renderCategories(
+    "text",
+    categoriesArray,
+    (item) => {
+      if (item.onClick) item.onClick();
+    },
+    null
+  );
 } // end setDrawCategories
 
 /* ===========================================================
@@ -439,10 +420,10 @@ function grabDrawData() {
     if (!entry || typeof entry !== "object") return;
 
     result.push({
-      key,
+      key: key,
       name: entry.name || key,
       category: entry.category || "uncategorized",
-      entry
+      entry: entry,
     });
   });
 
@@ -455,7 +436,7 @@ function grabDrawData() {
 function organizeDrawCategories(rawData = []) {
   const grouped = {};
 
-  rawData.forEach(item => {
+  rawData.forEach((item) => {
     const cat = item.category || "uncategorized";
     if (!grouped[cat]) grouped[cat] = [];
     grouped[cat].push(item);
@@ -466,7 +447,7 @@ function organizeDrawCategories(rawData = []) {
   );
 
   const organized = {};
-  sortedCategories.forEach(cat => {
+  sortedCategories.forEach((cat) => {
     organized[cat] = grouped[cat].sort((a, b) =>
       a.name.toLowerCase().localeCompare(b.name.toLowerCase())
     );
@@ -482,13 +463,15 @@ function bindDrawCategoryItems(data = {}, clickFactory = null) {
   const bound = {};
 
   Object.entries(data).forEach(([cat, items]) => {
-    bound[cat] = items.map(item => {
+    bound[cat] = items.map((item) => {
       const newItem = { ...item };
 
       if (typeof clickFactory === "function") {
         newItem.onClick = clickFactory(item);
       } else {
-        newItem.onClick = () => console.log(`Clicked: ${item.name}`);
+        newItem.onClick = function () {
+          console.log("Clicked: " + item.name);
+        };
       }
 
       return newItem;
@@ -501,7 +484,7 @@ function bindDrawCategoryItems(data = {}, clickFactory = null) {
 /* ===========================================================
    saveDrawState()
 =========================================================== */
-function saveDrawState() {
+export function saveDrawState() {
   const shallowTabs = {};
 
   for (const [id, info] of Object.entries(uiState.drawTabs || {})) {
@@ -542,7 +525,7 @@ function restoreDrawState(saved) {
   for (const [id, info] of Object.entries(saved.drawTabs || {})) {
     const entry =
       typeof info.drawRegistry === "string"
-        ? window.drawRegistry?.[info.drawRegistry]
+        ? (window.drawRegistry || {})[info.drawRegistry]
         : info.drawRegistry;
     uiState.drawTabs[id] = { ...info, drawRegistry: entry };
   }
@@ -562,23 +545,24 @@ function restoreDrawState(saved) {
     const name =
       info.type === "categories"
         ? "Categories"
-        : info.drawRegistry?.name || id.replace(/^tab-/, "");
-    addDrawSubtab({ name, entry: info.drawRegistry });
+        : (info.drawRegistry && info.drawRegistry.name) ||
+          id.replace(/^tab-/, "");
+    addDrawSubtab({ name: name, entry: info.drawRegistry });
   }
 
-  if (targetTab && typeof switchTab === "function") {
+  if (targetTab) {
     console.log("🔄 Restoring Draw tab:", targetTab);
     switchTab(targetTab);
   } else {
     console.warn("⚠️ Could not restore Draw tab — using default init");
-    if (typeof initDrawTab === "function") initDrawTab();
+    initDrawTab();
   }
 
   console.log("✅ Restored Draw state:", saved);
 } // end restoreDrawState
 
 /* ------------------------------------------------------------
-   Final drawDivs dispatcher (overwrites placeholder)
+   drawDivs dispatcher
 ------------------------------------------------------------ */
 export const drawDivs = {
   activeDivs: ["subtabs"],
@@ -589,5 +573,5 @@ export const drawDivs = {
   caption: setDrawCaption,
   sketchpad: setDrawSketchpad,
   subtabs: setDrawSubtabs,
-  text: setDrawText
+  text: setDrawText,
 }; // end drawDivs

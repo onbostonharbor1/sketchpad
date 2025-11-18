@@ -74,20 +74,20 @@ function drawAParab(thing, line1, line2) {
 //   lineTransform. This is because transformations
 //   only happen on the 2nd line.
 function drawParab(thing, pts) {
-    if (pts.length == 3)
-	pts.splice(1, 0, pts[1]);
-    // build lines
-    const line1 = new Line(pts[0], pts[1]);
-    const line2 = new Line(pts[2], pts[3]);
-    // build arms
-    let lineTransform = thing.lineTransform;
-    thing.lineTransform = 0;
-    let arm1 = ptsOnLine(thing, line1);
-    thing.lineTransform = lineTransform;
-    let arm2 = ptsOnLine(thing, line2);
-    // 
-    const parab = createParab(arm1, arm2);
-    drawLines(thing, parab);
+  if (pts.length == 3) pts.splice(1, 0, pts[1]);
+  // build lines
+  const line1 = new Line(pts[0], pts[1]);
+  const line2 = new Line(pts[2], pts[3]);
+  // build arms. Don't transform first line
+  let lineTransform = thing.lineTransform;
+  thing.lineTransform = 0;
+  let arm1 = ptsOnLine(thing, line1);
+  // restore lineTransform
+  thing.lineTransform = lineTransform;
+  let arm2 = ptsOnLine(thing, line2);
+  //
+  const parab = createParab(arm1, arm2);
+  drawLines(thing, parab);
 }
 
 function drawCircularParabola(thing) {

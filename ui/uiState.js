@@ -4,6 +4,7 @@
    which div setter functions are assigned, and
    which manifests or saved states are loaded.
    ------------------------------------------------------------ */
+import { Overlay } from "../classes/overlayClass.js";
 
 export const uiState = {
   /* =========================================================
@@ -25,8 +26,8 @@ export const uiState = {
   /* =========================================================
      Active tab and div context
   ========================================================= */
-  activeTab: "draw", // default at startup
-  activeDivs: {}, // points to current tab’s div map
+  activeTab: "draw",
+  activeDivs: {},
   activeGalleryTab: "tab-categories",
 
   /* =========================================================
@@ -49,9 +50,6 @@ export const uiState = {
 
   /* =========================================================
      Manifest storage
-     Each manifest.json or directoryRegistry.json is cached
-     by context. The activeManifest always points to the one
-     currently in use.
   ========================================================= */
   manifests: {
     gallery: {
@@ -74,9 +72,22 @@ export const uiState = {
     scripts: 0,
   },
 
-  activeManifest: null, // always points to current working manifest
-  activeDirectoryInfo: null, // optional: holds current directoryRegistry.json
+  /* =========================================================
+     Overlay state
+  ========================================================= */
+  overlay: {
+    active: false,
+    title: "",
+  },
+
+  activeManifest: null,
+  activeDirectoryInfo: null,
 };
 
-window.uiState = uiState; // expose globally
+window.uiState = uiState;
+
+/* =========================================================
+   Global overlay instance (fail-fast if DOM missing)
+========================================================= */
+window.overlay = new Overlay();
 // end uiState.js

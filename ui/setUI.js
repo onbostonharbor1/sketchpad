@@ -6,29 +6,24 @@
    - Establishes a predictable ownership model for interface actions.
    ------------------------------------------------------------ */
 
-// activateTab(tabKey)          – switch to selected top-level tab
-// handleTabChange(tabId)       – translate clicked tab id to internal key
-// restoreTabState(tabName)     – rebuild previous state for tab if saved
-// saveTabState(tabName)        – serialize current tab before leaving
-// window.addEventListener()    – initialize UI on page load
+import { drawDivs } from "./draw.js";
+import { initDrawTab } from "./draw.js";
+import { saveDrawState } from "./draw.js";
 
-/* ------------------------------------------------------------
-   Registry of all tab div-controllers
-   Each entry points to the *Divs object defined in that tab's file.
------------------------------------------------------------- */
-import { drawDivs }        from "./draw.js";
-import { initDrawTab }     from "./draw.js";
-import { patternsDivs }    from "./patterns.js";
+import { patternsDivs } from "./patterns.js";
 import { initPatternsTab } from "./patterns.js";
-import { figuresDivs }     from "./figures.js";
-import { initFiguresTab }  from "./figures.js";
-import { galleryDivs }     from "./gallery.js";
-import { initGalleryTab }  from "./gallery.js";
-import { utilityDivs }     from "./utilities.js";
-import { initUtilityTab }  from "./utilities.js";
-import { clearDivs }       from "./ui_utilities.js";
 
-let activeDivs = {};
+import { figuresDivs } from "./figures.js";
+import { initFiguresTab } from "./figures.js";
+
+import { galleryDivs } from "./gallery.js";
+import { initGalleryTab } from "./gallery.js";
+
+import { utilityDivs } from "./utilities.js";
+import { initUtilityTab } from "./utilities.js";
+
+import { clearDivs } from "./ui_utilities.js";
+import { uiState } from "./uiState.js";
 
 const allDivSets = {
   draw: drawDivs,
@@ -39,25 +34,13 @@ const allDivSets = {
 }; // end allDivSets
 
 /* ===========================================================
-   TAB STATE SAVE / RESTORE HANDLERS
-   =========================================================== */
-
-/* ------------------------------------------------------------
    saveTabState(tabName)
-   Called before switching away from a tab.
-   Captures any saveable state via that tab's save*State() function.
-
-   Arguments:
-     tabName – string key of the current top-level tab
------------------------------------------------------------- */
+=========================================================== */
 function saveTabState(tabName) {
   switch (tabName) {
     case "draw":
-      if (typeof saveDrawState === "function")
-        uiState.drawSavedState = saveDrawState();
+      uiState.drawSavedState = saveDrawState();
       break;
-
-    // Patterns save removed
 
     default:
       break;
@@ -65,47 +48,43 @@ function saveTabState(tabName) {
 } // end saveTabState
 
 /* ------------------------------------------------------------
-   restoreTabState(tabName)
-   Called when switching into a tab.
-   If a saved state exists for that tab, it rehydrates the tab’s content.
-
-   Arguments:
-     tabName – string key of the tab being entered
-
-   Returns:
-     true  if a saved state was successfully restored
-     false if no saved state existed
------------------------------------------------------------- */
-function restoreTabState(tabName) {
-  switch (tabName) {
-    case "draw":
-      if (uiState.drawSavedState && typeof restoreDrawState === "function") {
-        restoreDrawState(uiState.drawSavedState);
-        return true;
-      }
-      break;
-
-    // Patterns restore removed
-
-    default:
-      break;
-  }
-  return false;
-} // end restoreTabState
-
-/* ------------------------------------------------------------
    activateTab(tabKey)
-   Clears all divs and reassigns current setter functions
-   based on the selected top-level tab.
+
+   Purpose:
+     - Applies the correct theme (wrapper class)
+     - Assigns all clearing/setter functions from the tab’s DivSet
+     - Clears any shared divs (subtabs)
+     - Invokes the tab’s init function
+     - Lets the tab’s own init function restore its state
 
    Arguments:
-     tabKey – string key of the tab being activated
+     tabKey (string) – one of:
+         "draw", "patterns", "figures", "gallery", "utilities"
+
+   Notes:
+     - The old restoreTabState() logic has been REMOVED.
+     - Each tab now manages its OWN restoration:
+         initDrawTab()         restores draw state
+         initPatternsTab()     restores patterns state
+         initGalleryTab()      restores gallery state
+         initUtilityTab()      restores utilities state
+
+     - setUI.js no longer performs global restoration.
 ------------------------------------------------------------ */
 function activateTab(tabKey) {
+  // ----------------------------------------------------------
+  // 1. Clear subtabs area completely
+  // ----------------------------------------------------------
   clearDivs("subtabs");
 
+  // ----------------------------------------------------------
+  // 2. Load this tab’s DivSet (declared in each tab’s file)
+  // ----------------------------------------------------------
   const activeDivs = allDivSets[tabKey] || {};
 
+  // ----------------------------------------------------------
+  // 3. Apply theme to wrapper
+  // ----------------------------------------------------------
   const wrapper = document.getElementById("wrapper");
   wrapper.classList.remove(
     "theme-draw",
@@ -114,15 +93,22 @@ function activateTab(tabKey) {
     "theme-gallery",
     "theme-utilities"
   );
+
   if (activeDivs.theme) wrapper.classList.add(activeDivs.theme);
 
-  uiState.setAction    = activeDivs.action    || null;
-  uiState.setButtons   = activeDivs.buttons   || null;
-  uiState.setCaption   = activeDivs.caption   || null;
+  // ----------------------------------------------------------
+  // 4. Assign div-setter functions to uiState
+  // ----------------------------------------------------------
+  uiState.setAction = activeDivs.action || null;
+  uiState.setButtons = activeDivs.buttons || null;
+  uiState.setCaption = activeDivs.caption || null;
   uiState.setSketchpad = activeDivs.sketchpad || null;
-  uiState.setSubtabs   = activeDivs.subtabs   || null;
-  uiState.setText      = activeDivs.text      || null;
+  uiState.setSubtabs = activeDivs.subtabs || null;
+  uiState.setText = activeDivs.text || null;
 
+  // ----------------------------------------------------------
+  // 5. Call active div initializers (buttons/action/caption/etc.)
+  // ----------------------------------------------------------
   if (Array.isArray(activeDivs.activeDivs)) {
     if (activeDivs.activeDivs.includes("buttons") && uiState.setButtons)
       uiState.setButtons();
@@ -138,46 +124,45 @@ function activateTab(tabKey) {
 
     if (activeDivs.activeDivs.includes("sketchpad") && uiState.setSketchpad)
       uiState.setSketchpad();
-
-    // Do NOT call setSubtabs here.
   }
 
+  // ----------------------------------------------------------
+  // 6. Invoke the tab's own initializer
+  //    (Each init function now includes its own restore logic.)
+  // ----------------------------------------------------------
   switch (tabKey) {
-  case "draw":
-    // First restore the saved Draw state (if any)
-    const restored = restoreTabState("draw");
+    case "draw":
+      initDrawTab(); // draw.js handles restoring state internally
+      uiState.activeTab = "draw";
+      return;
 
-    // THEN run initDrawTab
-    initDrawTab(restored);
+    case "patterns":
+      initPatternsTab();
+      break;
 
-    // Skip the bottom restoreTabState call since we already restored
-    uiState.activeTab = "draw";
-    return;
-  case "patterns":
-      initPatternsTab(); break;
-  case "figures":
-      initFiguresTab();  break;
-  case "gallery":
-      initGalleryTab();  break;
-  case "utilities":
-      initUtilityTab();  break;
+    case "figures":
+      initFiguresTab();
+      break;
+
+    case "gallery":
+      initGalleryTab();
+      break;
+
+    case "utilities":
+      initUtilityTab();
+      break;
   }
 
-  restoreTabState(tabKey);
-
+  // ----------------------------------------------------------
+  // 7. Record active tab
+  // ----------------------------------------------------------
   uiState.activeTab = tabKey;
 } // end activateTab
 
-/* ------------------------------------------------------------
-   handleTabChange(tabId)
-   Called when a top-level tab button is clicked.
-   Translates Bootstrap button IDs into internal tab keys.
-
-   Arguments:
-     tabId – DOM id of the clicked nav button
------------------------------------------------------------- */
+/* ===========================================================
+   handleTabChange(event)
+=========================================================== */
 function handleTabChange(event) {
-  // handles both event object or id string
   const tabId = event?.target?.id || event;
 
   const map = {
@@ -194,28 +179,20 @@ function handleTabChange(event) {
     return;
   }
 
-  // --- Save current tab state before switching ---
   if (uiState.activeTab) saveTabState(uiState.activeTab);
 
-  // --- Switch to the requested tab ---
   activateTab(tabKey);
 } // end handleTabChange
 
-/* ------------------------------------------------------------
-   Initialize UI on first load.
-   Adds event listeners to main tab buttons and activates
-   the Draw tab by default.
-
-   Arguments:
-     (none)
------------------------------------------------------------- */
+/* ===========================================================
+   DOMContentLoaded
+=========================================================== */
 window.addEventListener("DOMContentLoaded", () => {
-  // attach tab listeners
   const tabButtons = document.querySelectorAll("#mainTabs .nav-link");
   tabButtons.forEach((btn) => {
     btn.addEventListener("click", () => handleTabChange(btn.id));
   });
 
-  // initial state: Draw tab active
   activateTab("draw");
 }); // end DOMContentLoaded
+

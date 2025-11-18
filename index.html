@@ -21,71 +21,17 @@
               └── offcanvasPanel
                     ├── offcanvas-header
                     └── offcanvas=body
-  ============================================================
-  Generated / Dynamic Div Structure (Draw Tab)
-  ------------------------------------------------------------
-   These divs are dynamically populated by draw.js and exist
-   within the shared layout defined in sketchpad.html.
 
-       subtabs
-         └── drawSubtabBar
-               ├── Categories tab button
-               └── one tab per active draw object
-                    └── close button (×)
 
-       text
-         └── category grid
-               ├── category title
-               └── clickable items (draw object entries)
+      overlayContainer
+         ├── overlayBackground   (dimmed clickable backdrop)
+         └── overlayPanel
+               ├── overlayHeader
+               │     ├── overlayTitle
+               │     └── overlayClose (×)
+               └── overlayContent     (HTML inserted dynamically)
 
-       action
-         └── drawControls
-               ├── ctrl-field
-               │     ├── ctrl-label
-               │     └── input control
-               └── dynamically built per drawRegistry parameters
-
-       sketchpad
-         └── shared canvas (window.drawCanvas)
-               └── active drawing rendered by entry.draw()
-
-       caption
-         └── caption-title (object name)
-               └── optional caption-buttons (future extension)
-
-   These nodes are rebuilt whenever subtabs or parameters change.
-   ============================================================
-   Generated / Dynamic Div Structure (Patterns Tab)
-   ------------------------------------------------------------
-   These divs are dynamically populated by patterns.js and exist
-   within the shared layout defined in sketchpad.html.
-
-       subtabs
-         └── patternsSubtabBar
-               ├── Categories tab button
-               └── Patterns tab button (active when script runs)
-
-       text
-         └── category grid
-               ├── category title
-               └── clickable items (individual pattern entries)
-
-       sketchpad
-         └── shared canvas (window.drawCanvas)
-               └── pattern drawing area (from executed script)
-
-       action
-         └── thumb-panel
-               ├── thumb-box
-               │     └── thumb-image
-               └── other controls (added by setPatternsThumbnails)
-
-       caption
-         └── caption-wrapper
-               ├── caption-title (pattern name)
-               └── caption-buttons (Prev / Next / Save)
-
-   These nodes are recreated or cleared as subtabs change.
+               These nodes are recreated or cleared as subtabs change.
    ============================================================ -->
 
     <link
@@ -97,6 +43,7 @@
     <link rel="stylesheet" href="./css/tabs.css" />
     <link rel="stylesheet" href="./css/categories.css" />
     <link rel="stylesheet" href="./css/offcanvas.css" />
+    <link rel="stylesheet" href="./css/overlay.css" />
   </head>
   <body>
     <div id="wrapper">
@@ -190,6 +137,17 @@
           </div>
           <div class="offcanvas-body">TBD</div>
         </div>
+      </div>
+    </div>
+    <!-- Overlay Container -->
+    <div id="overlayContainer" style="display:none;">
+      <div id="overlayBackground"></div>
+      <div id="overlayPanel">
+        <div id="overlayHeader">
+          <span id="overlayTitle"></span>
+          <button id="overlayClose">×</button>
+        </div>
+        <div id="overlayContent"></div>
       </div>
     </div>
     <!-- Files from the "Draw" side -->
