@@ -10,6 +10,7 @@ import { setCaptionBar } from "./caption.js";
 import { renderCategories } from "./categories.js";
 import { manifest } from "./manifest.js";
 import { showSharedOffcanvas, clearDivs } from "./ui_utilities.js";
+import { menuManager } from "./menuManager.js";
 
 // ============================================================
 // Constants
@@ -408,51 +409,33 @@ function displayUtilityResult(textOrArray) {
    setUtilityCaption(entry)
 
    Purpose:
-     Update the shared caption bar for Utilities, and wire its
-     click handler so that it opens the script source in the
-     shared offcanvas viewer.
-
-   Arguments:
-     entry (object) – metadata for the currently selected item:
-       entry.title    – optional display title
-       entry.filename – optional filename used as fallback title
-       entry.path     – path relative to utilities root
-       entry.subtab   – "Tools" | "Lab" | "Result"
-
-   Notes:
-     - Handles paths that already embed the subtab prefix
-       (e.g., "Tools/foo.js") as well as plain relative paths.
+     Update the shared caption bar for Utilities using
+     the unified caption-bar system (setCaptionBar).
 ------------------------------------------------------------ */
 function setUtilityCaption(entry) {
-  const title = entry.title || entry.filename || "(untitled)";
-  const path = entry.path;
+  const title  = entry.title    || entry.filename || "(untitled)";
+  const path   = entry.path;
   const subtab = entry.subtab || TOOLS;
 
-  // Initialize the caption bar with a click handler
-  setCaptionBar("caption", { title, path, subtab }, async () => {
-    try {
-      let scriptPath;
+  // No Prev/Next arrows for Utilities (leave null)
+  const onPrev = null;
+  const onNext = null;
 
-      // If path already contains "Tools/" or "Lab/" prefix, use it as-is
-      if (/^(Tools|Lab)\//.test(path)) {
-        scriptPath = `/utilities/${path}`;
-      } else {
-        // Otherwise, construct path from subtab + relative path
-        scriptPath = `/utilities/${subtab}/${path}`;
-      }
+  // Dropdown menu: show script source in the shared offcanvas
+  const onMenu = () => {
+    console.log("Utilities menu clicked — menu not yet implemented.");
+  };
 
-      const resp = await fetch(scriptPath);
-      if (!resp.ok) throw new Error(`HTTP ${resp.status} for ${scriptPath}`);
 
-      const code = await resp.text();
-
-      // Show script source in the shared offcanvas drawer
-      showSharedOffcanvas(title, code);
-    } catch (err) {
-      showSharedOffcanvas("Error", `Failed to load script: ${err.message}`);
-    }
+  setCaptionBar({
+    targetId: "caption",   // same as Gallery
+    title: title,
+    onPrev: onPrev,
+    onNext: onNext,
+    onMenu: onMenu
   });
 } // end setUtilityCaption
+
 
 /* ------------------------------------------------------------
    PUBLIC API for ui_callbacks.js
@@ -615,19 +598,6 @@ function setActiveUtilityItem(category, entry) {
   void entry;
 } // end setActiveUtilityItem
 
-/* ------------------------------------------------------------
-   updateUtilityCaption(tab)
-
-   Purpose:
-     Placeholder for future caption updates that depend only
-     on the active subtab.
-
-   Arguments:
-     tab (string) – subtab name or id
------------------------------------------------------------- */
-function updateUtilityCaption(tab) {
-  void tab;
-} // end updateUtilityCaption
 
 /* ------------------------------------------------------------
    setUtilityAction()

@@ -33,6 +33,8 @@ import { clearDivs, showSharedOffcanvas } from "./ui_utilities.js";
 import { renderCategories } from "./categories.js";
 import { drawState } from "../draw/drawState.js";
 import { uiState } from "./uiState.js";
+import { setCaptionBar } from "./caption.js";   // NEW
+import { menuManager } from "./menuManager.js";            // NEW
 
 /* ============================================================
    CONSTANTS
@@ -531,24 +533,24 @@ async function setPatternsCategories() {
   textDiv.innerHTML = "<p>Loading pattern categories...</p>";
 
   const manifestInfo = await loadPatternsManifest();
-  if (requestId !== lastCategoriesRequest) return;   // stale
+  if (requestId !== lastCategoriesRequest) return;   // stale request
   if (!manifestInfo) {
-    textDiv.innerHTML = `<p style="color:red;">Error loading manifest.</p>`;
+    textDiv.innerHTML =
+      `<p style="color:red;">Error loading manifest.</p>`;
     return;
   }
 
-  // If the Patterns subtab is active, do not show Categories
+  // If Patterns view is active, don't show Categories.
   if (uiState.activePatternsTab === PATTERNS_ID) return;
 
   /* ---------------------------------------------------------
-     Build the renderCategories() descriptor array
+     Build the hierarchical categories descriptor
      --------------------------------------------------------- */
   const categoriesArray = manifest
     .getCategories("patterns")
     .map(categoryName => {
       const items = manifest.getItems("patterns", categoryName) || [];
 
-      // Sort by display title
       const sorted = [...items].sort((a, b) =>
         (a.title || a.filename).toLowerCase()
           .localeCompare((b.title || b.filename).toLowerCase())
@@ -560,7 +562,6 @@ async function setPatternsCategories() {
           name: it.title || it.filename,
           hasSubitems: false,
           onClick: () => {
-            // Load the script into the Patterns subtab
             addPatternsSubtab({
               name: it.title || it.filename,
               type: "script",
@@ -574,26 +575,85 @@ async function setPatternsCategories() {
       };
     });
 
-  /* Render category list */
+  /* ---------------------------------------------------------
+     Render using the backward-compatible hierarchical renderer
+     --------------------------------------------------------- */
   textDiv.innerHTML = "";
-  renderCategories("text", categoriesArray, item => item.onClick?.(), null);
+  renderCategories("text", categoriesArray, (item) => {
+    if (item.onClick) item.onClick();
+  });
 } // end setPatternsCategories
 
 
 /* ============================================================
+   openPatternsMenu(entry)
+   ------------------------------------------------------------
+   Helper that invokes the global caption menu for the Patterns
+   tab. It packages the current pattern's context so the menu
+   can decide which actions to offer (edit in Draw, save copy,
+   metadata, show source, etc.).
+============================================================ */
+function openPatternsMenu(entry) {
+  const active = uiState.activePattern || {};
+  const base = entry || active;
+  if (!base) return;
+
+  // Build a minimal context object for the menu system
+  const context = {
+    tab: "patterns",
+    category: base.category || active.category || null,
+    filename: base.filename || active.filename || null,
+    title:
+      base.title ||
+      active.title ||
+      drawState.currentTitle ||
+      base.filename ||
+      "(untitled pattern)",
+  };
+
+  menuManager.open("patterns", context);
+} // end openPatternsMenu
+
+
+
+
+/* ============================================================
+   renderPatternsCaption(entry)
+   ------------------------------------------------------------
+   Internal helper that builds the caption row using the shared
+   caption bar helper:
+
+       | Title                          | Prev | Next | ▾ |
+
+   - Title comes from entry.title or entry.filename.
+   - Prev / Next call showPrevPattern / showNextPattern.
+   - ▾ opens the Patterns caption menu via openPatternsMenu().
+============================================================ */
+function renderPatternsCaption(entry) {
+  const titleText =
+    entry.title || entry.filename || "Untitled Pattern";
+
+  setCaptionBar({
+    targetId: "caption",
+    title: titleText,
+    onPrev: showPrevPattern,
+    onNext: showNextPattern,
+    onMenu: () => openPatternsMenu(entry),
+  });
+} // end renderPatternsCaption
+
+/* ============================================================
    updatePatternsCaption()
+   ------------------------------------------------------------
+   Called after loadAndRunPattern() when uiState.activePattern
+   is already set.
 
-   Purpose:
-     Draw the simple caption row for the Patterns tab.
-     Shows: title + Prev/Next/Save
-
-   Notes:
-     - This is shown after a script is run.
+   Uses uiState.activePattern + drawState.currentTitle to build
+   a minimal entry object, then delegates to renderPatternsCaption().
 ============================================================ */
 function updatePatternsCaption() {
   const capDiv = document.getElementById("caption");
   if (!capDiv) throw new Error("updatePatternsCaption: #caption not found");
-
   capDiv.innerHTML = "";
 
   const info = uiState.activePattern;
@@ -602,100 +662,39 @@ function updatePatternsCaption() {
     return;
   }
 
-  const title =
-    drawState.currentTitle || info.title || info.filename || "Untitled Pattern";
-
-  const wrapper = document.createElement("div");
-  wrapper.className = "caption-wrapper";
-
-  const titleSpan = document.createElement("span");
-  titleSpan.className = "caption-title";
-  titleSpan.textContent = title;
-
-  const btnGroup = document.createElement("div");
-  btnGroup.className = "caption-buttons";
-
-  const mk = (label) => {
-    const b = document.createElement("button");
-    b.textContent = label;
-    return b;
+  const entry = {
+    title: drawState.currentTitle || info.title || info.filename,
+    filename: info.filename,
+    category: info.category,
   };
 
-  const btnPrev = mk("Prev");
-  const btnNext = mk("Next");
-  const btnSave = mk("Save");
-
-  btnPrev.onclick = showPrevPattern;
-  btnNext.onclick = showNextPattern;
-  btnSave.onclick = () => alert("Save pressed");
-
-  btnGroup.appendChild(btnPrev);
-  btnGroup.appendChild(btnNext);
-  btnGroup.appendChild(btnSave);
-
-  wrapper.appendChild(titleSpan);
-  wrapper.appendChild(btnGroup);
-
-  capDiv.appendChild(wrapper);
+  renderPatternsCaption(entry);
 } // end updatePatternsCaption
-
 
 /* ============================================================
    setPatternsCaptionContent(entry)
-
-   Purpose:
-     Build full caption (Prev, Next, Save, Show Script)
-     Used after running a script to match gallery.js style.
-
-   Arguments:
-     entry: { title, filename, path }
-
+   ------------------------------------------------------------
+   Called from loadAndRunPattern() when we have a manifest
+   entry (with title/filename/path). It normalizes the entry
+   and reuses renderPatternsCaption() so caption behavior is
+   identical no matter how it is reached.
 ============================================================ */
 function setPatternsCaptionContent(entry) {
-  const captionDiv = document.getElementById("caption");
-  if (!captionDiv)
-    throw new Error("setPatternsCaptionContent: #caption not found");
+  // If no entry was supplied, fall back to the activePattern info
+  if (!entry) {
+    updatePatternsCaption();
+    return;
+  }
 
-  captionDiv.style.display = "flex";
-  captionDiv.style.justifyContent = "space-between";
-  captionDiv.style.alignItems = "center";
-  captionDiv.innerHTML = "";
-
-  const titleSpan = document.createElement("span");
-  titleSpan.className = "caption-title";
-  titleSpan.textContent = entry.title || entry.filename;
-
-  const btnGroup = document.createElement("div");
-  btnGroup.className = "caption-buttons";
-
-  const makeBtn = (label, handler) => {
-    const b = document.createElement("button");
-    b.textContent = label;
-    b.addEventListener("click", handler);
-    return b;
+  const normalized = {
+    title: entry.title,
+    filename: entry.filename,
+    category: uiState.activePattern?.category || entry.category,
   };
 
-  const btnPrev = makeBtn("Prev", showPrevPattern);
-  const btnNext = makeBtn("Next", showNextPattern);
-  const btnSave = makeBtn("Save", () => alert("Save pressed"));
-
-  /* Show Script button */
-  const btnShow = makeBtn("Show Script", async () => {
-    const resolved = manifest.resolvePath(
-      "patterns",
-      uiState.activePattern.category,
-      entry.filename
-    );
-    const resp = await fetch(resolved);
-    const code = await resp.text();
-    showSharedOffcanvas(entry.title || entry.filename, code);
-  });
-
-  [btnPrev, btnNext, btnSave, btnShow].forEach(b => btnGroup.appendChild(b));
-
-  captionDiv.appendChild(titleSpan);
-  captionDiv.appendChild(btnGroup);
+  renderPatternsCaption(normalized);
 } // end setPatternsCaptionContent
+
 
 
 /* ============================================================

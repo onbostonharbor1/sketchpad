@@ -9,12 +9,14 @@
    ------------------------------------------------------------ */
 
 import { uiState } from "./uiState.js";
-import { renderCategories, setActiveItem } from "./categories.js";
+import { renderCategories } from "./categories.js";
 import { setCaptionBar } from "./caption.js";
 import { showSharedOffcanvas, clearDivs } from "./ui_utilities.js";
 import { manifest } from "./manifest.js";
 import { printTitle } from "../draw/draw_utilities.js";
 import { Line, Point, StringThing } from "../classes/classes.js";
+import { menuManager } from "./menuManager.js";
+
 
 // ============================================================
 // Constants identifying Gallery domains
@@ -64,15 +66,16 @@ export async function initGalleryTab() {
       if (item) addGallerySubtab({ name: item.name });
     });
   } else {
-    // Initial startup — create all three subtabs
-    [IDEABOOK, PATTERNS, SCRIPTS].forEach((name) => {
-      addGallerySubtab({ name });
-    });
+      // Initial startup — only add Categories.
+      uiState.galleryTabs = { "tab-categories": { name: "Categories" } };
   }
 
-  // Restore active tab or fall back to Categories
-  const tabId = uiState.activeGalleryTab || "tab-categories";
+  const tabId = "tab-categories";   // Always start Gallery at Categories
   await switchGalleryTab(tabId);
+
+  // Also update uiState so it matches
+  uiState.activeGalleryTab = "tab-categories";
+
 
   console.log(`✅ initGalleryTab restored ${tabId}`);
 } // end initGalleryTab
@@ -153,7 +156,53 @@ async function setGalleryCategories() {
   };
 
   // Use shared category renderer
-  renderGalleryCategories(textDiv, data);
+renderCategories(
+  "text",
+  [
+    {
+      title: IDEABOOK,
+      items: data.Ideabook.map(name => ({
+        name,
+        hasSubitems: false,
+        onClick: () => handleGalleryCategoryClick(IDEABOOK, name)
+      }))
+    },
+    {
+      title: PATTERNS,
+      items: data.Patterns.map(name => ({
+        name,
+        hasSubitems: false,
+        onClick: () => handleGalleryCategoryClick(PATTERNS, name)
+      }))
+    },
+    {
+      title: SCRIPTS,
+      items: data.Scripts.map(entry => ({
+        name: entry.title || entry.filename,
+        hasSubitems: false,
+        onClick: () => handleGalleryScriptClick(entry)
+      }))
+    }
+  ],
+  (item) => item.onClick()
+);
+
+function handleGalleryCategoryClick(tab, categoryName) {
+  addGallerySubtab({ name: tab });
+
+  // NEVER pass categoryName to setActiveItem here.
+  // Only the fixed tab label is valid.
+//  setActiveItem(tab, { filename: categoryName });
+
+  renderGalleryThumbnails(tab, categoryName);
+} // end handleGalleryCategoryClick
+
+
+function handleGalleryScriptClick(entry) {
+  addGallerySubtab({ name: SCRIPTS });
+  renderGalleryScripts(entry.filename);
+} // end handleGalleryScriptClick
+
 
   // Attach click handlers for the 3 frames
   addGalleryHandler(IDEABOOK, textDiv);
@@ -513,7 +562,7 @@ async function renderGalleryScripts(scriptName = null) {
     }
 
     // Update active item + indexes
-    setActiveItem("Scripts", entry);
+ //   setActiveItem("Scripts", entry);
     uiState.activeGalleryItem = entry;
 
     if (!uiState.galleryIndex) {
@@ -592,7 +641,7 @@ function drawGalleryThumbnails(tab, category, manifest) {
       showGalleryImage(tab, category, path);
 
       // Mark item as active in uiState and shared category state
-      setActiveItem(category, entry);
+ //     setActiveItem(category, entry);
       uiState.activeGalleryItem = entry;
 
       // Refresh caption bar (Prev/Next/etc.)
@@ -616,7 +665,7 @@ function drawGalleryThumbnails(tab, category, manifest) {
   const entry = manifest[idx] ?? manifest[0];
   if (entry?.path) {
     showGalleryImage(tab, category, entry.path);
-    setActiveItem(category, entry);
+ //   setActiveItem(category, entry);
     uiState.activeGalleryItem = entry;
   }
 
@@ -892,170 +941,119 @@ function buildScriptControls(meta, params, panel, onChange) {
    updateGalleryCaption(tab)
 
    Purpose:
-     Render the caption bar for the Gallery tab, including:
-       - current item title
-       - Prev / Next navigation buttons
-       - optional "Show Script" button for SCRIPTS
+     Build the caption bar for the current Gallery item using
+     the unified caption-bar system (setCaptionBar).
 
-   Arguments:
-     tab (string) – IDEABOOK | PATTERNS | SCRIPTS
-
-   Throws:
-     Error if #caption is missing.
-============================================================ */
+     This replaces the old inline button creation. The caption
+     bar system now handles:
+       - Prev/Next arrows
+       - Title display
+       - Dropdown menu (if needed)
+------------------------------------------------------------ */
 function updateGalleryCaption(tab) {
-  const capDiv = document.getElementById("caption");
-  if (!capDiv) throw new Error("updateGalleryCaption: #caption not found");
+  const item = uiState.activeGalleryItem;
+  if (!item) return;
 
-  capDiv.innerHTML = "";
-  capDiv.style.display = "flex";
+  const title =
+    item.title ||
+    item.filename ||
+    item.path ||
+    "(untitled)";
 
-  const info = uiState.activeGalleryItem;
-  const titleSpan = document.createElement("span");
-  titleSpan.className = "caption-title";
-  titleSpan.textContent = info?.title || info?.filename || "(untitled)";
-  capDiv.appendChild(titleSpan);
-
-  const btnGroup = document.createElement("div");
-  btnGroup.className = "caption-buttons";
-
-  // Helper to build caption buttons
-  const makeBtn = (label, handler) => {
-    const b = document.createElement("button");
-    b.textContent = label;
-    b.addEventListener("click", handler);
-    return b;
+  // Dropdown menu callback (optional)
+  const menuHandler = () => {
+    menuManager.openMenu("gallery", {
+      tab,
+      entry: item,
+      index: uiState.galleryIndex?.[tab.toLowerCase()] ?? 0
+    });
   };
 
-  // Prev / Next navigation
-  btnGroup.appendChild(makeBtn("Prev", () => showPrevGalleryItem(tab)));
-  btnGroup.appendChild(makeBtn("Next", () => showNextGalleryItem(tab)));
-
-  // Additional "Show Script" button for SCRIPTS tab
-  if (tab === SCRIPTS) {
-    btnGroup.appendChild(
-      makeBtn("Show Script", async () => {
-        const entry = uiState.activeGalleryItem;
-        if (!entry) return;
-
-        try {
-          const res = await fetch(`./gallery/Scripts/${entry.path}`);
-          if (res.ok) {
-            const text = await res.text();
-            showSharedOffcanvas(entry.title || entry.filename, text);
-          } else {
-            showSharedOffcanvas(
-              entry.title || entry.filename,
-              `Unable to load script: HTTP ${res.status}`
-            );
-          }
-        } catch (err) {
-          showSharedOffcanvas(
-            entry.title || entry.filename,
-            `Error: ${err.message}`
-          );
-        }
-      })
-    );
-  }
-
-  capDiv.appendChild(btnGroup);
+  buildGalleryCaption(title, tab, menuHandler);
 } // end updateGalleryCaption
+
 
 /* ============================================================
    showPrevGalleryItem(tab)
 
    Purpose:
-     Move to the previous entry in uiState.activeManifest for
-     the given Gallery tab, wrapping around when needed. Updates
-     uiState.galleryIndex and re-displays either an image or
-     a script, followed by caption refresh.
-
-   Arguments:
-     tab (string) – IDEABOOK | PATTERNS | SCRIPTS
-============================================================ */
+     Navigate to the previous item in the activeManifest for
+     the given Gallery tab (Ideabook, Patterns, Scripts).
+     Automatically wraps around. Then rebuild caption bar.
+------------------------------------------------------------ */
 async function showPrevGalleryItem(tab) {
-  // Clear action region before navigation (so controls are rebuilt)
-  setGalleryAction();
 
-  const manifestList = uiState.activeManifest;
-  if (!manifestList || !Array.isArray(manifestList) || manifestList.length === 0) {
-    return;
-  }
+  const list = uiState.activeManifest;
+  if (!list || list.length === 0) return;
 
   const current = uiState.activeGalleryItem;
-  const idx = manifestList.findIndex((e) => e.path === current?.path);
-  const prevIdx = idx <= 0 ? manifestList.length - 1 : idx - 1;
-  const entry = manifestList[prevIdx];
+  const idx = list.findIndex((e) => e.path === current?.path);
+  const prevIdx = (idx <= 0) ? list.length - 1 : idx - 1;
 
+  const entry = list[prevIdx];
   uiState.activeGalleryItem = entry;
 
+  // Ensure galleryIndex exists
   if (!uiState.galleryIndex) {
     uiState.galleryIndex = { ideabook: 0, patterns: 0, scripts: 0 };
   }
 
-  const key = (tab || "").toLowerCase();
+  const key = tab.toLowerCase();
 
-  // Scripts use showGalleryScript; others use showGalleryImage
+  // Update index and show
   if (key === "scripts") {
     uiState.galleryIndex.scripts = prevIdx;
     await showGalleryScript(entry);
   } else {
     if (key === "ideabook") uiState.galleryIndex.ideabook = prevIdx;
     if (key === "patterns") uiState.galleryIndex.patterns = prevIdx;
-
     showGalleryImage(tab, uiState.activeCategory, entry.path);
   }
 
   updateGalleryCaption(tab);
 } // end showPrevGalleryItem
 
+
 /* ============================================================
    showNextGalleryItem(tab)
 
    Purpose:
-     Move to the next entry in uiState.activeManifest for the
-     given Gallery tab, wrapping around when needed. Updates
-     uiState.galleryIndex and re-displays either an image or
-     a script, followed by caption refresh.
-
-   Arguments:
-     tab (string) – IDEABOOK | PATTERNS | SCRIPTS
-============================================================ */
+     Navigate to the next item in the activeManifest for
+     the given Gallery tab (Ideabook, Patterns, Scripts).
+     Automatically wraps around. Then rebuild caption bar.
+------------------------------------------------------------ */
 async function showNextGalleryItem(tab) {
-  // Clear action region before navigation (so controls are rebuilt)
-  setGalleryAction();
 
-  const manifestList = uiState.activeManifest;
-  if (!manifestList || !Array.isArray(manifestList) || manifestList.length === 0) {
-    return;
-  }
+  const list = uiState.activeManifest;
+  if (!list || list.length === 0) return;
 
   const current = uiState.activeGalleryItem;
-  const idx = manifestList.findIndex((e) => e.path === current?.path);
-  const nextIdx = idx >= manifestList.length - 1 ? 0 : idx + 1;
-  const entry = manifestList[nextIdx];
+  const idx = list.findIndex((e) => e.path === current?.path);
+  const nextIdx = (idx >= list.length - 1) ? 0 : idx + 1;
 
+  const entry = list[nextIdx];
   uiState.activeGalleryItem = entry;
 
+  // Ensure galleryIndex exists
   if (!uiState.galleryIndex) {
     uiState.galleryIndex = { ideabook: 0, patterns: 0, scripts: 0 };
   }
 
-  const key = (tab || "").toLowerCase();
+  const key = tab.toLowerCase();
 
+  // Update index and show
   if (key === "scripts") {
     uiState.galleryIndex.scripts = nextIdx;
     await showGalleryScript(entry);
   } else {
     if (key === "ideabook") uiState.galleryIndex.ideabook = nextIdx;
     if (key === "patterns") uiState.galleryIndex.patterns = nextIdx;
-
     showGalleryImage(tab, uiState.activeCategory, entry.path);
   }
 
   updateGalleryCaption(tab);
 } // end showNextGalleryItem
+
 
 /* ============================================================
    galleryDivs
@@ -1374,3 +1372,47 @@ export async function showNextImage() {
 
   await showNextGalleryItem(tabLabel);
 } // end showNextImage
+
+/* ------------------------------------------------------------
+   buildGalleryCaption
+   Purpose:
+     Central builder for the new caption bar system used by
+     Gallery items (images or scripts).
+
+     We delegate directly to setCaptionBar(), which applies
+     the standard UI for:
+       - optional Prev arrow
+       - optional Next arrow
+       - dropdown menu
+       - title display
+------------------------------------------------------------ */
+function buildGalleryCaption(title, tabLabel, onMenu) {
+
+  // Decide which navigation callbacks are valid for this tab
+  let onPrev = null;
+  let onNext = null;
+
+  if (tabLabel === IDEABOOK) {
+    onPrev = () => showPrevGalleryItem(IDEABOOK);
+    onNext = () => showNextGalleryItem(IDEABOOK);
+  }
+
+  if (tabLabel === PATTERNS) {
+    onPrev = () => showPrevGalleryItem(PATTERNS);
+    onNext = () => showNextGalleryItem(PATTERNS);
+  }
+
+  if (tabLabel === SCRIPTS) {
+    onPrev = () => showPrevGalleryItem(SCRIPTS);
+    onNext = () => showNextGalleryItem(SCRIPTS);
+  }
+
+  setCaptionBar({
+    targetId: "caption",     // your unified caption host
+    title: title,
+    onPrev: onPrev,
+    onNext: onNext,
+    onMenu: onMenu
+  });
+} // end buildGalleryCaption
+

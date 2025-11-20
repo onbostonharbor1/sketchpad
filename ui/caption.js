@@ -39,78 +39,52 @@ import { menuManager } from "./menuManager.js";
      • Buttons only appear if callbacks are provided.
 ------------------------------------------------------------ */
 export function setCaptionBar(config) {
-  const { targetId, title, onPrev, onNext } = config;
+  const { targetId, title, onPrev, onNext, onMenu } = config;
 
   const el = document.getElementById(targetId);
   if (!el) throw new Error(`setCaptionBar: #${targetId} not found`);
 
-  /* Clear current content */
   el.innerHTML = "";
-  el.style.display = "flex";
-  el.style.flexDirection = "row";
+  el.style.display        = "flex";
   el.style.justifyContent = "space-between";
-  el.style.alignItems = "center";
-  el.style.gap = "8px";
+  el.style.alignItems     = "center";
 
-  /* ----------------------------------------------------------
-     LEFT: TITLE
-  ---------------------------------------------------------- */
+  // Left side: title
   const titleSpan = document.createElement("span");
   titleSpan.className = "caption-title";
   titleSpan.textContent = title || "";
-  titleSpan.style.flex = "1 1 auto";
   el.appendChild(titleSpan);
 
-  /* ----------------------------------------------------------
-     RIGHT: BUTTON CLUSTER (Prev → Next → v)
-  ---------------------------------------------------------- */
+  // Right side: Prev / Next / v
   const btnRow = document.createElement("div");
   btnRow.className = "caption-buttons";
-  btnRow.style.display = "flex";
-  btnRow.style.flexDirection = "row";
-  btnRow.style.gap = "6px";
+  el.appendChild(btnRow);
 
-  /* Prev button */
   if (typeof onPrev === "function") {
     const bPrev = document.createElement("button");
     bPrev.textContent = "Prev";
-    bPrev.addEventListener("click", onPrev);
+    bPrev.onclick = onPrev;
     btnRow.appendChild(bPrev);
   }
 
-  /* Next button */
   if (typeof onNext === "function") {
     const bNext = document.createElement("button");
     bNext.textContent = "Next";
-    bNext.addEventListener("click", onNext);
+    bNext.onclick = onNext;
     btnRow.appendChild(bNext);
   }
 
-  /* ----------------------------------------------------------
-     MENU BUTTON  ("v" — always present)
-  ---------------------------------------------------------- */
+  // Menu button (always exists)
   const bMenu = document.createElement("button");
   bMenu.textContent = "v";
-  bMenu.style.minWidth = "28px";
+  btnRow.appendChild(bMenu);
 
-  /* Determine if this tab has menu actions */
-  const hasMenu = menuManager.hasMenuItems();
-
-  if (!hasMenu) {
-    /* Disable visually and functionally */
+  // Caller chooses whether menu opens or not
+  if (typeof onMenu === "function") {
+    bMenu.onclick = (ev) => onMenu(bMenu, ev);
+  } else {
     bMenu.disabled = true;
     bMenu.style.opacity = "0.4";
     bMenu.style.cursor = "default";
-  } else {
-    /* Normal behavior */
-    bMenu.disabled = false;
-    bMenu.style.opacity = "1.0";
-    bMenu.style.cursor = "pointer";
-    bMenu.addEventListener("click", () => menuManager.open());
   }
-
-  btnRow.appendChild(bMenu);
-
-  /* Attach right cluster */
-  el.appendChild(btnRow);
-} // end setCaptionBar
+}
