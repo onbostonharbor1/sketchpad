@@ -72,6 +72,15 @@ export function initOverlay() {
   overlayManager.register("notes", notesEl);
   overlayManager.register("debug", debugEl);
 
+  ////////////////////////////////////////////////////////////////
+// Close button for entire overlay window
+////////////////////////////////////////////////////////////////
+document.getElementById("overlayClose").onclick = function () {
+  document.getElementById("overlayContainer").style.display = "none";
+  overlayManager.clearAll();
+}; // end onclick
+
+
   console.log("overlay.js: registered overlay layers:", overlayManager.layers);
 } // end initOverlay
 
@@ -97,3 +106,45 @@ export function openOverlay(html) {
 export function closeOverlay() {
   overlayManager.hide("interaction");
 } // end closeOverlay
+
+/* ------------------------------------------------------------
+   showHelpOverlay(helpPath, titleText)
+   Loads a full HTML help file, extracts <body>, places content
+   into overlay-help layer, and opens the overlay panel.
+------------------------------------------------------------ */
+export function showHelpOverlay(helpPath, titleText) {
+
+  fetch(helpPath)
+    .then(resp => resp.text())
+    .then(html => {
+
+      const parser = new DOMParser();
+      const doc = parser.parseFromString(html, "text/html");
+      const bodyHtml = doc.body ? doc.body.innerHTML : html;
+
+      const finalHtml =
+        "<div class='overlayHelp'>" + bodyHtml + "</div>";
+
+      overlayManager.show("help", finalHtml);
+
+      const header = document.getElementById("overlayTitle");
+      header.textContent = titleText + " Help";
+
+      const oc = document.getElementById("overlayContainer");
+      oc.style.display = "block";
+    });
+} // end showHelpOverlay
+
+
+////////////////////////////////////////////////////////////////
+// Close button for entire overlay window
+///////////////////////////////////////////'
+//
+/////////////////////
+document.getElementById("overlayClose").onclick = function () {
+  // Hide the whole overlay container
+  document.getElementById("overlayContainer").style.display = "none";
+
+  // Clear all overlay layers
+  overlayManager.clearAll();
+}; // end onclick

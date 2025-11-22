@@ -31,7 +31,7 @@
   "javascript.updateImportsOnFileMove.enabled": "always",
   "typescript.updateImportsOnFileMove.enabled": "always",
   "eslint.format.enable": true,
-  "editor.defaultFormatter": "esbenp.prettier-vscode",
+
 
   // === Terminal ===
   "terminal.integrated.shellIntegration.enabled": true,

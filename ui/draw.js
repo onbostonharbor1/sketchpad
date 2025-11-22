@@ -9,12 +9,17 @@
      - updating the canvas and parameter controls
    ------------------------------------------------------------ */
 
-import { renderCategories } from "./categories.js";
-import { clearDivs, showSharedOffcanvas } from "./ui_utilities.js";
+import { setCaptionBar }          from "./caption.js";
+import { renderCategories }       from "./categories.js";
+import { menuManager }            from "./menuManager.js";
+import { showHelpOverlay }        from "./overlay.js"
+import { showScriptOffcanvas }    from "./offcanvas.js";
 import { buildParameterControls } from "./parameterControls.js";
-import { uiState } from "./uiState.js";
-import { setCaptionBar } from "./caption.js";
-import { menuManager } from "./menuManager.js";
+import { uiState }                from "./uiState.js";
+import { clearDivs }              from "./ui_utilities.js";
+import { normalizeCaptionEntry, buildMenuHandler, rebuildCaption }
+                                  from "./caption.js";
+
 
 const DEFAULT_DRAW_SUBTAB = "tab-categories";
 
@@ -123,7 +128,7 @@ function switchTab(tabId) {
 
   // Dispatch behavior by type of subtab
   if (info.type === "categories") {
-    setDrawCategories();
+    renderDrawCategories();
   } else {
     drawActiveTab();
   }
@@ -273,7 +278,7 @@ export function addDrawSubtab(item) {
     uiState.drawTabs[tabId] = { type: "categories" };
     uiState.activeDrawTab = tabId;
     clearDivs();
-    setDrawCategories();
+    renderDrawCategories();
     return;
   }
 
@@ -432,7 +437,7 @@ function setDrawAction() {
    setDrawButtons()
 
    Purpose:
-     Populate the #buttons area with Draw-specific buttons.
+     Add a draw item to the caption's menu.
 
    Arguments:
      (none)
@@ -441,20 +446,10 @@ function setDrawButtons() {
   const el = document.getElementById("buttons");
   if (!el) throw new Error("setDrawButtons: #buttons not found");
 
-  el.innerHTML = "";   // fresh start
-
-  const tabId = uiState.activeDrawTab;
-  const info = uiState.drawTabs[tabId];
-
-  // Only object tabs have buttons (e.g., Dup)
-  if (!info || info.type !== "object") return;
-
-  const dupBtn = document.createElement("button");
-  dupBtn.textContent = "Dup";
-  dupBtn.className = "btn btn-sm btn-outline-primary";
-  dupBtn.addEventListener("click", () => copyActiveDrawObject());
-  el.appendChild(dupBtn);
+  // Draw tab: now controlled entirely by caption-menu
+  el.innerHTML = "";   // keep region clean, no local buttons
 } // end setDrawButtons
+
 
 
 /* ===========================================================
@@ -486,16 +481,30 @@ function clearDrawCaption() {
 function setDrawCaption(entry) {
   const title = entry.name || "(untitled)";
 
-  // Draw tab has no Prev/Next arrows
+  // Draw has no Prev/Next
   const onPrev = null;
   const onNext = null;
 
-  // Offcanvas viewer for registry JSON
-  const onMenu = () => {
-    showSharedOffcanvas(
-      "Draw Registry: " + title,
-      JSON.stringify(entry, null, 2)
+  const onMenu = async (anchor, ev) => {
+    if (!(anchor instanceof HTMLElement)) {
+      throw new Error("setDrawCaption: anchor is not a DOM element");
+    }
+
+    // Find registry key for this entry
+    const registryKey = Object.keys(window.drawRegistry).find(
+      k => window.drawRegistry[k] === entry
     );
+    if (!registryKey)
+      throw new Error("setDrawCaption: registry key not found for " + entry.name);
+
+    // Script path for Show Script
+    const scriptPath = `../draw/${registryKey}.js`;
+
+    // Build menu item array
+    const items = await buildDrawMenuItems("draw", registryKey, scriptPath);
+
+    // Open menu
+    menuManager.open(items, anchor);
   };
 
   setCaptionBar({
@@ -506,6 +515,7 @@ function setDrawCaption(entry) {
     onMenu: onMenu
   });
 } // end setDrawCaption
+
 
 
 /* ===========================================================
@@ -519,7 +529,7 @@ function setDrawCaption(entry) {
      (none)
 =========================================================== */
 export function setDrawText() {
-  setDrawCategories();
+  renderDrawCategories();
 } // end setDrawText
 
 
@@ -533,7 +543,7 @@ export function setDrawText() {
    Arguments:
      (none)
 =========================================================== */
-function copyActiveDrawObject() {
+export function copyActiveDrawObject() {
   const tabId = uiState.activeDrawTab;
   const info = uiState.drawTabs[tabId];
   if (!info || info.type !== "object") return;
@@ -580,131 +590,11 @@ function copyActiveDrawObject() {
 } // end copyActiveDrawObject
 
 
-function setDrawCategories() {
-  const raw = grabDrawData();
-  const organized = organizeDrawCategories(raw);
 
-  // Convert grouped structure into the format expected
-  // by the backward-compatible categories renderer.
-  const categoriesArray = Object.entries(organized).map(
-    ([categoryName, items]) => ({
-      title: categoryName,
-      items: items.map((it) => ({
-        name: it.name,
-        hasSubitems: false,
-        onClick: () => {
-          addDrawSubtab({ name: it.name, entry: it.entry });
-        }
-      }))
-    })
-  );
-
-  // Render using the original multi-frame CSS layout
-  renderCategories("text", categoriesArray);
-} // end setDrawCategories
-
-
-/* ===========================================================
-   grabDrawData()
-
-   Purpose:
-     Convert window.drawRegistry into a flat array of objects
-     suitable for later grouping into categories.
-
-   Arguments:
-     (none)
-=========================================================== */
-function grabDrawData() {
-  const registry = window.drawRegistry || {};
-  const result = [];
-
-  Object.entries(registry).forEach(([key, entry]) => {
-    if (!entry || typeof entry !== "object") return;
-
-    result.push({
-      key: key,
-      name: entry.name || key,
-      category: entry.category || "uncategorized",
-      entry: entry,
-    });
-  });
-
-  return result;
-} // end grabDrawData
-
-
-/* ===========================================================
-   organizeDrawCategories(rawData)
-
-   Purpose:
-     Group drawRegistry entries by their category property,
-     sorting categories and items alphabetically.
-
-   Arguments:
-     rawData (array of objects)
-=========================================================== */
-function organizeDrawCategories(rawData = []) {
-  const grouped = {};
-
-  // Group by category
-  rawData.forEach((item) => {
-    const cat = item.category || "uncategorized";
-    if (!grouped[cat]) grouped[cat] = [];
-    grouped[cat].push(item);
-  });
-
-  // Sort category names
-  const sortedCategories = Object.keys(grouped).sort((a, b) =>
-    a.toLowerCase().localeCompare(b.toLowerCase())
-  );
-
-  // Sort items within categories
-  const organized = {};
-  sortedCategories.forEach((cat) => {
-    organized[cat] = grouped[cat].sort((a, b) =>
-      a.name.toLowerCase().localeCompare(b.name.toLowerCase())
-    );
-  });
-
-  return organized;
-} // end organizeDrawCategories
 
 function extractCategoryNames(organized) {
   return Object.keys(organized).sort();
 } // end extractCategoryNames
-
-/* ===========================================================
-   bindDrawCategoryItems(data, clickFactory)
-
-   Purpose:
-     Attach click handlers to each item in a categorized list.
-
-   Arguments:
-     data (object) – { categoryName: [items...] }
-     clickFactory (function(item) → function) –
-        returns an onClick handler for each item
-=========================================================== */
-function bindDrawCategoryItems(data = {}, clickFactory = null) {
-  const bound = {};
-
-  Object.entries(data).forEach(([cat, items]) => {
-    bound[cat] = items.map((item) => {
-      const newItem = { ...item };
-
-      if (typeof clickFactory === "function") {
-        newItem.onClick = clickFactory(item);
-      } else {
-        newItem.onClick = function () {
-          console.log("Clicked: " + item.name);
-        };
-      }
-
-      return newItem;
-    });
-  });
-
-  return bound;
-} // end bindDrawCategoryItems
 
 
 /* ===========================================================
@@ -809,6 +699,142 @@ function restoreDrawState(saved) {
 
   console.log("✅ Restored Draw state:", saved);
 } // end restoreDrawState
+
+
+
+/* ------------------------------------------------------------
+   buildDrawMenuItems()
+   Creates the menu array for the Draw tab.
+   Fully conforms to menuManager.open(items, anchor).
+------------------------------------------------------------ */
+export async function buildDrawMenuItems(tabName, itemName, scriptPath) {
+
+  const items = [];
+
+  // -------------------------------------------------------
+  // HELP
+  // buildDrawMenuItems DOES NOT decide availability.
+  // It ONLY forwards a helpPath to showHelpOverlay().
+  // -------------------------------------------------------
+  const helpPath = `./help/${tabName}/${itemName}.html`;
+
+const helpItem = await menuManager.buildHelpItem(tabName, itemName);
+items.push(helpItem);
+//  items.push({
+//    label: "Help",
+//    onClick: () => showHelpOverlay(helpPath, itemName)
+//  });
+
+  // -------------------------------------------------------
+  // SCRIPT  (unchanged — just push the path)
+  // -------------------------------------------------------
+  items.push({
+    label: "Show Script",
+    onClick: () => showScriptOffcanvas(scriptPath, itemName)
+  });
+
+  // -------------------------------------------------------
+  // DUPLICATE (unchanged)
+  // -------------------------------------------------------
+  items.push({
+    label: "Duplicate",
+    onClick: () => {
+      copyActiveDrawObject();
+    }
+  });
+
+  return items;
+} // end buildDrawMenuItems
+
+
+
+/* ===========================================================
+   DRAW → CATEGORY DATA PREPARATION
+   -----------------------------------------------------------
+   These helpers prepare drawRegistry entries for rendering
+   with categories.js.  All UI-independent work happens here.
+=========================================================== */
+
+/* -----------------------------------------------------------
+   collectRegistryEntries()
+   Collects drawRegistry into a flat list of:
+     { key, name, category, entry }
+----------------------------------------------------------- */
+function collectRegistryEntries() {
+  const reg = window.drawRegistry || {};
+  const out = [];
+
+  for (const [key, entry] of Object.entries(reg)) {
+    if (!entry || typeof entry !== "object") continue;
+
+    out.push({
+      key: key,
+      name: entry.name || key,
+      category: entry.category || "uncategorized",
+      entry: entry
+    });
+  }
+
+  return out;
+} // end collectRegistryEntries
+
+
+/* -----------------------------------------------------------
+   groupEntriesByCategory(list)
+   Groups entries into:
+     { categoryName: [ {name, entry, …}, … ] }
+   Sorted category names and sorted item names.
+----------------------------------------------------------- */
+function groupEntriesByCategory(list = []) {
+  const grouped = {};
+
+  list.forEach((it) => {
+    const cat = it.category || "uncategorized";
+    if (!grouped[cat]) grouped[cat] = [];
+    grouped[cat].push(it);
+  });
+
+  // sort category names
+  const sorted = {};
+  const cats = Object.keys(grouped).sort((a, b) =>
+    a.toLowerCase().localeCompare(b.toLowerCase())
+  );
+
+  // sort items within each category
+  cats.forEach((cat) => {
+    sorted[cat] = grouped[cat].sort((a, b) =>
+      a.name.toLowerCase().localeCompare(b.name.toLowerCase())
+    );
+  });
+
+  return sorted;
+} // end groupEntriesByCategory
+
+
+/* -----------------------------------------------------------
+   renderDrawCategories()
+   Pipeline:
+     collectRegistryEntries →
+     groupEntriesByCategory →
+     categories.js:renderCategories()
+----------------------------------------------------------- */
+function renderDrawCategories() {
+  const list = collectRegistryEntries();
+  const grouped = groupEntriesByCategory(list);
+
+  const descriptor = Object.entries(grouped).map(([cat, items]) => ({
+    title: cat,
+    items: items.map((it) => ({
+      name: it.name,
+      hasSubitems: false,
+      onClick: () => {
+        addDrawSubtab({ name: it.name, entry: it.entry });
+      }
+    }))
+  }));
+
+  renderCategories("text", descriptor);
+} // end renderDrawCategories
 
 
 /* ------------------------------------------------------------

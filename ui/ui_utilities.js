@@ -4,6 +4,8 @@
 // showOffCanvas
 // showSharedOffCanvas
 
+import { overlayManager } from "./overlay.js";
+
 /* ------------------------------------------------------------
    clearDivs(args="")
    Empties the core divs shared by all tabs.
@@ -103,9 +105,17 @@ function wrapIndex(i, len) {
   return (i + len) % len;
 } // end wrapIndex
 
+////////////////////////////////////////////////////////////////
+// clearOverlaysForTabSwitch()
+////////////////////////////////////////////////////////////////
+function clearOverlaysForTabSwitch() {
+  document.getElementById("overlayContainer").style.display = "none";
+  overlayManager.clearAll();
+} // end clearOverlaysForTabSwitch
 
 export {
   clearDivs,
+  clearOverlaysForTabSwitch,
   showOffcanvas,
   initOffcanvasHandler,
   showSharedOffcanvas,

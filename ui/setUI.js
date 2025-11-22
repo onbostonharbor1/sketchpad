@@ -19,6 +19,8 @@ import { initFiguresTab } from "./figures.js";
 import { galleryDivs } from "./gallery.js";
 import { initGalleryTab } from "./gallery.js";
 
+import { initOverlay } from "./overlay.js";
+
 import { utilityDivs } from "./utilities.js";
 import { initUtilityTab } from "./utilities.js";
 
@@ -188,11 +190,16 @@ function handleTabChange(event) {
    DOMContentLoaded
 =========================================================== */
 window.addEventListener("DOMContentLoaded", () => {
+
+  // Initialize overlay layers BEFORE tab activation
+  initOverlay();
+
   const tabButtons = document.querySelectorAll("#mainTabs .nav-link");
   tabButtons.forEach((btn) => {
     btn.addEventListener("click", () => handleTabChange(btn.id));
   });
 
-  activateTab("draw");
+  activateTab("draw");   // safe because overlays now exist
 }); // end DOMContentLoaded
+
 

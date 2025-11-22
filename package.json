@@ -5,7 +5,7 @@
   "author": "",
   "license": "ISC",
   "scripts": {
-    "dev": "vite",
+    "dev": "node help/generateHelpManifest.js && vite",
     "build": "vite build",
     "preview": "vite preview"
   },

@@ -3,6 +3,16 @@
    Global overlay layout: covers entire viewport and floats
    above all tabs and content.
    ------------------------------------------------------------ */
+/* ------------------------------------------------------------
+   OVERLAY SYSTEM REFERENCE (STRUCTURAL SUMMARY)
+
+   overlayPanel      = the centered modal box
+   overlayContent    = the scrollable interior area of the box
+   overlay-layer     = individual content layers inside overlayContent
+                       (e.g. overlay-help, overlay-interaction, etc.)
+   overlayManager    = populates ONE overlay-layer at a time
+   overlayClose      = closes the entire overlayContainer
+   ------------------------------------------------------------ */
 
 #overlayContainer {
   position: fixed;
@@ -64,8 +74,39 @@
   overflow: auto;
 }
 
-/* simple help block styling (used by showHelp) */
-.help-block {
-  font-size: 0.9rem;
-  line-height: 1.4;
+/* ------------------------------------------------------------
+   OVERLAY SYSTEM REFERENCE (STRUCTURAL SUMMARY)
+
+   overlayPanel      = the centered modal box
+   overlayContent    = the scrollable interior area of the box
+   overlay-layer     = individual content layers inside overlayContent
+                       (e.g. overlay-help, overlay-interaction, etc.)
+   overlayManager    = populates ONE overlay-layer at a time
+   overlayClose      = closes the entire overlayContainer
+   ------------------------------------------------------------ */
+
+/* All overlay-layers start hidden. Only one is displayed at a time. */
+.overlay-layer {
+  display: none;
+  width: 100%;
+  height: auto;
+  padding: 0.5rem 0.75rem;
+}
+
+/* Styling for parsed help HTML */
+.overlayHelp {
+  font-size: 0.95rem;
+  line-height: 1.35;
+}
+
+.overlayHelp h1,
+.overlayHelp h2,
+.overlayHelp h3 {
+  margin-top: 0.6rem;
+  margin-bottom: 0.4rem;
+}
+
+.overlayHelp p,
+.overlayHelp li {
+  margin-bottom: 0.4rem;
 }

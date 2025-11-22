@@ -86,7 +86,7 @@ body {
 }
 
 #sharedCanvas {
-  position: static;        
+  position: static;
   z-index: auto;
 }
 
@@ -139,6 +139,47 @@ body {
   border-color: var(--theme-base);
 }
 
+/* ------------------------------------------------------------
+   Caption Menu Styling
+   ------------------------------------------------------------ */
+
+.caption-menu {
+  position: absolute;
+  background: white;
+  border: 1px solid #cccccc;
+  border-radius: 4px;
+  padding: 4px 0;
+  z-index: 9999;
+  box-shadow: 0 3px 8px rgba(0,0,0,0.25);
+
+  /* IMPORTANT: menu flows left from the right-justified button */
+  transform: translateX(-100%);  /* move menu left so right edge aligns under button */
+}
+
+.caption-menu-item {
+  padding: 6px 16px;
+  cursor: pointer;
+  white-space: nowrap;
+
+  /* ensure text left-justified */
+  text-align: left;
+}
+
+.caption-menu-item:hover {
+  background: #e8e8e8;
+}
+
+/* Disabled items (when help or script is missing) */
+.caption-menu-item.disabled {
+  color: #888;
+  cursor: default;
+  background: white !important;
+}
+
+.caption-menu-item.disabled:hover {
+  background: white !important;
+}
+
 #sketchpad {
   flex: 1;
   background: white;
@@ -180,7 +221,7 @@ body {
 
 #text pre {
   font-size: 0.75rem;
-  line-height: 1.3;
+  line-height: 1.2;
 }
 
 /* smaller validation message text */
