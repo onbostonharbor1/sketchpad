@@ -28,6 +28,11 @@
    ============================================================
 */
 
+import { fileLayer } from "./fileLayer.js";
+
+/* ============================================================
+   ManifestManager class
+============================================================ */
 export class ManifestManager {
   /* ==========================================================
      Constructor
@@ -44,14 +49,14 @@ export class ManifestManager {
       gallery: {
         ideabook: {}, // category → entries[]
         patterns: {}, // category → entries[]
-        scripts: [], // simple array
+        scripts: [],  // simple array
       },
       utilities: {
-        tools: {}, // category → entries[]
-        lab: {}, // category → entries[]
-        result: {}, // reserved, empty
+        tools: {},   // category → entries[]
+        lab: {},     // category → entries[]
+        result: {},  // reserved, empty
       },
-      draw: {}, // Phase 3: registry objects
+      draw: {},      // Phase 3: registry objects
     };
 
     // directoryRegistry.json results
@@ -62,35 +67,8 @@ export class ManifestManager {
   } // end constructor
 
   /* ==========================================================
-     PART 1 — PRIVATE JSON LOADERS
+     PART 1 — PRIVATE JSON LOADERS (via fileLayer)
      ========================================================== */
-
-  // ----------------------------------------------------------
-  // #loadJSON(path)
-  // ----------------------------------------------------------
-  /*
-     PRIVATE — loads JSON and returns parsed data.
-
-     Arguments:
-       path (string) — URL of JSON file
-
-     Returns:
-       object | array | null
-
-     Behavior:
-       - Logs errors but does not throw.
-       - Mirrors original loadJSON().
-  */
-  async #loadJSON(path) {
-    try {
-      const resp = await fetch(path);
-      if (!resp.ok) throw new Error(`HTTP ${resp.status} for ${path}`);
-      return await resp.json();
-    } catch (err) {
-      console.error(`Error loading JSON from ${path}:`, err);
-      return null;
-    }
-  } // end #loadJSON
 
   // ----------------------------------------------------------
   // #loadDirectoryRegistry(basePath)
@@ -107,7 +85,8 @@ export class ManifestManager {
        array of folder names or null
   */
   async #loadDirectoryRegistry(basePath) {
-    return await this.#loadJSON(`${basePath}/directoryRegistry.json`);
+    const path = `${basePath}/directoryRegistry.json`;
+    return await fileLayer.loadJSON(path);
   } // end #loadDirectoryRegistry
 
   // ----------------------------------------------------------
@@ -123,7 +102,8 @@ export class ManifestManager {
      Returns array or null.
   */
   async #loadManifest(basePath, category) {
-    return await this.#loadJSON(`${basePath}/${category}/manifest.json`);
+    const path = `${basePath}/${category}/manifest.json`;
+    return await fileLayer.loadJSON(path);
   } // end #loadManifest
 
   // ----------------------------------------------------------
@@ -260,10 +240,10 @@ export class ManifestManager {
     const base = "./utilities";
 
     const toolsDirs = await this.#loadDirectoryRegistry(`${base}/Tools`);
-    const labDirs = await this.#loadDirectoryRegistry(`${base}/Lab`);
+    const labDirs   = await this.#loadDirectoryRegistry(`${base}/Lab`);
 
     const tools = {};
-    const lab = {};
+    const lab   = {};
 
     if (Array.isArray(toolsDirs)) {
       for (const d of toolsDirs) {
@@ -282,7 +262,7 @@ export class ManifestManager {
     this.cache.utilities = { tools, lab, result: {} };
     this.directoryRegistry.utilities = {
       tools: toolsDirs || [],
-      lab: labDirs || [],
+      lab:   labDirs   || [],
     };
 
     return this.cache.utilities;
@@ -303,11 +283,9 @@ export class ManifestManager {
         a.toLowerCase().localeCompare(b.toLowerCase())
       );
 
-    if (tabName === "gallery") return ["Ideabook", "Patterns", "Scripts"];
-
+    if (tabName === "gallery")   return ["Ideabook", "Patterns", "Scripts"];
     if (tabName === "utilities") return ["Tools", "Lab", "Result"];
-
-    if (tabName === "draw") return Object.keys(cache);
+    if (tabName === "draw")      return Object.keys(cache);
 
     return [];
   } // end getCategories
@@ -319,23 +297,27 @@ export class ManifestManager {
      Returns item arrays/objects depending on the tab.
   */
   getItems(tabName, category) {
-    if (tabName === "patterns") return this.cache.patterns?.[category] || [];
+    if (tabName === "patterns") {
+      return this.cache.patterns?.[category] || [];
+    }
 
     if (tabName === "gallery") {
-      if (category === "Scripts") return this.cache.gallery.scripts;
+      if (category === "Scripts")  return this.cache.gallery.scripts;
       if (category === "Ideabook") return this.cache.gallery.ideabook;
       if (category === "Patterns") return this.cache.gallery.patterns;
       return [];
     }
 
     if (tabName === "utilities") {
-      if (category === "Tools") return this.cache.utilities.tools;
-      if (category === "Lab") return this.cache.utilities.lab;
-      if (category === "Result") return this.cache.utilities.result;
+      if (category === "Tools")   return this.cache.utilities.tools;
+      if (category === "Lab")     return this.cache.utilities.lab;
+      if (category === "Result")  return this.cache.utilities.result;
       return [];
     }
 
-    if (tabName === "draw") return this.cache.draw[category] || [];
+    if (tabName === "draw") {
+      return this.cache.draw[category] || [];
+    }
 
     return [];
   } // end getItems
@@ -356,6 +338,9 @@ export class ManifestManager {
 
        NOT:
          "./patterns/..."   ← (this incorrectly expands to /ui/patterns)
+
+     Now, path construction itself is delegated to fileLayer
+     wherever helpers exist (patterns, gallery scripts, utilities).
   */
   resolvePath(tabName, category, filename) {
     if (!filename) return "";
@@ -370,9 +355,9 @@ export class ManifestManager {
       /*
          patterns/<category>/<filename>.js
          must be addressed relative to /ui/
-         → "../patterns/<category>/<filename>.js"
+         → fileLayer.normalizePatternPath(category, filename)
       */
-      return `../patterns/${category}/${filename}.js`;
+      return fileLayer.normalizePatternPath(category, filename);
     }
 
     // -------------------------------
@@ -381,10 +366,11 @@ export class ManifestManager {
     if (tabName === "gallery") {
       // Scripts live in a single folder
       if (category === "Scripts") {
-        return `../gallery/Scripts/${filename}.js`;
+        return fileLayer.normalizeGalleryScript(filename);
       }
 
       // Ideabook / Patterns items have image or js paths
+      // (kept simple for now; can be moved into fileLayer later)
       return `../gallery/${category}/${filename}`;
     }
 
@@ -394,9 +380,9 @@ export class ManifestManager {
     if (tabName === "utilities") {
       /*
          utilities/<folder>/<filename>.js
-         → "../utilities/<folder>/<filename>.js"
+         → fileLayer.normalizeUtilityPath(category, filename)
       */
-      return `../utilities/${category}/${filename}.js`;
+      return fileLayer.normalizeUtilityPath(category, filename);
     }
 
     // -------------------------------
@@ -487,18 +473,19 @@ export class ManifestManager {
   // ----------------------------------------------------------
   // scanFolderForFiles(tabName, category)
   // ----------------------------------------------------------
+  /*
+     Uses fileLayer.listDirectory() instead of direct fetch.
+     Returns a list of JS basenames in the target folder.
+  */
   async scanFolderForFiles(tabName, category) {
     const { base, folder } = this.#resolveManifestFolder(tabName, category);
     const full = `${base}/${folder}`;
 
     try {
-      const resp = await fetch(full);
-      if (!resp.ok) throw new Error(`scanFolderForFiles HTTP ${resp.status}`);
-
-      const text = await resp.text();
-      const matches = [...text.matchAll(/href="([^"]+\.js)"/gi)];
-
-      return matches.map((m) => m[1].replace(/\.js$/i, ""));
+      const entries = await fileLayer.listDirectory(full);
+      return (entries || [])
+        .filter((name) => name.toLowerCase().endsWith(".js"))
+        .map((name) => name.replace(/\.js$/i, ""));
     } catch (err) {
       console.error(`scanFolderForFiles error for ${full}:`, err);
       return [];
@@ -515,7 +502,9 @@ export class ManifestManager {
   #grabManifestList(tabName, category) {
     switch (tabName) {
       case "patterns":
-        if (!this.cache.patterns[category]) this.cache.patterns[category] = [];
+        if (!this.cache.patterns[category]) {
+          this.cache.patterns[category] = [];
+        }
         return this.cache.patterns[category];
 
       case "gallery":
@@ -552,7 +541,7 @@ export class ManifestManager {
   #resolveManifestFolder(tabName, category) {
     switch (tabName) {
       case "patterns":
-        return { base: "./patterns", folder: category };
+        return { base: "./patterns",  folder: category };
 
       case "gallery":
         if (category === "Ideabook")
@@ -566,7 +555,8 @@ export class ManifestManager {
       case "utilities":
         if (category === "Tools")
           return { base: "./utilities", folder: "Tools" };
-        if (category === "Lab") return { base: "./utilities", folder: "Lab" };
+        if (category === "Lab")
+          return { base: "./utilities", folder: "Lab" };
         if (category === "Result")
           return { base: "./utilities", folder: "Result" };
         throw new Error(`Unknown utilities category '${category}'`);

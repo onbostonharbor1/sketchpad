@@ -1,93 +1,125 @@
 /* ui/setUI.js
    ------------------------------------------------------------
-   Sketchpad UI Controller
-   - Clears all shared divs when a top-level tab is selected.
-   - Assigns the active tab's div setter functions (from *Divs objects).
-   - Establishes a predictable ownership model for interface actions.
+   Sketchpad Tab Orchestrator
+   ------------------------------------------------------------
+   Responsibilities:
+     - Own the activation of top-level tabs (Draw, Patterns, etc.)
+     - Clear shared layout regions when switching tabs
+     - Apply per-tab theme classes to #wrapper
+     - Run each tab's div builders in a predictable sequence
+     - Call each tab's init() to let it restore/initialize state
+     - Save tab state before switching away (when provided)
+
+   This file is the central "engine" for top-level tab behavior.
+   All per-tab details (what divs to build, how to initialize)
+   live in the tab modules (draw.js, patterns.js, etc.).
    ------------------------------------------------------------ */
 
-import { drawDivs } from "./draw.js";
-import { initDrawTab } from "./draw.js";
-import { saveDrawState } from "./draw.js";
-
-import { patternsDivs } from "./patterns.js";
-import { initPatternsTab } from "./patterns.js";
-
-import { figuresDivs } from "./figures.js";
-import { initFiguresTab } from "./figures.js";
-
-import { galleryDivs } from "./gallery.js";
-import { initGalleryTab } from "./gallery.js";
-
+import { DrawController, initDrawTab, saveDrawState } from "./draw.js";
+import { patternsDivs, initPatternsTab } from "./patterns.js";
+import { figuresDivs, initFiguresTab } from "./figures.js";
+import { galleryDivs, initGalleryTab } from "./gallery.js";
 import { initOverlay } from "./overlay.js";
-
-import { utilityDivs } from "./utilities.js";
-import { initUtilityTab } from "./utilities.js";
-
+import { utilityDivs, initUtilityTab } from "./utilities.js";
 import { clearDivs } from "./ui_utilities.js";
 import { uiState } from "./uiState.js";
 
-const allDivSets = {
-  draw: drawDivs,
-  patterns: patternsDivs,
-  figures: figuresDivs,
-  gallery: galleryDivs,
-  utilities: utilityDivs,
-}; // end allDivSets
+/* ============================================================
+   Tab Specifications
+   ------------------------------------------------------------
+   NOTE:
+     - Draw uses an inline DivSpec built from DrawController.
+     - Other tabs currently still use their *Divs objects.
+     - All specs share the same shape:
+         { key, theme, divs, init, saveState, saveSlot }
+=========================================================== */
 
-/* ===========================================================
+// Inline DivSpec for Draw (replaces drawDivs usage here)
+const drawDivSpec = {
+  theme: "theme-draw",
+  activeDivs: ["subtabs"],
+
+  // Only subtabs are built at tab activation; Draw then
+  // manages caption/sketchpad internally via initDrawTab/switchTab.
+  buttons: null,
+  action: null,
+  caption: null,
+  sketchpad: null,
+  text: null,
+
+  // Use DrawController to build the subtabs bar
+  subtabs: () => {
+    DrawController.setDrawSubtabs();
+  }
+}; // end drawDivSpec
+
+const tabSpecs = {
+  draw: {
+    key: "draw",
+    theme: drawDivSpec.theme,
+    divs: drawDivSpec,
+    init: initDrawTab,
+    saveState: saveDrawState,
+    saveSlot: "drawSavedState"
+  },
+
+  patterns: {
+    key: "patterns",
+    theme: patternsDivs.theme,
+    divs: patternsDivs,
+    init: initPatternsTab,
+    saveState: null,
+    saveSlot: "patternsSavedState"
+  },
+
+  figures: {
+    key: "figures",
+    theme: figuresDivs.theme,
+    divs: figuresDivs,
+    init: initFiguresTab,
+    saveState: null,
+    saveSlot: "figuresSavedState"
+  },
+
+  gallery: {
+    key: "gallery",
+    theme: galleryDivs.theme,
+    divs: galleryDivs,
+    init: initGalleryTab,
+    saveState: null,
+    saveSlot: "gallerySavedState"
+  },
+
+  utilities: {
+    key: "utilities",
+    theme: utilityDivs.theme,
+    divs: utilityDivs,
+    init: initUtilityTab,
+    saveState: null,
+    saveSlot: "utilitiesSavedState"
+  }
+}; // end tabSpecs
+
+/* ============================================================
    saveTabState(tabName)
 =========================================================== */
 function saveTabState(tabName) {
-  switch (tabName) {
-    case "draw":
-      uiState.drawSavedState = saveDrawState();
-      break;
+  const spec = tabSpecs[tabName];
+  if (!spec) return;
 
-    default:
-      break;
-  }
+  if (!spec.saveState || !spec.saveSlot) return;
+
+  const snapshot = spec.saveState();
+  uiState[spec.saveSlot] = snapshot;
 } // end saveTabState
 
-/* ------------------------------------------------------------
-   activateTab(tabKey)
-
-   Purpose:
-     - Applies the correct theme (wrapper class)
-     - Assigns all clearing/setter functions from the tab’s DivSet
-     - Clears any shared divs (subtabs)
-     - Invokes the tab’s init function
-     - Lets the tab’s own init function restore its state
-
-   Arguments:
-     tabKey (string) – one of:
-         "draw", "patterns", "figures", "gallery", "utilities"
-
-   Notes:
-     - The old restoreTabState() logic has been REMOVED.
-     - Each tab now manages its OWN restoration:
-         initDrawTab()         restores draw state
-         initPatternsTab()     restores patterns state
-         initGalleryTab()      restores gallery state
-         initUtilityTab()      restores utilities state
-
-     - setUI.js no longer performs global restoration.
------------------------------------------------------------- */
-function activateTab(tabKey) {
-  // ----------------------------------------------------------
-  // 1. Clear subtabs area completely
-  // ----------------------------------------------------------
-  clearDivs("subtabs");
-
-  // ----------------------------------------------------------
-  // 2. Load this tab’s DivSet (declared in each tab’s file)
-  // ----------------------------------------------------------
-  const activeDivs = allDivSets[tabKey] || {};
-
-  // ----------------------------------------------------------
-  // 3. Apply theme to wrapper
-  // ----------------------------------------------------------
+/* ============================================================
+   applyTheme(spec)
+=========================================================== */
+function applyTheme(spec) {
   const wrapper = document.getElementById("wrapper");
+  if (!wrapper) throw new Error("applyTheme: #wrapper not found");
+
   wrapper.classList.remove(
     "theme-draw",
     "theme-patterns",
@@ -96,110 +128,106 @@ function activateTab(tabKey) {
     "theme-utilities"
   );
 
-  if (activeDivs.theme) wrapper.classList.add(activeDivs.theme);
+  if (spec && spec.theme) {
+    wrapper.classList.add(spec.theme);
+  }
+} // end applyTheme
 
-  // ----------------------------------------------------------
-  // 4. Assign div-setter functions to uiState
-  // ----------------------------------------------------------
-  uiState.setAction = activeDivs.action || null;
-  uiState.setButtons = activeDivs.buttons || null;
-  uiState.setCaption = activeDivs.caption || null;
-  uiState.setSketchpad = activeDivs.sketchpad || null;
-  uiState.setSubtabs = activeDivs.subtabs || null;
-  uiState.setText = activeDivs.text || null;
+/* ============================================================
+   assignDivBuilders(spec)
+=========================================================== */
+function assignDivBuilders(spec) {
+  const divs = spec ? spec.divs : {};
 
-  // ----------------------------------------------------------
-  // 5. Call active div initializers (buttons/action/caption/etc.)
-  // ----------------------------------------------------------
-  if (Array.isArray(activeDivs.activeDivs)) {
-    if (activeDivs.activeDivs.includes("buttons") && uiState.setButtons)
-      uiState.setButtons();
+  uiState.setAction    = divs.action    || null;
+  uiState.setButtons   = divs.buttons   || null;
+  uiState.setCaption   = divs.caption   || null;
+  uiState.setSketchpad = divs.sketchpad || null;
+  uiState.setSubtabs   = divs.subtabs   || null;
+  uiState.setText      = divs.text      || null;
 
-    if (activeDivs.activeDivs.includes("action") && uiState.setAction)
-      uiState.setAction();
+  uiState.activeDivs = divs.activeDivs || [];
+} // end assignDivBuilders
 
-    if (activeDivs.activeDivs.includes("caption") && uiState.setCaption)
-      uiState.setCaption();
+/* ============================================================
+   buildActiveDivs(spec)
+=========================================================== */
+function buildActiveDivs(spec) {
+  const divs = spec.divs;
+  const active = Array.isArray(divs.activeDivs) ? divs.activeDivs : [];
 
-    if (activeDivs.activeDivs.includes("text") && uiState.setText)
-      uiState.setText();
+  if (active.includes("buttons")   && typeof divs.buttons   === "function") divs.buttons();
+  if (active.includes("action")    && typeof divs.action    === "function") divs.action();
+  if (active.includes("caption")   && typeof divs.caption   === "function") divs.caption();
+  if (active.includes("text")      && typeof divs.text      === "function") divs.text();
+  if (active.includes("sketchpad") && typeof divs.sketchpad === "function") divs.sketchpad();
+  if (active.includes("subtabs")   && typeof divs.subtabs   === "function") divs.subtabs();
+} // end buildActiveDivs
 
-    if (activeDivs.activeDivs.includes("sketchpad") && uiState.setSketchpad)
-      uiState.setSketchpad();
+/* ============================================================
+   activateTab(tabKey)
+=========================================================== */
+function activateTab(tabKey) {
+  const spec = tabSpecs[tabKey];
+  if (!spec) {
+    console.warn("activateTab: unknown tab key:", tabKey);
+    return;
   }
 
-  // ----------------------------------------------------------
-  // 6. Invoke the tab's own initializer
-  //    (Each init function now includes its own restore logic.)
-  // ----------------------------------------------------------
-  switch (tabKey) {
-    case "draw":
-      initDrawTab(); // draw.js handles restoring state internally
-      uiState.activeTab = "draw";
-      return;
+  clearDivs("subtabs");      // 1. Clear shared divs
+  applyTheme(spec);          // 2. Apply theme
+  assignDivBuilders(spec);   // 3. Assign div builders
+  buildActiveDivs(spec);     // 4. Build UI regions
 
-    case "patterns":
-      initPatternsTab();
-      break;
-
-    case "figures":
-      initFiguresTab();
-      break;
-
-    case "gallery":
-      initGalleryTab();
-      break;
-
-    case "utilities":
-      initUtilityTab();
-      break;
+  if (typeof spec.init === "function") {
+    spec.init();             // 5. Tab init/restoration
   }
 
-  // ----------------------------------------------------------
-  // 7. Record active tab
-  // ----------------------------------------------------------
-  uiState.activeTab = tabKey;
+  uiState.activeTab = tabKey; // 6. Track active
 } // end activateTab
 
-/* ===========================================================
-   handleTabChange(event)
+/* ============================================================
+   handleTabChange(eventOrId)
 =========================================================== */
-function handleTabChange(event) {
-  const tabId = event?.target?.id || event;
+function handleTabChange(eventOrId) {
+  const tabId =
+    typeof eventOrId === "string"
+      ? eventOrId
+      : (eventOrId && eventOrId.target && eventOrId.target.id);
 
   const map = {
-    "draw-tab": "draw",
-    "patterns-tab": "patterns",
-    "figures-tab": "figures",
-    "gallery-tab": "gallery",
-    "utilities-tab": "utilities",
+    "draw-tab":      "draw",
+    "patterns-tab":  "patterns",
+    "figures-tab":   "figures",
+    "gallery-tab":   "gallery",
+    "utilities-tab": "utilities"
   };
 
   const tabKey = map[tabId];
   if (!tabKey) {
-    console.warn("Unknown tab ID:", tabId);
+    console.warn("handleTabChange: Unknown tab ID:", tabId);
     return;
   }
 
-  if (uiState.activeTab) saveTabState(uiState.activeTab);
+  if (uiState.activeTab) {
+    saveTabState(uiState.activeTab);
+  }
 
   activateTab(tabKey);
 } // end handleTabChange
 
-/* ===========================================================
+/* ============================================================
    DOMContentLoaded
 =========================================================== */
 window.addEventListener("DOMContentLoaded", () => {
-
-  // Initialize overlay layers BEFORE tab activation
-  initOverlay();
+  initOverlay();  // must exist before any tab init()
 
   const tabButtons = document.querySelectorAll("#mainTabs .nav-link");
   tabButtons.forEach((btn) => {
     btn.addEventListener("click", () => handleTabChange(btn.id));
   });
 
-  activateTab("draw");   // safe because overlays now exist
+  activateTab("draw");  // default
 }); // end DOMContentLoaded
 
-
+// end setUI.js

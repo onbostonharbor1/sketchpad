@@ -43,77 +43,65 @@
      }
 ------------------------------------------------------------ */
 import { showHelpOverlay } from "./overlay.js";
-import helpManifest from "../help/helpManifest.json";
+import { FileLayer } from "./fileLayer.js";   // ★ NEW — replaces old manifest check
 
 export const menuManager = (() => {
-  let menuEl = null; // Currently open menu <div>, or null
+  let menuEl = null;
   let outsideHandler = null;
   let escHandler = null;
 
-// ----------------------------------------------------------
-// ensureArray(value)
-// Fail-fast: items must be an array.
-// ----------------------------------------------------------
-function ensureArray(value, msg = "menuManager: expected array") {
-  if (!Array.isArray(value)) {
-    throw new Error(`${msg}. Received: ${typeof value}`);
-  }
-  return value;
-} // end ensureArray
-
-
-// ----------------------------------------------------------
-// validateItems(items)
-// Verifies each item has the required structure:
-//   { label: string, disabled?: boolean, onClick?: function }
-// ----------------------------------------------------------
-function validateItems(items) {
-  ensureArray(items, "menuManager: items must be an array");
-
-  items.forEach((item, idx) => {
-    if (!item || typeof item.label !== "string") {
-      throw new Error(`menuManager: item[${idx}] missing label`);
+  // ----------------------------------------------------------
+  // ensureArray(value)
+  // ----------------------------------------------------------
+  function ensureArray(value, msg = "menuManager: expected array") {
+    if (!Array.isArray(value)) {
+      throw new Error(`${msg}. Received: ${typeof value}`);
     }
-    if (!item.disabled && typeof item.onClick !== "function") {
-      throw new Error(
-        `menuManager: item[${idx}].onClick must be function for enabled items`
-      );
+    return value;
+  } // end ensureArray
+
+  // ----------------------------------------------------------
+  // validateItems(items)
+  // ----------------------------------------------------------
+  function validateItems(items) {
+    ensureArray(items, "menuManager: items must be an array");
+
+    items.forEach((item, idx) => {
+      if (!item || typeof item.label !== "string") {
+        throw new Error(`menuManager: item[${idx}] missing label`);
+      }
+      if (!item.disabled && typeof item.onClick !== "function") {
+        throw new Error(
+          `menuManager: item[${idx}].onClick must be function for enabled items`
+        );
+      }
+    });
+
+    return items;
+  } // end validateItems
+
+  // ----------------------------------------------------------
+  // createMenuItem(label, onClick, disabled=false)
+  // ----------------------------------------------------------
+  function createMenuItem(label, onClick, disabled = false) {
+    if (typeof label !== "string") {
+      throw new Error("createMenuItem: label must be string");
     }
-  });
+    return { label, onClick, disabled };
+  } // end createMenuItem
 
-  return items;
-} // end validateItems
+  // ----------------------------------------------------------
+  // positionMenu(anchor, menuEl)
+  // ----------------------------------------------------------
+  function positionMenu(anchor, menuEl) {
+    const rect = anchor.getBoundingClientRect();
+    const scrollLeft = window.pageXOffset;
+    const scrollTop = window.pageYOffset;
 
-
-// ----------------------------------------------------------
-// createMenuItem(label, onClick, disabled=false)
-// Factory to reduce tab-side boilerplate.
-// Tabs can use this instead of hand-building objects.
-// ----------------------------------------------------------
-function createMenuItem(label, onClick, disabled = false) {
-  if (typeof label !== "string") {
-    throw new Error("createMenuItem: label must be string");
-  }
-  return { label, onClick, disabled };
-} // end createMenuItem
-
-
-// ----------------------------------------------------------
-// positionMenu(anchor, menuEl)
-// Computes absolute position beneath the anchor element.
-// This isolates geometry, removes duplication, and
-// makes menuManager.open() cleaner.
-// ----------------------------------------------------------
-function positionMenu(anchor, menuEl) {
-  const rect = anchor.getBoundingClientRect();
-  const scrollLeft = window.pageXOffset;
-  const scrollTop = window.pageYOffset;
-
-  menuEl.style.position = "absolute";
-  menuEl.style.left = `${rect.left + scrollLeft}px`;
-  menuEl.style.top = `${rect.bottom + scrollTop + 4}px`;
-} // end positionMenu
-
+    menuEl.style.position = "absolute";
+    menuEl.style.left = `${rect.left + scrollLeft}px`;
+    menuEl.style.top = `${rect.bottom + scrollTop + 4}px`;
+  } // end positionMenu
 
   // ----------------------------------------------------------
   // close()
@@ -137,10 +125,6 @@ function positionMenu(anchor, menuEl) {
   // ----------------------------------------------------------
   // open(items, anchor)
   // ----------------------------------------------------------
-  /*
-     items  – array of { label: string, onClick: function }
-     anchor – DOM element whose bottom-left will anchor menu
-  */
   function open(items, anchor) {
     if (!Array.isArray(items))
       throw new Error("menuManager.open: items must be an array");
@@ -148,15 +132,12 @@ function positionMenu(anchor, menuEl) {
     if (!anchor || !(anchor instanceof HTMLElement))
       throw new Error("menuManager.open: anchor must be a DOM element");
 
-    // Ensure only one menu at a time
-    close();
+    close(); // always close previous
 
-    // Create menu container
     menuEl = document.createElement("div");
     menuEl.className = "caption-menu";
 
-    // Build menu items
-    // Build items (now supports disabled)
+    // Build menu item elements
     items.forEach((item) => {
       if (!item || typeof item.label !== "string")
         throw new Error("menuManager: item.label missing");
@@ -165,7 +146,6 @@ function positionMenu(anchor, menuEl) {
       el.className = "caption-menu-item";
       el.textContent = item.label;
 
-      // Handle disabled items
       if (item.disabled) {
         el.classList.add("disabled");
       } else {
@@ -181,23 +161,13 @@ function positionMenu(anchor, menuEl) {
       menuEl.appendChild(el);
     });
 
-
-    // Insert into document
     const wrapper = document.getElementById("wrapper");
     if (!wrapper) throw new Error("menuManager: #wrapper not found");
-
     wrapper.appendChild(menuEl);
 
-    // Position below anchor
-    const rect = anchor.getBoundingClientRect();
-    const scrollLeft = window.pageXOffset;
-    const scrollTop = window.pageYOffset;
+    positionMenu(anchor, menuEl);
 
-    menuEl.style.position = "absolute";
-    menuEl.style.left = `${rect.left + scrollLeft}px`;
-    menuEl.style.top = `${rect.bottom + scrollTop + 4}px`;
-
-    // Click outside → close
+    // outside click
     outsideHandler = (ev) => {
       if (menuEl && !menuEl.contains(ev.target) && ev.target !== anchor) {
         close();
@@ -205,13 +175,12 @@ function positionMenu(anchor, menuEl) {
     };
     document.addEventListener("mousedown", outsideHandler);
 
-    // ESC closes menu
+    // ESC key closes
     escHandler = (ev) => {
       if (ev.key === "Escape") close();
     };
     document.addEventListener("keydown", escHandler);
   } // end open
-
 
   // ----------------------------------------------------------
   // clear()
@@ -220,28 +189,28 @@ function positionMenu(anchor, menuEl) {
     close();
   } // end clear
 
-async function buildHelpItem(tabName, itemName) {
-  const exists =
-    helpManifest[tabName] &&
-    helpManifest[tabName].includes(itemName);
+  // ----------------------------------------------------------
+  // buildHelpItem(tabName, itemName)
+  // ----------------------------------------------------------
+  async function buildHelpItem(tabName, itemName) {
+    // NEW: ask the FileLayer
+    const exists = await FileLayer.helpExists(tabName, itemName);
 
-  const helpPath = `./help/${tabName}/${itemName}.html`;
+    const helpPath = `./help/${tabName}/${itemName}.html`;
 
-  if (!exists) {
+    if (!exists) {
+      return {
+        label: "Help",
+        disabled: true,
+        onClick: () => {},
+      };
+    }
+
     return {
       label: "Help",
-      disabled: true,
-      onClick: () => {}
+      onClick: () => showHelpOverlay(helpPath, itemName),
     };
-  }
-
-  return {
-    label: "Help",
-    onClick: () => showHelpOverlay(helpPath, itemName)
-  };
-} // end buildHelpItem
-
-
+  } // end buildHelpItem
 
   // ----------------------------------------------------------
   // Public interface
@@ -250,6 +219,8 @@ async function buildHelpItem(tabName, itemName) {
     open,
     close,
     clear,
-    buildHelpItem
+    buildHelpItem,
+    createMenuItem,
   };
 })(); // end menuManager IIFE
+

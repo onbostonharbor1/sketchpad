@@ -1,93 +1,104 @@
 /* ui/uiState.js
    ------------------------------------------------------------
-   Tracks the current interface state: which tab is active,
-   which div setter functions are assigned, and
-   which manifests or saved states are loaded.
+   Centralized UI State (pure data only)
+   ------------------------------------------------------------
+   Rules:
+     • Contains NO logic and NO function references.
+     • Does NOT store layout builders (that was old architecture).
+     • Only stores persistent state needed by tabs and orchestrator.
+     • Each tab keeps its own sub-state object.
+     • overlay and manifest sections preserved.
    ------------------------------------------------------------ */
-import { Overlay } from "../classes/overlayClass.js";
 
 export const uiState = {
   /* =========================================================
-     Canvas and layout
+     Canvas configuration
   ========================================================= */
-  canvasHeight: 600,
   canvasWidth: 600,
+  canvasHeight: 600,
 
   /* =========================================================
-     Active UI div assignments (populated in setUI.js)
-  ========================================================= */
-  setAction: null,
-  setButtons: null,
-  setCaption: null,
-  setSketchpad: null,
-  setSubtabs: null,
-  setText: null,
-
-  /* =========================================================
-     Active tab and div context
+     Active tab
   ========================================================= */
   activeTab: "draw",
-  activeDivs: {},
-  activeGalleryTab: "tab-categories",
 
   /* =========================================================
-     Per-tab working structures
+     Per-tab state containers
+     (Tabs may store anything they want inside their section.)
   ========================================================= */
-  drawTabs: {},
-  figuresTabs: {},
-  galleryTabs: {},
-  patternsTabs: {},
-  utilitiesTabs: {},
+  draw: {
+    activeSubtab: null,     // e.g., "ellipse", "categories"
+    tabs: {},               // keyed by subtab-id
+    saved: null             // last saved state from DrawSpec.save()
+  },
 
-  /* =========================================================
-     Saved UI state snapshots
-  ========================================================= */
-  drawSavedState: null,
-  patternsSavedState: null,
-  gallerySavedState: null,
-  figuresSavedState: null,
-  utilitiesSavedState: null,
+  patterns: {
+    activeCategory: null,
+    activeItem: null,
+    saved: null
+  },
+
+  gallery: {
+    activeCategory: null,
+    activeItem: null,
+
+    // persistent indices for Prev/Next restoration
+    index: {
+      ideabook: 0,
+      patterns: 0,
+      scripts: 0
+    },
+
+    saved: null
+  },
+
+  figures: {
+    activeCategory: null,
+    activeItem: null,
+    saved: null
+  },
+
+  utilities: {
+    activeCategory: null,
+    activeItem: null,
+    saved: null
+  },
 
   /* =========================================================
      Manifest storage
+     (Populated by manifest loader modules)
   ========================================================= */
   manifests: {
     gallery: {
       ideabook: null,
       patterns: null,
-      scripts: null,
+      scripts: null
     },
     draw: {
       patterns: null,
-      figures: null,
+      figures: null
     },
     utilities: {
-      tools: null,
-    },
+      tools: null
+    }
   },
 
-  galleryIndex: {
-    ideabook: 0,
-    patterns: 0,
-    scripts: 0,
-  },
+  /* =========================================================
+     Directory / Manifest helper pointers
+  ========================================================= */
+  activeManifest: null,
+  activeDirectoryInfo: null,
 
   /* =========================================================
      Overlay state
   ========================================================= */
   overlay: {
     active: false,
-    title: "",
-  },
-
-  activeManifest: null,
-  activeDirectoryInfo: null,
+    type: null,
+    title: ""
+  }
 };
 
 window.uiState = uiState;
 
-/* =========================================================
-   Global overlay instance (fail-fast if DOM missing)
-========================================================= */
-window.overlay = new Overlay();
 // end uiState.js
