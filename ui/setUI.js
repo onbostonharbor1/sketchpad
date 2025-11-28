@@ -84,20 +84,38 @@ function mapTabIdToKey(tabId) {
 /* ============================================================
    activateTab(tabKey)
 =========================================================== */
+/* ============================================================
+   activateTab(tabKey)
+=========================================================== */
 function activateTab(tabKey) {
   const spec = TabRegistry[tabKey];
   if (!spec) throw new Error("activateTab: no TabSpec for " + tabKey);
 
+  // 1. Clear all existing UI regions
   clearDivs();
+
+  // 2. Apply theme
   applyTheme(spec);
 
+  // 3. Rebuild region divs BEFORE running init()
+  if (spec.regions && Array.isArray(spec.regions)) {
+    spec.regions.forEach((regionId) => {
+      const div = document.getElementById(regionId);
+      if (div) div.innerHTML = "";
+    });
+  }
+
+  // 4. Now run the tab's initialization function
   if (!spec.init || typeof spec.init !== "function") {
     throw new Error("activateTab: TabSpec.init missing for " + tabKey);
   }
 
   spec.init();
+
+  // 5. Update active tab in state
   uiState.activeTab = tabKey;
 } // end activateTab
+
 
 
 /* ============================================================
