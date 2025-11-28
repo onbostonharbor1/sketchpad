@@ -123,3 +123,126 @@ export {
 };
 
 
+/* ------------------------------------------------------------
+   showScriptOffcanvas(scriptPath, titleText)
+   Fetches script source and displays it inside the Bootstrap
+   offcanvas panel. Offcanvas is appropriate for long, scrollable
+   text that should not block the app.
+------------------------------------------------------------ */
+export function showScriptOffcanvas(scriptPath, titleText) {
+
+  fetch(scriptPath)
+    .then(resp => resp.text())
+    .then(text => {
+
+      const escaped = text
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;");
+
+      const panel = document.getElementById("offcanvasPanel");
+      if (!panel)
+        throw new Error("showScriptOffcanvas: offcanvasPanel not found");
+
+      const body = panel.querySelector(".offcanvas-body");
+      if (!body)
+        throw new Error("showScriptOffcanvas: .offcanvas-body missing");
+
+      const titleEl = panel.querySelector(".offcanvas-title");
+      if (titleEl)
+        titleEl.textContent = titleText + " Script";
+
+      body.innerHTML = "";
+
+      const pre = document.createElement("pre");
+      pre.style.whiteSpace = "pre-wrap";
+      pre.style.fontSize = "0.85rem";
+      pre.textContent = escaped;
+
+      body.appendChild(pre);
+
+      const bsCanvas = new bootstrap.Offcanvas(panel);
+      bsCanvas.show();
+    });
+} // end showScriptOffcanvas
+
+
+export function renderThumbnailGrid(targetId, items, buildSrc, onClick) {
+  const target = document.getElementById(targetId);
+  if (!target)
+    throw new Error("renderThumbnailGrid: targetId not found: " + targetId);
+
+  if (!Array.isArray(items))
+    throw new Error("renderThumbnailGrid: items must be an array");
+
+  if (typeof buildSrc !== "function")
+    throw new Error("renderThumbnailGrid: buildSrc must be a function");
+
+  if (typeof onClick !== "function")
+    throw new Error("renderThumbnailGrid: onClick must be a function");
+
+  target.innerHTML = "";
+
+  const panel = document.createElement("div");
+  panel.className = "thumb-panel";
+
+  items.forEach((item, idx) => {
+    const box = document.createElement("div");
+    box.className = "thumb-box";
+
+    const img = document.createElement("img");
+    img.className = "thumb-image";
+    img.alt = item.title || item.filename;
+    img.src = buildSrc(item, idx);
+
+    img.addEventListener("click", () => onClick(item, idx));
+
+    box.appendChild(img);
+    panel.appendChild(box);
+  });
+
+  target.appendChild(panel);
+}
+
+export function buildCategoryDescriptor(groups, itemLabelFn, onClickFn) {
+  return Object.keys(groups).sort().map(category => {
+    const list = groups[category] || [];
+    const sorted = [...list].sort(itemLabelFn);
+
+    return {
+      title: category,
+      items: sorted.map((entry, idx) => ({
+        name: itemLabelFn(entry),
+        hasSubitems: false,
+        onClick: () => onClickFn(category, sorted, entry, idx)
+      }))
+    };
+  });
+}
+
+/* helpManifest.js
+   ------------------------------------------------------------
+   Loads help/manifest.json ONCE and caches it globally.
+   Used by all tabs.
+   ------------------------------------------------------------
+*/
+
+export let helpManifest = null;
+
+export async function loadHelpManifest() {
+  if (helpManifest !== null) return helpManifest;  // cached
+
+  const resp = await fetch("/help/manifest.json");
+  if (!resp.ok) {
+    throw new Error("Missing or unreadable /help/manifest.json");
+  }
+
+  const data = await resp.json();
+
+  if (typeof data !== "object" || Array.isArray(data)) {
+    throw new Error("Help manifest must be an object keyed by tab names");
+  }
+
+  helpManifest = data;
+  return helpManifest;
+} // end loadHelpManifest

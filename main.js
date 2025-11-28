@@ -42,6 +42,7 @@ import "./ui/fileLayer.js";
 import "./ui/manifest.js";
 import "./ui/menuManager.js";
 import "./ui/overlay.js";
+import "./ui/scriptRunner.js";
 import "./ui/draw.js";
 import "./ui/patterns.js";
 import "./ui/gallery.js";
@@ -51,6 +52,5 @@ import "./ui/utilities.js";
 // UI infrastructure
 import "./ui/ui_utilities.js";
 import "./ui/setUI.js";
-import "./ui/offcanvas.js";
 
 console.log("Sketchpad loaded under Vite.");

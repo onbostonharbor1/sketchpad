@@ -3,8 +3,7 @@
    Unified file/URL/path abstraction for ALL tabs.
    Absolutely no UI logic, no manifest logic.
    Pure low-level ops.
-   ------------------------------------------------------------
-*/
+   ------------------------------------------------------------ */
 
 export const fileLayer = {
 
@@ -66,7 +65,7 @@ export const fileLayer = {
       if (!txt) return [];
 
       const matches = [...txt.matchAll(/href="([^"]+)"/gi)];
-      return matches.map(m => m[1]);
+      return matches.map((m) => m[1]);
     } catch (err) {
       console.error("fileLayer.listDirectory:", path, err);
       return [];
@@ -74,11 +73,96 @@ export const fileLayer = {
   }, // end listDirectory
 
 
+/* ----------------------------------------------------------
+   helpExists(tabName, itemName)
+   /help/<tabName>/<itemName>.html
+---------------------------------------------------------- */
+helpExists(tabName, itemName) {
+  const path = `/help/${tabName}/${itemName}.html`;
+  return this.exists(path);
+}, // end helpExists
+
+
+  /* ==========================================================
+     PATH HELPERS (NEW, PREFERRED API)
+     ----------------------------------------------------------
+     All higher-level modules (manifest, tabs, help, scripts)
+     should use these helpers to construct paths.
+
+     NOTE:
+       - manifest.js will use:
+           path.directoryRegistry(basedir)
+           path.categoryManifest(basedir, category)
+           path.flatManifest(basedir)
+       - help/menu code will use:
+           path.helpHtml(tabName, itemName)
+       - script loaders may use:
+           path.patternScript(category, file)
+           path.galleryScript(file)
+           path.utilityScript(category, file)
+  ========================================================== */
+  path: {
+
+    // ../<basedir>/directoryRegistry.json
+    directoryRegistry(basedir) {
+      return `../${basedir}/directoryRegistry.json`;
+    }, // end directoryRegistry
+
+    // ../<basedir>/<category>/manifest.json
+    categoryManifest(basedir, category) {
+      return `../${basedir}/${category}/manifest.json`;
+    }, // end categoryManifest
+
+    // ../<basedir>/manifest.json
+    flatManifest(basedir) {
+      return `../${basedir}/manifest.json`;
+    }, // end flatManifest
+
+    // /help/<tabName>/<itemName>.html
+    helpHtml(tabName, itemName) {
+      return `/help/${tabName}/${itemName}.html`;
+    }, // end helpHtml
+
+    // Generic script path: ../<tabName>/<itemName>.js
+    script(tabName, itemName) {
+      const clean = itemName.replace(/\.js$/i, "");
+      return `../${tabName}/${clean}.js`;
+    }, // end script
+
+    // ../patterns/<category>/<file>.js
+    patternScript(category, file) {
+      const clean = file.replace(/\.js$/i, "");
+      return `../patterns/${category}/${clean}.js`;
+    }, // end patternScript
+
+    // ../gallery/Scripts/<file>.js
+    galleryScript(file) {
+      const clean = file.replace(/\.js$/i, "");
+      return `../gallery/Scripts/${clean}.js`;
+    }, // end galleryScript
+
+    // ../utilities/<category>/<file>.js
+    utilityScript(category, file) {
+      const clean = file.replace(/\.js$/i, "");
+      return `../utilities/${category}/${clean}.js`;
+    } // end utilityScript
+
+  }, // end path
+
+
+
+  /* ==========================================================
+     LEGACY NORMALIZERS
+     ----------------------------------------------------------
+     These are kept for backward compatibility. New code should
+     prefer fileLayer.path.* helpers instead.
+  ========================================================== */
+
   // ----------------------------------------------------------
   // normalizeHelpPath(tabName, itemName)
   // ----------------------------------------------------------
   normalizeHelpPath(tabName, itemName) {
-    return `./help/${tabName}/${itemName}.html`;
+    return this.path.helpHtml(tabName, itemName);
   }, // end normalizeHelpPath
 
 
@@ -86,7 +170,7 @@ export const fileLayer = {
   // normalizeScriptPath(tabName, itemName)
   // ----------------------------------------------------------
   normalizeScriptPath(tabName, itemName) {
-    return `../${tabName}/${itemName}.js`;
+    return this.path.script(tabName, itemName);
   }, // end normalizeScriptPath
 
 
@@ -95,8 +179,7 @@ export const fileLayer = {
   // ../patterns/<category>/<file>.js
   // ----------------------------------------------------------
   normalizePatternPath(category, file) {
-    file = file.replace(/\.js$/i, "");
-    return `../patterns/${category}/${file}.js`;
+    return this.path.patternScript(category, file);
   }, // end normalizePatternPath
 
 
@@ -105,8 +188,7 @@ export const fileLayer = {
   // ../gallery/Scripts/<file>.js
   // ----------------------------------------------------------
   normalizeGalleryScript(file) {
-    file = file.replace(/\.js$/i, "");
-    return `../gallery/Scripts/${file}.js`;
+    return this.path.galleryScript(file);
   }, // end normalizeGalleryScript
 
 
@@ -115,8 +197,7 @@ export const fileLayer = {
   // ../utilities/<category>/<file>.js
   // ----------------------------------------------------------
   normalizeUtilityPath(category, file) {
-    file = file.replace(/\.js$/i, "");
-    return `../utilities/${category}/${file}.js`;
+    return this.path.utilityScript(category, file);
   } // end normalizeUtilityPath
 
 }; // end fileLayer

@@ -1,0 +1,13 @@
+   # Standard Graphic File Exclusions
+**/*.png
+**/*.jpg
+**/*.jpeg
+**/*.gif
+**/*.svg
+**/*.webp
+
+# Optional: Exclude common large/unnecessary folders
+node_modules/
+dist/
+.cache/
+.vscode/

@@ -2,12 +2,12 @@
  * generateHelpManifest.js
  * ------------------------------------------------------------
  * Node script that scans the /help/<TabName>/ directories and
- * builds helpManifest.json listing which help files actually exist.
+ * builds manifest.json listing which help files actually exist.
  *
  * This runs BEFORE dev server startup:
  *   "dev": "node help/generateHelpManifest.js && vite"
  *
- * The browser then imports helpManifest.json and enables/disables
+ * The browser then imports manifest.json and enables/disables
  * the Help menu item based purely on manifest data.
  *
  * You do NOT run this manually unless you want to.
@@ -19,11 +19,12 @@ const fs = require("fs");
 const path = require("path");
 
 // Location of the help directory (relative to project root)
+const HELP_MANIFEST = "manifest.json"
 const HELP_ROOT = path.join(__dirname);          // …/help/
-const OUTPUT_FILE = path.join(HELP_ROOT, "helpManifest.json");
+const OUTPUT_FILE = path.join(HELP_ROOT, HELP_MANIFEST);
 
 // Top-level help subdirectories you plan to support
-const TAB_NAMES = ["Draw", "Patterns", "Gallery", "Utilities", "Figures"];
+const TAB_NAMES = ["draw", "patterns", "gallery", "utilities", "figures"];
 
 // Output structure
 const manifest = {};
@@ -63,4 +64,4 @@ fs.writeFileSync(
   "utf8"
 );
 
-console.log("helpManifest.json updated.");
+console.log("manifest.json for help updated.");

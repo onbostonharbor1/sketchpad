@@ -1,117 +1,49 @@
 /* ui/setUI.js
    ------------------------------------------------------------
-   Sketchpad Tab Orchestrator
+   Sketchpad Tab Orchestrator (TabSpec Architecture)
    ------------------------------------------------------------
-   Responsibilities:
-     - Own the activation of top-level tabs (Draw, Patterns, etc.)
-     - Clear shared layout regions when switching tabs
-     - Apply per-tab theme classes to #wrapper
-     - Run each tab's div builders in a predictable sequence
-     - Call each tab's init() to let it restore/initialize state
-     - Save tab state before switching away (when provided)
+*/
 
-   This file is the central "engine" for top-level tab behavior.
-   All per-tab details (what divs to build, how to initialize)
-   live in the tab modules (draw.js, patterns.js, etc.).
-   ------------------------------------------------------------ */
+import { DrawTabSpec }      from "./draw.js";
+import { PatternsTabSpec }  from "./patterns.js";
+import { GalleryTabSpec }   from "./gallery.js";
+import { UtilityTabSpec }   from "./utilities.js";
+import { FiguresTabSpec }   from "./figures.js";
 
-import { DrawController, initDrawTab, saveDrawState } from "./draw.js";
-import { patternsDivs, initPatternsTab } from "./patterns.js";
-import { figuresDivs, initFiguresTab } from "./figures.js";
-import { galleryDivs, initGalleryTab } from "./gallery.js";
-import { initOverlay } from "./overlay.js";
-import { utilityDivs, initUtilityTab } from "./utilities.js";
-import { clearDivs } from "./ui_utilities.js";
-import { uiState } from "./uiState.js";
+import { clearDivs }        from "./ui_utilities.js";
+import { initMenuManager }  from "./menuManager.js";
+import { initOverlay }      from "./overlay.js";
+import { uiState }          from "./uiState.js";
 
 /* ============================================================
-   Tab Specifications
-   ------------------------------------------------------------
-   NOTE:
-     - Draw uses an inline DivSpec built from DrawController.
-     - Other tabs currently still use their *Divs objects.
-     - All specs share the same shape:
-         { key, theme, divs, init, saveState, saveSlot }
+   Tab Registry (TabSpec-based)
 =========================================================== */
+const TabRegistry = {
+  draw:     DrawTabSpec,
+  patterns: PatternsTabSpec,
+  gallery:  GalleryTabSpec,
+  utilities: UtilityTabSpec,
+  figures:   FiguresTabSpec
+}; // end TabRegistry
 
-// Inline DivSpec for Draw (replaces drawDivs usage here)
-const drawDivSpec = {
-  theme: "theme-draw",
-  activeDivs: ["subtabs"],
 
-  // Only subtabs are built at tab activation; Draw then
-  // manages caption/sketchpad internally via initDrawTab/switchTab.
-  buttons: null,
-  action: null,
-  caption: null,
-  sketchpad: null,
-  text: null,
-
-  // Use DrawController to build the subtabs bar
-  subtabs: () => {
-    DrawController.setDrawSubtabs();
-  }
-}; // end drawDivSpec
-
-const tabSpecs = {
-  draw: {
-    key: "draw",
-    theme: drawDivSpec.theme,
-    divs: drawDivSpec,
-    init: initDrawTab,
-    saveState: saveDrawState,
-    saveSlot: "drawSavedState"
-  },
-
-  patterns: {
-    key: "patterns",
-    theme: patternsDivs.theme,
-    divs: patternsDivs,
-    init: initPatternsTab,
-    saveState: null,
-    saveSlot: "patternsSavedState"
-  },
-
-  figures: {
-    key: "figures",
-    theme: figuresDivs.theme,
-    divs: figuresDivs,
-    init: initFiguresTab,
-    saveState: null,
-    saveSlot: "figuresSavedState"
-  },
-
-  gallery: {
-    key: "gallery",
-    theme: galleryDivs.theme,
-    divs: galleryDivs,
-    init: initGalleryTab,
-    saveState: null,
-    saveSlot: "gallerySavedState"
-  },
-
-  utilities: {
-    key: "utilities",
-    theme: utilityDivs.theme,
-    divs: utilityDivs,
-    init: initUtilityTab,
-    saveState: null,
-    saveSlot: "utilitiesSavedState"
-  }
-}; // end tabSpecs
 
 /* ============================================================
-   saveTabState(tabName)
+   saveTabState(tabKey)
 =========================================================== */
-function saveTabState(tabName) {
-  const spec = tabSpecs[tabName];
-  if (!spec) return;
+function saveTabState(tabKey) {
+  const spec = TabRegistry[tabKey];
+  if (!spec || !spec.save) return;
 
-  if (!spec.saveState || !spec.saveSlot) return;
+  const snapshot = spec.save();
 
-  const snapshot = spec.saveState();
-  uiState[spec.saveSlot] = snapshot;
+  if (!uiState.tabSnapshots) {
+    uiState.tabSnapshots = {};
+  }
+
+  uiState.tabSnapshots[tabKey] = snapshot;
 } // end saveTabState
+
 
 /* ============================================================
    applyTheme(spec)
@@ -123,68 +55,50 @@ function applyTheme(spec) {
   wrapper.classList.remove(
     "theme-draw",
     "theme-patterns",
-    "theme-figures",
     "theme-gallery",
-    "theme-utilities"
+    "theme-figures",
+    "theme-utility"
   );
 
-  if (spec && spec.theme) {
-    wrapper.classList.add(spec.theme);
-  }
+  const theme = spec && spec.theme;
+  if (theme) wrapper.classList.add(theme);
 } // end applyTheme
 
-/* ============================================================
-   assignDivBuilders(spec)
-=========================================================== */
-function assignDivBuilders(spec) {
-  const divs = spec ? spec.divs : {};
-
-  uiState.setAction    = divs.action    || null;
-  uiState.setButtons   = divs.buttons   || null;
-  uiState.setCaption   = divs.caption   || null;
-  uiState.setSketchpad = divs.sketchpad || null;
-  uiState.setSubtabs   = divs.subtabs   || null;
-  uiState.setText      = divs.text      || null;
-
-  uiState.activeDivs = divs.activeDivs || [];
-} // end assignDivBuilders
 
 /* ============================================================
-   buildActiveDivs(spec)
+   mapTabIdToKey(tabId)
 =========================================================== */
-function buildActiveDivs(spec) {
-  const divs = spec.divs;
-  const active = Array.isArray(divs.activeDivs) ? divs.activeDivs : [];
+function mapTabIdToKey(tabId) {
+  const map = {
+    "draw-tab":     "draw",
+    "patterns-tab": "patterns",
+    "gallery-tab":  "gallery",
+    "figures-tab":  "figures",
+    "utilities-tab":  "utilities"
+  };
 
-  if (active.includes("buttons")   && typeof divs.buttons   === "function") divs.buttons();
-  if (active.includes("action")    && typeof divs.action    === "function") divs.action();
-  if (active.includes("caption")   && typeof divs.caption   === "function") divs.caption();
-  if (active.includes("text")      && typeof divs.text      === "function") divs.text();
-  if (active.includes("sketchpad") && typeof divs.sketchpad === "function") divs.sketchpad();
-  if (active.includes("subtabs")   && typeof divs.subtabs   === "function") divs.subtabs();
-} // end buildActiveDivs
+  return map[tabId] || null;
+} // end mapTabIdToKey
+
 
 /* ============================================================
    activateTab(tabKey)
 =========================================================== */
 function activateTab(tabKey) {
-  const spec = tabSpecs[tabKey];
-  if (!spec) {
-    console.warn("activateTab: unknown tab key:", tabKey);
-    return;
+  const spec = TabRegistry[tabKey];
+  if (!spec) throw new Error("activateTab: no TabSpec for " + tabKey);
+
+  clearDivs();
+  applyTheme(spec);
+
+  if (!spec.init || typeof spec.init !== "function") {
+    throw new Error("activateTab: TabSpec.init missing for " + tabKey);
   }
 
-  clearDivs("subtabs");      // 1. Clear shared divs
-  applyTheme(spec);          // 2. Apply theme
-  assignDivBuilders(spec);   // 3. Assign div builders
-  buildActiveDivs(spec);     // 4. Build UI regions
-
-  if (typeof spec.init === "function") {
-    spec.init();             // 5. Tab init/restoration
-  }
-
-  uiState.activeTab = tabKey; // 6. Track active
+  spec.init();
+  uiState.activeTab = tabKey;
 } // end activateTab
+
 
 /* ============================================================
    handleTabChange(eventOrId)
@@ -195,19 +109,8 @@ function handleTabChange(eventOrId) {
       ? eventOrId
       : (eventOrId && eventOrId.target && eventOrId.target.id);
 
-  const map = {
-    "draw-tab":      "draw",
-    "patterns-tab":  "patterns",
-    "figures-tab":   "figures",
-    "gallery-tab":   "gallery",
-    "utilities-tab": "utilities"
-  };
-
-  const tabKey = map[tabId];
-  if (!tabKey) {
-    console.warn("handleTabChange: Unknown tab ID:", tabId);
-    return;
-  }
+  const tabKey = mapTabIdToKey(tabId);
+  if (!tabKey) return;
 
   if (uiState.activeTab) {
     saveTabState(uiState.activeTab);
@@ -216,18 +119,28 @@ function handleTabChange(eventOrId) {
   activateTab(tabKey);
 } // end handleTabChange
 
+
 /* ============================================================
-   DOMContentLoaded
+   onDomContentLoaded()
 =========================================================== */
-window.addEventListener("DOMContentLoaded", () => {
-  initOverlay();  // must exist before any tab init()
+function onDomContentLoaded() {
+   initMenuManager();
+   initOverlay();     // REQUIRED
 
   const tabButtons = document.querySelectorAll("#mainTabs .nav-link");
-  tabButtons.forEach((btn) => {
-    btn.addEventListener("click", () => handleTabChange(btn.id));
+  tabButtons.forEach(function (btn) {
+    btn.addEventListener("click", function () {
+      handleTabChange(btn.id);
+    });
   });
 
-  activateTab("draw");  // default
-}); // end DOMContentLoaded
+  activateTab("draw");
+} // end onDomContentLoaded
+
+
+/* ============================================================
+   DOMContentLoaded wiring
+=========================================================== */
+window.addEventListener("DOMContentLoaded", onDomContentLoaded);
 
 // end setUI.js

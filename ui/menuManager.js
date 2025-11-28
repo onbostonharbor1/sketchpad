@@ -1,226 +1,183 @@
 /* menuManager.js
    ------------------------------------------------------------
-   Caption Menu Manager (global UI component)
+   Caption Menu Manager (non-IIFE, lazy-init capable)
    ------------------------------------------------------------
-   Responsibilities:
-     • Create/destroy a floating menu anchored to the caption bar
-     • Populate menu items dynamically per tab
-     • Close on: click outside, ESC, tab switch
-     • Fail-fast on invalid arguments
+*/
 
-   This file is UI-only. It has **zero** knowledge of patterns,
-   gallery, draw, or utilities. Tabs supply menu item arrays.
-
-   STRUCTURE:
-     menuManager.open(items, anchorElement)
-       - Creates menu (div) under #wrapper
-       - Positions below the anchor
-       - items = [ {label, onClick}, … ]
-
-     menuManager.close()
-       - Removes menu from DOM
-
-     menuManager.clear()
-       - Alias for close()
-
-   Expected CSS:
-     .caption-menu {
-         position: absolute;
-         background: white;
-         border: 1px solid #ccc;
-         border-radius: 4px;
-         padding: 4px 0;
-         z-index: 9999;
-         box-shadow: 0 2px 6px rgba(0,0,0,0.2);
-     }
-     .caption-menu-item {
-         padding: 4px 16px;
-         cursor: pointer;
-         white-space: nowrap;
-     }
-     .caption-menu-item:hover {
-         background: #e8e8e8;
-     }
------------------------------------------------------------- */
 import { showHelpOverlay } from "./overlay.js";
-import { FileLayer } from "./fileLayer.js";   // ★ NEW — replaces old manifest check
+import { fileLayer } from "./fileLayer.js";
+import { manifest } from "./manifest.js";
+import { loadHelpManifest } from "./ui_utilities.js";
 
-export const menuManager = (() => {
-  let menuEl = null;
-  let outsideHandler = null;
-  let escHandler = null;
+let menuEl = null;
+let outsideHandler = null;
+let escHandler = null;
+let ready = false;
 
-  // ----------------------------------------------------------
-  // ensureArray(value)
-  // ----------------------------------------------------------
-  function ensureArray(value, msg = "menuManager: expected array") {
-    if (!Array.isArray(value)) {
-      throw new Error(`${msg}. Received: ${typeof value}`);
+export function initMenuManager() {
+  ready = true;
+} // end initMenuManager
+
+function ensureReady() {
+  if (!ready) {
+    throw new Error("menuManager: not initialized (call initMenuManager first)");
+  }
+} // end ensureReady
+
+function ensureArray(value, msg = "menuManager: expected array") {
+  if (!Array.isArray(value)) {
+    throw new Error(`${msg}. Received: ${typeof value}`);
+  }
+  return value;
+} // end ensureArray
+
+
+function validateItems(items) {
+  ensureArray(items, "menuManager: items must be an array");
+
+  items.forEach((item, idx) => {
+    if (!item || typeof item.label !== "string") {
+      throw new Error(`menuManager: item[${idx}] missing label`);
     }
-    return value;
-  } // end ensureArray
-
-  // ----------------------------------------------------------
-  // validateItems(items)
-  // ----------------------------------------------------------
-  function validateItems(items) {
-    ensureArray(items, "menuManager: items must be an array");
-
-    items.forEach((item, idx) => {
-      if (!item || typeof item.label !== "string") {
-        throw new Error(`menuManager: item[${idx}] missing label`);
-      }
-      if (!item.disabled && typeof item.onClick !== "function") {
-        throw new Error(
-          `menuManager: item[${idx}].onClick must be function for enabled items`
-        );
-      }
-    });
-
-    return items;
-  } // end validateItems
-
-  // ----------------------------------------------------------
-  // createMenuItem(label, onClick, disabled=false)
-  // ----------------------------------------------------------
-  function createMenuItem(label, onClick, disabled = false) {
-    if (typeof label !== "string") {
-      throw new Error("createMenuItem: label must be string");
+    if (!item.disabled && typeof item.onClick !== "function") {
+      throw new Error(
+        `menuManager: item[${idx}].onClick must be function for enabled items`
+      );
     }
-    return { label, onClick, disabled };
-  } // end createMenuItem
+  });
 
-  // ----------------------------------------------------------
-  // positionMenu(anchor, menuEl)
-  // ----------------------------------------------------------
-  function positionMenu(anchor, menuEl) {
-    const rect = anchor.getBoundingClientRect();
-    const scrollLeft = window.pageXOffset;
-    const scrollTop = window.pageYOffset;
+  return items;
+} // end validateItems
 
-    menuEl.style.position = "absolute";
-    menuEl.style.left = `${rect.left + scrollLeft}px`;
-    menuEl.style.top = `${rect.bottom + scrollTop + 4}px`;
-  } // end positionMenu
+function createMenuItem(label, onClick, disabled = false) {
+  if (typeof label !== "string") {
+    throw new Error("createMenuItem: label must be string");
+  }
+  return { label, onClick, disabled };
+} // end createMenuItem
 
-  // ----------------------------------------------------------
-  // close()
-  // ----------------------------------------------------------
-  function close() {
-    if (menuEl && menuEl.parentNode) {
-      menuEl.parentNode.removeChild(menuEl);
-    }
-    menuEl = null;
+function positionMenu(anchor, menuEl) {
+  const rect = anchor.getBoundingClientRect();
+  const scrollLeft = window.pageXOffset;
+  const scrollTop = window.pageYOffset;
 
-    if (outsideHandler) {
-      document.removeEventListener("mousedown", outsideHandler);
-      outsideHandler = null;
-    }
-    if (escHandler) {
-      document.removeEventListener("keydown", escHandler);
-      escHandler = null;
-    }
-  } // end close
+  menuEl.style.position = "absolute";
+  menuEl.style.left = `${rect.left + scrollLeft}px`;
+  menuEl.style.top = `${rect.bottom + scrollTop + 4}px`;
+} // end positionMenu
 
-  // ----------------------------------------------------------
-  // open(items, anchor)
-  // ----------------------------------------------------------
-  function open(items, anchor) {
-    if (!Array.isArray(items))
-      throw new Error("menuManager.open: items must be an array");
+function close() {
+  if (menuEl && menuEl.parentNode) {
+    menuEl.parentNode.removeChild(menuEl);
+  }
+  menuEl = null;
 
-    if (!anchor || !(anchor instanceof HTMLElement))
-      throw new Error("menuManager.open: anchor must be a DOM element");
+  if (outsideHandler) {
+    document.removeEventListener("mousedown", outsideHandler);
+    outsideHandler = null;
+  }
+  if (escHandler) {
+    document.removeEventListener("keydown", escHandler);
+    escHandler = null;
+  }
+} // end close
 
-    close(); // always close previous
+function open(items, anchor) {
+  ensureReady();
 
-    menuEl = document.createElement("div");
-    menuEl.className = "caption-menu";
+  if (!Array.isArray(items))
+    throw new Error("menuManager.open: items must be an array");
 
-    // Build menu item elements
-    items.forEach((item) => {
-      if (!item || typeof item.label !== "string")
-        throw new Error("menuManager: item.label missing");
+  if (!anchor || !(anchor instanceof HTMLElement))
+    throw new Error("menuManager.open: anchor must be a DOM element");
 
-      const el = document.createElement("div");
-      el.className = "caption-menu-item";
-      el.textContent = item.label;
+  validateItems(items);
+  close();
 
-      if (item.disabled) {
-        el.classList.add("disabled");
-      } else {
-        if (typeof item.onClick !== "function")
-          throw new Error("menuManager: item.onClick must be function");
+  menuEl = document.createElement("div");
+  menuEl.className = "caption-menu";
 
-        el.addEventListener("click", () => {
-          close();
-          item.onClick();
-        });
-      }
+  items.forEach((item) => {
+    const el = document.createElement("div");
+    el.className = "caption-menu-item";
+    el.textContent = item.label;
 
-      menuEl.appendChild(el);
-    });
-
-    const wrapper = document.getElementById("wrapper");
-    if (!wrapper) throw new Error("menuManager: #wrapper not found");
-    wrapper.appendChild(menuEl);
-
-    positionMenu(anchor, menuEl);
-
-    // outside click
-    outsideHandler = (ev) => {
-      if (menuEl && !menuEl.contains(ev.target) && ev.target !== anchor) {
+    if (item.disabled) {
+      el.classList.add("disabled");
+    } else {
+      el.addEventListener("click", () => {
         close();
-      }
-    };
-    document.addEventListener("mousedown", outsideHandler);
-
-    // ESC key closes
-    escHandler = (ev) => {
-      if (ev.key === "Escape") close();
-    };
-    document.addEventListener("keydown", escHandler);
-  } // end open
-
-  // ----------------------------------------------------------
-  // clear()
-  // ----------------------------------------------------------
-  function clear() {
-    close();
-  } // end clear
-
-  // ----------------------------------------------------------
-  // buildHelpItem(tabName, itemName)
-  // ----------------------------------------------------------
-  async function buildHelpItem(tabName, itemName) {
-    // NEW: ask the FileLayer
-    const exists = await FileLayer.helpExists(tabName, itemName);
-
-    const helpPath = `./help/${tabName}/${itemName}.html`;
-
-    if (!exists) {
-      return {
-        label: "Help",
-        disabled: true,
-        onClick: () => {},
-      };
+        item.onClick();
+      });
     }
 
+    menuEl.appendChild(el);
+  });
+
+  const wrapper = document.getElementById("wrapper");
+  if (!wrapper) throw new Error("menuManager: #wrapper not found");
+  wrapper.appendChild(menuEl);
+
+  positionMenu(anchor, menuEl);
+
+  outsideHandler = (ev) => {
+    if (menuEl && !menuEl.contains(ev.target) && ev.target !== anchor) {
+      close();
+    }
+  };
+  document.addEventListener("mousedown", outsideHandler);
+
+  escHandler = (ev) => {
+    if (ev.key === "Escape") close();
+  };
+  document.addEventListener("keydown", escHandler);
+} // end open
+
+function clear() {
+  close();
+} // end clear
+
+export async function buildHelpItem(tabName, helpKey) {
+  const helpData = await loadHelpManifest();   // cached, deterministic
+
+  // The manifest key MUST exist and MUST be an array
+  const list = helpData[tabName];
+
+  if (!Array.isArray(list)) {
     return {
       label: "Help",
-      onClick: () => showHelpOverlay(helpPath, itemName),
+      disabled: true,
+      onClick: () => {}
     };
-  } // end buildHelpItem
+  }
 
-  // ----------------------------------------------------------
-  // Public interface
-  // ----------------------------------------------------------
+  const exists = list.includes(helpKey);
+
+  if (!exists) {
+    return {
+      label: "Help",
+      disabled: true,
+      onClick: () => {}
+    };
+  }
+
+  const path = `/help/${tabName}/${helpKey}.html`;
+
   return {
-    open,
-    close,
-    clear,
-    buildHelpItem,
-    createMenuItem,
+    label: "Help",
+    onClick: () => showHelpOverlay(path, helpKey)
   };
-})(); // end menuManager IIFE
+} // end buildHelpItem
 
+
+
+export const menuManager = {
+  open,
+  close,
+  clear,
+  createMenuItem,
+  buildHelpItem,
+  isReady() {
+    return ready;
+  }
+}; // end menuManager

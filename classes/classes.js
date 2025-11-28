@@ -5,10 +5,10 @@
 //////////////////////////////////////////////////////////////////
 // both         CircularParabola: do clockwise and
 //              counterclockwise at same time
-// cutoff       pointsOnParabola: at some point, 
-//              want to stop drawing from the 
+// cutoff       pointsOnParabola: at some point,
+//              want to stop drawing from the
 //              parabola to the arm
-// factor       InverseStar: shrinks the arms. 
+// factor       InverseStar: shrinks the arms.
 //              Differs from shorten in that
 //              this starts from the end of the arm
 // lineTransform
@@ -16,10 +16,10 @@
 //              ptsOnLine: straight, bendWithin, bendFromMid, and
 //                         bendMiddle
 //              lineTransform:
-//                  {type: type, angle: angle, anchorT: distance } 
-// mid          midpoints are added between nodes 
+//                  {type: type, angle: angle, anchorT: distance }
+// mid          midpoints are added between nodes
 // midpoint     actual midpoint of drawn object
-// numCycloids  sets the number of points. Code 
+// numCycloids  sets the number of points. Code
 //              wants the number to be one greater
 // shorten      the percent to shorten
 //              stitcher:   start and end positions for going through
@@ -27,7 +27,7 @@
 //              drawChords:  where in the list of steps to begin and
 //                           end drawing
 //  radiatePt    The radiate point
-   
+
 class StringThing {
     constructor(s = {}) {
         const defaults = {
@@ -44,8 +44,8 @@ class StringThing {
             radiatePt:   new Point(150, 50),
 
 	                 // CURVE_STITCH
-	    lineTransform: 0,
-            numNodes:    4,                    
+	    	lineTransform: 0,
+            numNodes:    4,
             radius:      200,
             rotate:      0,
             xScale:      1,
@@ -53,8 +53,8 @@ class StringThing {
 	                 // MEANING NEEDS TO BE FIRMER
             cutoff:      s.numSteps ? s.numSteps / 2 : 10, // fallback if numSteps missing
             factor:      0,
-	    both:        false,                 
-            shorten:     0,                     
+	   		both:        false,
+            shorten:     0,
 //          yIncrement:  1,
             trunc:       false
 
@@ -91,7 +91,7 @@ class Point {
 //	    this.y = gl.pts[x].y;
 //	}
     }
-    
+
     distanceTo(other) {
 	return Math.hypot(this.x - other.x, this.y - other.y);
     }
@@ -189,12 +189,12 @@ class Line {
 	    (this.start.y + this.end.y) / 2
 	);
     }
-    
+
     moveMidpointTo(newMidpoint) {
 	const currentMid = this.midpoint();
 	const dx = newMidpoint.x - currentMid.x;
 	const dy = newMidpoint.y - currentMid.y;
-	
+
 	// mutate existing points instead of reassigning
 	this.start.x += dx;
 	this.start.y += dy;
@@ -212,7 +212,7 @@ class Line {
 	this.end = temp;
 	return this;
     };
-    
+
     rotateAt(anchor = "start", angle = 0) {
 	let pivot;
 
@@ -227,7 +227,7 @@ class Line {
 	} else {
 	    throw new Error("Invalid anchor: must be 'start', 'end', or a Point");
 	}
-    
+
 	return this.rotateAround(pivot, angle);
     }
 
@@ -263,7 +263,7 @@ class Line {
 	const newStart = this.start.rotateAround(this.end, angleRadians);
 	return new Line(newStart, this.end);
     }
-    
+
     shortenEnd(amount) {
 	const dx = this.start.x - this.end.x;
 	const dy = this.start.y - this.end.y;
@@ -313,11 +313,11 @@ class Line {
     intersects(otherLine) {
 	const { start: A, end: B } = this;
 	const { start: C, end: D } = otherLine;
-	
+
 	const denom = (A.x - B.x) * (C.y - D.y) -
 	      (A.y - B.y) * (C.x - D.x);
 	if (denom === 0) return null; // Parallel or coincident
-	
+
 	const x = ((A.x * B.y - A.y * B.x) * (C.x - D.x) -
 		   (A.x - B.x) * (C.x * D.y - C.y * D.x)) / denom;
 	const y = ((A.x * B.y - A.y * B.x) * (C.y - D.y) -

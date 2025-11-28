@@ -1,4 +1,4 @@
-/* drawRegistry/inverseStar.js 
+/* drawRegistry/inverseStar.js
    ------------------------------------------------------------
    New lifecycle form (init, update, draw)
    Using Point objects created at runtime.
@@ -6,7 +6,6 @@
 import { Line, Point }     from "../classes/classes.js";
 import { CurveStitch }     from "../classes/curveStitchClass.js";
 import { drawInverseStar } from "../draw/drawRegular.js";
-import { createNodes } from "../draw/draw_utilities.js";
 
 window.drawRegistry_inverseStar = {
     name:         "Inverse Star",

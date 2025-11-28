@@ -1,18 +1,28 @@
 /* figures.js
    ------------------------------------------------------------
-   Defines placeholder functions for initializing Figures tab divs.
-   Each function currently sets its target div to display
-   a simple "TBD" message indicating its future purpose.
-   ------------------------------------------------------------ */
+   Figures Tab Controller — NEW ARCHITECTURE
+   Placeholder implementation (TBD content)
+   ------------------------------------------------------------
+*/
 
-import { uiState }   from "./uiState.js";
+import { uiState } from "./uiState.js";
 
+/* ============================================================
+   initFiguresTab — initialize placeholder content
+============================================================ */
 export function initFiguresTab() {
-    ;
-}
-/* ------------------------------------------------------------
-   Individual placeholder functions
------------------------------------------------------------- */
+  setFiguresButtons();
+  setFiguresAction();
+  setFiguresSubtabs();
+  setFiguresCaption();
+  setFiguresText();
+  setFiguresSketchpad();
+} // end initFiguresTab
+
+
+/* ============================================================
+   Placeholder setters for each UI region
+============================================================ */
 function setFiguresButtons() {
   const el = document.getElementById("buttons");
   if (el) el.innerHTML = "TBD figures buttons";
@@ -43,16 +53,34 @@ function setFiguresSketchpad() {
   if (el) el.innerHTML = "TBD figures sketchpad";
 } // end setFiguresSketchpad
 
-/* ------------------------------------------------------------
-   figuresDivs object mapping div names to their setter functions
------------------------------------------------------------- */
+
+/* ============================================================
+   TabSpec for setUI.js
+============================================================ */
+export const FiguresTabSpec = {
+  theme: "theme-figures",
+
+  init: initFiguresTab,
+  save: () => ({}),  // nothing to save yet
+
+  buttons:   setFiguresButtons,
+  action:    setFiguresAction,
+  subtabs:   setFiguresSubtabs,
+  caption:   setFiguresCaption,
+  text:      setFiguresText,
+  sketchpad: setFiguresSketchpad
+}; // end FiguresTabSpec
+
+
+/* ============================================================
+   Optional div-controller object for consistency
+============================================================ */
 export const figuresDivs = {
-    activeDivs: ["buttons", "action", "caption", "text", "sketchpad", "subtabs"],
-    theme:      "theme-figures",
-  buttons: setFiguresButtons,
-  action: setFiguresAction,
-  subtabs: setFiguresSubtabs,
-  caption: setFiguresCaption,
-  text: setFiguresText,
+  theme: "theme-figures",
+  buttons:   setFiguresButtons,
+  action:    setFiguresAction,
+  subtabs:   setFiguresSubtabs,
+  caption:   setFiguresCaption,
+  text:      setFiguresText,
   sketchpad: setFiguresSketchpad
 }; // end figuresDivs
