@@ -13,15 +13,26 @@ import { overlayManager } from "./overlay.js";
    Arguments:
      args – optional string id of an extra div to clear in addition
 ------------------------------------------------------------ */
-function clearDivs(args="") {
-    let ids = ["buttons", "action", "caption", "text","sketchpad"];
-    if (args != "")
+function clearDivs(args = "") {
+    // Existing regions you already clear
+    let ids = ["buttons", "action", "caption", "text", "sketchpad"];
+    if (args !== "")
         ids.push(args);
+
+    // Clear each region
     ids.forEach(id => {
         const el = document.getElementById(id);
         if (el) el.innerHTML = "";
     });
+
+    // Clear all canvas-overlay layers (interaction, bbox, nodes, guides)
+    for (const name in overlayManager.canvasLayers) {
+        const layer = overlayManager.canvasLayers[name];
+        layer.innerHTML = "";
+    }
 } // end clearDivs
+
+
 
 /* ------------------------------------------------------------
    showOffcanvas(title, text)

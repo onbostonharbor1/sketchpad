@@ -122,8 +122,18 @@
           <div id="subtabs">TBD</div>
           <div id="caption">TBD</div>
           <div id="text">TBD</div>
-          <div id="sketchpad">TBD</div>
-        </div>
+<div id="sketchpad-wrapper">
+
+    <div id="sketchpad">TBD</div>
+
+    <div id="canvasOverlayLayers">
+        <div id="interaction-layer"></div>
+        <div id="bbox-layer"></div>
+        <div id="nodes-layer"></div>
+        <div id="guides-layer"></div>
+    </div>
+
+</div>
 
         <div id="offcanvasPanel" class="offcanvas offcanvas-end" tabindex="-1">
           <div class="offcanvas-header">
@@ -139,22 +149,27 @@
         </div>
       </div>
     </div>
-    <!-- Overlay Container -->
-    <div id="overlayContainer" style="display:none;">
-      <div id="overlayBackground"></div>
-      <div id="overlayPanel">
-        <div id="overlayHeader">
-          <span id="overlayTitle"></span>
-          <button id="overlayClose">×</button>
-        </div>
-        <div id="overlayContent">
-          <div id="overlay-help" class="overlay-layer" style="display:none;"></div>
-          <div id="overlay-interaction" class="overlay-layer" style="display:none;"></div>
-          <div id="overlay-notes" class="overlay-layer" style="display:none;"></div>
-          <div id="overlay-debug" class="overlay-layer" style="display:none;"></div>
-        </div>
-      </div>
+
+
+
+  <!-- Overlay Container (Help / Notes / Debug ONLY) -->
+<div id="overlayContainer" style="display:none;">
+  <div id="overlayBackground"></div>
+  <div id="overlayPanel">
+    <div id="overlayHeader">
+      <span id="overlayTitle"></span>
+      <button id="overlayClose">×</button>
     </div>
+
+    <div id="overlayContent">
+      <div id="overlay-help" class="overlay-layer" style="display:none;"></div>
+      <div id="overlay-notes" class="overlay-layer" style="display:none;"></div>
+      <div id="overlay-debug" class="overlay-layer" style="display:none;"></div>
+    </div>
+  </div>
+</div>
+
+
     <!-- Files from the "Draw" side -->
     <script type="module" src="/main.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>

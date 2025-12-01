@@ -90,8 +90,6 @@ update(params) {
   params.pt1 = line.startPt();
   params.pt2 = line.endPt();
   params.midpoint = new Point(mid.x, mid.y);
-
-  console.log("✅ update done (single line, midpoint-driven)", this);
 }, // end update
 
   // ==========================================================

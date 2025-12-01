@@ -14,6 +14,7 @@ import { setCaptionBar }          from "./caption.js";
 import { renderCategories }       from "./categories.js";
 import { menuManager }            from "./menuManager.js";
 import { buildParameterControls } from "./parameterControls.js";
+
 import { uiState }                from "./uiState.js";
 import { clearDivs, showScriptOffcanvas }              from "./ui_utilities.js";
 
@@ -267,7 +268,13 @@ function markTabDirty(tabId) {
   const btn = document.querySelector(`[data-tab-id="${tabId}"]`);
   if (!btn) return;
 
-  btn.textContent += " *";
+  const label = btn.querySelector(".tab-label");
+  if (!label) return;
+
+  // Insert " *" BEFORE the close button
+  if (!label.textContent.endsWith(" *")) {
+    label.textContent = label.textContent + " *";
+  }
 } // end markTabDirty
 
 
@@ -280,8 +287,13 @@ function markTabClean(tabId) {
   const btn = document.querySelector(`[data-tab-id="${tabId}"]`);
   if (!btn) return;
 
-  btn.textContent = btn.textContent.replace(/\s\*$/, "");
+  const label = btn.querySelector(".tab-label");
+  if (!label) return;
+
+  // Remove trailing " *"
+  label.textContent = label.textContent.replace(/\s\*$/, "");
 } // end markTabClean
+
 
 /*************************************************************
    addDrawSubtab(item)
@@ -405,7 +417,7 @@ export function drawActiveTab() {
   // Caption bar
   // --------------------------
   setDrawCaption(entry);
-  setDrawButtons();   // Now fully empty (caption-menu handles actions)
+  setDrawButtons();   // caption-menu handles actions
 
   // --------------------------
   // Prepare sketchpad
@@ -417,14 +429,32 @@ export function drawActiveTab() {
   const canvas = window.drawCanvas;
   if (!canvas) throw new Error("drawActiveTab: window.drawCanvas missing");
 
-  // Ensure shared canvas is in the sketchpad area
+  // Put the shared canvas inside #sketchpad
   sketchpad.appendChild(canvas);
 
   const c = window.ctx;
   if (!c) throw new Error("drawActiveTab: window.ctx missing");
 
-  // Clear
   c.clearRect(0, 0, canvas.width, canvas.height);
+
+  // --------------------------
+  // Sync interaction overlay with canvas
+  // NOTE: now that canvasOverlayLayers lives INSIDE #sketchpad,
+  //       we treat coordinates as LOCAL to #sketchpad / canvas.
+  // --------------------------
+  const inter = overlayManager.getCanvasLayer("interaction");
+
+  // Clear all old point-picker dots
+  inter.innerHTML = "";
+
+  // Make interaction layer sit exactly over the canvas area
+  inter.style.position = "absolute";
+  inter.style.left = "0px";
+  inter.style.top = "0px";
+  inter.style.width = canvas.width + "px";
+  inter.style.height = canvas.height + "px";
+  inter.style.pointerEvents = "none";   // dots themselves will re-enable
+  inter.style.display = "block";
 
   // --------------------------
   // Parameter UI
@@ -432,10 +462,9 @@ export function drawActiveTab() {
   const state = uiState.draw.tabs[tabId];
   if (!state) throw new Error("drawActiveTab: missing tab state");
 
-  // Let controls re-trigger redraw
   state.redrawHandler = drawActiveTab;
+  state.onParamChange = () => markTabDirty(tabId);
 
-  // Build the controls inside #action
   buildParameterControls(state, "tab-draw", true);
 
   // --------------------------
@@ -451,6 +480,7 @@ export function drawActiveTab() {
     console.error("✗ Error redrawing " + entry.name, err);
   }
 } // end drawActiveTab
+
 
 /*************************************************************
    clearCanvas()

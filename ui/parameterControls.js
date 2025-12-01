@@ -6,6 +6,10 @@
    - Optionally renders the controls in the #action area.
    - Delegates to a tab-specific data builder.
 =========================================================== */
+
+import { overlayManager } from "./overlay.js";
+
+
 export function buildParameterControls(
   sourceInfo,
   targetTabId = "tab-generic",
@@ -209,7 +213,8 @@ function setRangeControl(field, label, def, value, info, key, tabId) {
     const newVal = parseFloat(input.value);
     readout.textContent = newVal;
     info.parameters[key] = newVal;
-    if (typeof info.redrawHandler === "function") info.redrawHandler();
+    if (typeof info.onParamChange === "function") info.onParamChange();
+    info.redrawHandler();
   });
   wrapper.appendChild(row);
   wrapper.appendChild(input);
@@ -230,7 +235,8 @@ function setCheckboxControl(field, label, def, value, info, key, tabId) {
 
   input.addEventListener("change", () => {
     info.parameters[key] = input.checked;
-    if (typeof info.redrawHandler === "function") info.redrawHandler();
+    if (typeof info.onParamChange === "function") info.onParamChange();
+    info.redrawHandler();
   });
 
   field.appendChild(label);
@@ -267,8 +273,8 @@ function setSelectControl(field, label, def, value, info, key, tabId) {
     const raw = select.value;
     const num = !isNaN(raw) && raw.trim() !== "" ? Number(raw) : raw;
     info.parameters[key] = num;
-
-    if (typeof info.redrawHandler === "function") info.redrawHandler();
+    if (typeof info.onParamChange === "function") info.onParamChange();
+    info.redrawHandler();
   });
 
   field.appendChild(label);
@@ -287,7 +293,8 @@ function setColorControl(field, label, def, value, info, key, tabId) {
 
   input.addEventListener("input", () => {
     info.parameters[key] = input.value;
-    if (typeof info.redrawHandler === "function") info.redrawHandler();
+    if (typeof info.onParamChange === "function") info.onParamChange();
+    info.redrawHandler();
   });
 
   field.appendChild(label);
@@ -309,7 +316,8 @@ function setDefaultControl(field, label, def, value, info, key, tabId) {
     const newVal =
       input.type === "number" ? parseFloat(input.value) : input.value;
     info.parameters[key] = newVal;
-    if (typeof info.redrawHandler === "function") info.redrawHandler();
+    if (typeof info.onParamChange === "function") info.onParamChange();
+    info.redrawHandler();
   });
 
   field.appendChild(label);
@@ -325,14 +333,21 @@ function setPointPickerControl(field, label, def, value, info, key, tabId) {
   readout.id = tabId + "-" + key;
 
   const canvas = document.getElementById("sharedCanvas");
-const container = document.getElementById("sketchpad");
-  const rect = canvas.getBoundingClientRect();
+  if (!canvas) throw new Error("pointPicker: #sharedCanvas not found");
 
+  // This is the REAL container for dots: interaction-layer
+  const container = overlayManager.canvasLayers["interaction"];
+  if (!container) throw new Error("pointPicker: interaction-layer missing");
+
+  container.style.display = "block";     // ensure visible
+  container.style.pointerEvents = "auto";
+
+  // Create the draggable dot
   const dot = document.createElement("div");
   dot.className = "point-picker-dot";
   dot.id = `dot-${key}`;
   dot.style.position = "absolute";
-  dot.style.left = value.x - 5 + "px";
+  dot.style.left = value.x - 5 + "px";   // canvas-local coordinates
   dot.style.top  = value.y - 5 + "px";
   dot.style.cursor = "grab";
   container.appendChild(dot);
@@ -343,7 +358,7 @@ const container = document.getElementById("sketchpad");
     if (!isDragging) return;
     e.preventDefault();
 
-    // compute coordinates relative to canvas
+    // Convert mouse to canvas-local coordinates
     const rect = canvas.getBoundingClientRect();
     const newX = e.clientX - rect.left;
     const newY = e.clientY - rect.top;
@@ -353,11 +368,11 @@ const container = document.getElementById("sketchpad");
 
     info.parameters[key].x = newX;
     info.parameters[key].y = newY;
-    readout.value = `${Math.round(newX)}, ${Math.round(newY)}`;
 
-    if (typeof info.redrawHandler === "function") {
-      info.redrawHandler();
-    }
+    if (typeof info.onParamChange === "function") info.onParamChange();
+    info.redrawHandler();
+
+    readout.value = `${Math.round(newX)}, ${Math.round(newY)}`;
   };
 
   dot.addEventListener("mousedown", (e) => {
@@ -379,6 +394,10 @@ const container = document.getElementById("sketchpad");
   field.appendChild(label);
   field.appendChild(readout);
 } // end setPointPickerControl
+
+
+
+
 
 
 

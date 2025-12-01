@@ -170,7 +170,7 @@ export function setUI(tab) {
     tabName = "draw"
   else
       tabName = tab;
-  console.log("=== setUI", tabName);
+
   if (!TabRegistry[tabName] && tabName !== START) {
     throw new Error("setUI: unknown tab " + tabName);
   }
@@ -180,6 +180,7 @@ export function setUI(tab) {
   if (prev && TabRegistry[prev] && TabRegistry[prev].save) {
     uiState[prev].saved = TabRegistry[prev].save();
   }
+
 
   applyTheme(tabName); // Ensure the theme is reset first
 

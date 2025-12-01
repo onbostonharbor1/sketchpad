@@ -1,23 +1,19 @@
 ////////////////////////////////////////////////////////////////
-// overlay.js
-// ------------------------------------------------------------
-// Single-file overlay system.
-// Contains:
-//   - overlayManager object
-//   - initOverlay() to register layers
-//   - showHelp / hideHelp wrappers
-//   - openOverlay / closeOverlay wrappers
-//
-// Nothing else. No overlayClass. No descriptors.
-// Fully aligned with current UI architecture.
+// overlay.js — CLEAN FINAL VERSION
 ////////////////////////////////////////////////////////////////
 
 export const overlayManager = {
+  // Panel overlays (help / notes / debug)
   layers: {},
 
+  // Canvas overlays (interaction / bbox / nodes / guides)
+  canvasLayers: {},
+
+  // ---------- Panel overlay API ----------
   register(name, element) {
-    if (!name || !element)
+    if (!name || !element) {
       throw new Error("overlayManager.register: invalid args");
+    }
     this.layers[name] = element;
   }, // end register
 
@@ -36,52 +32,86 @@ export const overlayManager = {
 
   clearLayer(name) {
     const el = this.layers[name];
-    if (!el)
-      throw new Error("overlayManager.clearLayer: unknown layer " + name);
+    if (!el) throw new Error("overlayManager.clearLayer: unknown layer " + name);
     el.innerHTML = "";
     el.style.display = "none";
   }, // end clearLayer
 
   clearAll() {
+    // clears panel overlays (NOT canvas overlays)
     for (const name in this.layers) {
       const el = this.layers[name];
       el.innerHTML = "";
       el.style.display = "none";
     }
   }, // end clearAll
+
+  // ---------- Canvas overlay API ----------
+  registerCanvas(name, element) {
+    if (!name || !element) {
+      throw new Error("overlayManager.registerCanvas: invalid args");
+    }
+    this.canvasLayers[name] = element;
+  }, // end registerCanvas
+
+  getCanvasLayer(name) {
+    const el = this.canvasLayers[name];
+    if (!el) {
+      throw new Error("overlayManager.getCanvasLayer: unknown canvas layer " + name);
+    }
+    return el;
+  } // end getCanvasLayer
 }; // end overlayManager
 
+// Expose for older code
 window.overlayManager = overlayManager;
 
 ////////////////////////////////////////////////////////////////
-// initOverlay()
-// Must be called ONCE from main.js
+// initOverlay() — CALL ONCE IN onDomContentLoaded()
 ////////////////////////////////////////////////////////////////
 export function initOverlay() {
-  const helpEl = document.getElementById("overlay-help");
-  const interEl = document.getElementById("overlay-interaction");
+
+  // ----- Panel overlays -----
+  const helpEl  = document.getElementById("overlay-help");
   const notesEl = document.getElementById("overlay-notes");
   const debugEl = document.getElementById("overlay-debug");
 
-  if (!helpEl || !interEl || !notesEl || !debugEl) {
-    throw new Error("initOverlay: one or more overlay elements missing");
+  if (!helpEl || !notesEl || !debugEl) {
+    throw new Error("initOverlay: missing help/notes/debug overlay elements");
   }
 
   overlayManager.register("help", helpEl);
-  overlayManager.register("interaction", interEl);
   overlayManager.register("notes", notesEl);
   overlayManager.register("debug", debugEl);
 
-  ////////////////////////////////////////////////////////////////
-// Close button for entire overlay window
-////////////////////////////////////////////////////////////////
-document.getElementById("overlayClose").onclick = function () {
-  document.getElementById("overlayContainer").style.display = "none";
-  overlayManager.clearAll();
-}; // end onclick
+  // ----- Canvas overlays -----
+  const inter  = document.getElementById("interaction-layer");
+  const bbox   = document.getElementById("bbox-layer");
+  const nodes  = document.getElementById("nodes-layer");
+  const guides = document.getElementById("guides-layer");
 
+  if (!inter || !bbox || !nodes || !guides) {
+    throw new Error("initOverlay: missing one or more canvas overlay layers");
+  }
 
-  console.log("overlay.js: registered overlay layers:", overlayManager.layers);
+  overlayManager.registerCanvas("interaction", inter);
+  overlayManager.registerCanvas("bbox", bbox);
+  overlayManager.registerCanvas("nodes", nodes);
+  overlayManager.registerCanvas("guides", guides);
+
+  // ----- Close button for help/notes/debug panel -----
+  const closeBtn = document.getElementById("overlayClose");
+  if (!closeBtn) throw new Error("initOverlay: #overlayClose missing");
+
+  closeBtn.onclick = function () {
+    document.getElementById("overlayContainer").style.display = "none";
+    overlayManager.clearAll();  // panel overlays only
+  }; // end onclick
+
+  console.log("overlay.js registered:",
+    overlayManager.layers,
+    overlayManager.canvasLayers
+  );
 } // end initOverlay
 
 ////////////////////////////////////////////////////////////////
@@ -97,21 +127,19 @@ export function hideHelp() {
 } // end hideHelp
 
 ////////////////////////////////////////////////////////////////
-// Interaction Overlay
+// Panel-style overlay open/close (rarely used)
 ////////////////////////////////////////////////////////////////
 export function openOverlay(html) {
-  overlayManager.show("interaction", html);
+  overlayManager.show("help", html);  // panel overlay
 } // end openOverlay
 
 export function closeOverlay() {
-  overlayManager.hide("interaction");
+  overlayManager.hide("help");
 } // end closeOverlay
 
-/* ------------------------------------------------------------
-   showHelpOverlay(helpPath, titleText)
-   Loads a full HTML help file, extracts <body>, places content
-   into overlay-help layer, and opens the overlay panel.
------------------------------------------------------------- */
+////////////////////////////////////////////////////////////////
+// Full HTML help loader
+////////////////////////////////////////////////////////////////
 export function showHelpOverlay(helpPath, titleText) {
 
   fetch(helpPath)
@@ -130,21 +158,6 @@ export function showHelpOverlay(helpPath, titleText) {
       const header = document.getElementById("overlayTitle");
       header.textContent = titleText + " Help";
 
-      const oc = document.getElementById("overlayContainer");
-      oc.style.display = "block";
+      document.getElementById("overlayContainer").style.display = "block";
     });
 } // end showHelpOverlay
-
-
-////////////////////////////////////////////////////////////////
-// Close button for entire overlay window
-///////////////////////////////////////////'
-//
-/////////////////////
-document.getElementById("overlayClose").onclick = function () {
-  // Hide the whole overlay container
-  document.getElementById("overlayContainer").style.display = "none";
-
-  // Clear all overlay layers
-  overlayManager.clearAll();
-}; // end onclick
