@@ -1,10 +1,11 @@
 /* patterns.js
    ------------------------------------------------------------
-   Patterns Tab — Correct Restored Behavior (2-Subtab Model)
+   Patterns Tab — New Architecture (Cold Init + Restore Model)
    ------------------------------------------------------------
-   Structure:
-     • Categories subtab  — shows category frames in #text
-     • Pattern subtab     — shows drawing in #sketchpad + thumbnails in #action
+   New structure:
+     • initPatternsTab(restoredFlag)  → cold-start only
+     • restorePatternsTab()           → rebuild from uiState
+     • PatternsController             → pure action functions
    ------------------------------------------------------------
 */
 
@@ -12,80 +13,113 @@ import { renderCategories }    from "./categories.js";
 import { setCaptionBar }       from "./caption.js";
 import { menuManager }         from "./menuManager.js";
 import { loadScriptModule, executeScriptToCanvas } from "./scriptRunner.js";
-import { uiState }             from "./uiState.js";
-import { clearDivs, showScriptOffcanvas, renderThumbnailGrid,
-  buildCategoryDescriptor }    from "./ui_utilities.js";
+import { showScriptOffcanvas, renderThumbnailGrid,
+         buildCategoryDescriptor } from "./ui_utilities.js";
 import { manifest }            from "./manifest.js";
 
-/* ===========================================================
+/* ============================================================
    Constants — permanent subtab IDs
 =========================================================== */
 const CATEGORIES_ID = "patterns-categories";
 const PATTERN_ID    = "patterns-pattern";
 
-/* ===========================================================
+/* ============================================================
    PatternsTabSpec — used by setUI.js
+   ------------------------------------------------------------
+   Must implement:
+     init(restoredFlag)
+     restore()
+     save()
 =========================================================== */
 export const PatternsTabSpec = {
   name: "patterns",
   theme: "theme-patterns",
-  regions: ["caption", "text", "sketchpad", "buttons", "action"],
-  init: initPatternsTab,
-  save: savePatternsState,
+  regions: ["caption", "text", "sketchpad", "action"],
+
+  init: initPatternsTab,        // cold-start only
+  restore: restorePatternsTab,  // rebuild from saved uiState
+  save: savePatternsState,      // optional persistence hook
+
   buildCaption: () => {},
   buildText: () => {},
   buildSketchpad: () => {},
-  buildButtons: () => {},
   buildAction: () => {}
 }; // end PatternsTabSpec
 
-/* ===========================================================
-   PatternsController — exported for external callbacks
+/* ============================================================
+   PatternsController — pure action functions
 =========================================================== */
 export const PatternsController = {
   initPatternsTab,
-  showCategoryList: setPatternsCategories,
+  showCategoryList,
   showSelectedPattern,
   onPrev,
   onNext,
   buildPatternsMenuItems
 }; // end PatternsController
 
-/* ===========================================================
-   initPatternsTab()
-   Entry point for the Patterns tab
+/* ============================================================
+   ensurePatternsManifestLoaded()
+   ------------------------------------------------------------
+   Loads the patterns manifest once and caches it into
+   manifest.cache.patterns as:
+     {
+       categoryName: [ entry, entry, ... ],
+       ...
+     }
 =========================================================== */
-export async function initPatternsTab(restored = false) {
-  clearDivs();
-
-  const raw      = await manifest.get("patterns");
-  const registry = manifest.getRegistry("patterns");
-  const groups   = raw;
-
-  const map = {};
-  for (let i = 0; i < registry.length; i++) {
-    map[registry[i]] = groups[i] || [];
-  }
-  manifest.cache.patterns = map;
-
-  uiState.patterns = uiState.patterns || {};
-
-  setPatternsSubtabs();
-
-  if (
-    restored &&
-    uiState.patterns.saved &&
-    uiState.patterns.saved.view === "pattern" &&
-    uiState.patterns.saved.activeCategory != null &&
-    typeof uiState.patterns.saved.activeItem === "number"
-  ) {
-    showSelectedPattern(
-      uiState.patterns.saved.activeCategory,
-      uiState.patterns.saved.activeItem
-    );
+async function ensurePatternsManifestLoaded() {
+  if (manifest.cache && manifest.cache.patterns) {
     return;
   }
 
+  const raw      = await manifest.get("patterns");
+  const registry = manifest.getRegistry("patterns");
+
+  if (!raw || !registry) {
+    throw new Error("ensurePatternsManifestLoaded: patterns manifest data missing");
+  }
+
+  const map = {};
+  for (let i = 0; i < registry.length; i++) {
+    const categoryName = registry[i];
+    map[categoryName] = raw[i] || [];
+  }
+
+  if (!manifest.cache) {
+    manifest.cache = {};
+  }
+
+  manifest.cache.patterns = map;
+} // end ensurePatternsManifestLoaded
+
+
+/* ============================================================
+   initPatternsTab(restored)
+   ------------------------------------------------------------
+   Cold-start initializer for the Patterns tab.
+
+   NOTE:
+     • setUI / setUI.initTab() has already cleared regions
+       and applied the theme.
+     • This function MUST NOT do any restore logic.
+     • It sets up static UI (subtabs) and shows default
+       category list.
+=========================================================== */
+export async function initPatternsTab(restored) {
+  // defensive: patterns state container
+  if (!uiState.patterns) {
+    uiState.patterns = {};
+  }
+
+  // This init is called only on cold start; restored flag is ignored
+  // by design in the new architecture.
+  await ensurePatternsManifestLoaded();
+
+  // Build the fixed subtabs bar for Patterns
+  setPatternsSubtabs();
+
+  // Default state is "categories" view
   uiState.patterns.activeCategory = null;
   uiState.patterns.activeItem     = null;
   uiState.patterns.saved = {
@@ -94,22 +128,33 @@ export async function initPatternsTab(restored = false) {
     activeItem: null
   };
 
-  setPatternsCategories();
+  // Show the list of pattern categories in #text
+  await showCategoryList();
 } // end initPatternsTab
 
-/* ===========================================================
+
+/* ============================================================
    setPatternsSubtabs()
+   ------------------------------------------------------------
+   Builds the Patterns subtab bar inside #subtabs.
+
+   • "Categories" tab is always present and active by default.
+   • "Pattern" tab is added later by addPatternSubtab() when
+     a specific pattern is selected.
 =========================================================== */
 function setPatternsSubtabs() {
-  const el = document.getElementById("subtabs");
-  if (!el) throw new Error("setPatternsSubtabs: #subtabs not found");
+  const container = document.getElementById("subtabs");
+  if (!container) {
+    throw new Error("setPatternsSubtabs: #subtabs not found");
+  }
 
-  el.innerHTML = "";
+  container.innerHTML = "";
 
   const bar = document.createElement("ul");
   bar.className = "nav nav-tabs patterns-subtabs";
-  el.appendChild(bar);
+  container.appendChild(bar);
 
+  // Categories tab ------------------------------------------------
   const li = document.createElement("li");
   li.className = "nav-item";
 
@@ -118,7 +163,11 @@ function setPatternsSubtabs() {
   btn.dataset.tabId = CATEGORIES_ID;
   btn.textContent = "Categories";
 
-  btn.addEventListener("click", () => {
+  btn.addEventListener("click", async function () {
+    if (!uiState.patterns) {
+      uiState.patterns = {};
+    }
+
     uiState.patterns.activeCategory = null;
     uiState.patterns.activeItem     = null;
     uiState.patterns.saved = {
@@ -127,43 +176,114 @@ function setPatternsSubtabs() {
       activeItem: null
     };
 
-    const text = document.getElementById("text");
-    if (text) text.innerHTML = "";
+    const textDiv = document.getElementById("text");
+    const actionDiv = document.getElementById("action");
+    const padDiv = document.getElementById("sketchpad");
 
-    const action = document.getElementById("action");
-    if (action) action.innerHTML = "";
+    if (!textDiv || !actionDiv || !padDiv) {
+      throw new Error("setPatternsSubtabs: one or more regions missing");
+    }
 
-    const pad = document.getElementById("sketchpad");
-    if (pad) pad.innerHTML = "";
+    textDiv.innerHTML   = "";
+    actionDiv.innerHTML = "";
+    padDiv.innerHTML    = "";
 
-    setPatternsCategories();
+    await showCategoryList();
   });
 
   li.appendChild(btn);
   bar.appendChild(li);
 } // end setPatternsSubtabs
 
-/* ===========================================================
-   setPatternsCategories()
+/* ============================================================
+   restorePatternsTab()
+   ------------------------------------------------------------
+   Called ONLY when uiState.patterns.saved exists.
+
+   Rules:
+     • NO clearing — setUI/initTab already handled that.
+     • NO static UI building — subtabs already built during init.
+     • JUST restore the exact previous view from uiState.
 =========================================================== */
-async function setPatternsCategories() {
-  const text = document.getElementById("text");
-  if (!text) throw new Error("setPatternsCategories: #text not found");
+async function restorePatternsTab() {
+  if (!uiState.patterns || !uiState.patterns.saved) {
+    throw new Error("restorePatternsTab: no saved Patterns state found");
+  }
 
-  text.innerHTML = "<p>Loading pattern categories...</p>";
+  const saved = uiState.patterns.saved;
+  const view  = saved.view;
 
-  const groups = manifest.cache.patterns;
+  // Ensure manifest is loaded before reconstructing
+  await ensurePatternsManifestLoaded();
 
-  if (!groups) {
-    text.innerHTML = "<p style='color:red'>Patterns manifest not loaded.</p>";
+  // Set subtabs (needed after every cold-init)
+  setPatternsSubtabs();
+
+  if (view === "categories") {
+    // Restore the categories list exactly as it was
+    uiState.patterns.activeCategory = null;
+    uiState.patterns.activeItem     = null;
+    await showCategoryList();
     return;
   }
 
-  const descriptor = buildCategoryDescriptor(
-    manifest.cache.patterns,
-    (entry) => entry.title || entry.filename,
+  if (view === "pattern") {
+    const cat = saved.activeCategory;
+    const idx = saved.activeItem;
 
-    (category, sortedList, entry, idx) => {
+    if (!cat || typeof idx !== "number") {
+      throw new Error("restorePatternsTab: invalid saved pattern state");
+    }
+
+    // NOTE: This does NOT clear #text, #sketchpad, #action.
+    // showSelectedPattern will repopulate regions as needed.
+    uiState.patterns.activeCategory = cat;
+    uiState.patterns.activeItem     = idx;
+
+    await showSelectedPattern(cat, idx);
+    return;
+  }
+
+  // Any unknown view is an error (fail-fast)
+  throw new Error(
+    "restorePatternsTab: unknown saved view type '" + view + "'"
+  );
+} // end restorePatternsTab
+
+/* ============================================================
+   showCategoryList()
+   ------------------------------------------------------------
+   Cold and restore both use this to show category frames
+   inside #text.  Uses manifest.cache.patterns exclusively.
+=========================================================== */
+async function showCategoryList() {
+  const textDiv = document.getElementById("text");
+  const actionDiv = document.getElementById("action");
+  const padDiv = document.getElementById("sketchpad");
+
+  if (!textDiv || !actionDiv || !padDiv) {
+    throw new Error("showCategoryList: required region missing");
+  }
+
+  // Clear dynamic regions only (subtabs are already built)
+  textDiv.innerHTML   = "Loading pattern categories...";
+  actionDiv.innerHTML = "";
+  padDiv.innerHTML    = "";
+
+  await ensurePatternsManifestLoaded();
+  const groups = manifest.cache.patterns;
+
+  if (!groups) {
+    textDiv.innerHTML =
+      "<p style='color:red'>Patterns manifest not available.</p>";
+    return;
+  }
+
+  // Descriptor drives the categories UI
+  const descriptor = buildCategoryDescriptor(
+    groups,
+    entry => entry.title || entry.filename,   // label
+    (category, sortedList, entry, idx) => {   // click handler
       uiState.patterns.activeCategory = category;
       uiState.patterns.activeItem     = idx;
       uiState.patterns.saved = {
@@ -177,15 +297,10 @@ async function setPatternsCategories() {
     }
   );
 
-  text.innerHTML = "";
+  textDiv.innerHTML = "";
   renderCategories("text", descriptor);
 
-  const actionDiv = document.getElementById("action");
-  if (actionDiv) actionDiv.innerHTML = "";
-
-  const pad = document.getElementById("sketchpad");
-  if (pad) pad.innerHTML = "";
-
+  // Caption: Patterns root
   setCaptionBar({
     targetId: "caption",
     title: "Patterns",
@@ -193,17 +308,25 @@ async function setPatternsCategories() {
     onNext: null,
     onMenu: null
   });
-} // end setPatternsCategories
+} // end showCategoryList
 
-/* ===========================================================
-   addPatternSubtab()
+
+/* ============================================================
+   addPatternSubtab(category)
+   ------------------------------------------------------------
+   Ensures that the "Pattern" subtab exists and becomes active.
+   Does NOT clear regions.
 =========================================================== */
 function addPatternSubtab(category) {
   const bar = document.querySelector("#subtabs ul");
-  if (!bar) throw new Error("addPatternSubtab: missing subtab bar");
+  if (!bar) {
+    throw new Error("addPatternSubtab: #subtabs ul not found");
+  }
 
+  // Look for existing Pattern tab
   let btn = bar.querySelector(`[data-tab-id="${PATTERN_ID}"]`);
 
+  // If not present, create it
   if (!btn) {
     const li = document.createElement("li");
     li.className = "nav-item";
@@ -214,11 +337,11 @@ function addPatternSubtab(category) {
     btn.textContent = "Pattern";
 
     btn.addEventListener("click", () => {
-      clearDivs();
+      // On click, simply reselect the current pattern from uiState
       const cat = uiState.patterns.activeCategory;
       const idx = uiState.patterns.activeItem;
 
-      if (cat != null && idx != null) {
+      if (cat != null && typeof idx === "number") {
         uiState.patterns.saved = {
           view: "pattern",
           activeCategory: cat,
@@ -232,9 +355,11 @@ function addPatternSubtab(category) {
     bar.appendChild(li);
   }
 
+  // Activate the Pattern tab and deactivate the Categories tab
   bar.querySelectorAll(".nav-link").forEach((b) => b.classList.remove("active"));
   btn.classList.add("active");
 
+  // Update saved state
   uiState.patterns.saved = {
     view: "pattern",
     activeCategory: category,
@@ -242,11 +367,14 @@ function addPatternSubtab(category) {
   };
 } // end addPatternSubtab
 
-/* ===========================================================
-   showSelectedPattern()
-=========================================================== */
-export async function showSelectedPattern(category, index) {
 
+/* ============================================================
+   showSelectedPattern(category, index)
+   ------------------------------------------------------------
+   Draws the pattern on the shared canvas.
+   Populates captions and thumbnails.
+=========================================================== */
+async function showSelectedPattern(category, index) {
   uiState.patterns.activeCategory = category;
   uiState.patterns.activeItem     = index;
   uiState.patterns.saved = {
@@ -255,94 +383,107 @@ export async function showSelectedPattern(category, index) {
     activeItem: index
   };
 
+  await ensurePatternsManifestLoaded();
   const list = manifest.cache.patterns?.[category] || [];
   const item = list[index];
 
+  const textDiv  = document.getElementById("text");
+  const padDiv   = document.getElementById("sketchpad");
+  const actionDiv = document.getElementById("action");
+
+  if (!textDiv || !padDiv || !actionDiv) {
+    throw new Error("showSelectedPattern: missing required region");
+  }
+
+  // Clear dynamic regions
+  textDiv.innerHTML   = "";
+  actionDiv.innerHTML = "";
+  padDiv.innerHTML    = "";
+
   if (!item) {
-    const padMissing = document.getElementById("sketchpad");
-    if (padMissing) {
-      padMissing.innerHTML = "<p style='color:red'>(Missing pattern)</p>";
-    }
+    padDiv.innerHTML =
+      "<p style='color:red'>(Missing pattern entry)</p>";
     return;
   }
 
   const filename   = item.filename;
   const scriptPath = `../patterns/${category}/${filename}.js`;
+  const helpKey    = `${category}/${filename}`;
 
-  const helpKey = `${category}/${filename}`;
-  const items   = await buildPatternsMenuItems("patterns", helpKey, scriptPath);
-
-  addPatternSubtab(category);
-
-  const textDiv = document.getElementById("text");
-  if (textDiv) textDiv.innerHTML = "";
-
-  const pad = document.getElementById("sketchpad");
-  if (!pad) throw new Error("showSelectedPattern: #sketchpad not found");
-
-  pad.innerHTML = "";
-  pad.appendChild(window.drawCanvas);
-
-  ctx.fillStyle = "#ffffff";
-  ctx.fillRect(0, 0, drawCanvas.width, drawCanvas.height);
-
+  // Load and execute pattern script
   let mod = null;
 
   try {
     mod = await loadScriptModule(scriptPath);
   } catch (err) {
-    console.error("Patterns: load error:", err);
-    pad.innerHTML =
+    padDiv.innerHTML =
       `<p style='color:red'>Pattern load error: ${err.message}</p>`;
     return;
   }
 
+  // Attach shared canvas
+  if (!window.drawCanvas) {
+    throw new Error("showSelectedPattern: window.drawCanvas missing");
+  }
+
+  padDiv.appendChild(window.drawCanvas);
+
+  ctx.fillStyle = "#ffffff";
+  ctx.fillRect(0, 0, drawCanvas.width, drawCanvas.height);
+
   try {
     executeScriptToCanvas(mod, filename);
   } catch (err) {
-    console.error("Patterns: execute error:", err);
-    pad.innerHTML =
+    padDiv.innerHTML =
       `<p style='color:red'>Pattern execute error: ${err.message}</p>`;
     return;
   }
 
+  // Thumbnail grid
   renderThumbnailGrid(
     "action",
     list,
-    (entry) => `./patterns/${category}/images/thumb_${entry.filename}.png`,
+    (entry) =>
+      `./patterns/${category}/images/thumb_${entry.filename}.png`,
     (_, idx) => {
       uiState.patterns.activeCategory = category;
       uiState.patterns.activeItem     = idx;
       uiState.patterns.saved = {
         view: "pattern",
         activeCategory: category,
-        activeItem: idx
+       activeItem: idx
       };
       showSelectedPattern(category, idx);
     }
   );
 
+  // Caption bar
   setCaptionBar({
     targetId: "caption",
     title: item.title || filename,
     onPrev: () => onPrev(),
     onNext: () => onNext(),
     onMenu: async (anchor) => {
-      const items = await buildPatternsMenuItems(
+      const menuItems = await buildPatternsMenuItems(
         "patterns",
         helpKey,
         scriptPath
       );
-      menuManager.open(items, anchor);
+      menuManager.open(menuItems, anchor);
     }
   });
 
+  // Ensure Pattern subtab active
+  addPatternSubtab(category);
 } // end showSelectedPattern
 
-/* ===========================================================
-   onPrev()
+
+/* ============================================================
+   onPrev() / onNext()
+   ------------------------------------------------------------
+   Simple index cycling — fail-fast if manifest missing.
 =========================================================== */
-export function onPrev() {
+function onPrev() {
   const category = uiState.patterns.activeCategory;
   const index    = uiState.patterns.activeItem;
 
@@ -361,10 +502,8 @@ export function onPrev() {
   showSelectedPattern(category, newIndex);
 } // end onPrev
 
-/* ===========================================================
-   onNext()
-=========================================================== */
-export function onNext() {
+
+function onNext() {
   const category = uiState.patterns.activeCategory;
   const index    = uiState.patterns.activeItem;
 
@@ -383,10 +522,13 @@ export function onNext() {
   showSelectedPattern(category, newIndex);
 } // end onNext
 
-/* ===========================================================
+
+/* ============================================================
    buildPatternsMenuItems()
+   ------------------------------------------------------------
+   Delegates to menuManager for Help.
 =========================================================== */
-export async function buildPatternsMenuItems(tabName, helpKey, scriptPath) {
+async function buildPatternsMenuItems(tabName, helpKey, scriptPath) {
   const items = [];
 
   const helpItem = await menuManager.buildHelpItem(tabName, helpKey);
@@ -408,54 +550,45 @@ export async function buildPatternsMenuItems(tabName, helpKey, scriptPath) {
   return items;
 } // end buildPatternsMenuItems
 
-/* ===========================================================
+/* ============================================================
    savePatternsState()
+   ------------------------------------------------------------
+   Called by setUI before a tab switch.
+   Must return a plain object representing current state.
 =========================================================== */
-export function savePatternsState() {
-  const state = uiState.patterns.saved || {
-    view: "categories",
-    activeCategory: null,
-    activeItem: null
-  };
+function savePatternsState() {
+  // uiState.patterns.saved is always maintained by controller actions.
+  if (!uiState.patterns || !uiState.patterns.saved) {
+    return {
+      view: "categories",
+      activeCategory: null,
+      activeItem: null
+    };
+  }
 
-  console.log("💾 Saved Patterns state:", state);
-  return state;
+  return {
+    view: uiState.patterns.saved.view,
+    activeCategory: uiState.patterns.saved.activeCategory,
+    activeItem: uiState.patterns.saved.activeItem
+  };
 } // end savePatternsState
 
-/* ===========================================================
-   patternsDivs — required by setUI.js
+
+/* ============================================================
+   patternsDivs (REMOVED)
+   ------------------------------------------------------------
+   This entire structure is now obsolete under the TabSpec
+   architecture and has been intentionally omitted.
+
+   Region clearing is done exclusively in:
+     setUI → initTab(tabKey) → clearDivs()
+
+   Region rebuilding is done via:
+     initPatternsTab  → (cold start)
+     restorePatternsTab → (state restore)
+     controller functions → (dynamic updates)
+
+   No patternsDivs object remains in the rewritten file.
 =========================================================== */
-export const patternsDivs = {
-  activeDivs: ["subtabs"],
-  theme: "theme-patterns",
 
-  action: () => {
-    const el = document.getElementById("action");
-    if (el) el.innerHTML = "";
-  },
-
-  buttons: () => {
-    const el = document.getElementById("buttons");
-    if (el) el.innerHTML = "";
-  },
-
-  caption: () => {
-    const el = document.getElementById("caption");
-    if (el) el.innerHTML = "";
-  },
-
-  sketchpad: () => {
-    const el = document.getElementById("sketchpad");
-    if (el) el.innerHTML = "";
-  },
-
-  subtabs: () => {
-    setPatternsSubtabs();
-  },
-
-  text: () => {
-    const el = document.getElementById("text");
-    if (el) el.innerHTML = "";
-  }
-}; // end patternsDivs
-
+// end of rewritten patterns.js

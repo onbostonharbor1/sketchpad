@@ -4,7 +4,6 @@
    ------------------------------------------------------------
 */
 
-import { uiState }          from "./uiState.js";
 import { setCaptionBar }    from "./caption.js";
 import { renderCategories } from "./categories.js";
 import { manifest }         from "./manifest.js";
@@ -14,17 +13,17 @@ import { menuManager }      from "./menuManager.js";
 /* ============================================================
    Internal module-level vars (NO uiState additions)
 ============================================================ */
-let utilitiesCache = null;       // { tools:{}, lab:{} }
-let currentDomain  = null;       // "Tools" | "Lab"
-let currentCategory = null;      // string
-let currentList     = [];        // manifest entries
-let currentIndex    = 0;         // numeric index
+let utilitiesCache = null;
+let currentDomain  = null;
+let currentCategory = null;
+let currentList     = [];
+let currentIndex    = 0;
 
 /* ============================================================
    Domain constants
 ============================================================ */
-const DOMAIN_TOOLS = "Tools";
-const DOMAIN_LAB   = "Lab";
+const DOMAIN_TOOLS  = "Tools";
+const DOMAIN_LAB    = "Lab";
 const DOMAIN_RESULT = "Result";
 
 /* ============================================================
@@ -32,91 +31,133 @@ const DOMAIN_RESULT = "Result";
 ============================================================ */
 export const UtilityTabSpec = {
   theme: "theme-utilities",
-
   init: initUtilityTab,
   save: saveUtilityState,
+  restore: restoreUtilityTab,
 
-  // region handlers (TabSpec architecture)
-  action:    () => {},   // Utilities uses no action panel
-  buttons:   () => {},   // no buttons panel
-  caption:   () => {},   // caption set per-item
-  sketchpad: () => {},   // sketchpad cleared dynamically
+  action:    () => {},
+  buttons:   () => {},
+  caption:   () => {},
+  sketchpad: () => {},
   subtabs:   setUtilitySubtabs,
   text:      () => {}
 };
 
+/* ============================================================
+   restoreUtilityTab()
+============================================================ */
+async function restoreUtilityTab() {
+  const saved = uiState.utilities.saved;
+
+  if (!saved) {
+    await initUtilityTab(false);
+    return;
+  }
+
+  await setUtilitySubtabs();
+
+  const tabId = saved.activeUtilityTabId || "tab-tools";
+  uiState.utilities.activeUtilityTabId = tabId;
+
+  await switchUtilityTab(tabId);
+
+  if (tabId === "tab-result" && saved.lastResult) {
+    displayUtilityResult(saved.lastResult);
+  }
+}
 
 /* ============================================================
-   initUtilityTab — NEW ARCHITECTURE
+   initUtilityTab()
 ============================================================ */
 export async function initUtilityTab(restored = false) {
   clearDivs();
 
-  /* --------------------------------------------
-     Load manifests using the Patterns/Gallery model
-     Tools and Lab ONLY.  Result has NO directory.
-  -------------------------------------------- */
+  uiState.utilities = uiState.utilities || {
+    activeUtilityTabId: "tab-tools",
+    activeUtilityItem: null,
+    lastResult: "",
+    lastUtilitySubtab: null,
+    saved: null
+  };
+
   const toolsRaw = await manifest.get("utilities/Tools");
   const labRaw   = await manifest.get("utilities/Lab");
 
   const toolsRegistry = manifest.getRegistry("utilities/Tools");
   const labRegistry   = manifest.getRegistry("utilities/Lab");
 
-  /* --------------------------------------------
-     Normalize → utilitiesCache
-  -------------------------------------------- */
-  utilitiesCache = {
-    Tools: {},
-    Lab:   {}
-  };
+  utilitiesCache = { Tools: {}, Lab: {} };
 
-  toolsRegistry.forEach((cat, i) => {
-    utilitiesCache.Tools[cat] = toolsRaw[i] || [];
-  });
+  toolsRegistry.forEach((cat, i) => utilitiesCache.Tools[cat] = toolsRaw[i] || []);
+  labRegistry.forEach((cat, i) => utilitiesCache.Lab[cat] = labRaw[i] || []);
 
-  labRegistry.forEach((cat, i) => {
-    utilitiesCache.Lab[cat] = labRaw[i] || [];
-  });
+  await setUtilitySubtabs();
 
-  /* --------------------------------------------
-     Build subtabs bar
-  -------------------------------------------- */
-  setUtilitySubtabs();
-
-  /* --------------------------------------------
-     Determine starting subtab
-  -------------------------------------------- */
-  let tabId = uiState.utilities.activeUtilityTab || "tab-tools";
+  let tabId = uiState.utilities.activeUtilityTabId || "tab-tools";
 
   if (restored && uiState.utilities.saved) {
-    const saved = uiState.utilities.saved.activeUtilityTab;
-    if (saved) tabId = saved;
+    const s = uiState.utilities.saved.activeUtilityTabId;
+    if (s) tabId = s;
   }
 
-  uiState.utilities.activeUtilityTab = tabId;
+  uiState.utilities.activeUtilityTabId = tabId;
 
-  /* --------------------------------------------
-     Switch to selected subtab
-  -------------------------------------------- */
   await switchUtilityTab(tabId);
 } // end initUtilityTab
 
-function setUtilitySubtabs() {
-  const el = document.getElementById("subtabs");
-  if (!el) throw new Error("setUtilitySubtabs: #subtabs not found");
+/* ============================================================
+   Caption + Result
+============================================================ */
+function setUtilityCaption({ title, path, subtab }) {
+  setCaptionBar({
+    targetId: "caption",
+    title: title || "(untitled)",
+    onPrev: null,
+    onNext: null,
+    onMenu: (anchor) => {
+      const items = [
+        {
+          label: "Show Script",
+          onClick: () => {
+            menuManager.close();
+            window.open(`/utilities/${subtab}/${path}`, "_blank");
+          }
+        }
+      ];
+      menuManager.open(items, anchor);
+    }
+  });
+} // end setUtilityCaption
 
+function displayUtilityResult(html) {
+  const textDiv = document.getElementById("text");
+  if (!textDiv) throw new Error("displayUtilityResult: #text not found");
+
+  textDiv.innerHTML = "";
+  const box = document.createElement("div");
+  box.className = "utility-result-box";
+  box.innerHTML = html || "";
+
+  textDiv.appendChild(box);
+} // end displayUtilityResult
+
+/* ============================================================
+   Subtabs
+============================================================ */
+async function setUtilitySubtabs() {
+  const el = document.getElementById("subtabs");
   el.innerHTML = "";
 
   const bar = document.createElement("ul");
   bar.className = "nav nav-tabs utility-subtabs";
   el.appendChild(bar);
 
-  function makeSubtab(name, id, active = false) {
+  function makeSubtab(name, id) {
     const li = document.createElement("li");
     li.className = "nav-item";
 
     const btn = document.createElement("button");
-    btn.className = "nav-link" + (active ? " active" : "");
+    btn.className = "nav-link";
     btn.dataset.tabId = id;
     btn.textContent = name;
 
@@ -124,14 +165,16 @@ function setUtilitySubtabs() {
 
     li.appendChild(btn);
     bar.appendChild(li);
-  } // end makeSubtab
+  }
 
-  makeSubtab("Tools", "tab-tools", true);
+  makeSubtab("Tools", "tab-tools");
   makeSubtab("Lab",   "tab-lab");
   makeSubtab("Result","tab-result");
 } // end setUtilitySubtabs
 
-
+/* ============================================================
+   switchUtilityTab()
+============================================================ */
 async function switchUtilityTab(tabId) {
   uiState.utilities.activeUtilityTabId = tabId;
 
@@ -139,15 +182,19 @@ async function switchUtilityTab(tabId) {
 
   if (tabId === "tab-tools") {
     await setUtilityCategories("Tools");
+
   } else if (tabId === "tab-lab") {
     await setUtilityCategories("Lab");
+
   } else if (tabId === "tab-result") {
-    /* result: #text will be populated later by
-       displayUtilityResult(), and we deliberately
-       leave #text empty here. */
+    const subtab = uiState.utilities.lastUtilitySubtab;
+    const entry  = uiState.utilities.activeUtilityItem;
+    if (subtab && entry) {
+      await runUtilityEntry(subtab, entry);
+    }
   }
 
-  const bar = document.querySelector("#subtabs ul");
+  const bar = document.querySelector("#subtabs ul.utility-subtabs");
   if (bar) {
     bar.querySelectorAll(".nav-link").forEach((b) => b.classList.remove("active"));
     const btn = bar.querySelector(`[data-tabId="${tabId}"]`);
@@ -155,26 +202,24 @@ async function switchUtilityTab(tabId) {
   }
 } // end switchUtilityTab
 
-async function onUtilityItemClick(item) {
-  uiState.utilities.lastUtilitySubtab = item.subtab;
-  uiState.utilities.activeUtilityItem = item.entry;
-
-  await switchUtilityTab("tab-result");
-
-  const scriptPath = `/utilities/${item.subtab}/${item.entry.path}`;
+/* ============================================================
+   runUtilityEntry()
+============================================================ */
+async function runUtilityEntry(subtab, entry) {
+  const scriptPath = `/utilities/${subtab}/${entry.path}`;
 
   try {
     const mod = await import(scriptPath + `?t=${Date.now()}`);
 
     if (typeof mod.runPattern !== "function") {
-      displayUtilityResult(`runPattern() not found in ${item.entry.filename}`);
+      displayUtilityResult(`runPattern() not found in ${entry.filename}`);
       return;
     }
 
-    if (item.subtab === "Lab") {
+    if (subtab === "Lab") {
       const sketchDiv = document.getElementById("sketchpad");
       if (!sketchDiv)
-        throw new Error("onUtilityItemClick: #sketchpad not found");
+        throw new Error("runUtilityEntry: #sketchpad not found");
 
       sketchDiv.innerHTML = "";
       sketchDiv.appendChild(window.drawCanvas);
@@ -186,74 +231,94 @@ async function onUtilityItemClick(item) {
     const result = await mod.runPattern();
 
     setUtilityCaption({
-      title: item.entry.title || item.entry.filename || "(untitled)",
-      path: item.entry.path,
-      subtab: item.subtab
+      title: entry.title || entry.filename || "(untitled)",
+      path: entry.path,
+      subtab
     });
 
-    if (item.subtab === "Lab") {
-      /* nothing to display in text */
-    } else {
+    if (subtab !== "Lab") {
       displayUtilityResult(result);
     }
+
+    uiState.utilities.lastResult = result;
+
   } catch (err) {
     console.error(`Error executing ${scriptPath}:`, err);
     displayUtilityResult(`Error executing ${scriptPath}: ${err.message}`);
   }
+} // end runUtilityEntry
+
+/* ============================================================
+   onUtilityItemClick()
+============================================================ */
+async function onUtilityItemClick(item) {
+  uiState.utilities.lastUtilitySubtab = item.subtab;
+  uiState.utilities.activeUtilityItem = item.entry;
+  uiState.utilities.activeUtilityTabId = "tab-result";
+
+  const bar = document.querySelector("#subtabs ul.utility-subtabs");
+  if (bar) {
+    bar.querySelectorAll(".nav-link").forEach((b) => b.classList.remove("active"));
+    const btn = bar.querySelector(`[data-tabId="tab-result"]`);
+    if (btn) btn.classList.add("active");
+  }
+
+  clearDivs();
+  await runUtilityEntry(item.subtab, item.entry);
 } // end onUtilityItemClick
 
+/* ============================================================
+   Categories
+============================================================ */
 async function setUtilityCategories(which) {
   const textDiv = document.getElementById("text");
-  if (!textDiv) throw new Error("setUtilityCategories: #text not found");
+  textDiv.innerHTML = `<p>Loading ${which}...</p>`;
 
-  textDiv.innerHTML = `<p>Loading ${which} categories...</p>`;
+  const sections =
+    which === "Tools" ? utilitiesCache.Tools :
+    which === "Lab"   ? utilitiesCache.Lab   :
+    null;
 
-const sections =
-  which === "Tools"
-    ? utilitiesCache.Tools
-    : which === "Lab"
-    ? utilitiesCache.Lab
-    : null;
-
-  if (!sections || typeof sections !== "object") {
-    textDiv.innerHTML =
-      `<p style='color:red;'>No manifest data for ${which}</p>`;
+  if (!sections) {
+    textDiv.innerHTML = `<p style='color:red;'>No manifest data for ${which}</p>`;
     return;
   }
 
   const frames = Object.keys(sections).map((subdir) => {
     const entries = sections[subdir] || [];
 
-const items = entries.map((entry) => ({
-  name: entry.title || entry.filename || "(untitled)",
-  onClick: () => onUtilityItemClick({ entry, subtab: which, category: subdir }),
-  entry,
-  subtab: which,
-  category: subdir
-}));
+    const items = entries.map((entry) => ({
+      name: entry.title || entry.filename || "(untitled)",
+      onClick: () => onUtilityItemClick({ entry, subtab: which, category: subdir }),
+      entry,
+      subtab: which,
+      category: subdir
+    }));
 
-
-    return {
-      title: subdir,
-      items
-    };
+    return { title: subdir, items };
   });
 
-  renderCategories("text", frames, onUtilityItemClick, null);
+  textDiv.innerHTML = "";
+  renderCategories("text", frames);
 } // end setUtilityCategories
 
-
+/* ============================================================
+   saveUtilityState()
+============================================================ */
 export function saveUtilityState() {
-  return {
-    activeUtilityTabId: uiState.utilities.activeUtilityTabId || null,
-    toolsIndex: uiState.utilities.toolsIndex || 0,
-    labIndex: uiState.utilities.labIndex || 0,
-    lastItem: uiState.utilities.lastItem || null
+  const s = {
+    activeUtilityTabId: uiState.utilities.activeUtilityTabId,
+    lastItem: uiState.utilities.activeUtilityItem || null,
+    lastResult: uiState.utilities.lastResult || ""
   };
-} // end saveUtilityState
 
+  uiState.utilities.saved = s;
+  return s;
+}
 
-
+/* ============================================================
+   Exposed helpers
+============================================================ */
 export async function loadCategory(categoryName) {
   if (!categoryName) {
     await switchUtilityTab("tab-tools");
@@ -262,32 +327,20 @@ export async function loadCategory(categoryName) {
 
   const key = categoryName.toLowerCase();
 
-  if (key === "tools") {
-    await switchUtilityTab("tab-tools");
-    return;
-  }
-  if (key === "lab") {
-    await switchUtilityTab("tab-lab");
-    return;
-  }
-  if (key === "result") {
-    await switchUtilityTab("tab-result");
-    return;
-  }
+  if (key === "tools")  return await switchUtilityTab("tab-tools");
+  if (key === "lab")    return await switchUtilityTab("tab-lab");
+  if (key === "result") return await switchUtilityTab("tab-result");
 
   await switchUtilityTab("tab-tools");
-} // end loadCategory
-
-
+}
 
 export async function runUtilityItem(name) {
-  throw new Error(
-    "runUtilityItem is not wired; items run via onUtilityItemClick."
-  );
-} // end runUtilityItem
+  throw new Error("runUtilityItem is not wired; items run via onUtilityItemClick.");
+}
 
-
-
+/* ============================================================
+   utilityDivs
+============================================================ */
 export const utilityDivs = {
   activeDivs: ["subtabs"],
   theme: "theme-utilities",
@@ -298,4 +351,3 @@ export const utilityDivs = {
   subtabs: setUtilitySubtabs,
   text: () => { const el = document.getElementById("text"); if (el) el.innerHTML = ""; }
 }; // end utilityDivs
-

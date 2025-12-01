@@ -15,66 +15,51 @@ import { initMenuManager }  from "./menuManager.js";
 import { initOverlay }      from "./overlay.js";
 import { uiState }          from "./uiState.js";
 
+const START = "START_APP";
 /* ============================================================
-   Tab Registry (TabSpec-based)
+   Tab Registry
+   All TabSpec objects must be registered here.
 =========================================================== */
 const TabRegistry = {
-  draw:     DrawTabSpec,
-  patterns: PatternsTabSpec,
-  gallery:  GalleryTabSpec,
+  draw:      DrawTabSpec,
+  patterns:  PatternsTabSpec,
+  gallery:   GalleryTabSpec,
   utilities: UtilityTabSpec,
   figures:   FiguresTabSpec
 }; // end TabRegistry
 
 
-
 /* ============================================================
-   saveTabState(tabKey)
+   setActiveTab(tabKey)
+   Cosmetic only — controls tab button highlighting.
 =========================================================== */
-function saveTabState(tabKey) {
-  const spec = TabRegistry[tabKey];
-  if (!spec || !spec.save) return;
+function setActiveTab(tabKey) {
+  const buttons = document.querySelectorAll("#mainTabs .nav-link");
 
-  const snapshot = spec.save();
+  buttons.forEach((btn) => {
+    if (!btn.id) return;
+    const key = mapTabIdToKey(btn.id);
 
-  if (!uiState.tabSnapshots) {
-    uiState.tabSnapshots = {};
-  }
-
-  uiState.tabSnapshots[tabKey] = snapshot;
-} // end saveTabState
-
-
-/* ============================================================
-   applyTheme(spec)
-=========================================================== */
-function applyTheme(spec) {
-  const wrapper = document.getElementById("wrapper");
-  if (!wrapper) throw new Error("applyTheme: #wrapper not found");
-
-  wrapper.classList.remove(
-    "theme-draw",
-    "theme-patterns",
-    "theme-gallery",
-    "theme-figures",
-    "theme-utility"
-  );
-
-  const theme = spec && spec.theme;
-  if (theme) wrapper.classList.add(theme);
-} // end applyTheme
+    if (key === tabKey) {
+      btn.classList.add("active");
+    } else {
+      btn.classList.remove("active");
+    }
+  });
+} // end setActiveTab
 
 
 /* ============================================================
    mapTabIdToKey(tabId)
+   Maps HTML button id → registry key.
 =========================================================== */
 function mapTabIdToKey(tabId) {
   const map = {
-    "draw-tab":     "draw",
-    "patterns-tab": "patterns",
-    "gallery-tab":  "gallery",
-    "figures-tab":  "figures",
-    "utilities-tab":  "utilities"
+    "draw-tab":      "draw",
+    "patterns-tab":  "patterns",
+    "gallery-tab":   "gallery",
+    "figures-tab":   "figures",
+    "utilities-tab": "utilities"
   };
 
   return map[tabId] || null;
@@ -82,40 +67,128 @@ function mapTabIdToKey(tabId) {
 
 
 /* ============================================================
-   activateTab(tabKey)
+   applyTheme(spec)
+   Adds the theme class for the activated tab.
 =========================================================== */
-/* ============================================================
-   activateTab(tabKey)
-=========================================================== */
-function activateTab(tabKey) {
-  const spec = TabRegistry[tabKey];
-  if (!spec) throw new Error("activateTab: no TabSpec for " + tabKey);
+function applyTheme(tabKey) {
+  const wrapper = document.getElementById("wrapper");
+  if (!wrapper) throw new Error("applyTheme: #wrapper missing");
 
-  // 1. Clear all existing UI regions
+  // Remove any existing theme class
+  const themeClasses = [
+    "theme-draw",
+    "theme-patterns",
+    "theme-gallery",
+    "theme-figures",
+    "theme-utilities"
+  ];
+  themeClasses.forEach((cls) => wrapper.classList.remove(cls));
+
+  // Map tab key → theme class
+  const themeMap = {
+    draw:      "theme-draw",
+    patterns:  "theme-patterns",
+    gallery:   "theme-gallery",
+    figures:   "theme-figures",
+    utilities: "theme-utilities"
+  };
+
+  const themeClass = themeMap[tabKey];
+  if (themeClass) wrapper.classList.add(themeClass);
+} // end applyTheme
+
+
+
+/* ============================================================
+   restoreTab(tabKey)
+   Called only when uiState.<tab>.saved exists.
+   Performs NO clearing. Delegates to TabSpec.restore().
+=========================================================== */
+function restoreTab(tabKey) {
+  const spec = TabRegistry[tabKey];
+  if (!spec || !spec.restore) {
+    throw new Error("restoreTab: missing TabSpec.restore for " + tabKey);
+  }
+
+  spec.restore();
+} // end restoreTab
+
+
+/* ============================================================
+   initTab(tabKey)
+   Cold start: clear regions + TabSpec.init(false)
+=========================================================== */
+function initTab(tabKey) {
+  const spec = TabRegistry[tabKey];
+  if (!spec || !spec.init) {
+    throw new Error("initTab: missing TabSpec.init for " + tabKey);
+  }
+
+  // 1. Clear main UI regions
   clearDivs();
 
-  // 2. Apply theme
-  applyTheme(spec);
+  // 2. Cold init
+  spec.init(false);
+} // end initTab
 
-  // 3. Rebuild region divs BEFORE running init()
-  if (spec.regions && Array.isArray(spec.regions)) {
-    spec.regions.forEach((regionId) => {
-      const div = document.getElementById(regionId);
-      if (div) div.innerHTML = "";
-    });
+
+/* ============================================================
+   activateTab(tabKey)
+   MASTER LOGIC:
+     - If uiState.<tab>.saved exists → restore
+     - Else → cold init
+=========================================================== */
+function activateTab(tab) {
+  let tabKey = tab;
+  console.log(`>>> activateTab: ${tabKey}`);
+
+  if (tab === START) {
+    tabKey = "draw";
+    initTab(tabKey);
+  } else {
+    const saved = uiState[tabKey] && uiState[tabKey].saved;
+    if (saved) {
+      restoreTab(tabKey);
+    } else {
+      initTab(tabKey);
+    }
   }
 
-  // 4. Now run the tab's initialization function
-  if (!spec.init || typeof spec.init !== "function") {
-    throw new Error("activateTab: TabSpec.init missing for " + tabKey);
-  }
-
-  spec.init();
-
-  // 5. Update active tab in state
+  // --- Common fall-through ---
   uiState.activeTab = tabKey;
+  setActiveTab(tabKey);
 } // end activateTab
 
+
+/* ============================================================
+   setUI(tabName)
+   PUBLIC ENTRY: All tab switches call this.
+=========================================================== */
+export function setUI(tab) {
+  let tabName;
+  if (tab === START)
+    tabName = "draw"
+  else
+      tabName = tab;
+  console.log("=== setUI", tabName);
+  if (!TabRegistry[tabName] && tabName !== START) {
+    throw new Error("setUI: unknown tab " + tabName);
+  }
+
+  // ---- SAVE STATE OF PREVIOUS TAB ----
+  const prev = uiState.activeTab;
+  if (prev && TabRegistry[prev] && TabRegistry[prev].save) {
+    uiState[prev].saved = TabRegistry[prev].save();
+  }
+
+  applyTheme(tabName); // Ensure the theme is reset first
+
+  // Now activate the tab (this will call initTab() or restoreTab() accordingly)
+  if (tab === START)
+    activateTab(START);
+  else
+    activateTab(tabName);
+} // end setUI
 
 
 /* ============================================================
@@ -130,11 +203,7 @@ function handleTabChange(eventOrId) {
   const tabKey = mapTabIdToKey(tabId);
   if (!tabKey) return;
 
-  if (uiState.activeTab) {
-    saveTabState(uiState.activeTab);
-  }
-
-  activateTab(tabKey);
+  setUI(tabKey);
 } // end handleTabChange
 
 
@@ -142,17 +211,17 @@ function handleTabChange(eventOrId) {
    onDomContentLoaded()
 =========================================================== */
 function onDomContentLoaded() {
-   initMenuManager();
-   initOverlay();     // REQUIRED
+  initMenuManager();
+  initOverlay();
 
   const tabButtons = document.querySelectorAll("#mainTabs .nav-link");
-  tabButtons.forEach(function (btn) {
-    btn.addEventListener("click", function () {
+  tabButtons.forEach((btn) => {
+    btn.addEventListener("click", () => {
       handleTabChange(btn.id);
     });
   });
 
-  activateTab("draw");
+  setUI(START); // Initial activation
 } // end onDomContentLoaded
 
 

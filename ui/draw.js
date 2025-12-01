@@ -35,6 +35,9 @@ export const DrawTabSpec = {
 
   // lifecycle hooks
   init: initDrawTab,
+  restore() {
+    restoreDrawTab();
+  }, // end restore
   save: saveDrawState,
 
   // region builders
@@ -45,7 +48,6 @@ export const DrawTabSpec = {
   buildAction: setDrawAction,
   buildSketchpad: setDrawSketchpad
 }; // end DrawTabSpec
-
 
 /* ===========================================================
    DrawController
@@ -92,25 +94,47 @@ export const DrawController = {
    - Restores previous active subtab or defaults to Categories
 =========================================================== */
 export function initDrawTab(restored = false) {
-  // Ensure the subtabs dictionary exists
+  console.log("Initializing Draw Tab...");
+
+  // Ensure the tabs dictionary exists
   if (!uiState.draw.tabs) {
-    uiState.draw.tabs = {};
+    console.log("Initializing uiState.draw.tabs...");
+    uiState.draw.tabs = {}; // Initialize the tabs if not present
   }
 
-  // Clear shared UI regions first
+  console.log("Clearing existing UI regions...");
   clearDivs();
 
-  // Build the subtab bar (Categories + any open object tabs)
+  console.log("Building subtabs...");
   setDrawSubtabs();
 
-  // Determine which subtab to activate
   const activeId =
-    uiState.draw.activeSubtb ||
-    DEFAULT_DRAW_SUBTAB;
+    uiState.draw.activeSubtab || DEFAULT_DRAW_SUBTAB;
 
-  // Activate
+  console.log("Activating subtab:", activeId);
   switchTab(activeId);
 } // end initDrawTab
+
+function restoreDrawTab() {
+  console.log("Restoring Draw Tab...");
+
+  // 1. Rebuild subtabs from uiState.draw.tabs
+  setDrawSubtabs();
+
+  // 2. Identify which tab was active last time
+  const activeId = uiState.draw.activeSubtab || DEFAULT_DRAW_SUBTAB;
+
+  // 3. If tab does not exist (edge case), fall back to Categories
+  if (!uiState.draw.tabs[activeId]) {
+    uiState.draw.activeSubtab = DEFAULT_DRAW_SUBTAB;
+    clearDivs();
+    renderDrawCategories();
+    return;
+  }
+
+  // 4. Switch into the restored tab
+  switchTab(activeId);
+} // end restoreDrawTab
 
 
 
@@ -181,7 +205,7 @@ function switchTab(tabId) {
   if (btn) btn.classList.add("active");
 
   // Track active tab
-  uiState.draw.activeSubtb = tabId;
+  uiState.draw.activeSubtab = tabId;
 
   // Clear UI regions
   clearDivs();
@@ -196,8 +220,6 @@ function switchTab(tabId) {
     drawActiveTab();
   }
 } // end switchTab
-
-
 
 /* ===========================================================
    deleteTab(tabId)
@@ -261,8 +283,6 @@ function markTabClean(tabId) {
   btn.textContent = btn.textContent.replace(/\s\*$/, "");
 } // end markTabClean
 
-
-
 /*************************************************************
    addDrawSubtab(item)
    -----------------------------------------------------------
@@ -320,7 +340,7 @@ export function addDrawSubtab(item) {
   // -------------------------------------------
   if (item.name === "Categories") {
     uiState.draw.tabs[tabId] = { type: "categories" };
-    uiState.draw.activeSubtb = tabId;
+    uiState.draw.activeSubtab = tabId;
     clearDivs();
     renderDrawCategories();
     return;
@@ -346,7 +366,7 @@ export function addDrawSubtab(item) {
     parameters: entry.params
   };
 
-  uiState.draw.activeSubtb = tabId;
+  uiState.draw.activeSubtab = tabId;
   clearDivs();
   drawActiveTab();
 } // end addDrawSubtab
@@ -358,11 +378,9 @@ export function addDrawSubtab(item) {
 *************************************************************/
 export function setDrawSketchpad(item) {
   const tabId = "tab-" + item.name.replace(/\s+/g, "-").toLowerCase();
-  uiState.draw.activeSubtb = tabId;
+  uiState.draw.activeSubtab = tabId;
   drawActiveTab();
 } // end setDrawSketchpad
-
-
 
 /*************************************************************
    drawActiveTab()
@@ -375,7 +393,7 @@ export function setDrawSketchpad(item) {
      - Run entry.update() and entry.draw()
 *************************************************************/
 export function drawActiveTab() {
-  const tabId = uiState.draw.activeSubtb;
+  const tabId = uiState.draw.activeSubtab;
   const info = uiState.draw.tabs[tabId];
 
   // Only object tabs are drawable
@@ -434,8 +452,6 @@ export function drawActiveTab() {
   }
 } // end drawActiveTab
 
-
-
 /*************************************************************
    clearCanvas()
 *************************************************************/
@@ -460,8 +476,6 @@ function setDrawAction() {
   if (el) el.innerHTML = "";
 } // end setDrawAction
 
-
-
 /*************************************************************
    setDrawButtons()
    -----------------------------------------------------------
@@ -474,8 +488,6 @@ function setDrawButtons() {
   el.innerHTML = "";
 } // end setDrawButtons
 
-
-
 /*************************************************************
    clearDrawCaption()
 *************************************************************/
@@ -483,8 +495,6 @@ function clearDrawCaption() {
   const el = document.getElementById("caption");
   if (el) el.innerHTML = "";
 } // end clearDrawCaption
-
-
 
 /*************************************************************
    setDrawCaption(entry)
@@ -531,8 +541,6 @@ function setDrawCaption(entry) {
   });
 } // end setDrawCaption
 
-
-
 /*************************************************************
    setDrawText()
    -----------------------------------------------------------
@@ -550,7 +558,7 @@ export function setDrawText() {
    a new subtab with "(Copy)" or "(Copy n)" suffix.
 *************************************************************/
 export function copyActiveDrawObject() {
-  const tabId = uiState.draw.activeSubtb;
+  const tabId = uiState.draw.activeSubtab;
   const info = uiState.draw.tabs[tabId];
   if (!info || info.type !== "object") return;
 
@@ -600,16 +608,12 @@ export function copyActiveDrawObject() {
   addDrawSubtab(newItem);
 } // end copyActiveDrawObject
 
-
-
 /*************************************************************
    extractCategoryNames()
 *************************************************************/
 function extractCategoryNames(organized) {
   return Object.keys(organized).sort();
 } // end extractCategoryNames
-
-
 
 /*************************************************************
    saveDrawState()
@@ -641,7 +645,7 @@ export function saveDrawState() {
   }
 
   const state = {
-    activeDrawTab: uiState.draw.activeSubtb || null,
+    activeDrawTab: uiState.draw.activeSubtab || null,
     drawTabs: shallowTabs
   };
 
@@ -679,8 +683,6 @@ export async function buildDrawMenuItems(tabName, itemName, scriptPath) {
   return items;
 } // end buildDrawMenuItems
 
-
-
 /*************************************************************
    collectRegistryEntries()
    -----------------------------------------------------------
@@ -704,8 +706,6 @@ function collectRegistryEntries() {
 
   return out;
 } // end collectRegistryEntries
-
-
 
 /*************************************************************
    groupEntriesByCategory()
@@ -739,8 +739,6 @@ function groupEntriesByCategory(list = []) {
 
   return sorted;
 } // end groupEntriesByCategory
-
-
 
 /*************************************************************
    renderDrawCategories()
