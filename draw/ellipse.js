@@ -270,9 +270,9 @@ function pointAtArcLength(targetLength, maxSamples, cumulativeLengths, pointArra
    ------------------------------------------------------------ */
 //function getEllipsePoints(width, height, centerX, centerY, rotationDeg
 //			  numPoints, spacingMode = "arc") {
-function getEllipsePoints(thing) {
-    let width     = thing.ellipse.a;
-    let height    = thing.ellipse.b;
+export function getEllipsePoints(thing) {
+    let width     = thing.ellipse.a*thing.xScale;
+    let height    = thing.ellipse.b*thing.yScale;
     let midX      = thing.midpoint.x;
     let midY      = thing.midpoint.y;
     let rotate    = thing.rotate;

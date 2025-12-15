@@ -1,88 +1,44 @@
 <!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <title>Test</title>
-    <script src="./classes/classes.js"></script>
-    <script src="./classes/ellipseClass.js"></script>
-    <script src="./draw/draw_utilities.js"></script>
-    <script src="./draw/drawRegular.js"></script>
-    <script src="./draw/ellipse.js"></script>
-    <script src="./draw/drawRedefines.js"></script>
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Draw (No UI)</title>
+
+  <style>
+    html, body { margin: 0; padding: 0; background: #fff; }
+    #wrap { position: absolute; top: 50px; left: 50px; }
+    canvas { border: 0; }
+  </style>
 </head>
+
 <body>
-<div style="position: absolute; top: 50px; left: 50px;">
-<canvas id="StringThing" width="1000" height="800"></canvas>
-</div>
-      <script>
-let drawState = {
-    currentTitle:    "", 
-    currentFileName: "",
-    dot:             false,
-    final:           false,
-    newLine:         10,
-    pts:             [],
-    ctr:             0
-}
+  <div id="wrap">
+    <canvas id="sharedCanvas" width="1000" height="800"></canvas>
+  </div>
 
-var theCanvas = document.getElementById("StringThing");
-var context   = theCanvas.getContext("2d"); 
-let ctx       = context;
-ctx.clearRect(0,0,theCanvas.width,theCanvas.height);
+  <!-- System imports only -->
+  <script type="module" src="/drawMain.js"></script>
 
-//function drawLinesAllAround(ptArray, skip = 1, color = "blue") {
-//  const s = { pts: ptArray, skip, color };
-//  _drawLines(s);
-//} // end drawLinesAllAround
-//
-//function drawLines(ptArray, start = 0, end = ptArray.length,
-//		   color = "blue", close = false) {
-//    const s = { pts: ptArray, start, end, skip: 1, color, close };
-//    _drawLines(s);
-//} // end drawLines
-//
-//function drawNodes(points, color = "blue") {
-//    const s = { pts: points, close: true, color };
-//    _drawLines(s);
-//} // end drawNodes
-//
-//function _drawLines(s) {
-//    const start = s.start ?? 0;
-//    const end   = s.end   ?? s.pts.length;
-//    const skip  = s.skip  ?? 1;
-//    const color = s.color ?? "blue";
-//    const close = s.close ?? false;
-//    const chop  = s.chop  ?? false;
-//
-//    for (let i = start; i < end; i++) {
-//	let j = i + skip;
-//	if (chop && j >= s.pts.length) return;
-//	j = j % s.pts.length;
-//	drawLine(s.pts[i], s.pts[j], color);
-//    }
-//
-//    if (close && s.pts.length > 1) {
-//	drawLine(s.pts[0], s.pts[(end - 1) % s.pts.length], color);
-//    }
-//} // end _drawLines
 
-   function test17() {
-//	printTitle("Test 17: Ellipse");
-       s = { midpoint: new Point(300,150),
-	      color:    "blue",
-	      skip:     30,
-	      ellipse:  {a: 500, b: 250},
-	     numNodes: 120,
-	     endSkip:   20,
-	     startSkip: 10,
-	     withinCirc: TAPER,
-	      rotate:   0
-	    };
-	thing = new Ellipse(s);
-        drawInEllipse(thing);
-   }
+  <script type="module">
+  import { Point, StringThing }          from './classes/classes.js';
+  import { drawMysticRose } from './draw/unicorns.js';
 
-test17();
-	</script>
+  runPattern();
+
+  function runPattern () {
+	  let s = { numNodes: 20,
+		          color:    "blue",
+		          midpoint: new Point(300,300),
+              yScale:   1.1,
+  //            ellipse:  { a: 400, b: 300 }
+		          radius:   400
+            };
+	  let thing = new StringThing(s);
+    drawMysticRose(thing);
+  }
+
+  </script>
 </body>
 </html>

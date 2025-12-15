@@ -13,6 +13,7 @@ import "./draw/color.js";
 import "./draw/draw_utilities.js";
 import "./draw/drawRegular.js";
 import "./draw/ellipse.js";
+import "./draw/unicorns.js";
 
 // === drawRegistry items ===
 import "./drawRegistry/2lines.js";
@@ -43,7 +44,9 @@ import "./ui/manifest.js";
 import "./ui/menuManager.js";
 import "./ui/overlay.js";
 import "./ui/scriptRunner.js";
+
 import "./ui/draw.js";
+import "./ui/drawMenuCommands.js";
 import "./ui/patterns.js";
 import "./ui/gallery.js";
 import "./ui/figures.js";

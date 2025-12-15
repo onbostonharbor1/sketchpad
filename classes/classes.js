@@ -50,7 +50,14 @@ class StringThing {
             rotate:      0,
             xScale:      1,
             yScale:      1,
-	                 // MEANING NEEDS TO BE FIRMER
+
+			// USED FOR CIRCULAR OBJECTS, NOT ELLIPSES
+			ellipse: {
+        			a: null,
+					b: null
+      		},
+
+			// MEANING NEEDS TO BE FIRMER
             cutoff:      s.numSteps ? s.numSteps / 2 : 10, // fallback if numSteps missing
             factor:      0,
 	   		both:        false,
@@ -64,7 +71,10 @@ class StringThing {
 
         // Assign all merged properties to this instance
         Object.assign(this, merged);
-
+		if (this.ellipse.a === null) {
+			this.ellipse.a = this.radius;
+			this.ellipse.b = this.radius;
+		}
         // Adjustments
         this.numCycloids += 1; // intentional offset
 

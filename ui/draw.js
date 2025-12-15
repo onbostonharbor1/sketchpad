@@ -12,10 +12,10 @@
 
 import { setCaptionBar }          from "./caption.js";
 import { renderCategories }       from "./categories.js";
+import { copyActiveDrawObject, resetActiveDrawObject }
+                                  from "./draWMenuCommands.js";
 import { menuManager }            from "./menuManager.js";
 import { buildParameterControls } from "./parameterControls.js";
-
-import { uiState }                from "./uiState.js";
 import { clearDivs, showScriptOffcanvas }              from "./ui_utilities.js";
 
 const DEFAULT_DRAW_SUBTAB = "tab-categories";   // Categories is always the root
@@ -278,7 +278,7 @@ function markTabDirty(tabId) {
 } // end markTabDirty
 
 
-function markTabClean(tabId) {
+export function markTabClean(tabId) {
   const info = uiState.draw.tabs[tabId];
   if (!info) return;
 
@@ -581,62 +581,7 @@ export function setDrawText() {
   renderDrawCategories();
 } // end setDrawText
 
-/*************************************************************
-   copyActiveDrawObject()
-   -----------------------------------------------------------
-   Duplicate the currently active drawRegistry entry into
-   a new subtab with "(Copy)" or "(Copy n)" suffix.
-*************************************************************/
-export function copyActiveDrawObject() {
-  const tabId = uiState.draw.activeSubtab;
-  const info = uiState.draw.tabs[tabId];
-  if (!info || info.type !== "object") return;
 
-  const entry = info.drawRegistry;
-
-  // Clone parameters
-  const newParams = structuredClone(info.parameters);
-
-  // Base name without previous copy suffix
-  const baseName = entry.name.replace(/\s*\(Copy.*\)$/i, "").trim();
-
-  // Find existing copies to determine next number
-  const existing = Object.values(uiState.draw.tabs)
-    .filter(
-      (t) =>
-        t.type === "object" &&
-        t.drawRegistry &&
-        t.drawRegistry.name &&
-        t.drawRegistry.name.startsWith(baseName)
-    )
-    .map((t) => t.drawRegistry.name);
-
-  let nextNumber = 1;
-  existing.forEach((name) => {
-    const match = name.match(/\(Copy\s*(\d*)\)$/i);
-    if (match) {
-      const n = parseInt(match[1] || "1", 10);
-      if (n >= nextNumber) nextNumber = n + 1;
-    }
-  });
-
-  const newName =
-    nextNumber === 1
-      ? `${baseName} (Copy)`
-      : `${baseName} (Copy ${nextNumber})`;
-
-  // Construct new entry
-  const newItem = {
-    name: newName,
-    entry: {
-      ...entry,
-      name: newName,
-      params: newParams
-    }
-  };
-
-  addDrawSubtab(newItem);
-} // end copyActiveDrawObject
 
 /*************************************************************
    extractCategoryNames()
@@ -709,6 +654,14 @@ export async function buildDrawMenuItems(tabName, itemName, scriptPath) {
       copyActiveDrawObject();
     }
   });
+
+  // RESET
+  items.push({
+  label: "Reset",
+  onClick: () => {
+    resetActiveDrawObject();
+  }
+});
 
   return items;
 } // end buildDrawMenuItems
