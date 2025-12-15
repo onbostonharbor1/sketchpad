@@ -1,7 +1,6 @@
 {
   "recommendations": [
     // --- Core development ---
-    "ms-vscode.vscode-typescript-next",
     "dbaeumer.vscode-eslint",
     "esbenp.prettier-vscode",
     "ecmel.vscode-html-css",
@@ -9,7 +8,6 @@
 
     // --- Workflow helpers ---
     "christian-kohler.path-intellisense",
-    "formulahendry.auto-rename-tag",
     "coenraads.bracket-pair-color-dl",
     "eamodio.gitlens",
     "usernamehw.errorlens",
@@ -21,7 +19,6 @@
 
     // --- Personal comfort ---
     "VSCodeEmacs.emacs",
-    "naumovs.color-highlight",
     "pkief.material-icon-theme",
     "Gruntfuggly.todo-tree"
   ]
