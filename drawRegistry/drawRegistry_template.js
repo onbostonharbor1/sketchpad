@@ -11,6 +11,7 @@ window.drawRegistry_TEMPLATE = {
   category: "prototype",
   tags: ["template"],
   description: "Simplified template for new drawRegistry entries.",
+  hover:       "",
 
   background: null,
   overlays: [],

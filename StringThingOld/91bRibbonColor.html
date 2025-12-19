@@ -1,0 +1,90 @@
+
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Animated Color Ribbon</title>
+  <style>
+    body { margin:0; background:#f8f8f8; display:flex; justify-content:center; align-items:center; height:100vh; }
+    canvas { background:transparent; }
+  </style>
+</head>
+<body>
+<canvas id="art" width="800" height="1000"></canvas>
+<script>
+const canvas = document.getElementById("art");
+const ctx = canvas.getContext("2d");
+const W = canvas.width, H = canvas.height;
+const cx = W/2, cy = H/2;
+
+// helper: generate circle points
+function circlePoints(n, R, offset=0, scale=1) {
+  let pts = [];
+  for (let i=0; i<n; i++) {
+    let a = 2*Math.PI * i/n + offset;
+    pts.push([
+      cx + scale*R*Math.cos(a),
+      cy + scale*R*Math.sin(a)
+    ]);
+  }
+  return pts;
+}
+
+// helper: rainbow gradient based on angle/time
+function colorAt(i, n, time) {
+  let hue = (360 * i/n + time*0.05) % 360;
+  return `hsla(${hue}, 70%, 45%, 0.3)`;
+}
+
+function drawRibbon(time) {
+  ctx.clearRect(0,0,W,H);
+  
+  const n = 1200;
+  const R = 250;
+
+  // base circle
+  let pts1 = circlePoints(n, R, 0, 1);
+
+  // animate rotation and scaling over time
+  let offset = time * 0.0004;           // slow rotation
+  let scale = 0.6 + 0.4*Math.sin(time*0.001); // pulsing scale
+
+  let pts2 = circlePoints(n, R*1.2, offset, scale);
+
+  ctx.lineWidth = 0.4;
+  
+  for (let i=0; i<n; i++) {
+    let [x1,y1] = pts1[i];
+    let j = (i*7) % n; // mapping multiplier creates folds
+    let [x2,y2] = pts2[j];
+    
+    ctx.beginPath();
+    ctx.strokeStyle = colorAt(i, n, time);
+    ctx.moveTo(x1,y1);
+    ctx.lineTo(x2,y2);
+    ctx.stroke();
+  }
+}
+
+function animate(time) {
+  drawRibbon(time);
+  requestAnimationFrame(animate);
+}
+
+animate(0);
+</script>
+</body>
+</html>
+
+<!--
+Changes
+
+
+
+    Uses HSLA colors (colorAt function) that sweep through the spectrum as time passes.
+    Slight transparency (0.3 alpha) makes overlaps blend into glowing textures.
+    Each line has its own hue depending on index + animation time → creates a shimmering, flowing ribbon effect.
+
+-->
+
+

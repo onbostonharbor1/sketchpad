@@ -5,7 +5,14 @@
   "author": "",
   "license": "ISC",
   "scripts": {
-    "dev": "node ./update_gallery_manifests.js && node help/generateHelpManifest.js && vite",
+    "predev": "node ./update_gallery_manifests.mjs && node ./help/generateHelpManifest.js",
+    "dev:vite": "vite --port 5173 --strictPort",
+    "dev:svc": "node ./node/sketchpadServer.mjs",
+    "dev:all": "concurrently -k -n SVC,VITE \"npm run dev:svc\" \"npm run dev:vite\"",
+    "open": "wait-on http://localhost:5173/ && start \"\" \"http://localhost:5173/\"",
+    "dev": "npm run predev && npm run dev:all",
+    "start:sketchpad": "concurrently -n DEV,OPEN \"npm run dev\" \"npm run open\"",
+
     "build": "vite build",
     "preview": "vite preview"
   },
@@ -14,6 +21,8 @@
     "sharp": "^0.34.5"
   },
   "devDependencies": {
-    "vite": "^7.1.12"
+    "concurrently": "^9.2.1",
+    "vite": "^7.1.12",
+    "wait-on": "^9.0.3"
   }
 }

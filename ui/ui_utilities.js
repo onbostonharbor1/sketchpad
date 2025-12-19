@@ -15,7 +15,7 @@ import { overlayManager } from "./overlay.js";
 ------------------------------------------------------------ */
 function clearDivs(args = "") {
     // Existing regions you already clear
-    let ids = ["buttons", "action", "caption", "text", "sketchpad"];
+    let ids = ["action", "caption", "text", "sketchpad"];
     if (args !== "")
         ids.push(args);
 

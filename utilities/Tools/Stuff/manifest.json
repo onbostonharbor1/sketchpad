@@ -1,3 +1,4 @@
 [
-    { "filename": "inchesToPixels", "path": "Stuff/inchesToPixels.js", "title": "Inches To Pixels" }
+    { "filename": "addPatternFiles", "path": "Stuff/AddPatternFiles.js", "title": "Add Pattern Scripts" },
+    { "filename": "inchesToPixels",  "path": "Stuff/inchesToPixels.js",  "title": "Inches To Pixels" }
 ]

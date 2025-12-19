@@ -1,11 +1,11 @@
-import { drawMysticRose } from "../../draw/unicorns";
-import { StringThing }   from "../classes/StringThing.js";
-import { Point }         from "../classes/classes.js";
+import { drawMysticRose } from "/draw/unicorns";
+import { Point, StringThing}          from "/classes/classes.js";
 
 export function runPattern () {
     let s = {
-                numNodes: 20,
+                numNodes: 12,
 		        color:    "blue",
+                lineWidth: .5,
 		        midpoint: new Point(300,300),
 		        radius:   200
         };

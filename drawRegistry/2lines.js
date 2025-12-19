@@ -15,6 +15,7 @@ window.drawRegistry_2lines = {
   source:      "internal",
   tags:        ["Geometry", "Primitive"],
   description: "Draws two independent lines sharing a common style.",
+  hover:       "",
 
   background: null,
   overlays:   [],

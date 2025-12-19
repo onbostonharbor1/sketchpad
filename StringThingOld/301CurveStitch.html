@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Custom Stitch Rule Editor</title>
+  <style>
+    body { font-family: sans-serif; margin: 20px; }
+    canvas { border: 1px solid #333; display: block; margin-bottom: 20px; }
+    label { display: block; margin: 5px 0; }
+    textarea { width: 100%; height: 80px; }
+  </style>
+</head>
+<body>
+<h1>🧵 Custom Stitch Rule Editor</h1>
+<canvas id="canvas" width="600" height="600"></canvas>
+<label>Point Generator:
+  <select id="pointGen">
+    <option value="circle">Circle</option>
+    <option value="line">Line</option>
+    <option value="grid">Grid</option>
+  </select>
+</label>
+<label>Point Count: <input type="range" id="pointCount" min="10" max="200" value="100"></label>
+<label>Connection Rule (JavaScript expression):</label>
+<textarea id="ruleInput">return (i + 50) % points.length;</textarea>
+<button id="renderBtn">🔄 Render</button>
+<script>
+const canvas = document.getElementById('canvas');
+const ctx = canvas.getContext('2d');
+function generatePoints(type, count) {
+  const points = [];
+  const w = canvas.width, h = canvas.height;
+  switch (type) {
+    case 'circle':
+      for (let i = 0; i < count; i++) {
+        const angle = (i / count) * Math.PI * 2;
+        points.push({
+          x: w / 2 + 200 * Math.cos(angle),
+          y: h / 2 + 200 * Math.sin(angle)
+        });
+      }
+      break;
+    case 'line':
+      for (let i = 0; i < count; i++) {
+        points.push({
+          x: 100 + (400 * i / (count - 1)),
+          y: h / 2
+        });
+      }
+      break;
+    case 'grid':
+      const cols = Math.ceil(Math.sqrt(count));
+      const rows = Math.ceil(count / cols);
+      for (let i = 0; i < count; i++) {
+        const x = (i % cols) * (w / cols) + w / (2 * cols);
+        const y = Math.floor(i / cols) * (h / rows) + h / (2 * rows);
+        points.push({ x, y });
+      }
+      break;
+  }
+  return points;
+}
+function renderStitch() {
+  const type = document.getElementById('pointGen').value;
+  const count = parseInt(document.getElementById('pointCount').value);
+  const ruleCode = document.getElementById('ruleInput').value;
+  const points = generatePoints(type, count);
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  let ruleFn;
+  try {
+    ruleFn = new Function('i', 'points', ruleCode);
+  } catch (err) {
+    alert("Invalid rule: " + err.message);
+    return;
+  }
+  ctx.strokeStyle = '#3366cc';
+  for (let i = 0; i < points.length; i++) {
+    let j;
+    try {
+      j = ruleFn(i, points);
+    } catch (err) {
+      continue;
+    }
+    if (typeof j === 'number' && j >= 0 && j < points.length) {
+      ctx.beginPath();
+      ctx.moveTo(points[i].x, points[i].y);
+      ctx.lineTo(points[j].x, points[j].y);
+      ctx.stroke();
+    }
+  }
+}
+document.getElementById('renderBtn').addEventListener('click', renderStitch);
+renderStitch();
+</script>
+</body>
+</html>
+<!--
+
+Fantastic, Barry. Let’s scaffold a Custom Stitch Rule Editor that lets
+users define how points connect—either through formulas, presets, or
+interactive logic. This will turn your curve-stitch engine into a
+generative playground where geometry meets code.
+
+---
+🧠 What You’re Building
+A system where users can:
+• Define a set of points (e.g. on a line, circle, grid, polygon)
+• Specify a connection rule: how lines are drawn between points
+• Preview the result live on canvas
+• Optionally animate or modulate the rule over time
+
+---
+🧩 Core Concepts
+1. Point Generator
+Generates a list of points based on a shape or parametric rule.
+Examples:
+• Line: evenly spaced points along a line
+• Circle: points around a circumference
+• Grid: 2D lattice of points
+• Parametric: `\( x(t), y(t) \)` for `\( t \in [0, 2\pi] \)`
+
+2. Connection Rule
+Defines how lines are drawn between points.
+Examples:
+• Connect point `\( i \)` to point `\( i + k \)`
+• Connect point `\( i \)` to point `\( f(i) \)`, where `\( f \)` is a user-defined function
+• Connect all points within a certain distance
+• Connect based on angle, index, or modulo logic
+
+🧠 What You Can Do Next
+• Add presets for common rules (e.g. `i + 1`, `i * 2 % n`, `Math.floor(Math.sin(i)*n)`)
+• Animate the rule over time (e.g. `offset` or `modulation`)
+• Let users define multiple connection rules
+• Add export/import for custom stitch configurations
+• Combine with parametric point generators (e.g. rose curves, spirals)
+-->

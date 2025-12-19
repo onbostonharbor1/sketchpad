@@ -1,0 +1,3 @@
+function missingImages() {
+    alert("missingImages");
+}

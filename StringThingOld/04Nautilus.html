@@ -1,0 +1,141 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Nautilus — Curve Stitching (static)</title>
+  <style>
+    :root{ --bg:#071025; --fg:#e6f3ff }
+    html,body{height:100%;margin:0;background:var(--bg);color:var(--fg);font-family:Inter,system-ui,Segoe UI,Roboto,Helvetica,Arial}
+    .wrap{display:flex;flex-direction:column;height:100vh}
+    canvas{flex:1;display:block;width:100%;height:100%}
+    .caption{position:fixed;right:16px;bottom:16px;background:rgba(0,0,0,0.45);padding:8px 10px;border-radius:10px;font-size:13px;backdrop-filter:blur(6px)}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <canvas id="c"></canvas>
+    <div class="caption">Nautilus — Curve stitching (static render)</div>
+  </div>
+
+  <script>
+    const canvas = document.getElementById('c');
+    const ctx = canvas.getContext('2d');
+
+function resize(){
+    const dpr = window.devicePixelRatio || 1;
+    canvas.width = Math.floor(canvas.clientWidth * dpr);
+    canvas.height = Math.floor(canvas.clientHeight * dpr);
+    ctx.setTransform(dpr,0,0,dpr,0,0);
+}
+
+function lerp(a,b,t){
+    return a + (b-a)*t}
+
+function generateSpiralPoints({points=1200, turns=7,
+			       a=2.6, b=0.18, cx, cy,
+			       scale=1}){
+    const pts = new Array(points);
+    const thetaMax = turns * Math.PI * 2;
+    for(let i=0;i<points;i++){
+        const t = i / (points - 1);
+        const theta = t * thetaMax;
+        const r = a * Math.exp(b * theta);
+        const x = cx + r * Math.cos(theta) * scale;
+        const y = cy + r * Math.sin(theta) * scale;
+        pts[i] = {x,y,theta,r};
+    }
+    return pts;
+}
+
+function drawStatic(){
+    resize();
+    const W = canvas.clientWidth;
+    const H = canvas.clientHeight;
+
+      // Background
+//    ctx.clearRect(0,0,W,H);
+//    const g = ctx.createLinearGradient(0,0,W,H);
+//    g.addColorStop(0,'#04101a');
+//    g.addColorStop(1,'#071025');
+//    ctx.fillStyle = g; ctx.fillRect(0,0,W,H);
+
+    // Parameters (static)
+//    const points = 1400;
+//    const turns = 8.0;
+//    const skip = 12; // chord skip
+//    const alpha = 0.11;
+//    const b = 0.185;
+    const points = 600;
+    const turns = 15.0;
+    const b = 0.15;
+    const skip = 12; // chord skip
+    const alpha = .4;
+    
+      // center & scale
+    const cx = W * 0.36;
+    const cy = H * 0.5;
+   const a = 2.6;
+    const thetaMax = turns * Math.PI * 2;
+    const rMax = a * Math.exp(b * thetaMax);
+    const scale = Math.min(W,H) * 0.56 / rMax;
+
+    const pts = generateSpiralPoints({points, turns, a, b, cx, cy, scale});
+
+    function colorForIndex(i){
+        const t = i / points;
+        const r = Math.round(lerp(225,255, Math.pow(t,0.6)));
+        const g = Math.round(lerp(150,245, Math.pow(t,0.9)));
+        const bl = Math.round(lerp(110,210, t));
+        return `rgba(${r},${g},${bl},${alpha})`;
+      }
+
+      ctx.lineWidth = 1.0; ctx.lineCap = 'round';
+
+      // Multiple stitched layers for depth
+    const layers = [skip,
+		    Math.max(1,Math.floor(skip*0.55)),
+		    Math.max(1,Math.floor(skip*1.4))];
+      for(let L=0; L<layers.length; L++){
+        const s = layers[L];
+        for(let i=0;i<points;i++){
+          const j = (i + s) % points;
+          const p = pts[i]; const q = pts[j];
+            ctx.beginPath();
+	    ctx.moveTo(p.x,p.y);
+	    ctx.lineTo(q.x,q.y);
+          ctx.strokeStyle = colorForIndex(i);
+          ctx.stroke();
+        }
+      }
+
+      // Accent outline
+    ctx.beginPath();
+    for(let i=0;i<points;i++){
+	const p=pts[i];
+	if(i===0)
+	    ctx.moveTo(p.x,p.y);
+	else ctx.lineTo(p.x,p.y);
+    }
+    ctx.strokeStyle = 'rgba(255,255,255,0.06)';
+    ctx.lineWidth = 1.4;
+    ctx.stroke();
+
+      // Aperture
+    ctx.beginPath();
+    ctx.arc(cx,cy,
+	    Math.max(6, Math.min(44, Math.log(points)*2)),
+	    0, Math.PI*2);
+    ctx.fillStyle = 'rgba(6,8,10,0.95)';
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(255,255,255,0.05)';
+    ctx.lineWidth = 1.0;
+    ctx.stroke();
+}
+
+    // draw once and on resize
+    drawStatic();
+    window.addEventListener('resize', drawStatic);
+  </script>
+</body>
+</html>

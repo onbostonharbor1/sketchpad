@@ -45,16 +45,6 @@ body {
   box-sizing: border-box;
 }
 
-#buttons {
-  padding: 4px 4px;
-  border-bottom: 1px solid var(--outline);
-  background-color: #f9f9f9;
-}
-
-#buttons button {
-  margin-right: 6px;
-}
-
 #action {
   flex: 1;
   background-color: var(--theme-tint);

@@ -3,7 +3,7 @@
 ////////////////////////////////////////////////////////////////
 
 export const overlayManager = {
-  // Panel overlays (help / notes / debug)
+  // Panel overlays (help / forms / debug)
   layers: {},
 
   // Canvas overlays (interaction / bbox / nodes / guides)
@@ -73,15 +73,15 @@ export function initOverlay() {
 
   // ----- Panel overlays -----
   const helpEl  = document.getElementById("overlay-help");
-  const notesEl = document.getElementById("overlay-notes");
+  const formsEl = document.getElementById("overlay-forms");
   const debugEl = document.getElementById("overlay-debug");
 
-  if (!helpEl || !notesEl || !debugEl) {
-    throw new Error("initOverlay: missing help/notes/debug overlay elements");
+  if (!helpEl || !formsEl || !debugEl) {
+    throw new Error("initOverlay: missing help/forms/debug overlay elements");
   }
 
   overlayManager.register("help", helpEl);
-  overlayManager.register("notes", notesEl);
+  overlayManager.register("forms", formsEl);
   overlayManager.register("debug", debugEl);
 
   // ----- Canvas overlays -----
@@ -99,7 +99,7 @@ export function initOverlay() {
   overlayManager.registerCanvas("nodes", nodes);
   overlayManager.registerCanvas("guides", guides);
 
-  // ----- Close button for help/notes/debug panel -----
+  // ----- Close button for help/forms/debug panel -----
   const closeBtn = document.getElementById("overlayClose");
   if (!closeBtn) throw new Error("initOverlay: #overlayClose missing");
 

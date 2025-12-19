@@ -16,6 +16,7 @@ window.drawRegistry_parabola = {
   source:      "internal",
   tags:        ["Geometry", "Curve Stitch"],
   description: "Draws a stitched parabola using two lines and a shared style.",
+  hover:       "",
 
   background: null,
   overlays:   [],

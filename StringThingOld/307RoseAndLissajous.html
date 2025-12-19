@@ -1,0 +1,179 @@
+<!--
+
+---
+
+🧠 Architectural Notes
+
+• `drawLissajous(a, b, delta, resolution)` is modular and ready for symbolic overlays later.
+• Phase shift slider uses `0–2π` scaled as `0–628` for intuitive control.
+• You can easily add provenance tags or registry hooks as you move into Phase 4/5.
+
+
+Let me know when you want to scaffold SVG conversion or overlay layering—this is a great base for symbolic inspection.
+ 
+
+Here’s a unified standalone HTML file that lets you toggle between Rose curves and Lissajous curves using a dropdown selector. The controls dynamically update based on the selected mode, and the draw logic is modular and inspectable—perfect for your iterative architecture:
+-->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Curve Visualizer</title>
+  <style>
+    body {
+      font-family: sans-serif;
+      margin: 20px;
+      background: #f0f0f0;
+    }
+    canvas {
+      border: 1px solid #333;
+      background: white;
+    }
+    .controls {
+      margin-top: 10px;
+    }
+    .controls label {
+      display: block;
+      margin: 5px 0;
+    }
+  </style>
+</head>
+<body>
+  <h2>🌀 Curve Visualizer</h2>
+  <label>
+    Curve Type:
+    <select id="mode">
+      <option value="rose">Rose Curve</option>
+      <option value="lissajous">Lissajous Curve</option>
+    </select>
+  </label>
+
+  <canvas id="curveCanvas" width="500" height="500"></canvas>
+
+  <div class="controls" id="roseControls">
+    <label>
+      Lobes (k): <input type="range" id="lobes" min="1" max="20" value="5" />
+      <span id="lobesVal">5</span>
+    </label>
+    <label>
+      Amplitude (a): <input type="range" id="amplitude" min="50" max="200" value="100" />
+      <span id="amplitudeVal">100</span>
+    </label>
+    <label>
+      Resolution: <input type="range" id="roseResolution" min="100" max="2000" value="1000" />
+      <span id="roseResolutionVal">1000</span>
+    </label>
+  </div>
+
+  <div class="controls" id="lissajousControls" style="display: none;">
+    <label>
+      Frequency X (a): <input type="range" id="freqX" min="1" max="20" value="3" />
+      <span id="freqXVal">3</span>
+    </label>
+    <label>
+      Frequency Y (b): <input type="range" id="freqY" min="1" max="20" value="2" />
+      <span id="freqYVal">2</span>
+    </label>
+    <label>
+      Phase Shift (δ): <input type="range" id="phase" min="0" max="628" value="314" />
+      <span id="phaseVal">π</span>
+    </label>
+    <label>
+      Resolution: <input type="range" id="lissResolution" min="100" max="2000" value="1000" />
+      <span id="lissResolutionVal">1000</span>
+    </label>
+  </div>
+
+  <script>
+    const canvas = document.getElementById('curveCanvas');
+    const ctx = canvas.getContext('2d');
+    const modeSelect = document.getElementById('mode');
+    const roseControls = document.getElementById('roseControls');
+    const lissajousControls = document.getElementById('lissajousControls');
+
+    function drawRose(k, a, resolution) {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      ctx.save();
+      ctx.translate(canvas.width / 2, canvas.height / 2);
+      ctx.beginPath();
+      for (let i = 0; i <= resolution; i++) {
+        const theta = (i / resolution) * 2 * Math.PI;
+        const r = a * Math.cos(k * theta);
+        const x = r * Math.cos(theta);
+        const y = r * Math.sin(theta);
+        if (i === 0) ctx.moveTo(x, y);
+        else ctx.lineTo(x, y);
+      }
+      ctx.strokeStyle = '#0077cc';
+      ctx.lineWidth = 2;
+      ctx.stroke();
+      ctx.restore();
+    }
+
+    function drawLissajous(a, b, delta, resolution) {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      ctx.save();
+      ctx.translate(canvas.width / 2, canvas.height / 2);
+      ctx.beginPath();
+      for (let i = 0; i <= resolution; i++) {
+        const t = (i / resolution) * 2 * Math.PI;
+        const x = 200 * Math.sin(a * t + delta);
+        const y = 200 * Math.sin(b * t);
+        if (i === 0) ctx.moveTo(x, y);
+        else ctx.lineTo(x, y);
+      }
+      ctx.strokeStyle = '#cc0077';
+      ctx.lineWidth = 2;
+      ctx.stroke();
+      ctx.restore();
+    }
+
+    function update() {
+      const mode = modeSelect.value;
+      roseControls.style.display = mode === 'rose' ? 'block' : 'none';
+      lissajousControls.style.display = mode === 'lissajous' ? 'block' : 'none';
+
+      if (mode === 'rose') {
+        const k = parseInt(document.getElementById('lobes').value);
+        const a = parseInt(document.getElementById('amplitude').value);
+        const resolution = parseInt(document.getElementById('roseResolution').value);
+        document.getElementById('lobesVal').textContent = k;
+        document.getElementById('amplitudeVal').textContent = a;
+        document.getElementById('roseResolutionVal').textContent = resolution;
+        drawRose(k, a, resolution);
+      } else {
+        const a = parseInt(document.getElementById('freqX').value);
+        const b = parseInt(document.getElementById('freqY').value);
+        const delta = parseInt(document.getElementById('phase').value) / 100;
+        const resolution = parseInt(document.getElementById('lissResolution').value);
+        document.getElementById('freqXVal').textContent = a;
+        document.getElementById('freqYVal').textContent = b;
+        document.getElementById('phaseVal').textContent = (delta === Math.PI) ? 'π' : delta.toFixed(2);
+        document.getElementById('lissResolutionVal').textContent = resolution;
+        drawLissajous(a, b, delta, resolution);
+      }
+    }
+
+    modeSelect.addEventListener('change', update);
+    document.querySelectorAll('input[type="range"]').forEach(input => {
+      input.addEventListener('input', update);
+    });
+
+    update(); // initial draw
+  </script>
+</body>
+</html>
+<!--
+
+---
+
+🧠 Architectural Highlights
+
+• Mode toggle: Clean separation between rose and Lissajous controls.
+• Modular draw routines: `drawRose()` and `drawLissajous()` are isolated and inspectable.
+• Live updates: All sliders reflect current values and redraw instantly.
+• Future-ready: Easy to add symbolic overlays, provenance tags, or SVG conversion in Phase 4/5.
+
+
+Let me know when you want to scaffold registry integration or overlay layering logic. This file is a great launchpad.
+-->

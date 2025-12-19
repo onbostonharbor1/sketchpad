@@ -9,9 +9,10 @@
    ------------------------------------------------------------
 */
 
-import { renderCategories }    from "./categories.js";
-import { setCaptionBar }       from "./caption.js";
-import { menuManager }         from "./menuManager.js";
+import { renderCategories }     from "./categories.js";
+import { setCaptionBar }        from "./caption.js";
+import { menuManager }          from "./menuManager.js";
+import { editPatternItemTitle } from "./patternsMenuCmds.js";
 import { loadScriptModule, executeScriptToCanvas } from "./scriptRunner.js";
 import { showScriptOffcanvas, renderThumbnailGrid,
          buildCategoryDescriptor } from "./ui_utilities.js";
@@ -522,7 +523,6 @@ function onNext() {
   showSelectedPattern(category, newIndex);
 } // end onNext
 
-
 /* ============================================================
    buildPatternsMenuItems()
    ------------------------------------------------------------
@@ -531,9 +531,11 @@ function onNext() {
 async function buildPatternsMenuItems(tabName, helpKey, scriptPath) {
   const items = [];
 
+  // HELP
   const helpItem = await menuManager.buildHelpItem(tabName, helpKey);
   items.push(helpItem);
 
+  // SHOW SCRIPT
   if (scriptPath) {
     items.push({
       label: "Show Script",
@@ -547,8 +549,17 @@ async function buildPatternsMenuItems(tabName, helpKey, scriptPath) {
     });
   }
 
+  // EDIT MANIFEST TITLE
+  items.push({
+    label: "Edit Manifest Title",
+    onClick: () => {
+      editPatternItemTitle();
+    }
+  });
+
   return items;
 } // end buildPatternsMenuItems
+
 
 /* ============================================================
    savePatternsState()

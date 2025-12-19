@@ -1,0 +1,82 @@
+1. capture position of mouse click
+2. color picker tool
+3. Polygon based curve igure
+4. gg curve stitch on a 3-lobed epitrochoid
+5. elliose 1
+   generate points along the circumference of a rotated ellipse5. elliose 1
+6. ellios 2 looks the same as elliose 1
+   generate points along the circumference of a rotated ellipse5. elliose 1
+7; pursuit curves in a polygnn
+8. gg discussion of parametric equations
+9. kk Parameetric equtions for an equinngular logrigthimic spiral
+10. strophoid
+11 more pursuit
+12 more and more -- more pursuit curves
+13.n
+   curve stitching bird approximation
+14. b0at
+   Mathematical boar drawing
+16. curves
+   3d hole optical illusion
+   
+17. explaiig th fitcanvas function
+18. ribbons
+    curve-stitch ribbon waves
+19. ribbons 2
+    interactive curve stitch ribbons
+20. gg
+    pursuit curve surface
+21  bb
+    point, line, parabola as objects
+    creating prabola as objects
+21. Pursuit
+    discussion and directions for coding
+22. Ll
+    Pursuit curve drawerer
+23. mm
+    packaging of 22
+    ------------------
+24. non
+Perfect, Barry. Here’s how to update your HTML so that each drawing function—like `test1()`—is loaded from its own external JavaScript file (e.g., `test1.js`). This modular approach keeps your code clean and scalable.
+
+25 bb
+Here’s a detailed walkthrough of the JavaScript code used in your dynamic drawing interface.
+
+26. tutorial
+    perhaps look at but not what is anted
+
+27. ading save imge
+28. module loader
+    raad only
+29  vp
+Here’s how to update your setup so that selecting a radio button dynamically loads an external HTML file (like `test2.html`) into the right-hand side of the interface — replacing the canvas with a content container.
+30 Using subfolders
+Here’s how to update your setup so that selecting a radio button dynamically loads an external HTML file (like `test2.html`) into the right-hand side of the interface — replacing the canvas with a content container.
+31. Drawing modes
+Drawing Mode Flag
+
+We’ll define a global `drawingMode` flag with three states:
+
+• `0`: Use `moveTo` and `lineTo` (standard path drawing)
+• `1`: Use `drawLine(pt1, pt2)` for each segment
+• `2`: Just draw the points (e.g., small circles or markers)
+
+32.more objects
+Here’s a modular example of `test1.js` that draws a curve-stitch parabola using your previously defined `drawLines(ctx, lines)` function. This version emphasizes object-oriented structure with clear separation between points, lines, and the parabola itself.
+35, drawing parabolsa again
+36 drawing circles 1
+37. more circls
+38. baghdad, more circlss
+39. bb extended
+ let’s build a hybrid system that combines the elegance of parametric curves with the control of index-based geometry. Thi
+
+40. bb
+ let’s build a hybrid system that combines the elegance of parametric curves with the control of index-based geometry. Thi
+
+41. cc
+extension: add to export, draggable control point, mini gallery of saaved curves next
+
+42. bb reviw
+
+43. shape factory
+XS

@@ -1,0 +1,136 @@
+<!--
+Yes 👍 — the same jitter principle can be adapted to scatter random speckles (dots, small blobs, or rectangles) across a background. Instead of drawing neat rows of swatches, you:
+
+	1. Fill the background with a base color (or gradient).
+	2. Randomly place speckles across the canvas.
+	3. For each speckle:
+		○ Choose a random position (x,y).
+		○ Choose a random size (radius or square size) within some range.
+		○ Apply jittered color around a base color.
+		○ Draw the speckle (circle, square, or pixel).
+	4. 
+
+
+
+
+
+Example: Jittered Speckle Noise Background
+-->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Jitter Speckle Noise</title>
+<style>
+  body { background: #111; color: white; font-family: sans-serif; text-align: center; }
+  canvas { margin-top: 20px; border: 1px solid #444; }
+</style>
+</head>
+<body>
+  <h2>Jittered Speckle Noise</h2>
+  <canvas id="canvas" width="800" height="400"></canvas>
+
+<script>
+function hexToHsl(hex) {
+  let r = 0, g = 0, b = 0;
+  if (hex.length === 4) {
+    r = parseInt(hex[1] + hex[1], 16);
+    g = parseInt(hex[2] + hex[2], 16);
+    b = parseInt(hex[3] + hex[3], 16);
+  } else if (hex.length === 7) {
+    r = parseInt(hex.substr(1, 2), 16);
+    g = parseInt(hex.substr(3, 2), 16);
+    b = parseInt(hex.substr(5, 2), 16);
+  }
+  r /= 255; g /= 255; b /= 255;
+  let max = Math.max(r, g, b), min = Math.min(r, g, b);
+  let h, s, l = (max + min) / 2;
+  if (max === min) {
+    h = s = 0;
+  } else {
+    let d = max - min;
+    s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+    switch (max) {
+      case r: h = (g - b) / d + (g < b ? 6 : 0); break;
+      case g: h = (b - r) / d + 2; break;
+      case b: h = (r - g) / d + 4; break;
+    }
+    h /= 6;
+  }
+  return [h * 360, s, l];
+}
+
+function hslToRgb(h, s, l) {
+  h /= 360;
+  let r, g, b;
+  if (s === 0) {
+    r = g = b = l;
+  } else {
+    const hue2rgb = (p, q, t) => {
+      if (t < 0) t += 1;
+      if (t > 1) t -= 1;
+      if (t < 1/6) return p + (q - p) * 6 * t;
+      if (t < 1/2) return q;
+      if (t < 2/3) return p + (q - p) * (2/3 - t) * 6;
+      return p;
+    };
+    const q = l < 0.5 ? l * (1 + s) : l + s - l * s;
+    const p = 2 * l - q;
+    r = hue2rgb(p, q, h + 1/3);
+    g = hue2rgb(p, q, h);
+    b = hue2rgb(p, q, h - 1/3);
+  }
+  return [Math.round(r * 255), Math.round(g * 255), Math.round(b * 255)];
+}
+
+function jitteredColor(baseHex, options = {}) {
+  let [h, s, l] = hexToHsl(baseHex);
+  h += (Math.random() - 0.5) * (options.hue || 0);
+  s += (Math.random() - 0.5) * (options.sat || 0);
+  l += (Math.random() - 0.5) * (options.light || 0);
+  let [r, g, b] = hslToRgb(h, s, l);
+  return `rgb(${r}, ${g}, ${b})`;
+}
+
+// Draw speckled noise
+const canvas = document.getElementById("canvas");
+const ctx = canvas.getContext("2d");
+
+// Background
+ctx.fillStyle = "#222";
+ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+// Parameters
+let numSpeckles = 500;
+let baseColor = "#88ccff"; // light blue base
+let jitter = {hue: 40, sat: 0.3, light: 0.2};
+
+for (let i = 0; i < numSpeckles; i++) {
+  let x = Math.random() * canvas.width;
+  let y = Math.random() * canvas.height;
+  let size = 2 + Math.random() * 6; // speckle size
+
+  ctx.fillStyle = jitteredColor(baseColor, jitter);
+  ctx.beginPath();
+  ctx.arc(x, y, size, 0, Math.PI * 2);
+  ctx.fill();
+}
+</script>
+</body>
+</html>
+
+<!--
+
+
+✅ What This Does
+
+
+	• Background filled with a dark gray base.
+	• 500 random speckles scattered across canvas.
+	• Each speckle:
+		○ Size = random between 2–8 px.
+		○ Color = light blue + jitter in hue, saturation, and lightness.
+	• 
+	• Result looks like a star field, sand texture, or paint splatter depending on parameters.
+
+-->

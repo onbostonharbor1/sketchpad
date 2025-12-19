@@ -1,0 +1,4 @@
+[
+    { "filename": "validateManifests", "path": "ManifestFiles/validateManifests.js", "title":    "Validate Manifests"},
+    { "filename": "missingImages",     "path": "ManifestFiles/missingImages.js",     "title":    "Check Missing Images"}
+]

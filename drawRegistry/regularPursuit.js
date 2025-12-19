@@ -12,7 +12,7 @@ window.drawRegistry_regularPursuit = {
     source:       "internal",
     tags:         ["Curve Stitch"],
     description:  "Regular Polygon draws from each node",
-
+  hover:       "",
     // -- visual styling ---
     background: null,
     overlays:   [],

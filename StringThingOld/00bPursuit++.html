@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Pursuit Curves</title>
+  <style>
+    body { background: black; }
+    canvas { display: block; margin: auto; background: white; }
+  </style>
+</head>
+<body>
+<canvas id="pursuit" width="900" height="900"></canvas>
+<script>
+const canvas = document.getElementById("pursuit");
+const ctx = canvas.getContext("2d");
+const W = canvas.width, H = canvas.height;
+
+// Parameters
+//const n = 6;            // number of points
+//const steps = 5000;     // number of iterations
+//const dt = 0.002;       // step size
+//const n = 6;            // number of points
+const steps = 1000;     // number of iterations
+const dt = 0.1;       // step size
+const radius = 200;     // initial circle radius
+const speed = .5;      // scaling of pursuit rate
+
+  function setPoints(numNodes,x,y,rotation=0) {
+      // Initialize points equally spaced on a circle
+      let pts = [];
+      for (let k = 0; k < numNodes; k++) {
+	  let theta = 2 * Math.PI * k / numNodes;
+          // changes so flat bottom
+	  theta = theta - rotation;
+	  //  pts.push({x: W/2 + radius * Math.cos(theta),
+	  //            y: H/2 + radius * Math.sin(theta)});
+	  pts.push({x: x + radius * Math.cos(theta),
+		    y: y + radius * Math.sin(theta)});
+      }
+      return pts;
+  }
+
+  
+  function drawPursuit(pts) {
+      ctx.strokeStyle = "rgba(0,0,0,0.4)";
+      ctx.lineWidth = 1;
+      let n = pts.length;
+
+      ctx.beginPath();
+      for (let s = 0; s < steps; s++) {
+	  // Draw current polygon
+	  ctx.moveTo(pts[0].x, pts[0].y);
+	  for (let i = 1; i < n; i++) ctx.lineTo(pts[i].x, pts[i].y);
+	  ctx.lineTo(pts[0].x, pts[0].y);
+
+	  // Update positions: each moves toward next
+	  let newPts = [];
+	  for (let i = 0; i < n; i++) {
+	      let j = (i+1)%n;
+	      let dx = pts[j].x - pts[i].x;
+	      let dy = pts[j].y - pts[i].y;
+	      newPts.push({
+		  x: pts[i].x + speed * dx * dt,
+		  y: pts[i].y + speed * dy * dt
+	      });
+	  }
+	  pts = newPts;
+      }
+      ctx.stroke();
+  }
+  pts = setPoints(4,200,200,Math.PI/4);
+  drawPursuit(pts);
+  pts = setPoints(4,483,483,Math.PI/4);
+  drawPursuit(pts);
+
+  pts = setPoints(4,483,200,Math.PI/4);
+  pts.reverse();
+  drawPursuit(pts);
+  pts = setPoints(4,200,483,Math.PI/4);
+  pts.reverse();
+  drawPursuit(pts);
+  
+</script>
+</body>
+</html>

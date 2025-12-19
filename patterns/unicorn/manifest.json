@@ -1,3 +1,17 @@
-[ 
-  { "filename": "fig1", "path": "unicorn/fig1.js" } 
-] 
+[
+  {
+    "filename": "mysticRose",
+    "path": "mysticRose.js",
+    "title": "mysticRose"
+  },
+  {
+    "filename": "crossHair",
+    "path": "crossHair.js",
+    "title": "crossHair"
+  },
+  {
+    "filename": "mysticRoseEllipse",
+    "path": "mysticRoseEllipse.js",
+    "title": "mysticRoseEllipse"
+  }
+]

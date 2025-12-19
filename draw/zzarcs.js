@@ -8,7 +8,7 @@
 	const dy = pt2.y - pt1.y;
 	const d  = Math.hypot(dx, dy);
 	if (d === 0) return;
-	
+
 	if (curvature === 0) {
 	    pts.push(pt1);
 	    pts.push(pt2);
@@ -29,15 +29,15 @@
 	const h  = Math.sqrt(Math.max(0, R * R - (d / 2) * (d / 2)));
 	const Cx = mx + sign * h * nx;
 	const Cy = my + sign * h * ny;
-	
+
 	let a0 = Math.atan2(pt1.y - Cy, pt1.x - Cx);
 	let a1 = Math.atan2(pt2.y - Cy, pt2.x - Cx);
 	const twoPi = Math.PI * 2;
                     // CCW sweep in [0, 2π)
-	let delta  = ((a1 - a0) % twoPi + twoPi) % twoPi; 
+	let delta  = ((a1 - a0) % twoPi + twoPi) % twoPi;
                     // choose minor sweep in (-π, π]
-	if (delta > Math.PI) delta -= twoPi; 
-	
+	if (delta > Math.PI) delta -= twoPi;
+
 	for (let i = 0; i <= numPoints; i++) {
 	    const t = i / numPoints;
 	    const a = a0 + t * delta;
@@ -124,15 +124,15 @@ function ptsOnArc(pt1, pt2, radius, segments = 50) {
 	  // b:      destination point
 	  // r_frac: arc radius as a fraction of half the distance
 	  //         between a and b
-	  //         -- 1 results in a semicircle arc, the arc flattens out the 
+	  //         -- 1 results in a semicircle arc, the arc flattens out the
 	  //            closer to 0 the number is set, 0 is invalid
 	  // n:      number of points to sample from arc
 	  let c = getCenter(a, b, r_frac);
 	  let r = dist(c, a);
-	  
+
 	  let aAngle = Math.atan2(a.y - c.y, a.x - c.x),
 	      bAngle = Math.atan2(b.y - c.y, b.x - c.x);
-	  
+
 	  if (aAngle > bAngle) {
 	      bAngle += 2 * Math.PI;
 	  }
@@ -151,7 +151,7 @@ function ptsOnArc(pt1, pt2, radius, segments = 50) {
 function dist(a, b) {
     return Math.sqrt(Math.pow(a.x - b.x, 2) + Math.pow(a.y - b.y, 2));
 }
-      
+
 /////////////////////////////////////////////////////////////////
 // getCenter
 /////////////////////////////////////////////////////////////////
@@ -168,7 +168,7 @@ function getCenter(a, b, frac) {
     let x = (b2 - b1) / (m1 - m2);
     // sub x back into one of the linear equations to get y
     let y = m1 * x + b1;
-    return new Point(x,y);	  
+    return new Point(x,y);
 }
 
 /////////////////////////////////////////////////////////////////
@@ -177,7 +177,7 @@ function getCenter(a, b, frac) {
 //NOT USED
 function getP3(a, b, frac) {
     let mid = midpoint(a, b);
-    
+
     let m = inverseSlope(a, b);
     // check if B is below A
     let bLower = b.y < a.y ? -1 : 1;
@@ -225,7 +225,7 @@ function range(start, end,step=1){
     }
     return result;
 }
-      
+
 /////////////////////////////////////////////////////////////////
 // slope
 /////////////////////////////////////////////////////////////////
@@ -248,3 +248,155 @@ function yIntercept(a, b) {
     let y = p.y;
     return y - m * x;
 }
+
+    function test7() {
+	printTitle("Test 7: Arc Points");
+	  s = {numSteps: 25,
+	       color: "blue",
+	       lineWidth: 1
+	      };
+	  thing      = new StringThing(s);
+          start      = new Point(10,300);
+	  end        = new Point(200,10);
+	  thing.arm1 = ptsOnLine(thing.numSteps,start,end);
+          start      = new Point(200,10);
+	  end        = new Point(400, 300);
+	  thing.arm2 = arcPoints(start, end, .3, thing.numSteps);
+	  stitcher(thing);
+
+	  thing.newColor = 'green';
+	  start      = new Point(10,500);
+	  end        = new Point(200,210);
+          thing.arm1 = arcPoints(start,end,.2,thing.numSteps);
+          start      = new Point(200,210);
+	  end        = new Point(400, 500);
+	  thing.arm2 = arcPoints(start, end, .3, thing.numSteps);
+	  stitcher(thing);
+     }
+/////////////////////////////////////////////////////////////////
+///////////////////////// ARC STUFF
+/////////////////////////////////////////////////////////////////
+// arcPoints
+/////////////////////////////////////////////////////////////////
+      function arcPoints(a, b, r_frac, n) {
+	  // a:      origin point
+	  // b:      destination point
+	  // r_frac: arc radius as a fraction of half the distance
+	  //         between a and b
+	  //         -- 1 results in a semicircle arc, the arc flattens out the
+	  //            closer to 0 the number is set, 0 is invalid
+	  // n:      number of points to sample from arc
+	  let c = getCenter(a, b, r_frac);
+	  let r = dist(c, a);
+
+	  let aAngle = Math.atan2(a.y - c.y, a.x - c.x),
+	      bAngle = Math.atan2(b.y - c.y, b.x - c.x);
+
+	  if (aAngle > bAngle) {
+	      bAngle += 2 * Math.PI;
+	  }
+
+          let points = range(aAngle, bAngle, (bAngle-aAngle)/n);
+	  let sampledPoints = points.map(
+	      (d) => new Point(Math.cos(d) * r + c.x,
+			       Math.sin(d) * r + c.y));
+	  return sampledPoints;
+      }
+
+/////////////////////////////////////////////////////////////////
+// dist
+/////////////////////////////////////////////////////////////////
+function dist(a, b) {
+    return Math.sqrt(Math.pow(a.x - b.x, 2) + Math.pow(a.y - b.y, 2));
+}
+
+/////////////////////////////////////////////////////////////////
+// getCenter
+/////////////////////////////////////////////////////////////////
+function getCenter(a, b, frac) {
+    let c  = getP3(a, b, frac);
+    let b1 = yIntercept(a, b);
+    let b2 = yIntercept(a, c);
+    let m1 = inverseSlope(a, b);
+    let m2 = inverseSlope(a, c);
+
+    // find the intersection of the two perpendicular bisectors
+    // i.e. solve m1 * x + b2 = m2 * x + b2 for x
+    let x = (b2 - b1) / (m1 - m2);
+    // sub x back into one of the linear equations to get y
+    let y = m1 * x + b1;
+    return new Point(x,y);
+}
+
+/////////////////////////////////////////////////////////////////
+// getP3
+/////////////////////////////////////////////////////////////////
+function getP3(a, b, frac) {
+    let mid = midpoint(a, b);
+
+    let m = inverseSlope(a, b);
+    // check if B is below A
+    let bLower = b.y < a.y ? -1 : 1;
+
+    // distance from midpoint along slope: between 0 and half
+    // the distance between the two points
+    let d = 0.5 * dist(a, b) * frac;
+
+    let x = d / Math.sqrt(1 + Math.pow(m, 2));
+    let y = m * x;
+    return new Point(bLower * x + mid.x, bLower * y + mid.y);
+    // return [mid[0] + d, mid[1] - (d * (b[0] - a[0])) / (b[1] - a[1])];
+}
+
+/////////////////////////////////////////////////////////////////
+// inverseSlope
+/////////////////////////////////////////////////////////////////
+function inverseSlope(a, b) {
+    // returns the inverse of the slope of the line from point A to B
+    // which is the slope of the perpendicular bisector
+    return -1 * (1 / slope(a, b));
+}
+
+/////////////////////////////////////////////////////////////////
+// midpoint
+/////////////////////////////////////////////////////////////////
+function midpoint(a, b) {
+    return new Point((a.x + b.x)/2, (a.y + b.y)/2);
+}
+function _m(a, b) {
+    return new Point((a.x + b.x)/2, (a.y + b.y)/2);
+}
+
+/////////////////////////////////////////////////////////////////
+// range
+/////////////////////////////////////////////////////////////////
+function range(start, end,step=1){
+    const result = [];
+    for (let i=start; i<end; i += step){
+	result.push(i);
+    }
+    return result;
+}
+
+/////////////////////////////////////////////////////////////////
+// slope
+/////////////////////////////////////////////////////////////////
+function slope(a, b) {
+    // returns the slope of the line from point A to B
+    return (b.y - a.y) / (b.x - a.x);
+}
+
+/////////////////////////////////////////////////////////////////
+// yIntercept
+/////////////////////////////////////////////////////////////////
+function yIntercept(a, b) {
+    // returns the y intercept of the perpendicular bisector of
+    // the line from point A to B
+    let m = inverseSlope(a, b);
+    let p = midpoint(a, b);
+    let x = p.x;
+    let y = p.y;
+    return y - m * x;
+}
+
+

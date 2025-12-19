@@ -51,7 +51,7 @@ let galleryCache    = null;
 export const GalleryTabSpec = {
   name: "gallery",
   theme: "theme-gallery",
-  regions: ["caption", "text", "sketchpad", "buttons", "action"],
+  regions: ["caption", "text", "sketchpad", "action"],
 
   init: initGalleryTab,
   restore: restoreGalleryTab,
@@ -60,7 +60,6 @@ export const GalleryTabSpec = {
   buildCaption: () => {},
   buildText: () => {},
   buildSketchpad: () => {},
-  buildButtons: () => {},
   buildAction: () => {}
 }; // end GalleryTabSpec
 
@@ -820,7 +819,7 @@ async function showGalleryScript(entry) {
   ctx.fillRect(0, 0, drawCanvas.width, drawCanvas.height);
 
   const moduleUrl = `/gallery/Scripts/${entry.filename}`;
-  let mod = await import(moduleUrl);
+  let mod = await import( /* @vite-ignore */moduleUrl);
 
   if (mod.patternMeta && mod.initPattern && mod.drawPattern) {
     const meta   = mod.patternMeta;

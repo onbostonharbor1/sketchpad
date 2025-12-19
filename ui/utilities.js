@@ -36,7 +36,7 @@ export const UtilityTabSpec = {
   restore: restoreUtilityTab,
 
   action:    () => {},
-  buttons:   () => {},
+
   caption:   () => {},
   sketchpad: () => {},
   subtabs:   setUtilitySubtabs,
@@ -209,7 +209,7 @@ async function runUtilityEntry(subtab, entry) {
   const scriptPath = `/utilities/${subtab}/${entry.path}`;
 
   try {
-    const mod = await import(scriptPath + `?t=${Date.now()}`);
+    const mod = await import(/* @vite-ignore */ scriptPath + `?t=${Date.now()}`);
 
     if (typeof mod.runPattern !== "function") {
       displayUtilityResult(`runPattern() not found in ${entry.filename}`);
@@ -345,7 +345,6 @@ export const utilityDivs = {
   activeDivs: ["subtabs"],
   theme: "theme-utilities",
   action: () => { const el = document.getElementById("action"); if (el) el.innerHTML = ""; },
-  buttons: () => { const el = document.getElementById("buttons"); if (el) el.innerHTML = ""; },
   caption: () => {},
   sketchpad: () => { const el = document.getElementById("sketchpad"); if (el) el.innerHTML = ""; },
   subtabs: setUtilitySubtabs,

@@ -5,6 +5,7 @@ import "./classes/classes.js";
 import "./classes/curveStitchClass.js";
 import "./classes/ellipseClass.js";
 import "./classes/overlayClass.js";
+import "./classes/radiate.js";
 
 // === Drawing utilities ===
 import "./draw/drawState.js";
@@ -18,13 +19,16 @@ import "./draw/unicorns.js";
 // === drawRegistry items ===
 import "./drawRegistry/2lines.js";
 import "./drawRegistry/circularParabola.js";
+import "./drawRegistry/cycloid.js";
 import "./drawRegistry/inEllipse.js";
 import "./drawRegistry/inverseStar.js";
 import "./drawRegistry/line.js";
+import "./drawRegistry/mysticRose.js";
+import "./drawRegistry/mysticRoseEllipse.js";
 import "./drawRegistry/parabola.js";
+import "./drawRegistry/radiate.js";
 import "./drawRegistry/regularPolygon.js";
 import "./drawRegistry/bird.js";
-import "./drawRegistry/boxes.js";
 import "./drawRegistry/lissajous.js";
 import "./drawRegistry/nautilus.js";
 import "./drawRegistry/regularPursuit.js";
@@ -42,11 +46,12 @@ import "./ui/categories.js";
 import "./ui/fileLayer.js";
 import "./ui/manifest.js";
 import "./ui/menuManager.js";
+import './ui/nodeLayer.js'
 import "./ui/overlay.js";
 import "./ui/scriptRunner.js";
 
 import "./ui/draw.js";
-import "./ui/drawMenuCommands.js";
+import "./ui/drawMenuCmds.js";
 import "./ui/patterns.js";
 import "./ui/gallery.js";
 import "./ui/figures.js";

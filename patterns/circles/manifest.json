@@ -1,18 +1,52 @@
-[ 
-    { "filename": "circle",      "path": "circles/circle.js",
-      "title":    "Circle: FULL"}, 
-    { "filename": "ellipseFull",       "path": "circles/ellipseFull.js",
-      "title":    "Ellipse: FULL"}, 
-    { "filename": "ellipseEndTaper",   "path": "circles/ellipseEndTaper.js",
-      "title":    "Ellipse: END_TAPER"}, 
-    { "filename": "ellipseStartEnd"  , "path": "circles/ellipseStartEnd.js",
-      "title":    "Ellipse: START_END"}, 
-    { "filename": "ellipseStartTaper", "path": "circles/ellipseStartTaper.js", 
-      "title":    "Ellipse: START_TAPER"}, 
-    { "filename": "ellipseTaper",      "path": "circles/ellipseTaper.js",
-      "title":    "Ellipse: TAPER"}, 
-    { "filename": "skippingPositive",  "path": "circles/skippingPositive.js",
-      "title":    "Skipping Positive"}, 
-    { "filename": "skippingNegative",  "path": "circles/skippingNegative.js",
-      "title":    "Skipping Negative"}
-] 
+[
+  {
+    "filename": "circle",
+    "path": "circles/circle.js",
+    "title": "Circle: FULL"
+  },
+  {
+    "filename": "ellipseFull",
+    "path": "circles/ellipseFull.js",
+    "title": "Ellipse: FULL"
+  },
+  {
+    "filename": "ellipseEndTaper",
+    "path": "circles/ellipseEndTaper.js",
+    "title": "Ellipse: END_TAPER"
+  },
+  {
+    "filename": "ellipseStartEnd",
+    "path": "circles/ellipseStartEnd.js",
+    "title": "Ellipse: START_END"
+  },
+  {
+    "filename": "ellipseStartTaper",
+    "path": "circles/ellipseStartTaper.js",
+    "title": "Ellipse: START_TAPER"
+  },
+  {
+    "filename": "ellipseTaper",
+    "path": "circles/ellipseTaper.js",
+    "title": "Ellipse: TAPER"
+  },
+  {
+    "filename": "skippingPositive",
+    "path": "circles/skippingPositive.js",
+    "title": "Skipping Positive"
+  },
+  {
+    "filename": "skippingNegative",
+    "path": "circles/skippingNegative.js",
+    "title": "Skipping Negative"
+  },
+  {
+    "filename": "mysticRose",
+    "path": "mysticRose.js",
+    "title": "mysticRose"
+  },
+  {
+    "filename": "cycloid",
+    "path": "cycloid.js",
+    "title": "cycloid"
+  }
+]

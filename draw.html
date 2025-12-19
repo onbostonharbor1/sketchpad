@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Draw (No UI)</title>
+  <title>Drawing Tests</title>
 
   <style>
     html, body { margin: 0; padding: 0; background: #fff; }
@@ -22,23 +22,32 @@
 
 
   <script type="module">
-  import { Point, StringThing }          from './classes/classes.js';
-  import { drawMysticRose } from './draw/unicorns.js';
+  import { Point, Line, StringThing }    from '/classes/classes.js';
+  import { Radiate }                     from '/classes/radiate.js';
+  import { drawLine }                    from '/draw/draw_utilities.js'
+  import { drawRadiate }                 from '/draw/unicorns.js';
 
-  runPattern();
 
-  function runPattern () {
-	  let s = { numNodes: 20,
-		          color:    "blue",
-		          midpoint: new Point(300,300),
-              yScale:   1.1,
-  //            ellipse:  { a: 400, b: 300 }
-		          radius:   400
-            };
-	  let thing = new StringThing(s);
-    drawMysticRose(thing);
-  }
+function runPattern() {
+	let radialPt = new Point(300,20);
+	let start    = new Point(20, 150);
+  let end      = new Point(500,450);
+	let numSteps = 20;
+	let r = {
+				radialPt:  radialPt,
+        start:     start,
+        end:       end,
+				numSteps:	 numSteps
+			}
+	let thing    = new Radiate(r);
 
+	drawRadiate(thing);
+}
+
+
+
+
+runPattern();
   </script>
 </body>
 </html>

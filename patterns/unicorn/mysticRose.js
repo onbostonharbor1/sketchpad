@@ -1,5 +1,5 @@
-  import { Point, StringThing }     from './classes/classes.js';
-  import { drawMysticRose }         from './draw/unicorns.js';
+  import { Point, StringThing }     from '/classes/classes.js';
+  import { drawMysticRose }         from '/draw/unicorns.js';
 
   export function runPattern () {
 	    let s = { numNodes: 20,

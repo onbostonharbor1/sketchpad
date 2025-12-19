@@ -1,9 +1,10 @@
-[ 
-  "circles" 
-, "curve_stitch" 
-, "imported" 
-, "parametric" 
-, "pursuit" 
-, "spirals" 
-, "unicorn" 
-] 
+[
+  "circles"
+, "curve_stitch"
+, "fundamental"
+, "imported"
+, "parametric"
+, "pursuit"
+, "spirals"
+, "unicorn"
+]

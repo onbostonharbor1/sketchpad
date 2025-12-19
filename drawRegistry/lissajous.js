@@ -18,6 +18,7 @@ window.drawRegistry_lissajous = {
   source:      "internal",
   tags:        ["Ellipse", "Curve Stitch"],
   description: "Draws chord patterns inside an ellipse using skip, taper, and withinCirc modes.",
+  hover:       "",
 
   background:  null,
   overlays:    [],

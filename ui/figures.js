@@ -11,7 +11,6 @@ import { uiState } from "./uiState.js";
    initFiguresTab — initialize placeholder content
 ============================================================ */
 export function initFiguresTab() {
-  setFiguresButtons();
   setFiguresAction();
   setFiguresSubtabs();
   setFiguresCaption();
@@ -23,11 +22,6 @@ export function initFiguresTab() {
 /* ============================================================
    Placeholder setters for each UI region
 ============================================================ */
-function setFiguresButtons() {
-  const el = document.getElementById("buttons");
-  if (el) el.innerHTML = "TBD figures buttons";
-} // end setFiguresButtons
-
 function setFiguresAction() {
   const el = document.getElementById("action");
   if (el) el.innerHTML = "TBD figures action";
@@ -63,7 +57,6 @@ export const FiguresTabSpec = {
   init: initFiguresTab,
   save: () => ({}),  // nothing to save yet
 
-  buttons:   setFiguresButtons,
   action:    setFiguresAction,
   subtabs:   setFiguresSubtabs,
   caption:   setFiguresCaption,
@@ -77,7 +70,6 @@ export const FiguresTabSpec = {
 ============================================================ */
 export const figuresDivs = {
   theme: "theme-figures",
-  buttons:   setFiguresButtons,
   action:    setFiguresAction,
   subtabs:   setFiguresSubtabs,
   caption:   setFiguresCaption,

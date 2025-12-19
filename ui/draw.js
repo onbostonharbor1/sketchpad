@@ -13,7 +13,7 @@
 import { setCaptionBar }          from "./caption.js";
 import { renderCategories }       from "./categories.js";
 import { copyActiveDrawObject, resetActiveDrawObject }
-                                  from "./draWMenuCommands.js";
+                                  from "./drawMenuCmds.js";
 import { menuManager }            from "./menuManager.js";
 import { buildParameterControls } from "./parameterControls.js";
 import { clearDivs, showScriptOffcanvas }              from "./ui_utilities.js";
@@ -32,7 +32,7 @@ export const DrawTabSpec = {
   name: TAB_NAME,
   theme: "theme-draw",
 
-  regions: ["subtabs", "sketchpad", "caption", "text", "buttons", "action"],
+  regions: ["subtabs", "sketchpad", "caption", "text", "action"],
 
   // lifecycle hooks
   init: initDrawTab,
@@ -70,7 +70,6 @@ export const DrawController = {
 
   clearCanvas,
   setDrawAction,
-  setDrawButtons,
   clearDrawCaption,
   setDrawCaption,
   setDrawSketchpad,
@@ -417,7 +416,6 @@ export function drawActiveTab() {
   // Caption bar
   // --------------------------
   setDrawCaption(entry);
-  setDrawButtons();   // caption-menu handles actions
 
   // --------------------------
   // Prepare sketchpad
@@ -505,18 +503,6 @@ function setDrawAction() {
   const el = document.getElementById("action");
   if (el) el.innerHTML = "";
 } // end setDrawAction
-
-/*************************************************************
-   setDrawButtons()
-   -----------------------------------------------------------
-   Draw tab no longer uses the #buttons area at all.
-   All actions now come from caption-menu.
-*************************************************************/
-function setDrawButtons() {
-  const el = document.getElementById("buttons");
-  if (!el) throw new Error("setDrawButtons: #buttons not found");
-  el.innerHTML = "";
-} // end setDrawButtons
 
 /*************************************************************
    clearDrawCaption()
