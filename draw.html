@@ -17,37 +17,41 @@
     <canvas id="sharedCanvas" width="1000" height="800"></canvas>
   </div>
 
-  <!-- System imports only -->
+  <!-- System bootstrap (assumed to set up window.ctx, canvas, etc.) -->
   <script type="module" src="/drawMain.js"></script>
 
-
   <script type="module">
-  import { Point, Line, StringThing }    from '/classes/classes.js';
-  import { Radiate }                     from '/classes/radiate.js';
-  import { drawLine }                    from '/draw/draw_utilities.js'
-  import { drawRadiate }                 from '/draw/unicorns.js';
+    /*
+      draw.htm (root)
+      Uses:
+        - LinkedCircles class
+        - drawLinkedCircles(thing)
+      Preserves link modes:
+        "pairwise" | "ring" | "allToAll"
+    */
 
+    import { LinkedCircles }     from "/classes/linkedCircles.js";
+    import { drawLinkedCircles } from "/draw/drawLinkedCircles.js";
 
-function runPattern() {
-	let radialPt = new Point(300,20);
-	let start    = new Point(20, 150);
-  let end      = new Point(500,450);
-	let numSteps = 20;
-	let r = {
-				radialPt:  radialPt,
-        start:     start,
-        end:       end,
-				numSteps:	 numSteps
-			}
-	let thing    = new Radiate(r);
+    // Create the draw-side object ("thing")
+    const thing = new LinkedCircles({
+      numCircles: 4,        // range: 2..7
+      linkMode: "ring",     // "pairwise" | "ring" | "allToAll"
+      radius: 100,
+      numPoints: 120,
+      numSteps: 6,
+      color: "blue",
+      lineWidth: 2
+      // midpoints intentionally omitted
+      // predefined midpoint set is selected automatically
+    });
 
-	drawRadiate(thing);
-}
+    // Draw once
+    drawLinkedCircles(thing);
 
-
-
-
-runPattern();
+    // Uncomment to test other modes:
+    // thing.setLinkMode("pairwise"); drawLinkedCircles(thing);
+    // thing.setLinkMode("allToAll"); drawLinkedCircles(thing);
   </script>
 </body>
 </html>

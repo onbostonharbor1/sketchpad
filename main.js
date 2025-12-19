@@ -4,6 +4,7 @@
 import "./classes/classes.js";
 import "./classes/curveStitchClass.js";
 import "./classes/ellipseClass.js";
+import "./classes/linkedCircles.js";
 import "./classes/overlayClass.js";
 import "./classes/radiate.js";
 
@@ -12,6 +13,7 @@ import "./draw/drawState.js";
 import "./draw/drawRedefines.js";
 import "./draw/color.js";
 import "./draw/draw_utilities.js";
+import "./draw/drawLinkedCircles.js";
 import "./draw/drawRegular.js";
 import "./draw/ellipse.js";
 import "./draw/unicorns.js";
@@ -38,8 +40,8 @@ import "./drawRegistry/drawRegistry.js";
 
 // === UI subsystem ===
 import "./ui/uiState.js";
-import "./ui/parameterControls.js";
 import "./ui/ui_callbacks.js";
+
 import "./ui/actionRegistry.js";
 import "./ui/caption.js";
 import "./ui/categories.js";
@@ -48,13 +50,15 @@ import "./ui/manifest.js";
 import "./ui/menuManager.js";
 import './ui/nodeLayer.js'
 import "./ui/overlay.js";
+import "./ui/parameterControls.js";
 import "./ui/scriptRunner.js";
 
 import "./ui/draw.js";
 import "./ui/drawMenuCmds.js";
-import "./ui/patterns.js";
-import "./ui/gallery.js";
 import "./ui/figures.js";
+import "./ui/gallery.js";
+import "./ui/patterns.js";
+import "./ui/patternsMenuCmds.js";
 import "./ui/utilities.js";
 
 // UI infrastructure

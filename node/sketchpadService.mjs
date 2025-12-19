@@ -78,6 +78,7 @@ export async function dispatchService(requestName, payload = {}) {
   if (typeof requestName !== "string" || requestName.trim() === "") {
     throw new Error(`dispatchService: invalid requestName: ${String(requestName)}`);
   }
+  console.log("dispatchService file:", import.meta.url, "request:", requestName);
 
   switch (requestName) {
 
@@ -269,13 +270,130 @@ export async function deletePackageScript(payload = {}) {
 
    =========================================================== */
 
+/* ===========================================================
+   TASK: editPackageScript
+
+   DESCRIPTION
+   -----------
+   Updates the title of a single manifest entry identified
+   by filename within a per-category manifest.json.
+
+   Payload:
+     {
+       manifestPath : "/patterns/<category>/manifest.json",
+       filename     : "<base filename>",
+       title        : "<new title>"
+     }
+
+   =========================================================== */
+
 export async function editPackageScript(payload = {}) {
+  console.log("editPackageScript file:", import.meta.url);
+
+  const manifestPathInput = payload.manifestPath;
+  const filename          = payload.filename;
+  const newTitleRaw       = payload.title;
+
+  /* ---- validate payload ---- */
+  if (typeof manifestPathInput !== "string" || manifestPathInput.trim() === "") {
+    throw new Error("editPackageScript: manifestPath missing or invalid");
+  }
+
+  if (typeof filename !== "string" || filename.trim() === "") {
+    throw new Error("editPackageScript: filename missing or invalid");
+  }
+
+  if (typeof newTitleRaw !== "string") {
+    throw new Error("editPackageScript: title must be a string");
+  }
+
+  const newTitle = newTitleRaw.trim();
+
+  /* ---- resolve and validate manifest path ---- */
+  const patternsRoot = path.resolve("./patterns");
+  const manifestPath = resolveManifestPath(patternsRoot, manifestPathInput);
+
+  /* ---- load manifest ---- */
+  const manifest = readJsonFileSync(manifestPath);
+  if (!Array.isArray(manifest)) {
+    throw new Error("editPackageScript: manifest is not an array");
+  }
+
+  /* ---- locate entry ---- */
+  let indexFound = -1;
+
+  for (let i = 0; i < manifest.length; i++) {
+    const entry = manifest[i];
+    if (!entry || typeof entry !== "object") continue;
+
+    if (entry.filename === filename) {
+      indexFound = i;
+      break;
+    }
+  }
+
+  if (indexFound < 0) {
+    throw new Error(`editPackageScript: entry not found: ${filename}`);
+  }
+
+  /* ---- update entry ---- */
+  const entry    = manifest[indexFound];
+  const oldTitle = entry.title || "";
+
+  entry.title = newTitle;
+
+  /* ---- persist ---- */
+  writeJsonFileSync(manifestPath, manifest);
+
+  /* ---- report ---- */
   return {
     request: "editPackageScript",
-    status: "noop",
-    payload
+    status: "ok",
+    manifestPath,
+    filename,
+    indexUpdated: indexFound,
+    oldTitle,
+    newTitle
   };
+
 } // end editPackageScript
+
+/* -----------------------------------------------------------
+   resolveManifestPath(patternsRoot, manifestPathInput)
+
+   DESCRIPTION
+   -----------
+   Resolves a UI-provided manifest path safely and ensures
+   it remains inside the patterns root.
+
+   Examples accepted:
+     "/patterns/circles/manifest.json"
+     "patterns/circles/manifest.json"
+
+----------------------------------------------------------- */
+function resolveManifestPath(patternsRoot, manifestPathInput) {
+
+  let rel = String(manifestPathInput);
+
+  /* ---- normalize leading slash ---- */
+  if (rel.startsWith("/")) {
+    rel = rel.slice(1);
+  }
+
+  const abs = path.resolve(rel);
+
+  /* ---- fail-fast traversal protection ---- */
+  if (!abs.startsWith(patternsRoot)) {
+    throw new Error(
+      "editPackageScript: manifestPath escapes patterns root: " + abs
+    );
+  }
+
+  assertFileExists(abs, "Manifest file not found: " + abs);
+
+  return abs;
+
+} // end resolveManifestPath
 
 
 /* ===========================================================

@@ -1,14 +1,24 @@
 /* drawRegistry/radiate.js
- */
-import { Line, Point }      from "../classes/classes.js";
-import { Radiate }          from "../classes/radiate.js";
-import { drawALine }        from "../draw/draw_utilities.js";
-import { drawRadiate }      from "../draw/unicorns.js";
+   ------------------------------------------------------------
+   New lifecycle form (init, update, draw)
+   Base line midpoint work is done first; endpoints updated only if needed.
+
+   Rewrite notes:
+   - Keep params JSON-safe at all times: start/end/midpoint/radialPt are plain {x,y}.
+   - Geometry for the base segment lives in this.elements.line (Line/Point objects).
+   - Radiate object lives in this.elements.thing and is what drawRadiate() consumes.
+   - No duplicate param mirroring (params === this.params).
+   ------------------------------------------------------------ */
+
+import { Line, Point } from "../classes/classes.js";
+import { Radiate }     from "../classes/radiate.js";
+import { drawALine }   from "../draw/draw_utilities.js";
+import { drawRadiate } from "../draw/unicorns.js";
 
 window.drawRegistry_radiate = {
   name:        "Radiate",
-  id:          "drawRaditae",
-  version:     .1,
+  id:          "drawRadiate",
+  version:     0.2,
   category:    "fundamental",
   firstOrder:  true,
   source:      "internal",
@@ -26,6 +36,7 @@ window.drawRegistry_radiate = {
     radialPt:  { x: 300, y: 20 },
     start:     { x: 20,  y: 150 },
     end:       { x: 500, y: 450 },
+    midpoint:  { x: 260, y: 300 },   // will be resynced in init()
     numSteps:  20,
     color:     "#0044cc",
     lineWidth: 1
@@ -39,80 +50,92 @@ window.drawRegistry_radiate = {
     radialPt:  { widget: "pointPicker", label: "Radial pt:" },
     start:     { widget: "pointPicker", label: "Start pt:" },
     end:       { widget: "pointPicker", label: "End pt:" },
-    midpoint:  { widget: "pointPicker", label: "Midpoint:" },
+    midpoint:  { widget: "pointPicker", label: "Midpoint:" }
   },
 
   // ==========================================================
   // 1. init() – create persistent elements
   // ==========================================================
-
   init() {
     const p = this.params;
-    const line = new Line(new Point(p.start.x, p.start.y),
-                          new Point(p.end.x,   p.end.y));
+
+    // Persistent geometry for the base segment
+    const line = new Line(
+      new Point(p.start.x, p.start.y),
+      new Point(p.end.x,   p.end.y)
+    );
+
+    // Sync midpoint from definitive geometry
     const mid = line.midpoint();
-    this.params.midpoint = { x: mid.x, y: mid.y };
-    const s = {radialPt:  p.radialPt,
-               start:     p.start,
-               end:       p.end,
-               numSteps:  p.numSteps,
-               color:     p.color,
-               lineWidth: p.lineWidth
-    };
-    const thing = new Radiate(s);
+    p.midpoint = { x: mid.x, y: mid.y };
+
+    // Persistent Radiate object (draw-side)
+    const thing = new Radiate({
+      radialPt:  { x: p.radialPt.x,  y: p.radialPt.y },
+      start:     { x: p.start.x,     y: p.start.y },
+      end:       { x: p.end.x,       y: p.end.y },
+      numSteps:  p.numSteps,
+      color:     p.color,
+      lineWidth: p.lineWidth
+    });
+
     this.elements = { line, thing };
   }, // end init
 
   // ==========================================================
   // 2. update(params) – apply new values from controls
   // ==========================================================
-update(params) {
-  const p = this.params;
-  const { line, thing } = this.elements;
+  update(params) {
+    const p = this.params;
+    const line = this.elements.line;
+    const thing = this.elements.thing;
 
-  // Compare against live geometry, not p/params (which are the same object)
-  const incomingMid = new Point(params.midpoint.x, params.midpoint.y);
-  const prevMid = line.midpoint();
+    // --- Base line updates (midpoint first; else endpoints) ---
+    const incomingMid = new Point(p.midpoint.x, p.midpoint.y);
+    const prevMid = line.midpoint();
 
-  if (!incomingMid.isSame(prevMid)) {
-    // Midpoint moved → reposition line (updates endpoints internally)
-    line.moveMidpointTo(incomingMid);
-  } else {
-    // Otherwise endpoints may have changed
-    line.setStart(new Point(params.start.x, params.start.y));
-    line.setEnd(new   Point(params.end.x,   params.end.y));
-  }
+    if (!incomingMid.isSame(prevMid)) {
+      line.moveMidpointTo(incomingMid);
+    } else {
+      line.setStart(new Point(p.start.x, p.start.y));
+      line.setEnd(new Point(p.end.x, p.end.y));
+    }
 
-  // Resync registry params from definitive geometry
-  const mid  = line.midpoint();
-  p.start    = line.startPt();
-  p.end      = line.endPt();
-  p.midpoint = new Point(mid.x, mid.y);
+    // --- Resync base geometry back into params (JSON-safe) ---
+    const start = line.startPt();
+    const end = line.endPt();
+    const mid = line.midpoint();
 
-  // Style
-  thing.color = params.color;
-  thing.lineWidth = Number(params.lineWidth);
-  thing.radialPt  = params.radialPt;
-  thing.start     = params.start;
-  thing.end       = params.end;
-  thing.numSteps  = params.numSteps;
+    p.start = { x: start.x, y: start.y };
+    p.end = { x: end.x, y: end.y };
+    p.midpoint = { x: mid.x, y: mid.y };
 
-  p.color = thing.color;
-  p.lineWidth = thing.lineWidth;
-  p.radialPt  = thing.radialPt;
-  p.start     = thing.start;
+    // --- Push current params into Radiate thing (JSON-safe) ---
+    thing.color = p.color;
+    thing.lineWidth = Number(p.lineWidth);
+    p.lineWidth = thing.lineWidth;
 
-  // Mirror back into shared params for UI
-  params.start    = line.startPt();
-  params.end      = line.endPt();
-  params.midpoint = new Point(mid.x, mid.y);
-}, // end update
+    thing.numSteps = Number(p.numSteps);
+    p.numSteps = thing.numSteps;
+
+    thing.radialPt = { x: p.radialPt.x, y: p.radialPt.y };
+    thing.start    = { x: p.start.x,    y: p.start.y };
+    thing.end      = { x: p.end.x,      y: p.end.y };
+
+    // Keep params in sync with what thing actually holds (deterministic)
+    p.color = thing.color;
+    p.radialPt = { x: thing.radialPt.x, y: thing.radialPt.y };
+    p.start    = { x: thing.start.x,    y: thing.start.y };
+    p.end      = { x: thing.end.x,      y: thing.end.y };
+  }, // end update
 
   // ==========================================================
   // 3. draw() – render the current geometry
   // ==========================================================
   draw() {
-    const { line, thing } = this.elements;
+    const line = this.elements.line;
+    const thing = this.elements.thing;
+
     drawALine(thing.color, thing.lineWidth, line);
     drawRadiate(thing);
   } // end draw

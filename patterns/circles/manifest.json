@@ -42,11 +42,11 @@
   {
     "filename": "mysticRose",
     "path": "mysticRose.js",
-    "title": "mysticRose"
+    "title": "Mystic Rose (circle)"
   },
   {
     "filename": "cycloid",
     "path": "cycloid.js",
-    "title": "cycloid"
+    "title": "Cycloid (one node)"
   }
 ]

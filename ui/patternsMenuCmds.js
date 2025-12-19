@@ -144,16 +144,36 @@ async function applyEditTitle(itemInfo) {
     closeFormsOverlay();
     return;
   }
-alert("stop here");
-//  await nodeDispatch("editPackageScript", {
-//    manifestPath: itemInfo.manifestPath,
-//    filename: itemInfo.filename,
-//    title: newTitle
-//  });
+
+  const result = await nodeDispatch("editPackageScript", {
+    manifestPath: itemInfo.manifestPath,
+    filename: itemInfo.filename,
+    title: newTitle
+  });
+
+  if (!result) {
+    throw new Error("applyEditTitle: editPackageScript returned nothing");
+  }
+
+  if (result.status !== "ok") {
+    throw new Error(
+      "applyEditTitle: editPackageScript failed: " + JSON.stringify(result)
+    );
+  }
+
+  console.log("editPackageScript wrote:", result.manifestPath);
+
+  /* ---------------------------------------------------------
+     Update the live in-memory item (the one Patterns is using)
+     and redraw. Do NOT clear/reload manifest caches here yet.
+  --------------------------------------------------------- */
+  itemInfo.item.title = newTitle;
+  itemInfo.currentTitle = newTitle;
 
   closeFormsOverlay();
 
-  manifest.cache.patterns = null;
+  uiState.patterns.activeCategory = itemInfo.category;
+  uiState.patterns.activeItem     = itemInfo.index;
 
   const patternsMod = await import("./patterns.js");
   await patternsMod.PatternsController.showSelectedPattern(

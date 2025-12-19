@@ -20,8 +20,8 @@ const path = require("path");
 
 // Location of the help directory (relative to project root)
 const HELP_MANIFEST = "manifest.json"
-const HELP_ROOT = path.join(__dirname);          // …/help/
-const OUTPUT_FILE = path.join(HELP_ROOT, HELP_MANIFEST);
+const HELP_ROOT     = path.resolve("help");
+const OUTPUT_FILE   = path.join(HELP_ROOT, HELP_MANIFEST);
 
 // Top-level help subdirectories you plan to support
 const TAB_NAMES = ["draw", "patterns", "gallery", "utilities", "figures"];
