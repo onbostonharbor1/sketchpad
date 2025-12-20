@@ -5,7 +5,7 @@
   "author": "",
   "license": "ISC",
   "scripts": {
-    "predev": "node ./node/update_gallery_manifests.mjs && node ./node/generateHelpManifest.js",
+    "predev": "node ./node/check_ports.mjs && node ./node/update_gallery_manifests.mjs && node ./node/generateHelpManifest.js",
 
     "dev:vite": "vite --port 5173 --strictPort",
     "dev:svc": "node ./node/sketchpadServer.mjs",

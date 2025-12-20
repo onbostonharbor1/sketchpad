@@ -21,27 +21,19 @@
   <script type="module" src="/drawMain.js"></script>
 
   <script type="module">
-    /*
-      draw.htm (root)
-      Uses:
-        - LinkedCircles class
-        - drawLinkedCircles(thing)
-      Preserves link modes:
-        "pairwise" | "ring" | "allToAll"
-    */
 
     import { LinkedCircles }     from "/classes/linkedCircles.js";
     import { drawLinkedCircles } from "/draw/drawLinkedCircles.js";
 
     // Create the draw-side object ("thing")
     const thing = new LinkedCircles({
-      numCircles: 4,        // range: 2..7
-      linkMode: "ring",     // "pairwise" | "ring" | "allToAll"
+      numCircles: 2,        // range: 2..7
+      linkMode: "pairwise",     // "pairwise" | "ring" | "allToAll"
       radius: 100,
-      numPoints: 120,
-      numSteps: 6,
+      numPoints: 80,
+      numSteps: 10,
       color: "blue",
-      lineWidth: 2
+      lineWidth: 1
       // midpoints intentionally omitted
       // predefined midpoint set is selected automatically
     });

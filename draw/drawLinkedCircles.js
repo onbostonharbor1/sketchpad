@@ -48,42 +48,95 @@ function buildCirclePairs(n, mode) {
 } // end buildCirclePairs
 
 export function drawLinkedCircles(thing) {
+  // ------------------------------------------------------------
+  // Fail-fast validation
+  // ------------------------------------------------------------
+  // The function expects a fully-formed LinkedCircles object.
+  // If anything fundamental is missing, we want to crash
+  // immediately so the error is visible in the console.
+  // ------------------------------------------------------------
+
   if (!thing) throw new Error("drawLinkedCircles: thing is required");
 
   const ctx = window.ctx;
   if (!ctx) throw new Error("drawLinkedCircles: window.ctx is null");
 
-  if (!thing.midpoints) throw new Error("drawLinkedCircles: thing.midpoints is required");
-  if (thing.midpoints.length !== thing.numCircles) throw new Error("drawLinkedCircles: midpoints length must match numCircles");
-
-  if (thing.numCircles < 2 || thing.numCircles > 7) throw new Error("drawLinkedCircles: numCircles must be in range 2..7");
-  if (thing.linkMode !== "pairwise" && thing.linkMode !== "ring" && thing.linkMode !== "allToAll") {
-    throw new Error('drawLinkedCircles: linkMode must be "pairwise", "ring", or "allToAll"');
+  if (!thing.midpoints) {
+    throw new Error("drawLinkedCircles: thing.midpoints is required");
   }
 
-  // Style
-  ctx.strokeStyle = thing.color;
-  ctx.lineWidth = thing.lineWidth;
+  if (thing.midpoints.length !== thing.numCircles) {
+    throw new Error("drawLinkedCircles: midpoints length must match numCircles");
+  }
 
-  // ----------------------------------------------------------
-  // 1) Draw all circles first (same as your original function)
-  // ----------------------------------------------------------
+  if (thing.numCircles < 2 || thing.numCircles > 7) {
+    throw new Error("drawLinkedCircles: numCircles must be in range 2..7");
+  }
+
+  if (
+    thing.linkMode !== "pairwise" &&
+    thing.linkMode !== "ring" &&
+    thing.linkMode !== "allToAll"
+  ) {
+    throw new Error(
+      'drawLinkedCircles: linkMode must be "pairwise", "ring", or "allToAll"'
+    );
+  }
+
+  // ------------------------------------------------------------
+  // Drawing style
+  // ------------------------------------------------------------
+  // These are applied once and remain in effect for everything
+  // drawn by this function (circles and linking stitches).
+  // ------------------------------------------------------------
+
+  ctx.strokeStyle = thing.color;
+  ctx.lineWidth   = thing.lineWidth;
+
+  // ------------------------------------------------------------
+  // 1) Draw the base circles
+  // ------------------------------------------------------------
+  // Each circle is drawn independently using drawOneCircle().
+  // This is purely visual structure; no linking occurs here.
+  // ------------------------------------------------------------
+
   for (let k = 0; k < thing.midpoints.length; k++) {
     drawOneCircle(ctx, thing.midpoints[k], thing.radius);
   }
 
-  // ----------------------------------------------------------
-  // 2) Build pairs according to the chosen mode
-  // ----------------------------------------------------------
+  // ------------------------------------------------------------
+  // 2) Determine which circles should be linked
+  // ------------------------------------------------------------
+  // buildCirclePairs() returns an array of index pairs.
+  //
+  // Example (pairwise, 3 circles):
+  //   [ [0,1], [1,2] ]
+  //
+  // Example (ring, 3 circles):
+  //   [ [0,1], [1,2], [2,0] ]
+  //
+  // Example (allToAll, 3 circles):
+  //   [ [0,1], [0,2], [1,2] ]
+  // ------------------------------------------------------------
+
   const pairs = buildCirclePairs(thing.numCircles, thing.linkMode);
 
-  // ----------------------------------------------------------
-  // 3) Draw all link lines for each pair
-  //    (matches your original stepAngle/numSteps logic)
-  // ----------------------------------------------------------
+  // ------------------------------------------------------------
+  // 3) Draw the linking "string" stitches
+  // ------------------------------------------------------------
+  // The circle is parameterized by angle.
+  // stepAngle determines how many points we sample around
+  // each circle.
+  // ------------------------------------------------------------
+
   const stepAngle = (2 * Math.PI) / thing.numPoints;
 
+  // We collect ALL stitch segments into one path for efficiency.
   ctx.beginPath();
+
+  // ------------------------------------------------------------
+  // For each pair of circles...
+  // ------------------------------------------------------------
 
   for (let pairIndex = 0; pairIndex < pairs.length; pairIndex++) {
     const a = pairs[pairIndex][0];
@@ -92,22 +145,50 @@ export function drawLinkedCircles(thing) {
     const c1 = thing.midpoints[a];
     const c2 = thing.midpoints[b];
 
+    // ----------------------------------------------------------
+    // Walk once around the circle in angular steps.
+    // Each iteration draws ONE explicit line segment:
+    //
+    //   circle A at angle i
+    //        →
+    //   circle B at angle h
+    //
+    // where h is offset by numSteps.
+    // ----------------------------------------------------------
+
     for (let i = 0; i < 2 * Math.PI; i += stepAngle) {
+      // Offset angle on the second circle.
       const h = i + stepAngle * thing.numSteps;
 
-      // Same structure as your original: lineTo on circle 1, moveTo on circle 2.
-      // (Yes, this produces the same visual behavior you had.)
-      ctx.lineTo(
-        c1.x + thing.radius * Math.sin(i),
-        c1.y - thing.radius * Math.cos(i)
-      );
+      // Compute the point on circle 1 at angle i
+      const x1 = c1.x + thing.radius * Math.sin(i);
+      const y1 = c1.y - thing.radius * Math.cos(i);
 
-      ctx.moveTo(
-        c2.x + thing.radius * Math.sin(h),
-        c2.y - thing.radius * Math.cos(h)
-      );
+      // Compute the point on circle 2 at angle h
+      const x2 = c2.x + thing.radius * Math.sin(h);
+      const y2 = c2.y - thing.radius * Math.cos(h);
+
+      // --------------------------------------------------------
+      // IMPORTANT:
+      //
+      // We explicitly start each stitch with moveTo(),
+      // then draw the stitch with lineTo().
+      //
+      // This guarantees that EVERY stitch is drawn and
+      // avoids the missing-line gap caused by relying on
+      // a previous pen position.
+      // --------------------------------------------------------
+
+      ctx.moveTo(x1, y1);
+      ctx.lineTo(x2, y2);
     }
   }
 
+  // ------------------------------------------------------------
+  // Render all stitches at once
+  // ------------------------------------------------------------
+
   ctx.stroke();
+
 } // end drawLinkedCircles
+

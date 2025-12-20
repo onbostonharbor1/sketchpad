@@ -1,3 +1,5 @@
+import { LinkedCircles } from "../classes/linkedCircles";
+
 // drawRegistry/drawRegistry.js
 window.drawRegistry = Object.assign(
   {},
@@ -9,6 +11,7 @@ window.drawRegistry = Object.assign(
     inverseStar:        window.drawRegistry_inverseStar,
     line:               window.drawRegistry_line,
     lines2:             window.drawRegistry_2lines,
+    LinkedCircles:      window.drawRegistry_linkedCircles,
     lissajous:          window.drawRegistry_lissajous,
     mysticRose:         window.drawRegistry_mysticRose,
     mysticRoseEllipse:  window.drawRegistry_mysticRoseEllipse,

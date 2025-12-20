@@ -1,8 +1,50 @@
+/* ===========================================================
+   wrapper.css
+   -----------------------------------------------------------
+   SINGLE STYLE CONTAINER — STRUCTURED DOCUMENT
+
+   TABLE OF CONTENTS
+   -----------------------------------------------------------
+   [LAYOUT]
+     - body
+     - #wrapper
+     - #tabs / tab text
+     - #content
+     - #control / #action
+     - #main
+     - #sketchpad-wrapper / #sketchpad / canvas layers
+
+   [CAPTION]
+     - #caption
+     - caption title + buttons
+     - caption dropdown menu
+
+   [CONTROLS]
+     - draw-controls base
+     - ctrl-field grid
+     - range sliders
+     - text inputs (editable + readonly)
+     - checkbox alignment
+     - validation / text output
+
+   [THUMBS_OVERLAYS]
+     - thumbnail panel
+     - thumbnail items
+     - point picker dots
+   =========================================================== */
+
+
+/* ===========================================================
+   [LAYOUT]
+   =========================================================== */
+
+/* ---- Base page ---- */
 body {
   margin: 0;
   font-family: system-ui, sans-serif;
 }
 
+/* ---- Root wrapper ---- */
 #wrapper {
   display: flex;
   flex-direction: column;
@@ -10,41 +52,38 @@ body {
   width: 100%;
 }
 
-/* Tabs bar at top */
-/* === ADJUST TAB AREA BACKGROUND AND TEXT COLOR === */
-
-/* Make the area behind the tabs white */
+/* ---- Tabs bar ---- */
 #tabs {
   background-color: #ffffff;
 }
 
-/* Default tab text color */
+/* Tab text color */
 .nav-tabs .nav-link {
   color: #000000;
 }
 
-/* Active tab text color (also black) */
 .nav-tabs .nav-link.active {
   color: #000000;
 }
 
-/* Below tabs: control + main */
+/* ---- Main split: control + main ---- */
 #content {
   flex: 1;
   display: flex;
   width: 100%;
 }
-/* Left control area */
+
+/* ---- Left control column ---- */
 #control {
   width: 300px;
   background-color: var(--theme-tint);
-  height: 600px;
   display: flex;
   flex-direction: column;
   padding: 10px;
   box-sizing: border-box;
 }
 
+/* ---- Action area inside control ---- */
 #action {
   flex: 1;
   background-color: var(--theme-tint);
@@ -52,7 +91,7 @@ body {
   overflow-y: auto;
 }
 
-/* Right main area */
+/* ---- Right main column ---- */
 #main {
   flex: 1;
   background: #fafafa;
@@ -62,30 +101,50 @@ body {
   flex-direction: column;
 }
 
-#sketchpad {
-  position: relative;    /* make it the coordinate system for dots */
+/* ---- Sketchpad anchoring ---- */
+#sketchpad-wrapper {
+  position: relative;
 }
 
+/* Unified sketchpad definition */
+#sketchpad {
+  position: relative;   /* coordinate system for overlays */
+  flex: 1;
+  background: white;
+}
+
+/* Legacy placeholders (kept for reference) */
 #subtabs,
 #caption,
 #text,
 #sketchpad {
-  /*      margin-bottom: 10px;
-      padding: 8px;
-      border: 1px solid #ccc; */
+  /*
+  margin-bottom: 10px;
+  padding: 8px;
+  border: 1px solid #ccc;
+  */
 }
 
+/* ---- Canvas base ---- */
 #sharedCanvas {
   position: static;
   z-index: auto;
 }
 
+/* ---- Overlay layer container ---- */
+#canvasOverlayLayers {
+  position: absolute;
+  top: 0;
+  left: 0;
+  pointer-events: none;
+}
+
 
 /* ===========================================================
-   PATTERNS CAPTION BAR
-   Displays current pattern title + Prev/Next/Save buttons
+   [CAPTION]
    =========================================================== */
 
+/* ---- Caption bar ---- */
 #caption {
   display: flex;
   justify-content: space-between;
@@ -98,19 +157,18 @@ body {
   color: #222;
 }
 
+/* ---- Caption title ---- */
 .caption-title {
   font-weight: bold;
   font-size: 0.9rem;
 }
 
+/* ---- Caption buttons ---- */
 .caption-buttons {
   display: flex;
   gap: 8px;
 }
 
-/* ===========================================================
-   CAPTION BUTTONS — unified, theme-aware styling
-   =========================================================== */
 .caption-buttons button {
   padding: 2px 10px;
   border: 1px solid var(--theme-base);
@@ -119,7 +177,9 @@ body {
   color: #000;
   cursor: pointer;
   font-size: 0.9em;
-  transition: background-color 0.2s ease, color 0.2s ease,
+  transition:
+    background-color 0.2s ease,
+    color 0.2s ease,
     border-color 0.2s ease;
 }
 
@@ -129,10 +189,7 @@ body {
   border-color: var(--theme-base);
 }
 
-/* ------------------------------------------------------------
-   Caption Menu Styling
-   ------------------------------------------------------------ */
-
+/* ---- Caption dropdown menu ---- */
 .caption-menu {
   position: absolute;
   background: white;
@@ -142,16 +199,14 @@ body {
   z-index: 9999;
   box-shadow: 0 3px 8px rgba(0,0,0,0.25);
 
-  /* IMPORTANT: menu flows left from the right-justified button */
-  transform: translateX(-100%);  /* move menu left so right edge aligns under button */
+  /* Menu opens leftward under right-justified button */
+  transform: translateX(-100%);
 }
 
 .caption-menu-item {
   padding: 6px 16px;
   cursor: pointer;
   white-space: nowrap;
-
-  /* ensure text left-justified */
   text-align: left;
 }
 
@@ -159,7 +214,7 @@ body {
   background: #e8e8e8;
 }
 
-/* Disabled items (when help or script is missing) */
+/* Disabled menu items */
 .caption-menu-item.disabled {
   color: #888;
   cursor: default;
@@ -170,21 +225,17 @@ body {
   background: white !important;
 }
 
-#sketchpad {
-  flex: 1;
-  background: white;
-}
 
 /* ===========================================================
-   DRAW PARAMETERS PANEL STYLING
-   (layout + color harmonization)
+   [CONTROLS]
    =========================================================== */
 
+/* ---- Draw controls base ---- */
 .draw-controls {
   display: flex;
   flex-direction: column;
   gap: 4px;
-  color: #222; /* softer dark text */
+  color: #222;
 }
 
 .draw-controls label {
@@ -192,6 +243,7 @@ body {
   font-size: 0.8rem;
 }
 
+/* ---- Inputs and selects ---- */
 .draw-controls input,
 .draw-controls select {
   background-color: #ffffff;
@@ -203,30 +255,30 @@ body {
   box-sizing: border-box;
 }
 
+/* ---- Readout values ---- */
 .draw-controls .ctrl-readout {
   color: #000;
   font-weight: 600;
   margin-left: 6px;
 }
 
+/* ---- Text output ---- */
 #text pre {
   font-size: 0.75rem;
   line-height: 1.2;
 }
 
-/* smaller validation message text */
+/* ---- Validation output ---- */
 #validationResults {
   font-size: 0.8rem;
   line-height: 1.2;
   margin-bottom: 8px;
 }
 
-/* ===========================================================
-   FINAL COMPACT RANGE LAYOUT
-   =========================================================== */
+/* ---- Control row grid ---- */
 .ctrl-field {
   display: grid;
-  grid-template-columns: 60px 1fr; /* smaller label column */
+  grid-template-columns: 60px 1fr;
   align-items: start;
   column-gap: 6px;
   margin-bottom: 10px;
@@ -236,12 +288,11 @@ body {
 .ctrl-field label {
   text-align: right;
   font-size: 0.8rem;
-  font-weight: normal;
   line-height: 1.2;
   color: #222;
 }
 
-/* stack min/current/max above slider */
+/* ---- Range slider layout ---- */
 .ctrl-range-wrapper {
   display: flex;
   flex-direction: column;
@@ -250,12 +301,11 @@ body {
 
 .ctrl-range-values {
   display: flex;
-  justify-content: space-between; /* ← forces left, middle, right on one row */
+  justify-content: space-between;
   align-items: center;
   width: 100%;
   font-size: 0.7em;
   color: #222;
-  line-height: 1.2;
   margin-bottom: 2px;
   white-space: nowrap;
 }
@@ -266,36 +316,77 @@ body {
   font-weight: normal;
 }
 
-/* slider fills full width */
 .ctrl-range-wrapper input[type="range"] {
   width: 100%;
-  box-sizing: border-box;
 }
 
-/* ===========================================================
-   Align range labels vertically with slider (not value row)
-   =========================================================== */
+/* Align label with slider (not value row) */
 .ctrl-field:has(.ctrl-range-wrapper) {
-  align-items: end; /* bottom-align within the row */
+  align-items: end;
 }
 
 .ctrl-field:has(.ctrl-range-wrapper) label {
-  align-self: center; /* centers the label with the slider */
-  padding-top: 14px; /* fine-tune vertical offset */
+  align-self: center;
+  padding-top: 14px;
 }
-/* Force visible background on text parameter controls */
+
+/* ---- Text controls ---- */
 input.ctrl-text[type="text"] {
-  background-color: #ffffff !important; /* white or pick your color */
+  background-color: #ffffff !important;
   color: #000000 !important;
   border: 1px solid #888 !important;
   border-radius: 4px;
   padding: 2px 4px;
 }
 
+/* Readonly text controls (display-only) */
+#action .draw-controls input.ctrl-text[readonly] {
+  background: transparent !important;
+  border: none !important;
+  color: #222 !important;
+  box-shadow: none !important;
+  cursor: default;
+}
+
+/* ---- Checkbox alignment ---- */
+.ctrl-field input[type="checkbox"] {
+  width: auto !important;
+  justify-self: start !important;
+  margin-left: 0 !important;
+}
+
+/* ---- Script controls harmonization ---- */
+#action .draw-controls,
+#action .draw-controls label,
+#action .draw-controls input,
+#action .draw-controls select,
+#action .draw-controls span {
+  font-size: 0.8rem;
+  color: inherit;
+  background: none;
+  border: none;
+  box-shadow: none;
+}
+
+.draw-controls .ctrl-range-values span {
+  font-size: 0.8em !important;
+  line-height: 1;
+}
+
+.draw-controls select {
+  border: 1px solid var(--outline);
+  border-radius: 4px;
+  background-color: #fff;
+  padding: 2px 4px;
+  box-shadow: 0 0 2px rgba(0, 0, 0, 0.08);
+}
+
+
 /* ===========================================================
-   THUMBNAIL PANEL (Patterns → Action)
-   Compact 6×10 grid, 36px thumbnails, scrollable if overflow
+   [THUMBS_OVERLAYS]
    =========================================================== */
+
+/* ---- Thumbnail panel ---- */
 .thumb-panel {
   display: grid;
   grid-template-columns: repeat(6, 1fr);
@@ -304,9 +395,10 @@ input.ctrl-text[type="text"] {
   background-color: #fafafa;
   border-top: 1px solid var(--outline);
   overflow-y: auto;
-  max-height: calc(36px * 10 + 6px * 9 + 12px); /* ~10 rows incl. gaps */
+  max-height: calc(36px * 10 + 6px * 9 + 12px);
 }
 
+/* ---- Thumbnail items ---- */
 .thumb-box {
   display: flex;
   flex-direction: column;
@@ -336,50 +428,7 @@ input.ctrl-text[type="text"] {
   font-size: 0.65rem;
 }
 
-/* ===========================================================
-   Make script controls identical to draw controls
-   =========================================================== */
-
-/* ===========================================================
-   Align Script controls visually with Draw tab
-   =========================================================== */
-
-#action .draw-controls,
-#action .draw-controls label,
-#action .draw-controls input,
-#action .draw-controls select,
-#action .draw-controls span {
-  font-size: 0.8rem;
-  color: inherit;
-  background: none;
-  border: none;
-  box-shadow: none;
-}
-
-/* shrink the numeric labels above range sliders */
-.draw-controls .ctrl-range-values span,
-#action .draw-controls .ctrl-range-values span {
-  font-size: 0.8em !important;
-  line-height: 1;
-}
-
-/* emphasize dropdown (select) controls slightly */
-.draw-controls select,
-#action .draw-controls select {
-  border: 1px solid var(--outline);
-  border-radius: 4px;
-  background-color: #fff;
-  padding: 2px 4px;
-  box-shadow: 0 0 2px rgba(0, 0, 0, 0.08);
-}
-
-/* Correct checkbox alignment in control column */
-.ctrl-field input[type="checkbox"] {
-  width: auto !important; /* stop it from stretching */
-  justify-self: start !important; /* align to left edge */
-  margin-left: 0 !important;
-}
-
+/* ---- Point picker overlay ---- */
 .point-picker-dot {
   position: absolute;
   width: 7px;
@@ -387,25 +436,5 @@ input.ctrl-text[type="text"] {
   background: red;
   border-radius: 50%;
   pointer-events: auto;
-  z-index: 2;         /* above the canvas */
-}
-
-/* Style readonly coordinate fields to look like display boxes */
-#action .draw-controls input.ctrl-text[readonly] {
-  background: transparent !important;
-  border: none !important;
-  color: #222 !important;
-  box-shadow: none !important;
-  cursor: default;
-}
-
-#sketchpad-wrapper {
-  position: relative;
-}
-
-#canvasOverlayLayers {
-  position: absolute;
-  top: 0;
-  left: 0;
-  pointer-events: none;
+  z-index: 2;
 }

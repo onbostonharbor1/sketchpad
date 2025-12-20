@@ -7,5 +7,5 @@
 		          midpoint: new Point(300,300),
 		          radius:   300};
 	    let thing = new StringThing(s);
-        drawMysticRose(thing);
+      drawMysticRose(thing);
   }

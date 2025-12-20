@@ -25,6 +25,7 @@ import "./drawRegistry/cycloid.js";
 import "./drawRegistry/inEllipse.js";
 import "./drawRegistry/inverseStar.js";
 import "./drawRegistry/line.js";
+import "./drawRegistry/linkedCircles.js";
 import "./drawRegistry/mysticRose.js";
 import "./drawRegistry/mysticRoseEllipse.js";
 import "./drawRegistry/parabola.js";

@@ -2,7 +2,7 @@ import{ beginPath, closePath, lineTo, moveTo, stroke}
                                              from "./drawRedefines";
 import { getEllipsePoints }                  from "./ellipse.js";
 import { createNodes, drawLine, ptsOnLine }  from "./draw_utilities.js";
-import { Line}                               from "/classes/classes.js";
+import { Line, Point }                               from "/classes/classes.js";
 
 //////////////////////////////////////////////////////////////////
 // crossHair

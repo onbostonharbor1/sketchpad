@@ -2,16 +2,26 @@
   {
     "filename": "mysticRose",
     "path": "mysticRose.js",
-    "title": "mysticRose"
+    "title": "Mystic Rose (circle)"
   },
   {
     "filename": "crossHair",
     "path": "crossHair.js",
-    "title": "crossHair"
+    "title": "Crosshair"
   },
   {
     "filename": "mysticRoseEllipse",
     "path": "mysticRoseEllipse.js",
-    "title": "mysticRoseEllipse"
+    "title": "Mystic Rose (ellipse)"
+  },
+  {
+    "filename": "fig1",
+    "path": "fig1.js",
+    "title": "fig1"
+  },
+  {
+    "filename": "linkedCircles",
+    "path": "linkedCircles.js",
+    "title": "Linked Circles"
   }
 ]
