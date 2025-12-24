@@ -1,10 +1,12 @@
 [
   "circles"
 , "curve_stitch"
+, "figures"
 , "fundamental"
 , "imported"
 , "parametric"
 , "pursuit"
 , "spirals"
-, "unicorn"
+, "unicorn",
+, "builds"
 ]

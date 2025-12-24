@@ -9,9 +9,9 @@
 	let numSteps = 20;
 	let r = {
 				radialPt:  radialPt,
-                start:     start,
-                end:       end,
-				numSteps:	 numSteps
+                start:     	start,
+                end:       	end,
+				numSteps: 	numSteps
 			}
 	let thing    = new Radiate(r);
 

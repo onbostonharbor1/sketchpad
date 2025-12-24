@@ -40,7 +40,8 @@ const toDegrees = (rad) => rad * (180 / Math.PI);
 /////////////////////////////////////////////////////////////////
 function createNodes(thing) {
   const nodes = [];
-  const { midpoint, radius, numNodes, rotate, xScale, yScale } = thing;
+  let { midpoint, radius, numNodes, rotate, xScale, yScale } = thing;
+  rotate = toRadians(rotate);
 
   for (let i = 0; i < numNodes; i++) {
     // Base angle for evenly spaced nodes
@@ -59,6 +60,30 @@ function createNodes(thing) {
 
   return nodes;
 }
+
+//////////////////////////////////////////////////////////////////
+// CREATE PRINT NODES
+//////////////////////////////////////////////////////////////////
+function createPrintNodes(s) {
+	let nodes = createNodes(thing);
+	let size = drawState.pts.length;
+	for (let i=0; i < nodes.length; i++) {
+	     printCircNum(nodes[i],i+size);
+	     drawState.pts.push(nodes[i]);
+	 }
+
+	if (s.mid) {
+	    for (let i=0; i < nodes.length; i++) {
+		      let j=i+1;
+		      if (j==nodes.length) j=0;
+		      let mid = midpoint(nodes[i],nodes[j]);
+		      drawState.pts.push(mid);
+		      printCircNum(mid);
+	    }
+	}
+	return nodes;
+}
+
 
 function drawParabs(thing, parabs) {
   for (let parab of parabs) {
@@ -149,17 +174,29 @@ function drawLine(point1, point2, color = "blue", lineWidth = 1) {
   restore();
 } // end drawLine
 
+/////////////////////////////////////////////////////////////////
+// midpoint
+/////////////////////////////////////////////////////////////////
+function midpoint(a, b) {
+    return new Point((a.x + b.x)/2, (a.y + b.y)/2);
+}
+function _m(a, b) {
+    return new Point((a.x + b.x)/2, (a.y + b.y)/2);
+}
+
+
 function printCircNum(pt, num = 9999) {
   drawCircle(pt, 8, "black");
-  save();
+  ctx.save();
   ctx.fillStyle = "black";
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
   if (num == 9999) {
-    fillText(drawState.ctr, pt.x, pt.y);
+    ctx.fillText(drawState.ctr, pt.x, pt.y);
     drawState.ctr++;
-  } else fillText(num, pt.x, pt.y);
-  restore();
+  } else
+      ctx.fillText(num, pt.x, pt.y);
+  ctx.restore();
 }
 
 function printTitle(text = "No Title") {
@@ -187,15 +224,17 @@ function printTitle(text = "No Title") {
 //  ctx.restore();
 //}
 
+/////////////////////////////////////////////////////////////////////////
 // stitcher
 //    returns an array of lines
+/////////////////////////////////////////////////////////////////////////
 function stitcher(arm1, arm2) {
   if (arm1.length > arm2.length) {
     [arm1, arm2] = [arm2, arm1];
   }
   const lines = [];
-  for (let i = 0; i < arm1.length - 1; i++) {
-    lines.push(new Line(arm1[i], arm2[i + 1]));
+  for (let i = 0; i < arm1.length; i++) {
+    lines.push(new Line(arm1[i], arm2[i]));
   }
   return lines;
 }
@@ -313,6 +352,8 @@ export {
   drawLines,
   drawALine,
   drawLine,
+  midpoint,
+  _m,
   printCircNum,
   printTitle,
   stitcher,

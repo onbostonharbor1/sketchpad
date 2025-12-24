@@ -103,23 +103,23 @@ class Point {
     }
 
     distanceTo(other) {
-	return Math.hypot(this.x - other.x, this.y - other.y);
+		return Math.hypot(this.x - other.x, this.y - other.y);
     }
 
     // Fuzzy equality using distance
     isNear(other, tolerance = 0.001) {
-	return this.distanceTo(other) <= tolerance;
+		return this.distanceTo(other) <= tolerance;
     }
 
     // Strict equality
     isSame(otherPoint) {
-	return this.x === otherPoint.x && this.y === otherPoint.y;
+		return this.x === otherPoint.x && this.y === otherPoint.y;
     }
 
     midpointBetween(other) {
-	return new Point(
-	    (this.x + other.x) / 2,
-	    (this.y + other.y) / 2
+		return new Point(
+	    	(this.x + other.x) / 2,
+	    	(this.y + other.y) / 2
 	)
     }
 

@@ -7,7 +7,7 @@ import { Line, Point }                               from "/classes/classes.js";
 //////////////////////////////////////////////////////////////////
 // crossHair
 //////////////////////////////////////////////////////////////////
-export function crossHair(points, color) {
+export function crossHair(points, color="gray") {
 	for (let i=0; i < points.length; i++) {
 	    drawLine(new Point(points[i].x-20, points[i].y),
 		     new Point(points[i].x+20, points[i].y),

@@ -9,6 +9,8 @@ export class Radiate {
       numSteps:   20,
       color:      "blue",
       nodes:      null,
+      start:      new Point(30,200),
+      end:        new Point(320,300),
       radialPt:   new Point(250,20),
       lineWidth:  1
     };

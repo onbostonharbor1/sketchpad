@@ -40,11 +40,6 @@
     "title": "Skipping Negative"
   },
   {
-    "filename": "mysticRose",
-    "path": "mysticRose.js",
-    "title": "Mystic Rose (circle)"
-  },
-  {
     "filename": "cycloid",
     "path": "cycloid.js",
     "title": "Cycloid (one node)"
