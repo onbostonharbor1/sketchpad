@@ -1,54 +1,3 @@
-<!doctype html>
-<html lang="en">
-<head>
-<meta charset="UTF-8">
-<title>Figure 250</title>
-<script type="text/javascript">
-// class: Point
-//	  StringThing
-//        radiate object
-// Main Functions:
-//    drawCircularParabola(StringThing)
-//    drawCycloid(StringThing)
-//    drawInEllipse(StringThing)
-//    drawInCircle(StringThing)
-//    DRAWINVERSESTAR(STRINGTHING)
-//    drawMysticRose(StringThing)
-//    drawParab(StringThing,parabola)
-//    drawParabs(StringThing,parabolaArray)
-//    drawParametric(funcX,funcY, pts)
-//         drawPolar(angle,rad, pts)
-//         range(low,high,numPoints
-//    drawPursuitCurve...
-//    drawRadiate(radiateObject);
-//    DRAWREGULARPOLYGON(StringThing)
-//    drawRegularPolygonCorner(StringThing)
-//         getEllipseNodes(s
-//    pointsOnParabola(StringThing,parab)
-//    Print Routines
-//       printCircNum(pt[,offset])
-//       printNodes(nodes,numNodes)       // OBSOLETE
-//       printANode(pt,num)
-//       printText(text)
-//       printTitle(text)
-//    ptsOnLine(numSteps,start,end);
-//    scaleNodes(nodes,thing)
-//   _scaleNodes(nodes,xScale,yScale,midpoint)
-//    setPt(point)
-//    shortenArms(thing)
-//    showBaseline(thing)           // NO LONGER USED
-//    showColors(color)
-//    showNodes(StringThing)        // NO LONGER USED
-//    testCircle(pt,color,width)
-//             Used in debugging as less typing than drawCircle
-//
-//    REPLACE BUILTIN FUNCTIONS: moveTo, lineTo, beginPath, closePath, stroke)
-
-// STRUCTURAL FUNCTIONS
-//    Debugger.log()
-//    canvasApp()
-//    drawScreen()
-//    eventwindowLoaded(): invokes canvasApp()
 
 // CONSTANTS AND GLOBALS
 const blue      = "blue";
@@ -61,18 +10,13 @@ const TAPER       = 1;
 const START_TAPER = 2;
 const END_TAPER   = 3;
 
-let gl = {
+let drawState = {
     dot:     false,
     final:   false,
     newLine: 10,
     pts:     new Array,
     ctr:     0
 }
-
-// ------------ SETUP ----------------
-window.addEventListener("load", eventWindowLoaded, false);	
-
-var Debugger = function () { };
 
 ///////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////
@@ -95,12 +39,9 @@ function eventWindowLoaded () {
   // Called after window is loaded event
 function canvasApp () {
       var theCanvas = document.getElementById("StringThing");
-      var context   = theCanvas.getContext("2d"); 
-    let ctx       = context;
+      var ctx   = theCanvas.getContext("2d");
       Debugger.log("Drawing Canvas");
 
-      // THIS IS WHERE THE DRAWING OCCURS
-      function drawScreen() {
 
 
 // ------------ BEGIN ----------------
@@ -114,7 +55,7 @@ function canvasApp () {
 //                           (colourNameToHex("blue"),.9).tint.hex);
 
 // ------------ TESTS ----------------
-//OK	  test1();    // right  
+//OK	  test1();    // right
 	  test2();    // regular shapes
 //	  test3();    // circle
 //	  test4();    // parabs
@@ -159,19 +100,19 @@ function canvasApp () {
 //          test43();   // strophoid
 
 
-	  
+
 // ------------ FIGURES ----------------
 
 //	  figure23();
 //	  figure72();
-//	  figure60(); 
+//	  figure60();
 //	  figure81();
-//	  figure82(); 
-//	  figure83();  
+//	  figure82();
+//	  figure83();
 //	  figure84();
 //	  figure85();
-//	  figure98();  
-//        figure99();  
+//	  figure98();
+//        figure99();
 //	  figure151();
 //	  figure158();
 //	  figure173();
@@ -202,7 +143,7 @@ function canvasApp () {
 
     //////////////////////////////////////////////////////////
 
-    
+
 
 
 //////////////////////////////////////////////////////////////////
@@ -210,68 +151,68 @@ function canvasApp () {
 // CLASSES
 //////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////
-    
+
 class StringThing {
       constructor(s) {
   	  let canvas         = document.querySelector("#StringThing");
-	  
+
                                        // bends at midpoint
-	  if (!("bendY"        in s))  s.bendY        = 0;       
+	  if (!("bendY"        in s))  s.bendY        = 0;
                                        // CircularParabola: do clockwise and
                                        // counterclockwise at same time
-	  if (!("both"         in s))  s.both         = false;	  
-	  if (!("color"        in s))  s.color        = "black";	  
-	                               // pointsOnParabola: at some point, 
-                                       // want to stop drawing from the 
+	  if (!("both"         in s))  s.both         = false;
+	  if (!("color"        in s))  s.color        = "black";
+	                               // pointsOnParabola: at some point,
+                                       // want to stop drawing from the
                                        // parabola to the arm
-	  if (!("cutoff"       in s))  s.cutoff       = s.numSteps/2;	  
-                                       // InverseStar: shrinks the arms. 
+	  if (!("cutoff"       in s))  s.cutoff       = s.numSteps/2;
+                                       // InverseStar: shrinks the arms.
                                        // Differs from shorten in that
                                        // this starts from the end of the arm
-	  if (!("factor"       in s))  s.factor       = 0;	  
-	  if (!("lineWidth"    in s))  s.lineWidth    = 1;	  
-                                       // midpoints are added between nodes 
-	  if (!("mid"          in s))  s.mid          = false;	  
+	  if (!("factor"       in s))  s.factor       = 0;
+	  if (!("lineWidth"    in s))  s.lineWidth    = 1;
+                                       // midpoints are added between nodes
+	  if (!("mid"          in s))  s.mid          = false;
 	                               // actual midpoint of drawn object
 	  if (!("midpoint"     in s))  s.midpoint = new Point(200,200);
-	                               // sets the number of points. Code 
+	                               // sets the number of points. Code
 	                               // wants the number to be one greater
-	  if (!("numCycloids"  in s))  s.numCycloids  = 1;	  
-	  if (!("numNodes"     in s))  s.numNodes     = 4;	  
-	  if (!("numSteps"     in s))  s.numSteps     = 20;	  
-	  if (!("radius"       in s))  s.radius       = 200;	  
+	  if (!("numCycloids"  in s))  s.numCycloids  = 1;
+	  if (!("numNodes"     in s))  s.numNodes     = 4;
+	  if (!("numSteps"     in s))  s.numSteps     = 20;
+	  if (!("radius"       in s))  s.radius       = 200;
 	  if (!("rotate"       in s))  s.rotate       = 0;
 	                               // the percent to shorten
-	  if (!("shorten"      in s))  s.shorten      = 0;	  
+	  if (!("shorten"      in s))  s.shorten      = 0;
 	  // stitcher:   start and end positions for going through
 	  //             steps
 	  // drawChords: where in the list of steps to begin and
 	  //             end drawing
-	  if (!("startSkip"    in s))  s.startSkip    = 0;	  
-	  if (!("endSkip"      in s))  s.endSkip      = 0;	  
-                                       // pattern skipping, like when drawing 
+	  if (!("startSkip"    in s))  s.startSkip    = 0;
+	  if (!("endSkip"      in s))  s.endSkip      = 0;
+                                       // pattern skipping, like when drawing
                                        // around a circle. For example, skip 4
                                        // means go from node[0] to node[4] or
                                        // from node[20] to node[24]
 	  if (!("skip"         in s))  s.skip         = 10;
-	  //                          -1 (START_END    )=end a starting point 
-	  //                           0 (FULL)        =full circle 
-	  //                           1 (TAPER)       =start and end taper 
+	  //                          -1 (START_END    )=end a starting point
+	  //                           0 (FULL)        =full circle
+	  //                           1 (TAPER)       =start and end taper
 	  //                           2 (START_TAPER)
-	  //                           1 (END_TAPER)   
+	  //                           1 (END_TAPER)
 	  if (!("withinCirc"   in s))  s.withinCirc    = FULL;
-	  
+
 	  if (!("start"        in s))  s.start        = new Point(150, 50);
-	  if (!("start"        in s))  s.endSkip      = 0;	  
+	  if (!("start"        in s))  s.endSkip      = 0;
 	                               // Only do the first N steps in stitcher
-	  if (!("trunc"        in s))  s.trunc        = false;	  
+	  if (!("trunc"        in s))  s.trunc        = false;
 	  if (!("yIncrement"   in s))  s.yIncrement   = 1;
                                        // scale is a factor, not percent
-	  if (!("xScale"       in s))  s.xScale       = 1;	  
+	  if (!("xScale"       in s))  s.xScale       = 1;
 	  if (!("yScale"       in s))  s.yScale       = 1;
 	  if (!("ellipse"      in s))  s.ellipse = { a: s.radius, b: s.radius };
 
-			
+
 	  //////////////////////////////////////////////////////
 	  this.arm1         = null;
 	  this.arm2         = null;
@@ -301,13 +242,13 @@ class StringThing {
 	  this.yIncrement   = s.yIncrement;
 	  this.xScale       = s.xScale;
 	  this.yScale       = s.yScale;
-//	  if (!("printNodes"   in s))  s.printNodes   = false;	  
+//	  if (!("printNodes"   in s))  s.printNodes   = false;
 //	  if (!("showNodes"    in s))  s.showNodes    = false;
 //	  if (!("taper"        in s))  s.taper         = 0;
 //	  this.printNodes   = s.printNodes;
 //	  this.showNodes    = s.showNodes;
 //	  this.taper        = s.taper;
-	  
+
       }
     set newColor(col)   { this.color    = col; }
     set newNodes(nodes) { this.numNodes = nodes; }
@@ -323,8 +264,8 @@ class Point {
 	    this.x = x;
 	    this.y = y;
 	} else {
-	    this.x = gl.pts[x].x;
-	    this.y = gl.pts[x].y;
+	    this.x = drawState.pts[x].x;
+	    this.y = drawState.pts[x].y;
 	}
     }
 }
@@ -335,7 +276,7 @@ class Point {
 //	if (!("bend"      in r))  r.bend      = 0;
 //	if (!("lineWidth" in r))  r.lineWidth = 1;
 //	if (!("numSteps"  in r))  r.numSteps  = 20;
-//        
+//
 //	this.color     = r.color;
 //	this.bend      = r.bend;
 //	this.lineWidth = r.lineWidth;
@@ -345,11 +286,11 @@ class Point {
 //    }
 //}  // end Radiate
 
-/////////////////////////////////////////////////////////////////  
-/////////////////////////////////////////////////////////////////  
+/////////////////////////////////////////////////////////////////
+/////////////////////////////////////////////////////////////////
 // FUNCTIONS GO BELOW HERE
-/////////////////////////////////////////////////////////////////  
-/////////////////////////////////////////////////////////////////  
+/////////////////////////////////////////////////////////////////
+/////////////////////////////////////////////////////////////////
 
 
 //////////////////////////////////////////////////////////////////
@@ -454,7 +395,7 @@ class Point {
 
 	    return j+1;
 	}
-	
+
 	function drawWithin(nodes, skip, color, start, end) {
 	    let i = 0;
 	    let k;
@@ -495,10 +436,10 @@ class Point {
 	    return;
 	}
 
-// if adding an arm at the beginning of end	
+// if adding an arm at the beginning of end
 // must be withinCirc = START_END
 
-	if (Array.isArray(thing.arm1) || Array.isArray(thing.arm2))	
+	if (Array.isArray(thing.arm1) || Array.isArray(thing.arm2))
 	    thing.withinCirc = START_END;
 
 	if (Array.isArray(thing.arm1) ||
@@ -517,7 +458,7 @@ class Point {
 //	    drawWithin(nodes,skip,color,nodes.length-skip);
 	    return;
 	}
-  
+
 	if (thing.startSkip > 0) {
 	    start   = thing.startSkip;
 	    length -= thing.startSkip;
@@ -541,9 +482,9 @@ class Point {
 	    k = (i+1) % nodes.length;
 	    drawLine(nodes[j],nodes[k],color);
 	    ctr++;
-	    if (ctr > nodes.length) break;	    
+	    if (ctr > nodes.length) break;
 	    }
-	    
+
 	// START_END WITHIN, NO TAPER
 	if (thing.withinCirc == START_END) {
 	    drawWithin(nodes,skip, color, start, length);
@@ -571,7 +512,7 @@ class Point {
 	drawEnd(nodes,skip,color,start,length);
 
     }
-    
+
 /////////////////////////////////////////////////////////////////
 // drawInEllipse
 //    This is the real place for drawChords work
@@ -601,7 +542,7 @@ class Point {
 	    }
 	    return i;
 	}
-	
+
 //	function drawStart(nodes, skip, color, start=0, dist=4) {
 	function drawStart(nodes, skip, color, dist=4) {
 	    // inc gives a slight small setting to the distance
@@ -620,7 +561,7 @@ class Point {
 	    }
 	    return i;
 	}
-	
+
 	function drawEnd(nodes, skip, color, start, dist=4) {
 	    let end = start+2*(skip-dist)-1;
             let j;
@@ -631,7 +572,7 @@ class Point {
 	    }
 	}
 
-	
+
 	let color = thing.color;
 	let skip  = thing.skip;
 	let nodes = createEllipseNodes(thing);
@@ -643,7 +584,7 @@ class Point {
 	    drawNodes(nodes,color);
 	    return;
 	}
-	
+
 // START AND END WITHIN, NO TAPER
 	if (thing.withinCirc == START_END) {
 	    // there is duplication here and in the TAPER code
@@ -656,14 +597,14 @@ class Point {
 
 	    if (thing.endSkip < 0)
 		startSlice = nodes.slice(0,- thing.endSkip);
-	    if (thing.startSkip < 0) 
+	    if (thing.startSkip < 0)
 		endSlice = nodes.slice(thing.startSkip);
-	    
+
 	    if (thing.endSkip < 0)
 		nodes = nodes.concat(startSlice);
 	    if (thing.startSkip < 0)
 		nodes = endSlice.concat(nodes);
-		
+
 	    if (nodes.length < LENGTH)
 		drawLines(nodes,0,nodes.length-1,color);
 	    else
@@ -694,13 +635,13 @@ class Point {
 	             // Remove last elements from list
 	if (thing.endSkip > 0)
 	    nodes.length = nodes.length - thing.endSkip;
-	
+
 	// Positive taken care of already
 	//     we take the end of the array and will soon
-	//     prepend it. 
-	if (thing.startSkip < 0) 
+	//     prepend it.
+	if (thing.startSkip < 0)
 	    startSlice = nodes.slice(thing.startSkip);
-	  
+
 	// if there is a negative endSkip, add the beginning
 	// elements of nodes to the end, so when it gets
 	// past the old length, the newly added nodes are
@@ -712,7 +653,7 @@ class Point {
 	//
 	// if an endSkip and a startSkip, should also work
 	//
-	// Need to add to 
+	// Need to add to
 	if (thing.endSkip < 0) {
 	    // thing.endSkip is negative so need to change
 	    // its sign. THIS IS THE BEGINNING OF THE ARRAY
@@ -721,7 +662,7 @@ class Point {
 	}
 	if (thing.startSkip < 0)
 	    nodes = startSlice.concat(nodes);
-	
+
 	if (nodes.length < LENGTH)
 	    drawLines(nodes,0,nodes.length-1,color);
 	else
@@ -737,7 +678,7 @@ class Point {
 	else
 //	    start = drawStart(nodes, skip, color, start, DISTANCE);
 	    start = drawStart(nodes, skip, color, DISTANCE);
-	
+
                          // DRAW MIDDLE
 	start = drawWithin(nodes, skip, color, thing.withinCirc, start);
 
@@ -791,7 +732,7 @@ class Point {
 	  stroke();
           closePath();
       } // end drawMysticRose
-      
+
 
 
 /////////////////////////////////////////////////////////////////
@@ -828,21 +769,19 @@ class Point {
 
 /////////////////////////////////////////////////////////////////
 // PARAMETRICS
-//    drawPolar    
+//    drawPolar
 //    drawParametric
 //    range
 /////////////////////////////////////////////////////////////////
-	  function drawPolar(angle, rad, pts) {
-	      let funcX = function(t) {
-//		  return .5*rad(t) * Math.cos(angle(t));
-		  return rad(t) * Math.cos(angle(t));
-	      }
-	      let funcY = function(t) {
-//		  return .5*rad(t) * Math.sin(angle(t));
-		  return rad(t) * Math.sin(angle(t));
-	      }
-	      drawParametric(funcX,funcY,pts);
-	  }
+function drawPolar(angle, rad, pts) {
+    let funcX = function(t) {
+		return rad(t) * Math.cos(angle(t));
+	}
+	let funcY = function(t) {
+	return rad(t) * Math.sin(angle(t));
+	}
+	drawParametric(funcX,funcY,pts);
+}
 
                       ////////////////////
                       // range
@@ -856,7 +795,7 @@ class Point {
 	      }
 	      return arr;
 	  }
-	  
+
 
                       ////////////////////
                       // drawParametric
@@ -1002,7 +941,7 @@ class Point {
 /////////////////////////////////////////////////////////////////
 // MOVED
        function drawRegularStar(thing) {
-  	  let nodes = createNodes(thing);	
+  	  let nodes = createNodes(thing);
 	  const lineEnd = [];
 	  let deltaX, deltaY,newX,newY;
 	  for (let i=0;i<thing.numNodes;i++){
@@ -1062,27 +1001,27 @@ class Point {
 //////////////////////////////////////////////////////////////////
 // Example usage:
 // const myCanvas = document.getElementById("myCanvas");
-// drawEulerSpiral(myCanvas, 10, 10000, 50);     
+// drawEulerSpiral(myCanvas, 10, 10000, 50);
 
    function drawEulerSpiral(thing,totalLength, numSegments, scaleFactor) {
 	let x = 0;
 	let y = 0;
 	let t = 0;
 	const dt = totalLength / numSegments;
-	
+
 	ctx.beginPath();
 	ctx.lineWidth = 1;
 	ctx.moveTo(x+thing.midpoint.x, y+thing.midpoint.y); // Start at the origin
-	
+
 	for (let i = 0; i < numSegments; i++) {
 	    // Approximate the Fresnel integral steps
 	    const dx = Math.cos(t * t / 2) * dt;
 	    const dy = Math.sin(t * t / 2) * dt;
-	    
+
 	    x += dx * scaleFactor;
 	    y += dy * scaleFactor;
 	    t += dt;
-	    
+
 	    ctx.lineTo(x+thing.midpoint.x, y+thing.midpoint.y);
 	}
 	ctx.stroke();
@@ -1122,17 +1061,17 @@ class Point {
 //    a is a scaling factor that determines the initial radius when theta is 0.
 //    b controls the tightness or "pitch" of the spiral.
 //                A larger b results in a faster-expanding spiral.
-//    theta is the angle in radians, representing the rotation around the origin. 
+//    theta is the angle in radians, representing the rotation around the origin.
 //    a, b: The a and b parameters from the logarithmic spiral equation.
-//    startAngle, endAngle: The range of angles (in radians) 
+//    startAngle, endAngle: The range of angles (in radians)
 //               over which to draw the spiral.
-//    step: The increment for theta in each iteration, determining 
-//               the smoothness of the drawn spiral. 
+//    step: The increment for theta in each iteration, determining
+//               the smoothness of the drawn spiral.
 //
 
 //    By adjusting the a, b, startAngle, endAngle, and step parameters,
 //    you can control the size, tightness, and extent of the generated
-//    logarithmic spiral. 
+//    logarithmic spiral.
 
  function drawLogarithmicSpiral(thing, a, b, startAngle, endAngle, step) {
      ctx.strokeStyle = thing.color;
@@ -1153,7 +1092,7 @@ class Point {
          }
      }
      ctx.stroke();
- }    
+ }
 
 //////////////////////////////////////////////////////////////////
 // drawPureSpiral
@@ -1185,15 +1124,15 @@ class Point {
 	ctx.strokeStyle = thing.color;
 	ctx.lineWidth   = thing.lineWidth;
         ctx.moveTo(thing.midpoint.x, thing.midpoint.y);
-    
-//        var gap = 1.8;                // increase this for spacing between spiral lines        
+
+//        var gap = 1.8;                // increase this for spacing between spiral lines
         var STEPS_PER_ROTATION = 60; // increasing this makes the curve smoother
-    
-        var increment = 2*Math.PI/STEPS_PER_ROTATION;		
+
+        var increment = 2*Math.PI/STEPS_PER_ROTATION;
         var theta = increment;
         while( theta < numRotations*Math.PI) {
-           var newX = thing.midpoint.x + theta * Math.cos(theta) * gap; 
-           var newY = thing.midpoint.y + theta * Math.sin(theta) * gap; 
+           var newX = thing.midpoint.x + theta * Math.cos(theta) * gap;
+           var newY = thing.midpoint.y + theta * Math.sin(theta) * gap;
            ctx.lineTo(newX, newY);
            theta = theta + increment;
         }
@@ -1201,7 +1140,7 @@ class Point {
 	ctx.fill();
         ctx.stroke(); // draw the spiral
     }
-        
+
 //////////////////////////////////////////////////////////////////
 // drawPureSpiralB
 //////////////////////////////////////////////////////////////////
@@ -1281,12 +1220,12 @@ class Point {
 	ctx.lineWidth   = thing.lineWidth;
 
 	// Scaling factor for visual size
-	const scale = 50; 
-	
+	const scale = 50;
+
 	// Initial values
 	let currentHypotenuse = 1; // Start with a leg of length 1
 	let currentAngle      = 0; // Initial angle
-	
+
 	// FUNCTION TO DRAW A SINGLE TRIANGLE SEGMENT
 	function drawTriangle(hypotenuseLength, angle) {
 	    ctx.beginPath();
@@ -1295,22 +1234,22 @@ class Point {
 	    // Calculate new vertex coordinates
 	    const x = thing.midpoint.x + hypotenuseLength * scale * Math.cos(angle);
 	    const y = thing.midpoint.y + hypotenuseLength * scale * Math.sin(angle);
-	    
+
 	    ctx.lineTo(x, y); // Draw hypotenuse
 	    ctx.lineTo(x - scale * Math.sin(angle), y + scale * Math.cos(angle)); // Draw perpendicular leg (length 1)
-	    ctx.closePath(); 
+	    ctx.closePath();
 	    ctx.stroke(); // Draw the triangle outline
 	}
 
 	// Loop to draw the spiral
 	for (let i = 1; i <= numTriangles; i++) {
 	    // Calculate the angle of the new triangle based on the previous hypotenuse
-	    const angleIncrement = Math.atan(1 / currentHypotenuse); 
+	    const angleIncrement = Math.atan(1 / currentHypotenuse);
 	    currentAngle += angleIncrement;
-	    
+
 	    // Draw the current triangle
-	    drawTriangle(Math.sqrt(i + 1), currentAngle); 
-	    
+	    drawTriangle(Math.sqrt(i + 1), currentAngle);
+
 	    // Update hypotenuse for the next iteration
 	    currentHypotenuse = Math.sqrt(currentHypotenuse * currentHypotenuse + 1);
 	}
@@ -1332,11 +1271,11 @@ class Point {
 	  beginPath();
 	  ctx.strokeStyle = "red";
 	  ctx.lineWidth = 1;
-	  
+
 	  let end = thing.arm1.length-1;
 	  moveTo(thing.arm1[0].x,  thing.arm1[0].y);
 	  lineTo(thing.arm1[end].x,thing.arm1[end].y);
-	  
+
 	  end = thing.arm2.length-1;
 	  moveTo(thing.arm2[0].x ,thing.arm2[0].y);
 	  lineTo(thing.arm2[end].x,thing.arm2[end].y);
@@ -1345,7 +1284,7 @@ class Point {
 
 	  let num1 = thing.arm2[end].x.toFixed();
 	  let num2 = thing.arm2[end].y.toFixed();
-	  let text = `[${num1}, ${num2}]`;	
+	  let text = `[${num1}, ${num2}]`;
           ctx.fillStyle = "white";
 	  ctx.font = "10px Arial";
 	  ctx.fillText(text,num1, num2);
@@ -1435,7 +1374,7 @@ class Point {
 	  if ((length % 2) == 1) length--;
 	  let mid = length/2;
 	  thing.arm1 = tArm1.slice(mid, tArm1.length);
-	      
+
 	  // divide hypot by 2 because bend is at the midpoint
 	  let endY = tArm2.length-1;
 	  let hypot = Math.hypot(tArm2[0].x - tArm2[endY].x,
@@ -1445,7 +1384,7 @@ class Point {
 	  // negative Y
 	  endY = halfArm2.length -1;
 	  halfArm2[endY].y = halfArm2[endY].y-tBendY;
-	      
+
 	  let deltaY = halfArm2[endY].y - halfArm2[0].y;
 	  // how long is X
 	  let x = Math.sqrt(hypot*hypot - deltaY*deltaY);
@@ -1453,7 +1392,7 @@ class Point {
 	  thing.numSteps = thing.numSteps/2;
 	  thing.newArm2 = ptsOnLine(thing.numSteps, halfArm2[0],halfArm2[endY]);
 	  stitcher(thing);
-	  
+
 	  // restore orig
 	  thing.bendY    = tBendY;
 	  thing.numSteps = tSteps
@@ -1481,7 +1420,7 @@ class Point {
  	  ctx.strokeStyle = oldColor;
 	  ctx.lineWidth = oldWidth;
      } // end drawCircle
-      
+
                       ////////////////////
                       // testCircle
                       ////////////////////
@@ -1495,7 +1434,7 @@ class Point {
 //    drawLines
 //    drawLinesAllAround
 //    drawLinesAround
-    
+
 ///////////////////////////////////////////////////////////
 // MOVED
       function drawLine(point1,point2,color="blue",lineWidth=1) {
@@ -1536,7 +1475,7 @@ class Point {
 	    drawLine(s.pts[0],s.pts[j],s.color);
 	}
     }
-    
+
     function drawLines(ptArray,start=0,end=ptArray.length,color="blue", close=false) {
 	s = { pts:     ptArray,
 	      start:   start,
@@ -1577,7 +1516,7 @@ class Point {
 //	    j=i+skip;
 //	}
     }
-    
+
 //////////////////////////////////////////////////////////////////
 // drawNodes
 //////////////////////////////////////////////////////////////////
@@ -1591,7 +1530,7 @@ class Point {
 	_drawLines(s);
     }
 
-    
+
 //////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////
 // HELPER FUNCTIONS
@@ -1605,7 +1544,7 @@ class Point {
 //    'b' is the semi-minor axis
 /////////////////////////////////////////////////////////////////
     function createEllipseNodes(thing) {
-	if (thing.ellipse.a == thing.ellipse.b) 
+	if (thing.ellipse.a == thing.ellipse.b)
 	    return createNodes(thing);
 	else
 	    return getEllipsePts(thing);
@@ -1613,7 +1552,7 @@ class Point {
 //	let manyNodes = getEllipsePts(thing,10);
 //	let circumference = ellipseCircumference(thing.ellipse.a,thing.ellipse.b);
 //	let segLength = circumference/thing.numNodes;
-	
+
 	// Rather just take the points drawn on the ellipse using sine
 	// and cosine, take the circumference and divide it by the
 	// number of line segment that it might take to draw the ellipse.
@@ -1640,7 +1579,7 @@ class Point {
 //	total = 0;
 //	while (total < manyNodes.length -1) {
 //	    newNodes.push(manyNodes[total]);
-//	    total += j;	    
+//	    total += j;
 //	}
 //	return newNodes;
 //	return nodes;
@@ -1676,7 +1615,7 @@ class Point {
  	if (!(xScale == 1 && yScale == 1)){
 	    nodes = _scaleNodes(nodes, xScale, yScale, midpoint)
 	}
-   return nodes;  
+   return nodes;
 } // end _createNodes
 
 //////////////////////////////////////////////////////////////////
@@ -1685,22 +1624,22 @@ class Point {
      function createPrintNodes(s) {
 	let nodes =_createNodes(s.numNodes,s.rotate,s.midpoint,
 				s.radius,s.xScale,s.yScale);
-	 let size = gl.pts.length;
+	 let size = drawState.pts.length;
 	 for (let i=0; i < nodes.length; i++) {
 	     printCircNum(nodes[i],i+size);
 	     printANode(nodes[i],i);
-	     gl.pts.push(nodes[i]);
+	     drawState.pts.push(nodes[i]);
 	 }
-			  
+
 	if (s.mid) {
-	    gl.newLine += 12;
+	    drawState.newLine += 12;
 	    printText("Midpoint");
-	    gl.newLine += 12;
+	    drawState.newLine += 12;
 	    for (let i=0; i < nodes.length; i++) {
 		j=i+1;
 		if (j==nodes.length) j=0;
 		mid = midpoint(nodes[i],nodes[j]);
-		gl.pts.push(mid);
+		drawState.pts.push(mid);
 		printCircNum(mid);
 		printANode(mid);
 		n1x = nodes[i].x.toFixed();
@@ -1737,7 +1676,7 @@ class Point {
     function ellipseCircumference(a, b) {
 	// a: semi-major axis
 	// b: semi-minor axis
-	
+
 	if (a <= 0 || b <= 0) {
 	    throw new Error("Semi-major and semi-minor axes must be positive values.");
 	}
@@ -1825,9 +1764,9 @@ class Point {
 	    nodes.push(new Point(x,y));
 	    newAngle += angleInc;
 	}
-	return nodes;  
+	return nodes;
       } // end getEllipsePts
-    
+
 /////////////////////////////////////////////////////////////////
 // get ellipse nodes
 /////////////////////////////////////////////////////////////////
@@ -1889,7 +1828,7 @@ class Point {
 
       // WHY NUMNODES AREGUMENT. need to rethink given arm1 and arm2
 /////////////////////////////////////////////////////////////////
-// Print Functions      
+// Print Functions
 //    printANode
 //    printCircNum
 //    printNodes
@@ -1902,21 +1841,21 @@ class Point {
     function printANode(pt,num=999) {
 	let x = 510;
 	let ctr;
-    	if (num==999) ctr=gl.ctr;
+    	if (num==999) ctr=drawState.ctr;
 	else ctr=num;
 	let text = `${ctr}=(${pt.x.toFixed()}, ${pt.y.toFixed()})`;
-        ctx.fillText(text,x,gl.newLine);
-	gl.newLine += 12;
+        ctx.fillText(text,x,drawState.newLine);
+	drawState.newLine += 12;
     }
-    
+
                    /////////////////////
                    // printCircNum
                    /////////////////////
     function printCircNum(point,num=999) {
 	pt = numbersToPoints(point);
 	let newPt = new Point(pt.x,pt.y);
-	if (gl.final) {
-	    if (num==999) gl.ctr++;
+	if (drawState.final) {
+	    if (num==999) drawState.ctr++;
 	    return;
 	}
 	drawCircle(newPt,8,"black");
@@ -1925,13 +1864,13 @@ class Point {
 	ctx.textAlign = 'center';
 	ctx.textBaseline = 'middle';
 	if (num==999) {
-	    ctx.fillText(gl.ctr,newPt.x,newPt.y);
-	    gl.ctr++;
-	} else 
+	    ctx.fillText(drawState.ctr,newPt.x,newPt.y);
+	    drawState.ctr++;
+	} else
 	    ctx.fillText(num,newPt.x,newPt.y);
 	ctx.fillStyle = oldFillStyle;
     }
-    
+
 
                    /////////////////////
                    // printText
@@ -1939,12 +1878,12 @@ class Point {
     function printText(text) {
  	let color         = ctx.fillStyle;
 	ctx.fillStyle = "blue";
-	let x = 500; 
-        ctx.fillText(text,x,gl.newLine);
+	let x = 500;
+        ctx.fillText(text,x,drawState.newLine);
 	ctx.fillStyle = color;
-	gl.newLine += 12;
+	drawState.newLine += 12;
     }
-    
+
                    /////////////////////
                    // printTitle
                    /////////////////////
@@ -1972,8 +1911,8 @@ class Point {
 //	  ctx.fillStyle=color;
 //      }
 
-	  
-    
+
+
 /////////////////////////////////////////////////////////////////
 // ptsOnLine
 /////////////////////////////////////////////////////////////////
@@ -1988,11 +1927,11 @@ class Point {
 	    aPt.y += yInc;
 	    pts.push(new Point(aPt.x, aPt.y));
 	}
-        return pts;	  
+        return pts;
     } // end ptsOnLine
 
 
- 
+
 /////////////////////////////////////////////////////////////////
 // scaleNodes
 /////////////////////////////////////////////////////////////////
@@ -2004,15 +1943,15 @@ class Point {
     function _scaleNodes(nodes, xScale, yScale, midpoint){
 	if (xScale != 1){
 	for (let i=0; i < nodes.length; i++){
-	    nodes[i].x = midpoint.x + 
+	    nodes[i].x = midpoint.x +
 		xScale*(midpoint.x - nodes[i].x);
 	}
 	}
 	if (yScale != 1) {
 	    for (let i=0; i < nodes.length; i++){
-		nodes[i].y = midpoint.y - 
+		nodes[i].y = midpoint.y -
 		    yScale*(midpoint.y - nodes[i].y);
-	    }	  
+	    }
 	}
 	return nodes;
     } // end scaleNodes
@@ -2021,12 +1960,12 @@ class Point {
 // setPt
 /////////////////////////////////////////////////////////////////
     function setPt(pt,draw=true) {
-        gl.pts.push(pt);
+        drawState.pts.push(pt);
 	if (draw)
 	    printCircNum(pt);
-	return gl.pts.length - 1;
+	return drawState.pts.length - 1;
     }
-    
+
 /////////////////////////////////////////////////////////////////
 // shortenArms
 /////////////////////////////////////////////////////////////////
@@ -2036,7 +1975,7 @@ class Point {
 	              // I want the amount left
 	let shorten = (100 - thing.shorten)/100;
 	let deltaX = Math.abs(thing.arm1[thing.arm1.length-1].x - thing.arm1[0].x);
-//	if (deltaX == 0) 
+//	if (deltaX == 0)
 //	    deltaX = 100;
 	let length = shorten*deltaX;
 	let j = 0;
@@ -2088,7 +2027,7 @@ class Point {
 	startY = yPos + 30;
 	x=x+300;
 	tintAmount = .08;
-	  
+
   	for (let i=0; i<8; i++) {
 	    newColor    = calculateTintAndShade(color,tintAmount);
 	    tintAmount += .04;
@@ -2108,7 +2047,7 @@ class Point {
 //////////////////////////////////////////////////////////////////
 // MOVED
     function moveTo(pt1,pt2) {
-	if (gl.dot) {
+	if (drawState.dot) {
 	    drawCircle(new Point(pt1,pt2),1);
 	} else {
 	    ctx.moveTo(pt1,pt2)
@@ -2116,7 +2055,7 @@ class Point {
     }
 // MOVED
     function lineTo(pt1,pt2) {
-	if (gl.dot) {
+	if (drawState.dot) {
 	    drawCircle(new Point(pt1,pt2),1);
 	} else {
 	    ctx.lineTo(pt1,pt2)
@@ -2124,17 +2063,17 @@ class Point {
     }
 // MOVED
     function beginPath() {
-	if (!gl.dot) ctx.beginPath();
+	if (!drawState.dot) ctx.beginPath();
     }
-    
+
 // MOVED
     function stroke(){
-	if (!gl.dot) ctx.stroke();
+	if (!drawState.dot) ctx.stroke();
     }
-    
+
 // MOVED
     function closePath() {
-	if (!gl.dot) ctx.closePath();
+	if (!drawState.dot) ctx.closePath();
     }
 
 
@@ -2208,7 +2147,7 @@ class Point {
                    ///////////////////////////////////
     function test2() {
 	printTitle("Test 2: Regular Shapes");
-//	gl.dot = true;
+//	drawState.dot = true;
 	  s={numSteps:     20,
 	     midpoint:     new Point(200,200),
 //	     lineWidth:    .5,
@@ -2221,23 +2160,23 @@ class Point {
 	     numNodes:     4 };
 	  thing = new StringThing(s);
 //	  drawRegularStar(thing);
-	  
+
 	  thing.newColor = "blue";
 	  thing.midpoint = new Point(420,200);
 //	  drawInverseStar(thing);
-	  
+
 	  thing.newColor = "red";
 	  thing.midpoint = new Point(200,420);
 //	  drawRegularPolygon(thing);
-	  
+
 	  thing.newColor = "blue";
 	  thing.midpoint = new Point(200,200);
 	  drawRegularPolygonCorner(thing);
-	  
+
 	  thing.newColor = "orange";
 	  thing.midpoint = new Point(420,200);
 	  drawRegularPolygonTouch(thing);
-	  
+
 	  ctx.fillStyle = "blue";
 	  ctx.fillText("Draw Regular Star",   10,10);
 	  ctx.fillText("Draw Inverse Star",   10,20);
@@ -2287,10 +2226,10 @@ class Point {
 //	  parabs = [[coord1, coord2, coord3],
 //		    [coord21, coord20, coord22, coord23],
 	//		    [coord11,coord12,coord13]];
-	
+
 	printTitle("Test 4c: Draw Many Parabolas");
 	  parabs = [[coord30, coord31, coord32]];
-	  
+
 	  s = {
 //	      yIncrement: .75,
 //	      bendY: 100,
@@ -2329,7 +2268,7 @@ class Point {
 	       color: "blue",
 	       lineWidth: 1
 	      };
-	  thing      = new StringThing(s);	
+	  thing      = new StringThing(s);
           start      = new Point(10,300);
 	  end        = new Point(200,10);
 	  thing.arm1 = ptsOnLine(thing.numSteps,start,end);
@@ -2352,8 +2291,8 @@ class Point {
                    ///////////////////////////////////
     function test8() {
 	printTitle("Test 8: Draw using points on parabola");
-	  coord1 = new Point(0,0);       
-	  coord2 = new Point(0,400);     
+	  coord1 = new Point(0,0);
+	  coord2 = new Point(0,400);
 	  coord3 = new Point(200,400);
 	  parab = [coord1, coord2, coord3];
 	  s = {numSteps: 25,
@@ -2362,9 +2301,9 @@ class Point {
 	  thing = new StringThing(s);
 	  pointsOnParabola(thing,parab);
 
-	  coord1 = new Point(210,0);       
-	  coord2 = new Point(210,400);     
-	  coord3 = new Point(400,400);	  
+	  coord1 = new Point(210,0);
+	  coord2 = new Point(210,400);
+	  coord3 = new Point(400,400);
 	  parab = [coord1, coord2, coord3];
 	  thing.newColor = "green";
 	  const ptsOnParab = pointsOnParabola(thing,parab);
@@ -2400,7 +2339,7 @@ class Point {
 		color:    "blue",
 		midpoint: new Point(300,300),
 		radius:   200};
-	gl.final = true;
+	drawState.final = true;
 	  thing = new StringThing(s);
           drawMysticRose(thing);
       }
@@ -2414,10 +2353,10 @@ class Point {
 //	      mid1: new Point(220,240),
 //	      mid2: new Point(420,240),
 //	      mid2: new Point(360,740),
-	      
-	      mid1: new Point(220,200),	      
+
+	      mid1: new Point(220,200),
 	      mid2: new Point(360,660),
-	      numPoints: 40,  
+	      numPoints: 40,
 	      numSteps: 15,
 	      color:    "blue",
 	      radius: 200
@@ -2439,7 +2378,7 @@ class Point {
 	      }
 	  thing = new StringThing(s);
 	  drawCircularParabola(thing);
-      }      
+      }
 
                    ///////////////////////////////////
                    // test 13: COLOR TEST
@@ -2458,7 +2397,7 @@ class Point {
 	  }
 	  startY = 30;
 	  tintAmount = .08;
-	  
+
   	  for (let i=0; i<8; i++) {
 	      newColor    = calculateTintAndShade(color,tintAmount);
 	      tintAmount += .04;
@@ -2517,7 +2456,7 @@ class Point {
 	printTitle("Test 16: Crosshair");
 	  crossHair([new Point(60,60)], "green");
       }
-      
+
                    ///////////////////////////////////
                    // test 17: FULL ELLIPSE
                    ///////////////////////////////////
@@ -2572,7 +2511,7 @@ class Point {
 
 
 
-      
+
                    ///////////////////////////////////
                    // test 20: SPIRAL
                    ///////////////////////////////////
@@ -2677,7 +2616,7 @@ class Point {
 //	      printTitle("Test 24: 1--scale 400");
 //	      let funcX = function(t) { return .1*Math.sin(t); };
 //	      let funcY = function(t) { return .1*Math.cos(t); };
-/********************************************************************/	      
+/********************************************************************/
 	      pts = range(0,2*Math.PI, 3000);
 //	      printTitle("Test 24: 2");   // scale .5
 //	      a = 80;  b=1;   c=1;    d=80;  j=3;  k=3;
@@ -2710,12 +2649,12 @@ class Point {
 //	      printTitle("Test 24: 9");   // scale 60
 //	      funcX = function(t) { return Math.cos(5.9*t) + .25*Math.cos(5.75*t) + Math.cos(65*t) ; };
 //	      funcY = function(t) { return Math.sin(5.9*t) + .25*Math.sin(5.75*t) + Math.sin(65*t) ; };
-	      
+
 //	      printTitle("Test 24: 10");   // scale 60
 //	      funcX = function(t) { return Math.cos(t)+(1/3)*(Math.cos(123*t)+Math.sin(250*t)) ; };
 //	      funcY = function(t) { return Math.sin(t)+(1/3)*(Math.sin(123*t)+Math.cos(245*t)) ; };
 
-		 
+
 //	      pts = range(0,2*Math.PI, 3000);
 //	      printTitle("Test 24: 11");   // scale 60
 //	      funcX = function(t) { return 1.4*Math.cos(t)+(1/3)*Math.sin(201*t) ; };
@@ -2723,7 +2662,7 @@ class Point {
 
 //	      printTitle("Test 24: 12");   // scale 60
 //	      funcY = function(t) { return 1.4*Math.sin(t)+(1/3)*Math.cos(193*t) ; };
-	      
+
 //	      printTitle("Test 24: 13");   // scale 60
 //	      funcX = function(t) { return 1.5*Math.cos(t)+.5*Math.sin(199*t) ;}; // orig
 
@@ -2754,11 +2693,11 @@ class Point {
 //	      funcX = function(t) { return Math.cos(t) + (1/1.4)*Math.cos(110*t) ; };
 //	      funcY = function(t) { return Math.sin(t) + (1/1.4)*Math.cos(112*t) ; };
 //	      printTitle("Test 24: 22");   // scale 60
-//	      funcY = function(t) { return Math.sin(t) + (1/1.4)*Math.pow(Math.sin(112*t),4) ; }; 
+//	      funcY = function(t) { return Math.sin(t) + (1/1.4)*Math.pow(Math.sin(112*t),4) ; };
 //	      printTitle("Test 24: 23");   // scale 60
 //	      funcY = function(t) { return Math.sin(t) + (1/1.4)*Math.pow(Math.sin(112*t),3) ; };//orig
 
-	
+
 //	      printTitle("Test 24: 24");   // scale 30
 //	      funcX = function(t) { return 3*Math.cos(t)+Math.cos(3*t); };
 //	      funcY = function(t) { return 3*Math.sin(t)-Math.sin(3*t); };
@@ -2782,7 +2721,7 @@ class Point {
 //	      pts = range(-2*Math.PI,2*Math.PI, 500);
 //	      funcX = function(t) { return 10*Math.sin(2.78*t) *
 //				    Math.round(Math.sqrt(Math.cos(Math.cos(8.2*t)))) ;}
-//				    
+//
 //	      funcY = function(t) { return 9*Math.cos(2.78*t)*Math.cos(2.78*t) *
 //				    Math.sin(Math.sin(8.2*t)) ; }
 
@@ -2794,7 +2733,7 @@ class Point {
 //	      pts = range(0,2*Math.PI, 500);
 //	      funcX = function(t) { return 4*Math.cos(t) };
 //	      funcY = function(t) { return 8*Math.sin(t) };
-	      
+
 //	      printTitle("Test 24: 28--right branch hyperbola");   // scale 30
 //	      pts = range(-2*Math.PI,2*Math.PI, 300);
 //	      funcX = function(t) { return 80*(1/Math.cos(t)); };
@@ -2835,7 +2774,7 @@ class Point {
 		  radius:   180,
 		  numSteps: 40,
 		  shorten: 15
-		}; 
+		};
 	thing = new StringThing(s);
 	drawRegularStar(thing);
 	ctx.fillStyle = "blue";
@@ -2854,73 +2793,73 @@ class Point {
 //	      funcY = function(t) { return 0.4*Math.sin(t/1.2);};
 
 //	      printTitle("Test 27-2: Print Radial");    // scale 150
-//	      funcY = function(t) { return Math.cos((1/6)*t);};	      
+//	      funcY = function(t) { return Math.cos((1/6)*t);};
 
 //	      printTitle("Test 27-3: Print Radial");   //scale=200
-//	      funcY = function(t) { return Math.cos((1/4)*t);};	      
+//	      funcY = function(t) { return Math.cos((1/4)*t);};
 
-//	      printTitle("Test 27-4: Print Radial");  
+//	      printTitle("Test 27-4: Print Radial");
 //	      funcY = function(t) { return Math.cos((1/7)*t);};
 
 //	      printTitle("Test 27-5: Print Radial");
-//	      funcY = function(t) { return Math.cos((2/7)*t);};	      
+//	      funcY = function(t) { return Math.cos((2/7)*t);};
 
 //	      printTitle("Test 27-6 Print Radial");
 //	      funcY = function(t) { return Math.cos((8/7)*t);};
 
 //	      printTitle("Test 27-7: Print Radial");
-//	      funcY = function(t) { return Math.cos((5/6)*t);};	      	
+//	      funcY = function(t) { return Math.cos((5/6)*t);};
 
 //	      printTitle("Test 27-8: Print Radial");
-//	      funcY = function(t) { return Math.cos((6/7)*t);};	      
+//	      funcY = function(t) { return Math.cos((6/7)*t);};
 
 //	      printTitle("Test 27-9: Print Radial");
-//	      funcY = function(t) { return Math.cos((7/6)*t);};	      
+//	      funcY = function(t) { return Math.cos((7/6)*t);};
 
 //	      printTitle("Test 27-10: Print Radial");
-//	      funcY = function(t) { return Math.cos((8/5)*t);};	      
+//	      funcY = function(t) { return Math.cos((8/5)*t);};
 
 //	      printTitle("Test 27-11: Print Radial");
-//	      funcY = function(t) { return Math.cos((10/7)*t);};	      
+//	      funcY = function(t) { return Math.cos((10/7)*t);};
 
 //	      printTitle("Test 27-12: Print Radial");
-//	      funcY = function(t) { return Math.cos((12/7)*t);};	      
+//	      funcY = function(t) { return Math.cos((12/7)*t);};
 
 //	      printTitle("Test 27-13: Print Radial");
-//	      funcY = function(t) { return Math.cos((6/15)*t);};	      
-//	      pts = range(0, 200, 1000); 
+//	      funcY = function(t) { return Math.cos((6/15)*t);};
+//	      pts = range(0, 200, 1000);
 //	      printTitle("Test 27-14: Print Radial");
 //	      funcY = function(t) { return 3*Math.sin(t) + 2; }  // scale 40
 //	      printTitle("Test 27-15: Print Radial");
 //	      funcY = function(t) { return 3*Math.sin((Math.PI*t)) }
 
 //	      printTitle("Test 27-16: Print Radial");
-//	      pts = range(0, 100, 1000); 
-//	      funcY = function(t) { return .1*t ; } 
+//	      pts = range(0, 100, 1000);
+//	      funcY = function(t) { return .1*t ; }
 //	      funcX = function(t) { return .3*t ; }
 
 //	      printTitle("Test 27-16: Print Radial");
-//	      pts = range(0, 100, 1000); 
-//	      funcY = function(t) { return .1*t ; } 
+//	      pts = range(0, 100, 1000);
+//	      funcY = function(t) { return .1*t ; }
 //	      funcX = function(t) { return .3*t ; }
 
 	      printTitle("Test 27-17: Print Radial");
-	      pts = range(-2*Math.PI, 2*Math.PI, 200); 
-	      funcY = function(t) { return Math.sqrt(4*Math.cos(2*t)) ; } 
+	      pts = range(-2*Math.PI, 2*Math.PI, 200);
+	      funcY = function(t) { return Math.sqrt(4*Math.cos(2*t)) ; }
 	      funcX = function(t) { return t ; }
 	      drawPolar(funcX,funcY,pts);
-	      
+
 	  }
 
                    ///////////////////////////////////
-                   // test 28A: 
+                   // test 28A:
                    ///////////////////////////////////
     function test28a() {
 	printTitle("Figure 28a");
 	const amplitude = 30; // Height of the wave
 	const frequency = 0.03; // How many cycles fit in the width
 	const centerY = 300;
-	
+
 	beginPath();
 	moveTo(30, centerY+18); // Start at the left edge, centered vertically
 
@@ -2976,7 +2915,7 @@ class Point {
 	    };
 	thing = new StringThing(s);
 	drawInCircle(thing);
-      }    
+      }
 
                    ///////////////////////////////////
                    // test 30: SIMPLE SPIRAL
@@ -3003,7 +2942,7 @@ class Point {
    	let s = { radius:    5,                    // this is a start radius
 	      midpoint:  new Point(200,300),
 	      color:     blue
-	    }	
+	    }
  	let thing = new StringThing(s);
 	let gap = 6;
 	let numRotations = 8;
@@ -3020,7 +2959,7 @@ class Point {
    	let s = { radius:    5,                    // this is a start radius
 	      midpoint:  new Point(200,300),
 	      color:     blue
-	    }	
+	    }
  	let thing = new StringThing(s);
 	let gap = 6;
 	let ptsToDraw = 200;
@@ -3035,23 +2974,23 @@ class Point {
 	printTitle("Test 33: Fermat Spiral");
    	let s = { midpoint:  new Point(300,300),
 		  color:     blue
-		}	
+		}
  	let thing = new StringThing(s);
 	let scaleFactor = 30;
 	let numTurns = 6;
 	let gap = 1.2;
 	drawFermatSpiral(thing,scaleFactor,numTurns, gap);
     }
-    
+
                    ///////////////////////////////////
-                   // test 34: LOG SPIRAL 
+                   // test 34: LOG SPIRAL
                    //          not integrated
                    ///////////////////////////////////
     function test34() {
 	printTitle("Test 34: log Spiral--not integrated");
    	let s = { midpoint:  new Point(300,300),
 		  color:     blue
-		}	
+		}
  	let thing = new StringThing(s);
 	let a = 15;
 	let b = .08;
@@ -3069,13 +3008,13 @@ class Point {
 	printTitle("Test 35: euler Spiral--not integrated");
    	let s = { midpoint:  new Point(350,150),
 		  color:     blue
-		}	
+		}
  	let thing = new StringThing(s);
 	let totalLength = 3000;
 	let numSegments = 10000;
 	let scaleFactor = 15;
 	drawEulerSpiral(thing, totalLength, numSegments, scaleFactor);
-    }    
+    }
 
 
                    ///////////////////////////////////
@@ -3086,11 +3025,11 @@ class Point {
        printTitle("Test 36: Spiral of Theodorus--not integrated");
        let s = { midpoint:  new Point(300,260),
 		 color:     blue
-	       }	
+	       }
        let thing = new StringThing(s);
        numTriangles = 23;
        drawTheodorusSpiral(thing,numTriangles);
-    }        
+    }
 
                    ///////////////////////////////////
                    // test 37: DRAW CHORDS VARIATION
@@ -3112,11 +3051,11 @@ class Point {
 	let thing = new StringThing(s);
         drawInEllipse(thing);
 
-	
+
     }
 
                    ///////////////////////////////////
-                   // test 38: 
+                   // test 38:
                    ///////////////////////////////////
     function test38(){
 	printTitle("Test 38");
@@ -3148,7 +3087,7 @@ class Point {
 		drawLine(nodes[i],nodes[j],thing.color);
 	    }
 	}
-	
+
 	s={color:    blue,
 	   radius:   100,
 	   numNodes: 32,
@@ -3178,7 +3117,7 @@ class Point {
 	      };
 	let thingBig = new StringThing(s);
 	nodesBig = createNodes(thingBig);
-	
+
 	let numNodes = thingBig.numNodes;
 	nodesTopLeft     = nodesBig.slice(numNodes/4,  numNodes/2);
 	nodesBottomLeft  = nodesBig.slice(numNodes/2,  3*numNodes/4);
@@ -3189,7 +3128,7 @@ class Point {
 	thingBig.arm1 = nodesUpper;
 	thingBig.arm2 = nodesTopLeft;
 	stitcher(thingBig);
-	
+
 	thingBig.arm1 = nodesLower;
 	thingBig.arm2 = nodesBottomRight;
 	stitcher(thingBig);
@@ -3219,7 +3158,7 @@ class Point {
 
    	ctx.fillStyle = toColor(color,80);
 	ctx.fillRect(210,100,75,600);
-  
+
   	ctx.fillStyle = toColor(color,100);;
 	ctx.fillRect(285,100,75,600);
 
@@ -3240,7 +3179,7 @@ class Point {
 	for (i=0;i<pts.length;i++)
 	    setPt(pts[i]);
     }
-   
+
     function test42() {
 	printTitle("Text 42: arcCurvature Points");
 	pt1 = new Point(50,50);
@@ -3306,13 +3245,13 @@ class Point {
 	drawParabs(thing,parabs);
 
   }
-	
+
 
                    ///////////////////////////////////
                    // Figure 36: REGULAR STAR
                    ///////////////////////////////////
       function figure036(thing) {
-  	  let nodes = createNodes(thing);	
+  	  let nodes = createNodes(thing);
 	  const lineEnd = [];
 	  let deltaX, deltaY,newX,newY;
 	  for (let i=0;i<thing.numNodes;i++){
@@ -3374,7 +3313,7 @@ class Point {
     function figure72(){
 	//        background("darkblue");
 //	showColors("lightskyblue",300);
-	drawSpeckledRadialGradient(context, theCanvas.width, theCanvas.height, {
+	drawSpeckledRadialGradient(ctx, theCanvas.width, theCanvas.height, {
             dotRadius: 1,
             totalDots: 30000,
             noiseOpacity: 0.4,
@@ -3399,9 +3338,9 @@ class Point {
 		pt2 = new Point(x,         y+s.length);
 	    }
 	    drawParab(thing,[pt1, s.center, pt2]);
-	    
+
 	}
-    
+
 	const UL = 0;
 	const DL = 1;
 	const UR = 2;
@@ -3418,7 +3357,7 @@ class Point {
 	let thing = new StringThing(s);
 	// 0
 	let pt = new Point(xCenter - 1.6*length, yCenter - 1.45*length);
-	setPt(pt,false);  
+	setPt(pt,false);
 	s = {center: pt, direction: DR, length: length, color: colorBlue };
 	buildParab(s,thing);
 
@@ -3427,7 +3366,7 @@ class Point {
 	setPt(pt,false);
 	s = {center: pt, direction: UR, length: length, color: colorBlue };
 	buildParab(s,thing);
-	
+
 	// 2
 	pt = new Point(xCenter - 1.15*length, yCenter - 1.7*length);
 	setPt(pt,false);
@@ -3463,37 +3402,37 @@ class Point {
 	setPt(pt,false);
 	s = {center: pt, direction: DL, length: length, color: colorBlue };
 	buildParab(s,thing);
-	
+
 	// 8
 	pt = new Point(xCenter + 1.4*length,yCenter);
 	setPt(pt,false);
 	s = {center: pt, direction: UL, length: length, color: colorBlue };
 	buildParab(s,thing);
-	
+
 	// 9
 	pt = new Point(xCenter + 1.15*length, yCenter - 1.7*length);
 	setPt(pt,false);
 	s = {center: pt, direction: DL, length: length, color: colorBrown };
 	buildParab(s,thing);
-	
+
 	// 10
 	pt = new Point(xCenter + 1.0*length, yCenter -.25*length);
 	setPt(pt,false);
 	s = {center: pt, direction: UL, length: length, color: colorBrown };
 	buildParab(s,thing);
-	
+
 	// 11
 	pt = new Point(xCenter +  .6*length, yCenter - 1.3*length);
 	setPt(pt,false);
 	s = {center: pt, direction: DR, length: length, color: colorBlue };
 	buildParab(s,thing);
-	
+
 	// 12
 	pt = new Point(xCenter + .25*length, yCenter);
 	setPt(pt,false);
 	s = {center: pt, direction: UR, length: length, color: colorBlue };
 	buildParab(s,thing);
-	
+
 	// 13
 	pt = new Point(xCenter +  .15*length, yCenter -  1.55*length);
 	setPt(pt,false);
@@ -3517,7 +3456,7 @@ class Point {
 	setPt(pt,false);
 	s = {center: pt, direction: UL, length: length, color: colorBrown };
 	buildParab(s,thing);
-	
+
 	// 17
 	pt = new Point(xCenter + 1.0*length, yCenter +.25*length);
 	setPt(pt,false);
@@ -3544,7 +3483,7 @@ class Point {
 
 	// 21
 	pt = new Point(xCenter - 1.6*length, yCenter + 1.45*length);
-	setPt(pt,false);  
+	setPt(pt,false);
 	s = {center: pt, direction: UR, length: length, color: colorBlue };
 	buildParab(s,thing);
 
@@ -3604,9 +3543,9 @@ class Point {
 //	parabs = buildParab(direct,length);
 //	thing.color = "blue";
 //	drawParabs(thing,parabs);
-	
+
     }
-   
+
 
                    ///////////////////////////////////
                    // Figure 81: MORE PARABOLAS
@@ -3617,17 +3556,17 @@ class Point {
 	printTitle("Figure 81: Yet more parabolas--First I'm building");
 
 	pts = [ new Point(190,250),
-		new Point(140,80),						       
+		new Point(140,80),
 		new Point(180,555),
 		new Point(450,100),
 		new Point(450,600)
-	      ];	    
+	      ];
 	crossHair(pts,"black");
 
 	drawLine(new Point(0,47),new Point(800,47),"black",2);
 	drawLine(new Point(16,3),new Point(16,800),"black",2);
-	gl.dot = true;
-	    
+	drawState.dot = true;
+
 	let s = { color: "green",
 		  midpoint: new Point(320,350),
 		  radius:   300,
@@ -3695,32 +3634,32 @@ class Point {
 	ctx.fillStyle = "green";
 	createPrintNodes(thing);
 	parabs = [];
-	parab = [ _m(gl.pts[4], gl.pts[9]), gl.pts[0], _m(gl.pts[7],gl.pts[9])];  // 0
+	parab = [ _m(drawState.pts[4], drawState.pts[9]), drawState.pts[0], _m(drawState.pts[7],drawState.pts[9])];  // 0
 	parabs.push(parab);
-	parab = [ gl.pts[8], gl.pts[4],gl.pts[9]];                                // 4
+	parab = [ drawState.pts[8], drawState.pts[4],drawState.pts[9]];                                // 4
 	parabs.push(parab);
-	parab = [ _m(gl.pts[4],gl.pts[8]), gl.pts[1], _m(gl.pts[5],gl.pts[8])];   // 1
+	parab = [ _m(drawState.pts[4],drawState.pts[8]), drawState.pts[1], _m(drawState.pts[5],drawState.pts[8])];   // 1
 	parabs.push(parab);	thing.xScale=1;
-	parab = [ gl.pts[8], gl.pts[5], gl.pts[11]];                              // 5
+	parab = [ drawState.pts[8], drawState.pts[5], drawState.pts[11]];                              // 5
 	parabs.push(parab);
-	parab = [ _m(gl.pts[5],gl.pts[11]), gl.pts[2], _m(gl.pts[6],gl.pts[11])]; // 2
+	parab = [ _m(drawState.pts[5],drawState.pts[11]), drawState.pts[2], _m(drawState.pts[6],drawState.pts[11])]; // 2
 	parabs.push(parab);
-	parab = [ gl.pts[10], gl.pts[6], gl.pts[11]];                             // 6
+	parab = [ drawState.pts[10], drawState.pts[6], drawState.pts[11]];                             // 6
 	parabs.push(parab);
-	parab = [ _m(gl.pts[6],gl.pts[10]), gl.pts[3], _m(gl.pts[7],gl.pts[10])]; // 3
+	parab = [ _m(drawState.pts[6],drawState.pts[10]), drawState.pts[3], _m(drawState.pts[7],drawState.pts[10])]; // 3
 	parabs.push(parab);
-	parab = [ gl.pts[10], gl.pts[7], gl.pts[9]];                              // 7
+	parab = [ drawState.pts[10], drawState.pts[7], drawState.pts[9]];                              // 7
 	parabs.push(parab);
-	pt =  _m(gl.pts[4],gl.pts[9]);
-        parab = [gl.pts[4], pt, _m(gl.pts[0],pt)];                                // 0-4
-	parabs.push(parab);  
+	pt =  _m(drawState.pts[4],drawState.pts[9]);
+        parab = [drawState.pts[4], pt, _m(drawState.pts[0],pt)];                                // 0-4
+	parabs.push(parab);
 	thing.xScale=1;
 	thing.newColor = "sandybrown";
 	drawParabs(thing,parabs);
 	r = {midpoint: new Point(300,300),
-             start:    _m(gl.pts[4],gl.pts[9]),
+             start:    _m(drawState.pts[4],drawState.pts[9]),
 	     color:    "sandybrown",
-             end:      gl.pts[9],
+             end:      drawState.pts[9],
 	     numSteps: 8
 	    };
 	thing = new StringThing(r);
@@ -3746,23 +3685,23 @@ class Point {
 	createPrintNodes(thing);
 	ctx.fillStyle = "green";
 	parabs = [];
-	lPt = _m(gl.pts[0],gl.pts[6]);
-	rPt = _m(gl.pts[1],gl.pts[6]);
-        parab = [gl.pts[0],  lPt, gl.pts[4]];
+	lPt = _m(drawState.pts[0],drawState.pts[6]);
+	rPt = _m(drawState.pts[1],drawState.pts[6]);
+        parab = [drawState.pts[0],  lPt, drawState.pts[4]];
 	parabs.push(parab);
-	parab = [lPt,gl.pts[4],rPt];
+	parab = [lPt,drawState.pts[4],rPt];
 	parabs.push(parab);
-        parab = [gl.pts[1],  rPt, gl.pts[4]];
+        parab = [drawState.pts[1],  rPt, drawState.pts[4]];
 	parabs.push(parab);
-        parab = [gl.pts[1],  rPt, gl.pts[2]];
+        parab = [drawState.pts[1],  rPt, drawState.pts[2]];
 	parabs.push(parab);
-	parab = [gl.pts[2],  rPt, gl.pts[6]];
+	parab = [drawState.pts[2],  rPt, drawState.pts[6]];
 	parabs.push(parab);
-	parab = [rPt, gl.pts[6], lPt];
+	parab = [rPt, drawState.pts[6], lPt];
 	parabs.push(parab);
-	parab = [gl.pts[3],  lPt, gl.pts[6]];
+	parab = [drawState.pts[3],  lPt, drawState.pts[6]];
 	parabs.push(parab);
-	parab = [gl.pts[3],  lPt, gl.pts[0]];
+	parab = [drawState.pts[3],  lPt, drawState.pts[0]];
 	parabs.push(parab);
 	drawParabs(thing,parabs);
     }
@@ -3792,82 +3731,82 @@ class Point {
 	y9 = y8 + yDist/2;
 	y10 = y9 + yDist/2;
 	y11 = y10 + yLength;
-	gl.pts[1] = new Point(x1,y3);
-	gl.pts[2] = new Point(x1,y6);
-	gl.pts[3] = new Point(x1,y9);
-	gl.pts[4] = new Point(x2,y3);
-	gl.pts[5] = new Point(x2,y6);
-	gl.pts[6] = new Point(x2,y9);
-	gl.pts[7] = new Point(x3,y1);
-	gl.pts[8] = new Point(x3,y2);
-	gl.pts[9] = new Point(x3,y4);
-	gl.pts[10] = new Point(x3,y5);
-	gl.pts[11] = new Point(x3,y7);
-	gl.pts[12] = new Point(x3,y8);
-	gl.pts[13] = new Point(x3,y10);
-	gl.pts[14] = new Point(x3,y11);
-	gl.pts[15] = new Point(x4,y3);
-	gl.pts[16] = new Point(x4,y6);
-	gl.pts[17] = new Point(x4,y9);
-	gl.pts[18] = new Point(x5,y3);
-	gl.pts[19] = new Point(x5,y6);
-	gl.pts[20] = new Point(x5,y9);
-	gl.ctr++;
-	drawLine(gl.pts[1],gl.pts[4],"blue");
-	drawLine(gl.pts[2],gl.pts[5],"blue");
-	drawLine(gl.pts[3],gl.pts[6],"blue");
-	drawLine(gl.pts[7],gl.pts[8],"blue");
-	drawLine(gl.pts[9],gl.pts[10],"blue");
-	drawLine(gl.pts[11],gl.pts[12],"blue");
-	drawLine(gl.pts[13],gl.pts[14],"blue");
-	drawLine(gl.pts[15],gl.pts[18],"blue");
-	drawLine(gl.pts[16],gl.pts[19],"blue");
-	drawLine(gl.pts[17],gl.pts[20],"blue");	
+	drawState.pts[1] = new Point(x1,y3);
+	drawState.pts[2] = new Point(x1,y6);
+	drawState.pts[3] = new Point(x1,y9);
+	drawState.pts[4] = new Point(x2,y3);
+	drawState.pts[5] = new Point(x2,y6);
+	drawState.pts[6] = new Point(x2,y9);
+	drawState.pts[7] = new Point(x3,y1);
+	drawState.pts[8] = new Point(x3,y2);
+	drawState.pts[9] = new Point(x3,y4);
+	drawState.pts[10] = new Point(x3,y5);
+	drawState.pts[11] = new Point(x3,y7);
+	drawState.pts[12] = new Point(x3,y8);
+	drawState.pts[13] = new Point(x3,y10);
+	drawState.pts[14] = new Point(x3,y11);
+	drawState.pts[15] = new Point(x4,y3);
+	drawState.pts[16] = new Point(x4,y6);
+	drawState.pts[17] = new Point(x4,y9);
+	drawState.pts[18] = new Point(x5,y3);
+	drawState.pts[19] = new Point(x5,y6);
+	drawState.pts[20] = new Point(x5,y9);
+	drawState.ctr++;
+	drawLine(drawState.pts[1],drawState.pts[4],"blue");
+	drawLine(drawState.pts[2],drawState.pts[5],"blue");
+	drawLine(drawState.pts[3],drawState.pts[6],"blue");
+	drawLine(drawState.pts[7],drawState.pts[8],"blue");
+	drawLine(drawState.pts[9],drawState.pts[10],"blue");
+	drawLine(drawState.pts[11],drawState.pts[12],"blue");
+	drawLine(drawState.pts[13],drawState.pts[14],"blue");
+	drawLine(drawState.pts[15],drawState.pts[18],"blue");
+	drawLine(drawState.pts[16],drawState.pts[19],"blue");
+	drawLine(drawState.pts[17],drawState.pts[20],"blue");
 	ctx.fillStyle = "blue";
-	for (i=1;i<gl.pts.length;i++) {
-	    printCircNum(gl.pts[i]);
+	for (i=1;i<drawState.pts.length;i++) {
+	    printCircNum(drawState.pts[i]);
 	}
 	s = { color: blue,
 //	      color: "cornflowerblue",
 	      numSteps: 18,
 	      lineWidth: .8,
 //	      shorten:   80,
-	      midpoint: _m(gl.pts[4],gl.pts[15])
+	      midpoint: _m(drawState.pts[4],drawState.pts[15])
 //	      yIncrement: .8
 	    };
 	thing = new StringThing(s);
 //	drawRegularStar(thing);
-	parab = [gl.pts[1], gl.pts[4], gl.pts[8], gl.pts[7]];
+	parab = [drawState.pts[1], drawState.pts[4], drawState.pts[8], drawState.pts[7]];
 	drawParab(thing,parab);
-	parab = [gl.pts[1], gl.pts[4], gl.pts[9], gl.pts[10]];
+	parab = [drawState.pts[1], drawState.pts[4], drawState.pts[9], drawState.pts[10]];
 	drawParab(thing,parab);
-	parab = [gl.pts[18], gl.pts[15], gl.pts[9], gl.pts[10]];
+	parab = [drawState.pts[18], drawState.pts[15], drawState.pts[9], drawState.pts[10]];
 	drawParab(thing,parab);
-	parab = [gl.pts[15], gl.pts[18], gl.pts[7], gl.pts[8]];
+	parab = [drawState.pts[15], drawState.pts[18], drawState.pts[7], drawState.pts[8]];
 	drawParab(thing,parab);
-	parab = [gl.pts[9], gl.pts[10], gl.pts[5], gl.pts[2]];
+	parab = [drawState.pts[9], drawState.pts[10], drawState.pts[5], drawState.pts[2]];
 	drawParab(thing,parab);
-	parab = [gl.pts[2], gl.pts[5], gl.pts[11], gl.pts[12]];
+	parab = [drawState.pts[2], drawState.pts[5], drawState.pts[11], drawState.pts[12]];
 	drawParab(thing,parab);
-	parab = [gl.pts[6], gl.pts[3], gl.pts[11], gl.pts[12]];
+	parab = [drawState.pts[6], drawState.pts[3], drawState.pts[11], drawState.pts[12]];
 	drawParab(thing,parab);
-	parab = [gl.pts[3], gl.pts[6], gl.pts[13], gl.pts[14]];
+	parab = [drawState.pts[3], drawState.pts[6], drawState.pts[13], drawState.pts[14]];
 	drawParab(thing,parab);
-	parab = [gl.pts[14], gl.pts[13], gl.pts[17], gl.pts[20]];
+	parab = [drawState.pts[14], drawState.pts[13], drawState.pts[17], drawState.pts[20]];
 	drawParab(thing,parab);
-	parab = [gl.pts[20], gl.pts[17], gl.pts[12], gl.pts[11]];
+	parab = [drawState.pts[20], drawState.pts[17], drawState.pts[12], drawState.pts[11]];
 	drawParab(thing,parab);
-	parab = [gl.pts[12], gl.pts[11], gl.pts[16], gl.pts[19]];
+	parab = [drawState.pts[12], drawState.pts[11], drawState.pts[16], drawState.pts[19]];
 	drawParab(thing,parab);
-	parab = [gl.pts[19], gl.pts[16], gl.pts[10], gl.pts[9]];
+	parab = [drawState.pts[19], drawState.pts[16], drawState.pts[10], drawState.pts[9]];
 	drawParab(thing,parab);
-	parab = [gl.pts[7], gl.pts[8], gl.pts[5], gl.pts[2]];
+	parab = [drawState.pts[7], drawState.pts[8], drawState.pts[5], drawState.pts[2]];
 	drawParab(thing,parab);
-	parab = [gl.pts[7], gl.pts[8], gl.pts[16], gl.pts[19]];
+	parab = [drawState.pts[7], drawState.pts[8], drawState.pts[16], drawState.pts[19]];
 	drawParab(thing,parab);
-	parab = [gl.pts[2], gl.pts[5], gl.pts[13], gl.pts[14]];
+	parab = [drawState.pts[2], drawState.pts[5], drawState.pts[13], drawState.pts[14]];
 	drawParab(thing,parab);
-	parab = [gl.pts[14], gl.pts[13], gl.pts[16], gl.pts[19]];
+	parab = [drawState.pts[14], drawState.pts[13], drawState.pts[16], drawState.pts[19]];
 	drawParab(thing,parab);
     }
 
@@ -3933,7 +3872,7 @@ class Point {
                    ///////////////////////////////////
     function figure98() {
 	printTitle("Figure 098");
-	gl.final = false;
+	drawState.final = false;
 	s = { startSkip: 4,
 	      endSkip: 4,
 	      radius: 350,
@@ -3947,40 +3886,40 @@ class Point {
 	let distance = 165;
 	let degrees  = 45;
 	ctx.fillStyle="black";
-	
-	gl.pts[0] = new Point(20,350);
+
+	drawState.pts[0] = new Point(20,350);
  	printCircNum(0,0);
 	let temp      = new Point(320,350);
-	gl.pts[1] = rotatePoint(gl.pts[0],temp,toRadians(-degrees));
+	drawState.pts[1] = rotatePoint(drawState.pts[0],temp,toRadians(-degrees));
 	drawLine(0,1);
 	printCircNum(1,1);
 
-	gl.pts[2] = new Point(gl.pts[1].x+distance,gl.pts[1].y);
+	drawState.pts[2] = new Point(drawState.pts[1].x+distance,drawState.pts[1].y);
 	printCircNum(2,2);
-	temp      = new Point(gl.pts[2].x+300,gl.pts[2].y);
-	gl.pts[3] = rotatePoint(gl.pts[2],temp,toRadians(degrees));
+	temp      = new Point(drawState.pts[2].x+300,drawState.pts[2].y);
+	drawState.pts[3] = rotatePoint(drawState.pts[2],temp,toRadians(degrees));
 	printCircNum(3,3);
 	drawLine(2,3);
 
-	gl.pts[4] = new Point(gl.pts[0].x,gl.pts[0].y+distance);
+	drawState.pts[4] = new Point(drawState.pts[0].x,drawState.pts[0].y+distance);
 	printCircNum(4,4);
-	temp      = new Point(gl.pts[4].x+300,gl.pts[4].y);
-	gl.pts[5] = rotatePoint(gl.pts[4],temp,toRadians(degrees));
+	temp      = new Point(drawState.pts[4].x+300,drawState.pts[4].y);
+	drawState.pts[5] = rotatePoint(drawState.pts[4],temp,toRadians(degrees));
 	printCircNum(5,5);
-	drawLine(4,5);	
+	drawLine(4,5);
 
-    	gl.pts[6] = new Point(gl.pts[5].x+distance,gl.pts[5].y);
+    	drawState.pts[6] = new Point(drawState.pts[5].x+distance,drawState.pts[5].y);
 	printCircNum(6,6);
-	temp      = new Point(gl.pts[6].x+300,gl.pts[6].y);
-	gl.pts[7] = rotatePoint(gl.pts[6],temp,toRadians(-degrees));
+	temp      = new Point(drawState.pts[6].x+300,drawState.pts[6].y);
+	drawState.pts[7] = rotatePoint(drawState.pts[6],temp,toRadians(-degrees));
 	printCircNum(7,7);
 	drawLine(6,7);
-	
-	let x = ((gl.pts[2].x-gl.pts[1].x)/2)+gl.pts[1].x;
+
+	let x = ((drawState.pts[2].x-drawState.pts[1].x)/2)+drawState.pts[1].x;
 	let yOffset = 140;
-	gl.pts[8] = new Point(x, gl.pts[2].y+yOffset);
+	drawState.pts[8] = new Point(x, drawState.pts[2].y+yOffset);
 	printCircNum(8,8);
-	gl.pts[9] = new Point(x, gl.pts[6].y-yOffset);
+	drawState.pts[9] = new Point(x, drawState.pts[6].y-yOffset);
 	printCircNum(9,9);
 	s = { color: "saddlebrown",
 	      numSteps: 40 };
@@ -3994,26 +3933,26 @@ class Point {
 	    [7,6,9,8]
 		  ]);
 }
-    
+
                    ///////////////////////////////////
                    // Figure 99:
                    ///////////////////////////////////
-////////////////////////////////////////////////////////////////////////      
+////////////////////////////////////////////////////////////////////////
 // FIGURE 99
     function figure99() {
 	printTitle("Figure 99");
-	gl.final=true;
+	drawState.final=true;
         let x = 50;
 	let y = 100;
 	let yOffset = 100;
 	let xRight = x+500;
 	let yLeft  = y+500;
 	ctx.fillStyle="black";
-	gl.pts[0] = new Point(x,y);
-	gl.pts[1] = new Point(x,yLeft);
-	gl.pts[2] = new Point(xRight+100, y+yOffset);
-	gl.pts[3] = new Point(xRight, yLeft-yOffset);
-	for (i=0; i < gl.pts.length; i++) {
+	drawState.pts[0] = new Point(x,y);
+	drawState.pts[1] = new Point(x,yLeft);
+	drawState.pts[2] = new Point(xRight+100, y+yOffset);
+	drawState.pts[3] = new Point(xRight, yLeft-yOffset);
+	for (i=0; i < drawState.pts.length; i++) {
 	    printCircNum(i);
 	}
 	drawLine(0,2,"red",4);
@@ -4037,7 +3976,7 @@ class Point {
                    ///////////////////////////////////
     function figure151(){
 	let distance   = 40;
-	gl.final = true;
+	drawState.final = true;
 	function drawIt(ORIGIN) {
             let lineLength = 150;
 	    let degrees = 45;
@@ -4049,19 +3988,19 @@ class Point {
 			      new Point(x+lineLength,y),
 			      -toRadians(degrees)));
 	    //segment 2 to 3
-	    setPt(new Point(gl.pts[gl.ctr-1].x,   gl.pts[gl.ctr-1].y+distance));
-	    setPt(rotatePoint(gl.pts[gl.ctr-1],
-			      new Point(gl.pts[gl.ctr-1].x - lineLength,gl.pts[gl.ctr-1].y),
+	    setPt(new Point(drawState.pts[drawState.ctr-1].x,   drawState.pts[drawState.ctr-1].y+distance));
+	    setPt(rotatePoint(drawState.pts[drawState.ctr-1],
+			      new Point(drawState.pts[drawState.ctr-1].x - lineLength,drawState.pts[drawState.ctr-1].y),
 			      toRadians(45)));
 	    //segment 4 to 5
-	    setPt(new Point(gl.pts[gl.ctr-2].x+distance,   gl.pts[gl.ctr-2].y));
-	    setPt(rotatePoint(gl.pts[gl.ctr-1],
-			      new Point(gl.pts[gl.ctr-1].x + lineLength,gl.pts[gl.ctr-1].y),
+	    setPt(new Point(drawState.pts[drawState.ctr-2].x+distance,   drawState.pts[drawState.ctr-2].y));
+	    setPt(rotatePoint(drawState.pts[drawState.ctr-1],
+			      new Point(drawState.pts[drawState.ctr-1].x + lineLength,drawState.pts[drawState.ctr-1].y),
 			      -toRadians(45)));
 	    //segment 6 to 7
-	    setPt(new Point(gl.pts[gl.ctr-2].x,   gl.pts[gl.ctr-2].y-distance));
-	    setPt(rotatePoint(gl.pts[gl.ctr-1],
-			      new Point(gl.pts[gl.ctr-1].x + lineLength,gl.pts[gl.ctr-1].y),
+	    setPt(new Point(drawState.pts[drawState.ctr-2].x,   drawState.pts[drawState.ctr-2].y-distance));
+	    setPt(rotatePoint(drawState.pts[drawState.ctr-1],
+			      new Point(drawState.pts[drawState.ctr-1].x + lineLength,drawState.pts[drawState.ctr-1].y),
 			      toRadians(45)));
 	}
 
@@ -4079,23 +4018,23 @@ class Point {
 			   [5,4,6,7],
 			   [7,6,1,0] ]);
 
-	drawIt(new Point(gl.pts[7].x+distance,50));
+	drawIt(new Point(drawState.pts[7].x+distance,50));
 	drawParabs(thing,[ [8,9,10,11],
 			   [11,10,12,13],
 			   [13,12,14,15],
 			   [15,14,9,8] ]);
 
-	drawIt(new Point(gl.pts[3].x,gl.pts[3].y+distance));
+	drawIt(new Point(drawState.pts[3].x,drawState.pts[3].y+distance));
 	drawParabs(thing,[ [16,17,18,19],
 			   [19,18,20,21],
 			   [21,20,22,23],
 			   [23,22,17,16] ]);
 
-	drawIt(new Point(gl.pts[23].x+distance,gl.pts[23].y));
+	drawIt(new Point(drawState.pts[23].x+distance,drawState.pts[23].y));
 	drawParabs(thing,[ [24,25,26,27],
 			   [27,26,28,29],
 			   [29,28,30,31],
-			   [31,30,25,24] ]);	
+			   [31,30,25,24] ]);
 	drawParabs(thing,[ [4,5,23,22],
 			   [22,23,24,25],
 			   [25,24,11,10],
@@ -4114,16 +4053,16 @@ class Point {
 			    [7,6,27,26],
 			    [8,9,21,20],
 			    [13,12,16,17]
-			  ]);	
+			  ]);
 	//	printCircNum(rotatePoint(a,c,angle));
     }
 
                    ///////////////////////////////////
-                   // Figure 158: 
+                   // Figure 158:
                    ///////////////////////////////////
     function figure158() {
 	printTitle("Figure 158");
-//	gl.final = true;
+//	drawState.final = true;
 	ctx.fillStyle="black";
 	let mid = new Point(300,300);
 	s = {numSteps: 20,
@@ -4135,15 +4074,15 @@ class Point {
 	      }
 	thing      = new StringThing(s);
 	let nodes = createPrintNodes(thing);
-	// create an arm for each spoke 
+	// create an arm for each spoke
 	let Arm1 = [];
-	for (i=0; i < gl.pts.length; i++) Arm1.push(ptsOnLine(thing.numSteps,mid,gl.pts[i]));
+	for (i=0; i < drawState.pts.length; i++) Arm1.push(ptsOnLine(thing.numSteps,mid,drawState.pts[i]));
 
 	// now create each of the loops
 	let Arm2 = [];
-	for (i=0; i < gl.pts.length; i++) {
-	    j = (i+1) % gl.pts.length;
-	    Arm2.push(arcPoints(gl.pts[j], gl.pts[i], .7, thing.numSteps+1));
+	for (i=0; i < drawState.pts.length; i++) {
+	    j = (i+1) % drawState.pts.length;
+	    Arm2.push(arcPoints(drawState.pts[j], drawState.pts[i], .7, thing.numSteps+1));
 	}
 	// draw outside
 	for (i=0;i<Arm2.length;i++) {
@@ -4152,7 +4091,7 @@ class Point {
 	}
 	let loops = [];
 	let temp = [];
-	
+
 	// all three elements of the loop combined into one array
 	for (i=0; i<nodes.length; i++){
 	    k = (i+1) % nodes.length;
@@ -4205,14 +4144,14 @@ class Point {
     function squareSine() {
 	printTitle("Figure 172: Square Sine");
 	function doBox(s) {
-            let pt1     = new Point(s.pt.x,     s.pt.y + s.dy);	    
+            let pt1     = new Point(s.pt.x,     s.pt.y + s.dy);
 	    let pt2     = new Point(pt1.x+s.dx, pt1.y)
 	    s.dy = -s.dy;
 	    let pt3     = new Point(pt2.x,      pt2.y + s.dy);
 	    drawLine(s.pt,pt1,"blue");
 	    drawLine(pt1, pt2,"blue");
 	    drawLine(pt2, pt3,"blue");
-            
+
 	    let arm1    = ptsOnLine(s, s.pt, pt1);
 	    let arm2    = ptsOnLine(s, pt1,  pt2);
 	    let arm3    = ptsOnLine(s, pt2,  pt3);
@@ -4233,12 +4172,12 @@ class Point {
 	      dy: -150,
 	      pt: new Point(-75, 200)
 	    };
-	for (let i=0;i<7;i++) s = doBox(s);	
+	for (let i=0;i<7;i++) s = doBox(s);
 	s.pt=new Point(-75, 200)
 	for (i=0;i<7;i++) s = doBox(s);
 	s.pt=new Point(-75, 500)
 	for (i=0;i<7;i++) s = doBox(s);
-	
+
     }
 
                    ///////////////////////////////////
@@ -4314,11 +4253,11 @@ class Point {
 	for (i=0; i<6*arms[0].length; i++) {
             drawLine(arm[i],arm[i+arms[0].length+18],blue);
 	}
-	    
+
     }
-    
+
                    ///////////////////////////////////
-                   // Figure 204: 
+                   // Figure 204:
                    ///////////////////////////////////
     function figure204() {
 	printTitle("Figure 204");
@@ -4456,7 +4395,7 @@ class Point {
 	skip = 70;
 	pts = nodesBottom.concat(armRight.toReversed());
 	pts = pts.concat(armLeft);
-        drawLinesAround(pts,skip,"slategray");	
+        drawLinesAround(pts,skip,"slategray");
 
     }
                    ///////////////////////////////////
@@ -4481,7 +4420,7 @@ class Point {
 	thing.arm1 = ptsOnLine(thing.numSteps,center,pt);
 	arm1 = thing.arm1;
 	drawInCircle(thing);
-      
+
 	s = { midpoint:     center,
 	      numNodes:     150,
 	      rotate:       0,
@@ -4526,14 +4465,14 @@ class Point {
 	end   = start+22;
 	thing.arm2 = nodes.slice(start,end);
 	stitcher(thing);
-	
+
 	thing.arm1 = null;
 	thing.arm1 = arm2;
 	start = 3*nodes.length/4-2;
 	end   = start+22;
 	thing.arm2 = nodes.slice(start,end);
 	stitcher(thing);
-	
+
     }
 
 
@@ -4602,13 +4541,13 @@ class Point {
 	    let num = Math.round((percent/100)*255).toString(16);
 	    return (color+num);
 	}
-	
+
 	function callStitcher(thing,arm1,arm2,numNodes){
 	    for (i=0;i<numNodes;i++) {
 		thing.arm1 = arm1[i];
 		thing.arm2 = arm2[i];
 		stitcher(thing);
-		
+
 		j = i-1;
 		if (j < 0) j = numNodes-1;
 		thing.arm2 = arm2[j].toReversed();
@@ -4620,7 +4559,7 @@ class Point {
 	    let pt         = new Point(thing.midpoint.x, thing.midpoint.y);
 	    const nodes    = createNodes(thing);
 	    let numNodes   = thing.numNodes;
-	    
+
 	    arm1 = [];
 	    for (i=0; i<numNodes; i++) {
 		arm1.push(ptsOnLine(thing.numSteps,thing.midpoint,nodes[i]));
@@ -4651,7 +4590,7 @@ class Point {
 	    for (i=0; i < numNodes; i++) {
 		shortArms.push(arm1[i].slice(0,5));
 	    }
-	    
+
 	    arms1a = [];
 	    for (i=0; i < numNodes; i++) {
 		j = i+1;
@@ -4671,7 +4610,7 @@ class Point {
 		thing.arm2 = shortTop[i].toReversed();
 		stitcher(thing);
 	    }
-	    
+
 // DRAW INNER OTHER
 	    shortArms = [];
 	    for (i=0; i < numNodes; i++) {
@@ -4706,7 +4645,7 @@ class Point {
 		thing.arm2 = shortTop[i];
 		stitcher(thing);
 	    }
-	    
+
 // DRAW INNER PARABOLA 1
 	    thing.color = "blue";
 	    thing.color = "lightgray";
@@ -4739,7 +4678,7 @@ class Point {
 	};
 	thing = new StringThing(s);
 	drawCircParab(thing);
-	
+
     }
 
 
@@ -4781,7 +4720,7 @@ class Point {
 	thing = new StringThing(s);
 	drawCircle(center,radius,"blue");
 	drawInCircle(thing);
-	
+
 	nodes=createNodes(thing);
 	lineNodes = ptsOnLine(30,nodes[50],nodes[0]);
 
@@ -4806,7 +4745,7 @@ class Point {
                    // Figure 246:
                    ///////////////////////////////////
     function figure246() {
-	printTitle("Figure 246");	
+	printTitle("Figure 246");
 	radius = 150;
 	center = new Point(200,180);
 	numNodes = 100;
@@ -4824,7 +4763,7 @@ class Point {
 	let right = nodes.slice(nodes.length/2,nodes.length);
 	let left  = nodes.slice(0,nodes.length/2);
 	left.reverse();
-	
+
 	lineNodes = ptsOnLine((numNodes/2)-9,nodes[0],nodes[numNodes/2]);
 	length = Math.round(lineNodes.length/2+3);
 	topDiff = 4;
@@ -4873,7 +4812,7 @@ class Point {
 	}
    }
 
-    
+
                    ///////////////////////////////////
                    // Figure 250:
                    ///////////////////////////////////
@@ -4893,7 +4832,7 @@ class Point {
 	    };
 	thing = new StringThing(s);
 	drawInEllipse(thing);
-	
+
 	s = { color:       "#9e9eff",
 	      withinCirc:  TAPER,
 	      ellipse:     {a: 140, b: 250 },
@@ -4906,7 +4845,7 @@ class Point {
 	    };
 	thing = new StringThing(s);
 	drawInEllipse(thing);
-	
+
        s = { color: "red",
 	   color:       "#6b6bff",
 	      withinCirc:  TAPER,
@@ -4922,7 +4861,7 @@ class Point {
 	thing = new StringThing(s);
 	drawInEllipse(thing);
     }
-    
+
                    ///////////////////////////////////
                    // Figure 255:
                    ///////////////////////////////////
@@ -5005,7 +4944,7 @@ class Point {
        curvature = 3;
        numPoints = 8;
        let pts1 = arcCurvature(pt1, pt2, curvature, numPoints);
-       
+
        pt1 = new Point(25, 500);
        pt2 = new Point(575,500);
        curvature = -2.8;
@@ -5082,12 +5021,12 @@ class Point {
 	    };
 	thing = new StringThing(s);
         drawInEllipse(thing);
-      }    
-/////////////////////////////////////////////////////////////////  
-/////////////////////////////////////////////////////////////////  
+      }
+/////////////////////////////////////////////////////////////////
+/////////////////////////////////////////////////////////////////
 // TESTS AND FIGURES GO ABOVE HERE
-/////////////////////////////////////////////////////////////////  
-/////////////////////////////////////////////////////////////////  
+/////////////////////////////////////////////////////////////////
+/////////////////////////////////////////////////////////////////
 
 
       drawScreen();
@@ -5095,15 +5034,583 @@ class Point {
 
 
 
-</script> 
-</head>
-<body>
-<div style="position: absolute; top: 50px; left: 50px;">
-<canvas id="StringThing" width="1000" height="800">
 
- Your browser does not support HTML 5 Canvas. 
-</canvas>
-</div>
-<script src="utility.js"></script>
-</body>
-</html>
+      var theCanvas = document.getElementById("StringThing");
+      var ctx   = theCanvas.getContext("2d");
+
+
+
+
+class Point {
+    constructor (x,y) {
+	if (typeof(x)=="number") {
+	    this.x = x;
+	    this.y = y;
+	} else {
+	    this.x = gl.pts[x].x;
+	    this.y = gl.pts[x].y;
+	}
+    }
+}
+
+
+function printTitle(text,pt={x: 150, y: 20},col="blue") {
+	x = pt.x; y=pt.y;
+ 	let color         = ctx.fillStyle;
+	let font          = ctx.font;
+	ctx.font      = "12px Verdana";
+	ctx.fillStyle = col;
+//	let x = 150; let y = 20;
+        ctx.fillText(text,x,y);
+	ctx.fillStyle = color;
+	ctx.font      = font;
+    }
+
+function arcCurvature(pt1, pt2, curve, numPoints = 32) {
+	// Lets me specify using a real looking number
+	curvature = curve/1000;
+	pts = [];
+	// Use the same math to find center, radius, and sweep
+	const dx = pt2.x - pt1.x;
+	const dy = pt2.y - pt1.y;
+	const d  = Math.hypot(dx, dy);
+	if (d === 0) return;
+
+	if (curvature === 0) {
+	    pts.push(pt1);
+	    pts.push(pt2);
+	    return pts;
+	}
+
+	const sign = Math.sign(curvature);
+	let   R    = Math.abs(1 / curvature);
+	const Rmin = d / 2;
+	if (R < Rmin) R = Rmin;
+
+	const mx = (pt1.x + pt2.x) / 2;
+	const my = (pt1.y + pt2.y) / 2;
+	const ux = dx / d;
+	const uy = dy / d;
+	const nx = -uy;
+	const ny = ux;
+	const h  = Math.sqrt(Math.max(0, R * R - (d / 2) * (d / 2)));
+	const Cx = mx + sign * h * nx;
+	const Cy = my + sign * h * ny;
+
+	let a0 = Math.atan2(pt1.y - Cy, pt1.x - Cx);
+	let a1 = Math.atan2(pt2.y - Cy, pt2.x - Cx);
+	const twoPi = Math.PI * 2;
+                    // CCW sweep in [0, 2π)
+	let delta  = ((a1 - a0) % twoPi + twoPi) % twoPi;
+                    // choose minor sweep in (-π, π]
+	if (delta > Math.PI) delta -= twoPi;
+
+	for (let i = 0; i <= numPoints; i++) {
+	    const t = i / numPoints;
+	    const a = a0 + t * delta;
+	    const x = Cx + R * Math.cos(a);
+	    const y = Cy + R * Math.sin(a);
+	    pts.push(new Point(x,y));
+	}
+	return pts;
+    }
+
+
+function inchesToPixels() {
+    let inches = prompt("What is the widest dimension in inches");
+    alert (inches*300);
+}
+
+function alertPoint(pt) {
+    alert(`x = ${pt.x}, y = ${pt.y}`);
+}
+
+function comparePoints(pt1,pt2) {
+    if (pt1.x.toFixed(2) == pt2.x.toFixed(2)) {
+	if (pt1.y.toFixed(2) == pt2.y.toFixed(2)) {
+	    return true;
+	}
+    }
+    return false;
+}
+
+// NOT TESTED
+// https://cscheng.info/2016/06/09/calculate-circle-line-intersection-with-javascript-and-p5js.html
+function findCircleLineIntersections(r, h, k, m, n) {
+    // circle: (x - h)^2 + (y - k)^2 = r^2
+    // line: y = m * x + n
+    // r: circle radius
+    // h: x value of circle centre
+    // k: y value of circle centre
+    // m: slope
+    // n: y-intercept
+
+    // get a, b, c values
+    var a = 1 + m*m;
+    var b = -h * 2 + (m * (n - k)) * 2;
+    var c = h*h   + (n-k)*(n-k) - r*r;
+    //      sq(h) + sq(n - k)   - sq(r);
+
+    // get discriminant
+    var d = b*b - 4 * a * c;
+    if (d >= 0) {
+        // insert into quadratic formula
+        var intersections = [
+            (-b + Math.sqrt(b*b - 4 * a * c)) / (2 * a),
+            (-b - Math.sqrt(b*b - 4 * a * c)) / (2 * a)
+        ];
+        if (d == 0) {
+            // only 1 intersection
+            return [intersections[0]];
+        }
+        return intersections;
+    }
+    // no intersection
+    return [];
+}
+
+
+
+const calculateTintAndShade = (
+    hexColor, // using #663399 as an example
+    percentage // using 10% as an example
+) => {
+    const r = parseInt(hexColor.slice(1, 3), 16); // r = 102
+    const g = parseInt(hexColor.slice(3, 5), 16); // g = 51
+    const b = parseInt(hexColor.slice(5, 7), 16); // b = 153
+
+    /*
+       From this part, we are using our two formulas
+       in this case, here is the formula for tint,
+       please be aware that we are performing two validations
+       we are using Math.min to set the max level of tint to 255,
+       so we don't get values like 280 ;)
+       also, we have the Math.round so we don't have values like 243.2
+       both validations apply for both tint and shade as you can see */
+    const tintR = Math.round(Math.min(255, r + (255 - r) * percentage)); // 117
+    const tintG = Math.round(Math.min(255, g + (255 - g) * percentage)); // 71
+    const tintB = Math.round(Math.min(255, b + (255 - b) * percentage)); // 163
+
+
+    const shadeR = Math.round(Math.max(0, r - r * percentage)); // 92
+    const shadeG = Math.round(Math.max(0, g - g * percentage)); // 46
+    const shadeB = Math.round(Math.max(0, b - b * percentage)); // 138
+
+
+    /*
+       Now with all the values calculated, the only missing stuff is
+       getting our color back to hexadecimal, to achieve that, we are going
+       to perform a toString(16) on each value, so we get the hex value
+       for each color, and then we just append each value together and voilÃ !*/
+    return {
+        tint: {
+            r: tintR,
+            g: tintG,
+            b: tintB,
+            hex:
+                '#' +
+                [tintR, tintG, tintB]
+                    .map(x => x.toString(16).padStart(2, '0'))
+                    .join(''), // #7547a3
+        },
+        shade: {
+            r: shadeR,
+            g: shadeG,
+            b: shadeB,
+            hex:
+                '#' +
+                [shadeR, shadeG, shadeB]
+                    .map(x => x.toString(16).padStart(2, '0'))
+                    .join(''), // #5c2e8a
+        },
+    };
+};
+
+function colourNameToHex(color)
+{
+    color = color.toLowerCase();
+
+    var colours = {"aliceblue":"#f0f8ff","antiquewhite":"#faebd7",
+		   "aqua":"#00ffff","aquamarine":"#7fffd4","azure":"#f0ffff",
+		   "beige":"#f5f5dc","bisque":"#ffe4c4","black":"#000000",
+		   "blanchedalmond":"#ffebcd","blue":"#0000ff","blueviolet":"#8a2be2",
+		   "brown":"#a52a2a","burlywood":"#deb887","cadetblue":"#5f9ea0",
+		   "chartreuse":"#7fff00","chocolate":"#d2691e","coral":"#ff7f50",
+		   "cornflowerblue":"#6495ed","cornsilk":"#fff8dc","crimson":"#dc143c",
+		   "cyan":"#00ffff","darkblue":"#00008b","darkcyan":"#008b8b",
+		   "darkgoldenrod":"#b8860b","darkgray":"#a9a9a9","darkgreen":"#006400",
+		   "darkkhaki":"#bdb76b","darkmagenta":"#8b008b",
+		   "darkolivegreen":"#556b2f","darkorange":"#ff8c00",
+		   "darkorchid":"#9932cc","darkred":"#8b0000","darksalmon":"#e9967a",
+		   "darkseagreen":"#8fbc8f","darkslateblue":"#483d8b",
+		   "darkslategray":"#2f4f4f","darkturquoise":"#00ced1",
+		   "darkviolet":"#9400d3","deeppink":"#ff1493","deepskyblue":"#00bfff",
+		   "dimgray":"#696969","dodgerblue":"#1e90ff","firebrick":"#b22222",
+		   "floralwhite":"#fffaf0","forestgreen":"#228b22","fuchsia":"#ff00ff",
+		   "gainsboro":"#dcdcdc","ghostwhite":"#f8f8ff","gold":"#ffd700",
+		   "goldenrod":"#daa520","gray":"#808080","green":"#008000",
+		   "greenyellow":"#adff2f","honeydew":"#f0fff0","hotpink":"#ff69b4",
+		   "indianred ":"#cd5c5c","indigo":"#4b0082","ivory":"#fffff0",
+		   "khaki":"#f0e68c","lavender":"#e6e6fa","lavenderblush":"#fff0f5"
+		   ,"lawngreen":"#7cfc00","lemonchiffon":"#fffacd","lightblue":"#add8e6",
+		   "lightcoral":"#f08080","lightcyan":"#e0ffff"
+		   ,"lightgoldenrodyellow":"#fafad2","lightgrey":"#d3d3d3",
+		   "lightgreen":"#90ee90","lightpink":"#ffb6c1","lightsalmon":"#ffa07a"
+		   ,"lightseagreen":"#20b2aa","lightskyblue":"#87cefa"
+		   ,"lightslategray":"#778899","lightsteelblue":"#b0c4de",
+		   "lightyellow":"#ffffe0","lime":"#00ff00","limegreen":"#32cd32",
+		   "linen":"#faf0e6","magenta":"#ff00ff","maroon":"#800000"
+		   ,"mediumaquamarine":"#66cdaa","mediumblue":"#0000cd"
+		   ,"mediumorchid":"#ba55d3","mediumpurple":"#9370d8",
+		   "mediumseagreen":"#3cb371","mediumslateblue":"#7b68ee"
+		   ,"mediumspringgreen":"#00fa9a","mediumturquoise":"#48d1cc"
+		   ,"mediumvioletred":"#c71585","midnightblue":"#191970"
+		   ,"mintcream":"#f5fffa","mistyrose":"#ffe4e1","moccasin":"#ffe4b5"
+		   ,"navajowhite":"#ffdead","navy":"#000080","oldlace":"#fdf5e6",
+		   "olive":"#808000","olivedrab":"#6b8e23","orange":"#ffa500"
+		   ,"orangered":"#ff4500","orchid":"#da70d6","palegoldenrod":"#eee8aa",
+		   "palegreen":"#98fb98","paleturquoise":"#afeeee",
+		   "palevioletred":"#d87093","papayawhip":"#ffefd5",
+		   "peachpuff":"#ffdab9","peru":"#cd853f","pink":"#ffc0cb"
+		   ,"plum":"#dda0dd","powderblue":"#b0e0e6","purple":"#800080",
+		   "rebeccapurple":"#663399","red":"#ff0000","rosybrown":"#bc8f8f",
+		   "royalblue":"#4169e1","saddlebrown":"#8b4513","salmon":"#fa8072",
+		   "sandybrown":"#f4a460","seagreen":"#2e8b57","seashell":"#fff5ee",
+		   "sienna":"#a0522d","silver":"#c0c0c0","skyblue":"#87ceeb",
+		   "slateblue":"#6a5acd","slategray":"#708090","snow":"#fffafa"
+		   ,"springgreen":"#00ff7f","steelblue":"#4682b4","tan":"#d2b48c",
+		   "teal":"#008080","thistle":"#d8bfd8","tomato":"#ff6347",
+		   "turquoise":"#40e0d0","violet":"#ee82ee","wheat":"#f5deb3",
+		   "white":"#ffffff","whitesmoke":"#f5f5f5","yellow":"#ffff00",
+		   "yellowgreen":"#9acd32"};
+
+    if (typeof colours[color] != 'undefined')
+        return colours[color];
+    return false;
+}
+
+function getLineEquation(pt1,pt2) {
+    if (pt2.x - pt1.x === 0) {  // handle vertical line
+	return {slope:0, b: 0} ;
+//	return `x = ${pt1.x}`; // Equation for a vertical line
+    }
+
+    const m = (pt2.y - pt1.y) / (pt2.x - pt1.x);
+    const b = pt1.y - m * pt1.x; // Calculate the y-intercept
+
+    return `y = ${m}x + ${b}`;
+}
+
+
+
+
+
+/////////////////////////////////////////////////////////////////
+// pts from array
+/////////////////////////////////////////////////////////////////
+function ptsFromArray(coords){
+    let pts = [];
+    for (let i=0; i < coords.length; i++){
+	pts.push(new Point(coords[i][0],coords[i][1]));
+    }
+    return pts;
+}
+
+
+/////////////////////////////////////////////////////////////////
+// lineIntersection
+/////////////////////////////////////////////////////////////////
+function lineIntersect(p1, p2, p3, p4) {
+    var c2x = p3.x - p4.x; // (x3 - x4)
+    var c3x = p1.x - p2.x; // (x1 - x2)
+    var c2y = p3.y - p4.y; // (y3 - y4)
+    var c3y = p1.y - p2.y; // (y1 - y2)
+
+    // down part of intersection point formula
+    var d  = c3x * c2y - c3y * c2x;
+
+    if (d == 0) {
+    	throw new Error('Number of intersection points is zero or infinity.');
+    }
+
+    // upper part of intersection point formula
+    var u1 = p1.x * p2.y - p1.y * p2.x; // (x1 * y2 - y1 * x2)
+    var u4 = p3.x * p4.y - p3.y * p4.x; // (x3 * y4 - y3 * x4)
+
+    // intersection point formula
+    var px = (u1 * c2x - c3x * u4) / d;
+    var py = (u1 * c2y - c3y * u4) / d;
+    var p = { x: px, y: py };
+
+    return p;
+}
+
+/////////////////////////////////////////////////////////////////
+// getPerpendicular
+/////////////////////////////////////////////////////////////////
+function getPerpendicular(p1, p2, length) {
+    const dx = p2.x - p1.x;
+    const dy = p2.y - p1.y;
+    const normalizedDX = dy  / Math.sqrt(dx * dx + dy * dy);
+    const normalizedDY = -dx / Math.sqrt(dx * dx + dy * dy);
+
+    const endX = p2.x + normalizedDX * length;
+    const endY = p2.y + normalizedDY * length;
+    return [p2, new Point(endX,endY)];
+}
+
+
+//////////////////////////////////////////////////////////////////
+// numbersToPoints
+//////////////////////////////////////////////////////////////////
+    function numbersToPoints(coords) {
+	if (Array.isArray(coords)) {
+	    let nodes = [];
+	    for (let i=0;i<coords.length;i++){
+		if (typeof(coords[i]) == "number") {
+		    nodes.push(gl.pts[coords[i]]);
+		} else {
+		    nodes.push(coords[i]);
+		}
+	    }
+	    return nodes;
+	}
+	if (typeof(coords) == "number")
+	    return gl.pts[coords];
+	else return coords;
+    }
+
+function rotatePoint(start, end, angle){
+    let cos = Math.cos(angle);
+    let sin = Math.sin(angle);
+    let x = (cos*(end.x - start.x)) + (sin*(end.y - start.y)) + start.x;
+    let y = (cos*(end.y - start.y)) - (sin*(end.x - start.x)) + start.y;
+    return new Point(x,y);
+}
+/////////////////////////////////////////////////////////////////
+// Rotate a point around a pivot
+/////////////////////////////////////////////////////////////////
+//     function rotatePoint(start, end, angle) {
+//	  // Translate to origin
+//	  translated_x = end.x - start.x;
+//	  translated_y = end.y - start.y;
+//
+//	  // Rotate
+//	  rotated_x = translated_x * Math.cos(angle)
+//	            - translated_y * Math.sin(angle);
+//	  rotated_y = translated_x * Math.sin(angle)
+//	            + translated_y * Math.cos(angle);
+//
+//	  // Translate back
+//	  rotated_p = new Point(rotated_x + start.x, rotated_y + start.y);
+//
+//	  return rotated_p;
+//      }
+
+
+/////////////////////////////////////////////////////////////////
+// toDegrees
+/////////////////////////////////////////////////////////////////
+function toDegrees(radians){
+    return radians*(180/Math.PI);
+}
+
+/////////////////////////////////////////////////////////////////
+// toRadians
+/////////////////////////////////////////////////////////////////
+function toRadians(degrees) {
+    return degrees*(Math.PI/180);
+}
+
+
+function ptsOnArc(pt1, pt2, radius, segments = 50) {
+    x1 = pt1.x;
+    y1 = pt1.y;
+    x2 = pt2.x;
+    y2 = pt2.y;
+  // Distance between points
+  const dx = x2 - x1;
+  const dy = y2 - y1;
+  const d = Math.sqrt(dx*dx + dy*dy);
+
+  if (d > 2 * radius) {
+    console.error('Radius too small for the given points!');
+    return;
+  }
+
+  // Midpoint between P1 and P2
+  const mx = (x1 + x2) / 2;
+  const my = (y1 + y2) / 2;
+
+  // Distance from midpoint to center along the perpendicular bisector
+  const h = Math.sqrt(radius*radius - (d/2)*(d/2));
+
+  // Perpendicular vector to pt1->pt2
+  const perpX = -dy / d;
+  const perpY = dx / d;
+
+  // Two possible circle centers:
+  const cx1 = mx + perpX * h;
+  const cy1 = my + perpY * h;
+
+  const cx2 = mx - perpX * h;
+  const cy2 = my - perpY * h;
+
+  // Choose one center, for example cx1, cy1
+  const cx = cx1;
+  const cy = cy1;
+
+  // Calculate start and end angles
+  function angleBetween(x, y) {
+    return Math.atan2(y - cy, x - cx);
+  }
+
+  let startAngle = angleBetween(x1, y1);
+  let endAngle   = angleBetween(x2, y2);
+
+  // Adjust angles to ensure we draw the smaller arc (counterclockwise)
+  if (endAngle < startAngle) {
+    endAngle += 2 * Math.PI;
+  }
+
+  // Draw straight lines approximating the arc
+    let pts = [];
+    for (let i = 0; i <= segments; i++) {
+	const t = i / segments;
+	const angle = startAngle + t * (endAngle - startAngle);
+	const x = cx + radius * Math.cos(angle);
+	const y = cy + radius * Math.sin(angle);
+	pts.push(new Point(x,y));
+    }
+    return pts;
+}
+
+
+
+/////////////////////////////////////////////////////////////////
+///////////////////////// ARC STUFF
+/////////////////////////////////////////////////////////////////
+// arcPoints
+/////////////////////////////////////////////////////////////////
+      function arcPoints(a, b, r_frac, n) {
+	  // a:      origin point
+	  // b:      destination point
+	  // r_frac: arc radius as a fraction of half the distance
+	  //         between a and b
+	  //         -- 1 results in a semicircle arc, the arc flattens out the
+	  //            closer to 0 the number is set, 0 is invalid
+	  // n:      number of points to sample from arc
+	  let c = getCenter(a, b, r_frac);
+	  let r = dist(c, a);
+
+	  let aAngle = Math.atan2(a.y - c.y, a.x - c.x),
+	      bAngle = Math.atan2(b.y - c.y, b.x - c.x);
+
+	  if (aAngle > bAngle) {
+	      bAngle += 2 * Math.PI;
+	  }
+
+          let points = range(aAngle, bAngle, (bAngle-aAngle)/n);
+	  let sampledPoints = points.map(
+	      (d) => new Point(Math.cos(d) * r + c.x,
+			       Math.sin(d) * r + c.y));
+	  return sampledPoints;
+      }
+
+/////////////////////////////////////////////////////////////////
+// dist
+/////////////////////////////////////////////////////////////////
+function dist(a, b) {
+    return Math.sqrt(Math.pow(a.x - b.x, 2) + Math.pow(a.y - b.y, 2));
+}
+
+/////////////////////////////////////////////////////////////////
+// getCenter
+/////////////////////////////////////////////////////////////////
+function getCenter(a, b, frac) {
+    let c  = getP3(a, b, frac);
+    let b1 = yIntercept(a, b);
+    let b2 = yIntercept(a, c);
+    let m1 = inverseSlope(a, b);
+    let m2 = inverseSlope(a, c);
+
+    // find the intersection of the two perpendicular bisectors
+    // i.e. solve m1 * x + b2 = m2 * x + b2 for x
+    let x = (b2 - b1) / (m1 - m2);
+    // sub x back into one of the linear equations to get y
+    let y = m1 * x + b1;
+    return new Point(x,y);
+}
+
+/////////////////////////////////////////////////////////////////
+// getP3
+/////////////////////////////////////////////////////////////////
+function getP3(a, b, frac) {
+    let mid = midpoint(a, b);
+
+    let m = inverseSlope(a, b);
+    // check if B is below A
+    let bLower = b.y < a.y ? -1 : 1;
+
+    // distance from midpoint along slope: between 0 and half
+    // the distance between the two points
+    let d = 0.5 * dist(a, b) * frac;
+
+    let x = d / Math.sqrt(1 + Math.pow(m, 2));
+    let y = m * x;
+    return new Point(bLower * x + mid.x, bLower * y + mid.y);
+    // return [mid[0] + d, mid[1] - (d * (b[0] - a[0])) / (b[1] - a[1])];
+}
+
+/////////////////////////////////////////////////////////////////
+// inverseSlope
+/////////////////////////////////////////////////////////////////
+function inverseSlope(a, b) {
+    // returns the inverse of the slope of the line from point A to B
+    // which is the slope of the perpendicular bisector
+    return -1 * (1 / slope(a, b));
+}
+
+/////////////////////////////////////////////////////////////////
+// midpoint
+/////////////////////////////////////////////////////////////////
+function midpoint(a, b) {
+    return new Point((a.x + b.x)/2, (a.y + b.y)/2);
+}
+function _m(a, b) {
+    return new Point((a.x + b.x)/2, (a.y + b.y)/2);
+}
+
+/////////////////////////////////////////////////////////////////
+// range
+/////////////////////////////////////////////////////////////////
+function range(start, end,step=1){
+    const result = [];
+    for (let i=start; i<end; i += step){
+	result.push(i);
+    }
+    return result;
+}
+
+/////////////////////////////////////////////////////////////////
+// slope
+/////////////////////////////////////////////////////////////////
+function slope(a, b) {
+    // returns the slope of the line from point A to B
+    return (b.y - a.y) / (b.x - a.x);
+}
+
+/////////////////////////////////////////////////////////////////
+// yIntercept
+/////////////////////////////////////////////////////////////////
+function yIntercept(a, b) {
+    // returns the y intercept of the perpendicular bisector of
+    // the line from point A to B
+    let m = inverseSlope(a, b);
+    let p = midpoint(a, b);
+    let x = p.x;
+    let y = p.y;
+    return y - m * x;
+}
+
+

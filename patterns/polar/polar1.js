@@ -1,32 +1,36 @@
-import { drawPolar, drawParametric, buildParametricDomain, chooseNumPointsForFreq,
-          autoFitParametricToCanvas }    from "/draw/parametrics.js";
-import { Parametric }                      from "/classes/parametric.js";
+// patterns/<yourPolarTest>.js
+// ------------------------------------------------------------
+// Polar pattern using drawPolar(s)
+// ------------------------------------------------------------
+import { drawPolar } from "/draw/parametrics.js";
 
 export function runPattern() {
 
-	// Define the semantic range first (what curve interval you want)
-	const domain = {
-		tMin: 0,
-		tMax: 2 * Math.PI,
-		numPoints: 0
+	const s = {
+		printEquations: true,
+		margin:         30,
+
+		// Domain is part of "s" (as you wanted).
+		domain: {
+			tMin:      -30,
+			tMax:       30,
+			numPoints:  600,
+
+			// Optional (ignored when numPoints is non-zero)
+			maxFreq:         0,
+			samplesPerCycle: 30
+		},
+
+		// OLD: funcX(t)=t, funcY(t)=0.4*sin(t/1.2)
+		// NEW: angle(t)=t, rad(t)=0.4*sin(t/1.2)
+		angle: function(t) { return t; },
+		rad:   function(t) { return 0.4 * Math.sin(t / 1.2); },
+
+		// Optional stroke style
+		color:     "blue",
+		lineWidth: 1
 	};
 
-	// Choose sampling density based on the fastest frequency used
-	// (here: max of 198 and 201 => 201)
-	domain.numPoints = chooseNumPointsForFreq(domain, 201, 30);
+	drawPolar(s);
 
-    let a = 40;  let b=99;  let c=100; let d=40;  let j=4;  let k=4;
-
-	let s = {
-		pts:  buildParametricDomain(domain),
-        funcX: function(t) { return 150*(Math.cos(a*t) - Math.cos(b*t)**j) ; },
-	    funcY: function(t) { return 150*(Math.sin(c*t) - Math.sin(d*t)**k) ; }
-	};
-
-	let thing = new Parametric(s);
-
-	autoFitParametricToCanvas(thing, 600, 600, 20);
-	thing.printEquations();
-	drawPolar(thing);
-
-} // end test
+} // end runPattern

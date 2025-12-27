@@ -1,30 +1,72 @@
-import { drawParametric, buildParametricDomain, chooseNumPointsForFreq,
-          autoFitParametricToCanvas }    from "/draw/parametrics.js";
-import { Parametric }                    from "/classes/parametric.js";
+import { Point } from "/classes/classes.js";
+import { drawLine } from "/draw/draw_utilities.js";
+
+/*****************************************************
+Increase T → longer, more dramatic arms
+(1.45 → 1.6)
+
+Decrease b → tighter waist
+(140 → 110)
+
+Increase a → wider flare
+(220 → 260)
+
+Adjust offset → envelope character
+(0 = symmetric, 20–40 = strong curvature)
+
+******************************************************/
 
 export function runPattern() {
 
-	// Define the semantic range first (what curve interval you want)
-	const domain = {
-		tMin: 0,
-		tMax: 2 * Math.PI,
-		numPoints: 0
-	};
+  // ------------------------------------------------------------
+  // Tunables — these are the only things you should tweak
+  // ------------------------------------------------------------
+  const midX = 500;
+  const midY = 350;
 
-	// Choose sampling density based on the fastest frequency used
-	// (here: max of 198 and 201 => 201)
-	domain.numPoints = chooseNumPointsForFreq(domain, 201, 30);
+  const a = 220;        // horizontal opening (larger = wider)
+  const b = 140;        // vertical scale   (smaller = tighter waist)
+  const T = 1.7;       // parameter extent (1.2–1.7 is typical)
 
-	let s = {
-		pts:  buildParametricDomain(domain),
-        funcX: function(t) { return 80*(1/Math.cos(t)); },
-	    funcY: function(t) { return 80*Math.tan(t) }
-	};
+  const n       = 40;  // number of stitch lines
+  const offset  = 25;   // pairing shift (0..60 is useful)
+  const color   = "green";
+  const width   = 1;
 
-	let thing = new Parametric(s);
+  // ------------------------------------------------------------
+  // Build left & right hyperbola branches
+  // x = ±a cosh(t), y = b sinh(t)
+  // ------------------------------------------------------------
+  const left  = [];
+  const right = [];
 
-	autoFitParametricToCanvas(thing, 600, 600, 20);
-	thing.printEquations();
-	drawParametric(thing);
+  for (let i = 0; i <= n; i++) {
 
-} // end test
+    const u = i / n;              // 0..1
+    const t = -T + 2 * T * u;     // -T..+T
+
+    const x = a * Math.cosh(t);
+    const y = b * Math.sinh(t);
+
+    right.push(new Point(midX + x, midY + y));
+    left.push( new Point(midX - x, midY + y));
+  }
+
+  // ------------------------------------------------------------
+  // Curve stitch:
+  // connect left[i] → right[j] with reversed + offset index
+  // ------------------------------------------------------------
+  const N = left.length;
+
+  for (let i = 0; i < N; i++) {
+
+    let j = (N - 1 - i) + offset;
+
+    // clamp (intentional, predictable)
+    if (j < 0)   j = 0;
+    if (j >= N)  j = N - 1;
+
+    drawLine(left[i], right[j], color, width);
+  }
+
+} // end runPattern

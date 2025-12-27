@@ -1,55 +1,97 @@
-// parametric.js
+// parametrics.js
 // ------------------------------------------------------------
 // Parametric curve support (function-based, line-segment rendering)
 // ------------------------------------------------------------
-import { Point }    from "/classes/classes.js";
-import { drawLine } from "/draw/draw_utilities";
+import { Point }               from "/classes/classes.js";
+import { Parametric }          from "/classes/parametric.js";
+import { drawLine, printText } from "/draw/draw_utilities.js";
 
-export function drawPolar(thing) {
+// Kept only for historical reference (DO NOT USE).
+function drawOldPolar(angle, rad, pts) {
+	let funcX = function(t) {
+		return rad(t) * Math.cos(angle(t));
+	};
+	let funcY = function(t) {
+		return rad(t) * Math.sin(angle(t));
+	};
+	drawParametric(funcX, funcY, pts);
+} // end drawOldPolar
 
-	if (!thing.angle || !thing.rad) {
+
+export function drawPolar(s) {
+
+	// Fail-fast: polar definition must exist.
+	if (!s.angle || !s.rad) {
 		throw new Error("drawPolar requires angle(t) and rad(t)");
 	}
 
-	const param = new Parametric({
-		pts:   thing.pts,
-		scale: thing.scale,
-		midX:  thing.midX,
-		midY:  thing.midY,
+	// Build the raw parametric structure FIRST (adapter step),
+	// then create the Parametric object ONCE.
+	const p = Object.assign({}, s, {
 
-		funcX(t) {
-			return thing.rad(t) * Math.cos(thing.angle(t));
-		},
+		// Convert polar → parametric in-place (no extra Parametric object reshaping).
+		funcX: function(t) { return s.rad(t) * Math.cos(s.angle(t)); },
+		funcY: function(t) { return s.rad(t) * Math.sin(s.angle(t)); }
 
-		funcY(t) {
-			return thing.rad(t) * Math.sin(thing.angle(t));
-		}
 	});
 
-	drawParametric(param);
+	// The Parametric constructor now owns “building pts from domain” (and defaults).
+	const thing = new Parametric(p);
+
+	// Delegate to the unified pipeline (autoFit + optional equation printing + draw).
+	drawParametric(thing);
 
 } // end drawPolar
 
 
 export function drawParametric(thing) {
 
-	const { pts, scale, midX, midY, funcX, funcY, color, lineWidth } = thing;
+	const {
+		pts,
+		funcX,
+		funcY,
+		color,
+		lineWidth,
+		printEquations
+	} = thing;
+
+	// ------------------------------------------------------------
+	// Auto-fit is part of the draw pipeline
+	// ------------------------------------------------------------
+	autoFitParametricToCanvas(thing);
 
 	function toCanvasX(coord) {
-		return scale * coord + midX;
+		return thing.scale * coord + thing.mid.x;
 	} // end toCanvasX
 
 	function toCanvasY(coord) {
-		return scale * coord + midY;
+		return thing.scale * coord + thing.mid.y;
 	} // end toCanvasY
+
+	function printParametricEquations(funcX, funcY) {
+
+		function getFuncBody(fn) {
+			const src = fn.toString();
+			const m = src.match(/return\s+([\s\S]*?);?\s*\}/);
+			return (m && m[1]) ? m[1].trim() : src;
+		} // end getFuncBody
+
+		printText("funcX: " + getFuncBody(funcX), new Point(10, 10));
+		printText("funcY: " + getFuncBody(funcY), new Point(10, 25));
+
+	} // end printParametricEquations
+
+	if (printEquations) {
+		printParametricEquations(funcX, funcY);
+	}
 
 	for (let i = 0; i < pts.length - 1; i++) {
 
-		let x1 = toCanvasX(funcX(pts[i]));
-		let y1 = toCanvasY(funcY(pts[i]));
+		const x1 = toCanvasX(funcX(pts[i]));
+		const y1 = toCanvasY(funcY(pts[i]));
 
-		let x2 = toCanvasX(funcX(pts[i + 1]));
-		let y2 = toCanvasY(funcY(pts[i + 1]));
+		const x2 = toCanvasX(funcX(pts[i + 1]));
+		const y2 = toCanvasY(funcY(pts[i + 1]));
 
 		drawLine(
 			new Point(x1, y1),
@@ -57,10 +99,10 @@ export function drawParametric(thing) {
 			color,
 			lineWidth
 		);
-
 	}
 
 } // end drawParametric
+
 
 function measureParametricBounds(thing) {
 
@@ -89,7 +131,18 @@ function measureParametricBounds(thing) {
 } // end measureParametricBounds
 
 
-export function autoFitParametricToCanvas(thing, canvasW = 600, canvasH = 600, margin = 20) {
+export function autoFitParametricToCanvas(thing) {
+
+	const canvas = document.getElementById("sharedCanvas");
+	if (!canvas) {
+		throw new Error("autoFitParametricToCanvas: #sharedCanvas not found");
+	}
+
+	const canvasW = canvas.width;
+	const canvasH = canvas.height;
+
+	// margin is always available now (class default is 30)
+	const margin = thing.margin;
 
 	const b = measureParametricBounds(thing);
 
@@ -117,113 +170,12 @@ export function autoFitParametricToCanvas(thing, canvasW = 600, canvasH = 600, m
 	const centerY = (b.minY + b.maxY) / 2;
 
 	thing.scale = scale;
-	thing.midX  = canvasW / 2 - scale * centerX;
-	thing.midY  = canvasH / 2 - scale * centerY;
+
+	const midX = canvasW / 2 - scale * centerX;
+	const midY = canvasH / 2 - scale * centerY;
+
+	thing.mid = new Point(midX, midY);
 
 	return b;
 
 } // end autoFitParametricToCanvas
-
-/***********************************************************************
-* Range (tMin → tMax) is NOT something that can be auto-fit like scale.
-*
-* Scale is geometric: once a curve is sampled, its bounds can be
-*                     measured and mapped to the canvas.
-*
-* Range is semantic:  it defines *which curve* is being sampled.
-*
-* Examples:
-*   - Fourier-style curves are usually meaningful over [0, 2π].
-*   - Lissajous curves may require a larger range for full closure,
-*     depending on frequency ratios.
-*   - Polar curves often need [0, n·2π] to complete their structure.
-*   - Some parametric curves are intentionally open and only defined
-*     over a specific interval [a, b].
-*
-* Because of this, range must be chosen intentionally by the caller.
-* The system treats it as part of the curve’s definition, not as a
-* derived rendering parameter.
-**********************************************************************/
-
-export function buildParametricDomain(domain) {
-
-	const { tMin, tMax, numPoints } = domain;
-
-	if (numPoints <= 0) {
-		throw new Error("buildParametricDomain: numPoints must be > 0");
-	}
-
-	const delta = tMax - tMin;
-	const step  = delta / numPoints;
-	const pts   = [];
-
-	for (let i = 0; i <= numPoints; i++) {
-		pts.push(tMin + i * step);
-	}
-
-	return pts;
-
-} // end buildParametricDomain
-
-/*
-numPoints controls sampling resolution, not the identity of the curve.
-
-Unlike range (tMin → tMax), which determines *which* curve is being
-sampled, numPoints determines *how well* that curve is approximated.
-
-Key points:
-- Higher-frequency terms (e.g. sin(198*t)) require more samples.
-- Too few points cause aliasing, jaggedness, and missed features.
-- More points improve accuracy but cost performance.
-
-A practical rule:
-Choose a target number of samples per fastest oscillation cycle.
-
-Example:
-If the largest frequency used is ~201 and the range is [0, 2π],
-then there are ~201 oscillations across the domain.
-
-Using 20–50 samples per cycle:
-  201 * 30 ≈ 6000 points (good quality)
-  201 * 50 ≈ 10000 points (very smooth)
-
-numPoints is therefore a resolution knob, not a semantic one.
-It should be chosen intentionally, often based on the known
-highest frequency in the parametric functions.
-*/
-
-
-export function chooseNumPointsForFreq(domain, maxFreq, samplesPerCycle = 30) {
-
-	const cycles =
-		maxFreq * (domain.tMax - domain.tMin) / (2 * Math.PI);
-
-	let n = Math.ceil(cycles * samplesPerCycle);
-
-	// enforce a reasonable minimum
-	if (n < 200) n = 200;
-
-	return n;
-
-} // end chooseNumPointsForFreq
-
-
-////////////////////////////////////////////////////////////
-// range
-////////////////////////////////////////////////////////////
-function range(low, high, numPoints) {
-
-	let delta = high - low;
-	let step  = delta / numPoints;
-	const arr = [];
-
-	for (let i = 0; i <= numPoints; i++) {
-		arr.push(low + i * step);
-	}
-
-	return arr;
-
-} // end range
-
-
-
