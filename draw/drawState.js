@@ -9,8 +9,8 @@
   if (!canvas) {
     canvas = document.createElement("canvas");
     canvas.id = CANVAS_ID;
-    canvas.width = 600;
-    canvas.height = 600;
+    canvas.width = 1000;
+    canvas.height = 1000;
     document.body.appendChild(canvas);
   }
 
@@ -31,7 +31,7 @@ Object.defineProperty(window, "ctx", {
 
 
 export let drawState = {
-    currentTitle:    "", 
+    currentTitle:    "",
     currentFileName: "",
     dot:             false,
     final:           false,

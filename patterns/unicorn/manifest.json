@@ -18,5 +18,10 @@
     "filename": "linkedCircles",
     "path": "linkedCircles.js",
     "title": "Linked Circles"
+  },
+  {
+    "filename": "drawInSquare",
+    "path": "drawInSquare.js",
+    "title": "drawInSquare"
   }
 ]

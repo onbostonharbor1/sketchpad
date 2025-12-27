@@ -776,127 +776,199 @@ function removePointPickerDots(container, tabId, key) {
 
 /* ------------------------------------------------------------
    setPointPickerControl()
-   - Supports a single Point (value = {x,y}) OR an array of Points.
-   - No window-level listeners.
-   - No permanent pointer interception.
-   - Removes old dots for this control on rebuild.
+   ------------------------------------------------------------
+   PURPOSE
+   -------
+   Render ONE point-picker control (single Point value = {x, y})
+   that:
+     - shows a read-only text readout: "x, y"
+     - draws ONE draggable dot on the interaction overlay layer
+     - updates info.parameters[key].x/y while dragging
+     - calls info.onParamChange() and info.redrawHandler()
+
+   IMPORTANT DESIGN NOTES
+   ----------------------
+   This version intentionally preserves your “old” drag model:
+     - mousedown starts drag
+     - window mousemove updates dot position + parameter
+     - window mouseup ends drag
+
+   But it adds key fixes borrowed from the newer work:
+     (A) Remove old dots for this key on rebuild (prevents duplicates)
+     (B) Use a tab+key-specific dot id (prevents collisions)
+     (C) Do NOT leave window listeners installed forever
+         (install them only during drag; remove on mouseup)
+
+   ASSUMPTIONS (FAIL-FAST)
+   -----------------------
+   - #sharedCanvas exists
+   - overlayManager.canvasLayers["interaction"] exists
+   - info.parameters[key] already exists and is an object with x/y
+   - info.redrawHandler exists
 ------------------------------------------------------------ */
 function setPointPickerControl(field, label, def, value, info, key, tabId) {
+
+  // ---------------------------------------------------------
+  // READOUT (UI)
+  // ---------------------------------------------------------
+  // A read-only text field that displays the current point.
+  // This is NOT the editable source of truth; the dot drag is.
+  // ---------------------------------------------------------
+  const readout = document.createElement("input");
+  readout.type = "text";
+  readout.readOnly = true;
+  readout.className = "ctrl-text";
+  readout.value = Math.round(value.x) + ", " + Math.round(value.y);
+  readout.id = tabId + "-" + key;
+
+  // ---------------------------------------------------------
+  // CANVAS LOOKUP
+  // ---------------------------------------------------------
+  // We convert mouse client coordinates to canvas-local coords
+  // using getBoundingClientRect().
+  // ---------------------------------------------------------
   const canvas = document.getElementById("sharedCanvas");
   if (!canvas) throw new Error("pointPicker: #sharedCanvas not found");
 
-  const container = overlayManager.getCanvasLayer("interaction");
-  // Note: overlayManager.getCanvasLayer already fail-fast throws if missing
+  // ---------------------------------------------------------
+  // OVERLAY LAYER (DOT CONTAINER)
+  // ---------------------------------------------------------
+  // Dots must live in the interaction overlay layer so they:
+  //   - render above the canvas
+  //   - can intercept mouse events
+  // ---------------------------------------------------------
+  const container = overlayManager.canvasLayers["interaction"];
+  if (!container) throw new Error("pointPicker: interaction-layer missing");
 
-  // Remove any existing dots for this control (rebuild-safe)
-  removePointPickerDots(container, tabId, key);
-
-  // We keep interaction-layer non-interactive except while dragging
-  // so it cannot block normal canvas interactions.
+  // Ensure the layer is visible. (Your overlay system may also
+  // manage this elsewhere, but we do it here to be deterministic.)
   container.style.display = "block";
 
-  // If your CSS already sets pointer-events:none for interaction-layer,
-  // keep it that way until a drag starts.
-  container.style.pointerEvents = "none";
+  // ---------------------------------------------------------
+  // DOT CLEANUP (NEW BEHAVIOR ADDED)
+  // ---------------------------------------------------------
+  // When the action panel is rebuilt, this control may be rebuilt.
+  // If we do not remove the previous dot, dots accumulate forever.
+  //
+  // We remove any existing dot(s) created for THIS tabId+key.
+  // This matches the prefix strategy you used in the array picker.
+  // ---------------------------------------------------------
+  const prefix = "dot-" + tabId + "-" + key;
+  const kids = Array.from(container.children);
 
-  // Normalize: allow single point or array of points
-  const isArray = Array.isArray(value);
-  const points = isArray ? value : [value];
-
-  // Build one readout per point (stacked)
-  // If you prefer a single combined readout for arrays, say so.
-  const readouts = [];
-
-  for (let i = 0; i < points.length; i++) {
-    const p = points[i];
-    if (!p) throw new Error("pointPicker: missing point value for " + key);
-
-    const readout = document.createElement("input");
-    readout.type = "text";
-    readout.readOnly = true;
-    readout.className = "ctrl-text";
-    readout.value = Math.round(p.x) + ", " + Math.round(p.y);
-    readout.id = tabId + "-" + key + (isArray ? "-" + i : "");
-    readouts.push(readout);
+  for (let i = 0; i < kids.length; i++) {
+    const el = kids[i];
+    if (el.id && el.id.indexOf(prefix) === 0) {
+      container.removeChild(el);
+    }
   }
 
-  // Create dots
-  for (let i = 0; i < points.length; i++) {
-    const p = points[i];
+  // ---------------------------------------------------------
+  // DOT CREATION
+  // ---------------------------------------------------------
+  // Use a tab-aware id so different tabs / different keys do not
+  // overwrite each other. (Your old version used `dot-${key}`,
+  // which can collide across tabs and across rebuilds.)
+  // ---------------------------------------------------------
+  const dot = document.createElement("div");
+  dot.className = "point-picker-dot";
+  dot.id = prefix;                 // single-point id: "dot-<tabId>-<key>"
+  dot.style.position = "absolute";
+  dot.style.left = (value.x - 5) + "px";  // center dot on point
+  dot.style.top  = (value.y - 5) + "px";
+  dot.style.cursor = "grab";
+  container.appendChild(dot);
 
-    const dot = document.createElement("div");
-    dot.className = "point-picker-dot";
-    dot.id = pointPickerDotId(tabId, key, isArray ? i : null);
-    dot.style.position = "absolute";
-    dot.style.left = (p.x - 5) + "px";
-    dot.style.top  = (p.y - 5) + "px";
+  // ---------------------------------------------------------
+  // DRAG STATE
+  // ---------------------------------------------------------
+  // We keep drag state entirely inside this function instance.
+  // No global flags. No persistent window listeners.
+  // ---------------------------------------------------------
+  let isDragging = false;
+
+  // ---------------------------------------------------------
+  // DRAG HANDLERS
+  // ---------------------------------------------------------
+  // - We add window listeners ONLY when dragging begins
+  // - We remove them immediately when dragging ends
+  //
+  // This prevents listener accumulation across rebuilds and avoids
+  // “mystery behavior” where old handlers keep running forever.
+  // ---------------------------------------------------------
+
+  function onMouseMove(e) {
+    if (!isDragging) return;
+
+    // Prevent text selection / browser drag behaviors while dragging the dot.
+    e.preventDefault();
+
+    // Convert mouse position to canvas-local coordinates.
+    const rect = canvas.getBoundingClientRect();
+    const newX = e.clientX - rect.left;
+    const newY = e.clientY - rect.top;
+
+    // Update dot position (visual).
+    dot.style.left = (newX - 5) + "px";
+    dot.style.top  = (newY - 5) + "px";
+
+    // Update the underlying model (source of truth).
+    // We assume info.parameters[key] already exists.
+    info.parameters[key].x = newX;
+    info.parameters[key].y = newY;
+
+    // Notify and redraw.
+    // (This matches your existing pattern; we do not invent new callbacks.)
+    if (typeof info.onParamChange === "function") info.onParamChange();
+    info.redrawHandler();
+
+    // Update the readout text.
+    readout.value = Math.round(newX) + ", " + Math.round(newY);
+  } // end onMouseMove
+
+  function endDrag() {
+    if (!isDragging) return;
+
+    isDragging = false;
     dot.style.cursor = "grab";
-    dot.style.touchAction = "none"; // prevents browser panning/zooming during drag
-    container.appendChild(dot);
 
-    // Use Pointer Events so we don't install global window handlers.
-    dot.addEventListener("pointerdown", (e) => {
-      e.preventDefault();
-      e.stopPropagation();
+    // Remove listeners immediately (critical to prevent accumulation).
+    window.removeEventListener("mousemove", onMouseMove);
+    window.removeEventListener("mouseup", endDrag);
 
-      dot.setPointerCapture(e.pointerId);
-      dot.style.cursor = "grabbing";
+    // Optional: if you later decide the interaction layer should NOT
+    // intercept clicks except during drag, you can toggle pointerEvents
+    // here. For now we leave it alone to match your working baseline.
+  } // end endDrag
 
-      // Enable event handling only during the drag
-      container.style.pointerEvents = "auto";
+  // ---------------------------------------------------------
+  // DRAG START (mousedown on dot)
+  // ---------------------------------------------------------
+  dot.addEventListener("mousedown", (e) => {
+    e.preventDefault();
+    e.stopPropagation();
 
-      const onMove = (ev) => {
-        ev.preventDefault();
+    isDragging = true;
+    dot.style.cursor = "grabbing";
 
-        const rect = canvas.getBoundingClientRect();
-        const newX = ev.clientX - rect.left;
-        const newY = ev.clientY - rect.top;
+    // Install window listeners ONLY for the duration of this drag.
+    window.addEventListener("mousemove", onMouseMove, { passive: false });
+    window.addEventListener("mouseup", endDrag);
+  });
 
-        dot.style.left = (newX - 5) + "px";
-        dot.style.top  = (newY - 5) + "px";
-
-        if (isArray) {
-          // Expect info.parameters[key] to be an array of Points
-          info.parameters[key][i].x = newX;
-          info.parameters[key][i].y = newY;
-          readouts[i].value = Math.round(newX) + ", " + Math.round(newY);
-        } else {
-          info.parameters[key].x = newX;
-          info.parameters[key].y = newY;
-          readouts[0].value = Math.round(newX) + ", " + Math.round(newY);
-        }
-
-        if (typeof info.onParamChange === "function") info.onParamChange();
-        info.redrawHandler();
-      };
-
-      const onUp = (ev) => {
-        ev.preventDefault();
-
-        dot.releasePointerCapture(ev.pointerId);
-        dot.style.cursor = "grab";
-
-        dot.removeEventListener("pointermove", onMove);
-        dot.removeEventListener("pointerup", onUp);
-        dot.removeEventListener("pointercancel", onUp);
-
-        // Immediately stop intercepting clicks when drag ends
-        container.style.pointerEvents = "none";
-      };
-
-      dot.addEventListener("pointermove", onMove);
-      dot.addEventListener("pointerup", onUp);
-      dot.addEventListener("pointercancel", onUp);
-    });
-  }
-
-  // Assemble DOM
+  // ---------------------------------------------------------
+  // ASSEMBLE CONTROL ROW DOM
+  // ---------------------------------------------------------
+  // The control row shows:
+  //   label
+  //   readout
+  // The dot itself is on the overlay layer, not inside the row.
+  // ---------------------------------------------------------
   field.appendChild(label);
+  field.appendChild(readout);
 
-  for (let i = 0; i < readouts.length; i++) {
-    field.appendChild(readouts[i]);
-  }
 } // end setPointPickerControl
+
 
 function setPointPickerArrayControl(field, label, def, value, info, key, tabId) {
   if (!Array.isArray(value)) {

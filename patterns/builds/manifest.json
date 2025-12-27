@@ -1,3 +1,7 @@
 [
-  { "filename": "firstBuild", "path": "spirals/firstBuild.js" }
+  {
+    "filename": "firstBuild",
+    "path": "spirals/firstBuild.js",
+    "title": "First Build"
+  }
 ]

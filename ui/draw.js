@@ -94,29 +94,23 @@ export const DrawController = {
    - Restores previous active subtab or defaults to Categories
 =========================================================== */
 export function initDrawTab(restored = false) {
-  console.log("Initializing Draw Tab...");
-
   // Ensure the tabs dictionary exists
   if (!uiState.draw.tabs) {
-    console.log("Initializing uiState.draw.tabs...");
+
     uiState.draw.tabs = {}; // Initialize the tabs if not present
   }
 
-  console.log("Clearing existing UI regions...");
   clearDivs();
 
-  console.log("Building subtabs...");
   setDrawSubtabs();
 
   const activeId =
     uiState.draw.activeSubtab || DEFAULT_DRAW_SUBTAB;
 
-  console.log("Activating subtab:", activeId);
   switchTab(activeId);
 } // end initDrawTab
 
 function restoreDrawTab() {
-  console.log("Restoring Draw Tab...");
 
   // 1. Rebuild subtabs from uiState.draw.tabs
   setDrawSubtabs();
@@ -472,8 +466,6 @@ export function drawActiveTab() {
     const params = (state.parameters = entry.params);
     entry.update(params);
     entry.draw();
-
-    console.log("✓ Redrew " + entry.name);
   } catch (err) {
     console.error("✗ Error redrawing " + entry.name, err);
   }
@@ -610,7 +602,6 @@ export function saveDrawState() {
     drawTabs: shallowTabs
   };
 
-  console.log("💾 Saved Draw state:", state);
   return state;
 } // end saveDrawState
 

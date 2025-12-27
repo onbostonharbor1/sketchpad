@@ -6,8 +6,6 @@
 =========================================================== */
 
 export function runPattern() {
-  console.log("🧩 validateDrawRegistry() runPattern invoked");
-
   const actionDiv = document.getElementById("action");
   const textDiv = document.getElementById("text");
 

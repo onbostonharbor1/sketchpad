@@ -1,3 +1,7 @@
-[ 
-  { "filename": "test1", "path": "imported/test1.js" } 
-] 
+[
+  {
+    "filename": "test1",
+    "path": "imported/test1.js",
+    "title": "Placeholder"
+  }
+]

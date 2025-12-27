@@ -118,7 +118,6 @@ update(params) {
   params.line2_pt2 = l2.endPt();
   params.line2_midpoint = l2.midpoint();
 
-  console.log("✅ update done (dual line, midpoint and endpoints synced)", this);
 }, // end update
 
 

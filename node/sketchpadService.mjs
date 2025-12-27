@@ -19,7 +19,8 @@
    CURRENT TASKS
 
    Implemented:
-     • addPatternScripts   (scan + update per-category manifests)
+     • addPatternScripts        (scan + update per-category manifests)
+     • writePatternThumbnail    (write 36x36 thumb PNG from browser)
 
    Placeholders (NO-OP, future expansion):
      • deletePackageScript
@@ -34,9 +35,13 @@
      circles/
        manifest.json
        *.js
+       images/
+         thumb_<filename>.png
      curve_stitch/
        manifest.json
        *.js
+       images/
+         thumb_<filename>.png
      ...
 
    IMPORTANT CONSTRAINTS
@@ -88,6 +93,9 @@ export async function dispatchService(requestName, payload = {}) {
     /* backward-compatible alias */
     case "updatePatternManifests":
       return await addPatternScripts(payload);
+
+    case "writePatternThumbnail":
+      return await writePatternThumbnail(payload);
 
     case "deletePackageScript":
       return await deletePackageScript(payload);
@@ -236,6 +244,90 @@ export async function addPatternScripts(payload = {}) {
     updatedCategories
   };
 } // end addPatternScripts
+
+
+/* ===========================================================
+   TASK: writePatternThumbnail
+
+   DESCRIPTION
+   -----------
+   Writes a 36x36 PNG thumbnail provided by the browser.
+
+   Payload:
+     {
+       category  : "<category>",
+       filename  : "<base filename>",
+       pngBase64 : "<base64 png bytes>"
+     }
+
+   Output path:
+     ./patterns/<category>/images/thumb_<filename>.png
+
+   =========================================================== */
+
+export async function writePatternThumbnail(payload = {}) {
+
+  const category  = payload.category;
+  const filename  = payload.filename;
+  const pngBase64 = payload.pngBase64;
+
+  /* ---- validate payload ---- */
+  if (typeof category !== "string" || category.trim() === "") {
+    throw new Error("writePatternThumbnail: category missing or invalid");
+  }
+
+  if (typeof filename !== "string" || filename.trim() === "") {
+    throw new Error("writePatternThumbnail: filename missing or invalid");
+  }
+
+  if (typeof pngBase64 !== "string" || pngBase64.trim() === "") {
+    throw new Error("writePatternThumbnail: pngBase64 missing or invalid");
+  }
+
+  /* ---- validate patterns root ---- */
+  const patternsRoot = path.resolve("./patterns");
+  assertDirectoryExists(
+    patternsRoot,
+    "writePatternThumbnail: patterns root missing: " + patternsRoot
+  );
+
+  /* ---- validate category directory ---- */
+  const categoryDir = path.join(patternsRoot, category);
+  assertDirectoryExists(
+    categoryDir,
+    "writePatternThumbnail: category dir missing: " + categoryDir
+  );
+
+  /* ---- ensure images dir exists ---- */
+  const imagesDir = path.join(categoryDir, "images");
+
+  if (!fs.existsSync(imagesDir)) {
+    fs.mkdirSync(imagesDir, { recursive: true });
+  }
+  assertDirectoryExists(
+    imagesDir,
+    "writePatternThumbnail: images dir not a directory: " + imagesDir
+  );
+
+  /* ---- write thumbnail file ---- */
+  const outName = "thumb_" + filename + ".png";
+  const outPath = path.join(imagesDir, outName);
+
+  const buf = Buffer.from(pngBase64, "base64");
+  fs.writeFileSync(outPath, buf);
+
+  assertFileExists(outPath, "writePatternThumbnail: write failed: " + outPath);
+
+  /* ---- report ---- */
+  return {
+    request: "writePatternThumbnail",
+    status: "ok",
+    category,
+    filename,
+    outPath
+  };
+
+} // end writePatternThumbnail
 
 
 /* ===========================================================

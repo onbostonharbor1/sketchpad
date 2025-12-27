@@ -2,57 +2,8 @@
 // ------------------------------------------------------------
 // Parametric curve support (function-based, line-segment rendering)
 // ------------------------------------------------------------
-
-class Parametric {
-
-	constructor(s = {}) {
-
-		const defaults = {
-			scale:     60,
-			midX:      200,
-			midY:      200,
-			funcX:     null,
-			funcY:     null,
-			pts:       [],
-			color:     "blue",
-			lineWidth: 1
-		};
-
-		Object.assign(this, defaults, s);
-
-		if (!this.funcX || !this.funcY) {
-			throw new Error("Parametric requires funcX and funcY");
-		}
-
-	} // end constructor
-
-
-	getFuncBody(fn) {
-
-		const src = fn.toString();
-
-		// Extract "return ..." for classic function bodies
-		const m = src.match(/return\s+([\s\S]*?);?\s*\}/);
-		if (m && m[1]) return m[1].trim();
-
-		// Fallback: return full source if parsing fails
-		return src;
-
-	} // end getFuncBody
-
-
-	printEquations() {
-
-		const xExpr = this.getFuncBody(this.funcX);
-		const yExpr = this.getFuncBody(this.funcY);
-
-		printText("funcX: " + xExpr, new Point(10, 10));
-		printText("funcY: " + yExpr, new Point(10, 25));
-
-	} // end printEquations
-
-} // end class Parametric
-
+import { Point }    from "/classes/classes.js";
+import { drawLine } from "/draw/draw_utilities";
 
 export function drawPolar(thing) {
 
@@ -138,7 +89,7 @@ function measureParametricBounds(thing) {
 } // end measureParametricBounds
 
 
-function autoFitParametricToCanvas(thing, canvasW = 600, canvasH = 600, margin = 20) {
+export function autoFitParametricToCanvas(thing, canvasW = 600, canvasH = 600, margin = 20) {
 
 	const b = measureParametricBounds(thing);
 
@@ -194,7 +145,7 @@ function autoFitParametricToCanvas(thing, canvasW = 600, canvasH = 600, margin =
 * derived rendering parameter.
 **********************************************************************/
 
-function buildParametricDomain(domain) {
+export function buildParametricDomain(domain) {
 
 	const { tMin, tMax, numPoints } = domain;
 
@@ -242,7 +193,7 @@ highest frequency in the parametric functions.
 */
 
 
-function chooseNumPointsForFreq(domain, maxFreq, samplesPerCycle = 30) {
+export function chooseNumPointsForFreq(domain, maxFreq, samplesPerCycle = 30) {
 
 	const cycles =
 		maxFreq * (domain.tMax - domain.tMin) / (2 * Math.PI);
@@ -275,34 +226,4 @@ function range(low, high, numPoints) {
 } // end range
 
 
-// ------------------------------------------------------------
-// Example usage (standalone test-style)
-// ------------------------------------------------------------
-
-function test() {
-
-	// Define the semantic range first (what curve interval you want)
-	const domain = {
-		tMin: 0,
-		tMax: 2 * Math.PI,
-		numPoints: 0
-	};
-
-	// Choose sampling density based on the fastest frequency used
-	// (here: max of 198 and 201 => 201)
-	domain.numPoints = chooseNumPointsForFreq(domain, 201, 30);
-
-	let s = {
-		pts:  buildParametricDomain(domain),
-		funcX: function(t) { return 1.5 * Math.cos(t) + 0.5 * Math.sin(198 * t); },
-		funcY: function(t) { return 1.5 * Math.sin(t) + 0.5 * Math.cos(201 * t); }
-	};
-
-	let thing = new Parametric(s);
-
-	autoFitParametricToCanvas(thing, 600, 600, 20);
-	thing.printEquations();
-	drawParametric(thing);
-
-} // end test
 

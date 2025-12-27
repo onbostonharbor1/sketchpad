@@ -1,3 +1,147 @@
-[ 
-  { "filename": "param1", "path": "parametric/param1.js" } 
-] 
+[
+  {
+    "filename": "param1",
+    "path": "parametric/param1.js",
+    "title": "Just a circle"
+  },
+  {
+    "filename": "param2",
+    "path": "param2.js",
+    "title": "Four curly squares"
+  },
+  {
+    "filename": "param10",
+    "path": "param10.js",
+    "title": "5 Corner Ribbon"
+  },
+  {
+    "filename": "param11",
+    "path": "param11.js",
+    "title": "Circles Forming Rings"
+  },
+  {
+    "filename": "param12",
+    "path": "param12.js",
+    "title": "Four Flat Ribbon"
+  },
+  {
+    "filename": "param13",
+    "path": "param13.js",
+    "title": "Four ended"
+  },
+  {
+    "filename": "param14",
+    "path": "param14.js",
+    "title": "Three Corner"
+  },
+  {
+    "filename": "param15",
+    "path": "param15.js",
+    "title": "5 Nodes Right"
+  },
+  {
+    "filename": "param16",
+    "path": "param16.js",
+    "title": "Vaguely Hexagonal"
+  },
+  {
+    "filename": "param17",
+    "path": "param17.js",
+    "title": "Hex with vertices"
+  },
+  {
+    "filename": "param18",
+    "path": "param18.js",
+    "title": "Square with bumps"
+  },
+  {
+    "filename": "param19",
+    "path": "param19.js",
+    "title": "Vaguely hex (again)"
+  },
+  {
+    "filename": "param20",
+    "path": "param20.js",
+    "title": "Double Circle Whirls"
+  },
+  {
+    "filename": "param21",
+    "path": "param21.js",
+    "title": "Tilted Square"
+  },
+  {
+    "filename": "param22",
+    "path": "param22.js",
+    "title": "Crown"
+  },
+  {
+    "filename": "param23",
+    "path": "param23.js",
+    "title": "Square with double X"
+  },
+  {
+    "filename": "param24",
+    "path": "param24.js",
+    "title": "Dull: Inward Curving, no interior"
+  },
+  {
+    "filename": "param25",
+    "path": "param25.js",
+    "title": "Ribbon whirls"
+  },
+  {
+    "filename": "param26",
+    "path": "param26.js",
+    "title": "Swirling, no interior"
+  },
+  {
+    "filename": "param27",
+    "path": "param27.js",
+    "title": "Waves"
+  },
+  {
+    "filename": "param3",
+    "path": "param3.js",
+    "title": "Four circles"
+  },
+  {
+    "filename": "param4",
+    "path": "param4.js",
+    "title": "Double Wave"
+  },
+  {
+    "filename": "param5",
+    "path": "param5.js",
+    "title": "Single Wave"
+  },
+  {
+    "filename": "param6",
+    "path": "param6.js",
+    "title": "Single ribbon wrapped"
+  },
+  {
+    "filename": "param7",
+    "path": "param7.js",
+    "title": "Single ribbon horizontal"
+  },
+  {
+    "filename": "param8",
+    "path": "param8.js",
+    "title": "Jump Ropes"
+  },
+  {
+    "filename": "param9",
+    "path": "param9.js",
+    "title": "Circles in Circles"
+  },
+  {
+    "filename": "param29",
+    "path": "param29.js",
+    "title": "param29"
+  },
+  {
+    "filename": "param30",
+    "path": "param30.js",
+    "title": "Vibrant Ribbon"
+  }
+]

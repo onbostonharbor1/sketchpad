@@ -64,7 +64,7 @@ function createNodes(thing) {
 //////////////////////////////////////////////////////////////////
 // CREATE PRINT NODES
 //////////////////////////////////////////////////////////////////
-function createPrintNodes(s) {
+function createPrintNodes(thing) {
 	let nodes = createNodes(thing);
 	let size = drawState.pts.length;
 	for (let i=0; i < nodes.length; i++) {
@@ -72,7 +72,7 @@ function createPrintNodes(s) {
 	     drawState.pts.push(nodes[i]);
 	 }
 
-	if (s.mid) {
+	if (thing.mid) {
 	    for (let i=0; i < nodes.length; i++) {
 		      let j=i+1;
 		      if (j==nodes.length) j=0;
@@ -84,10 +84,21 @@ function createPrintNodes(s) {
 	return nodes;
 }
 
+function convertParabPtsToLines(parabs) {
+  let converted = [];
+  for (let parab of parabs) {
+    if (parab.length == 3)
+      parab.splice(1, 0, parab[1]);
+    let line1 = new Line(parab[0],parab[1]);
+    let line2 = new Line(parab[2],parab[3]);
+    converted.push([line1,line2]);
+  }
+  return converted;
+}
 
 function drawParabs(thing, parabs) {
   for (let parab of parabs) {
-    if (parab.length == 3) parab.splice(1, 0, parab[1]);
+//    if (parab.length == 3) parab.splice(1, 0, parab[1]);
     for (let j = 0; j < parab.length; j++) {
       let start = parab[j].start;
       let end = parab[j].end;
@@ -198,6 +209,14 @@ function printCircNum(pt, num = 9999) {
       ctx.fillText(num, pt.x, pt.y);
   ctx.restore();
 }
+
+function printText(text,pt) {
+ 	ctx.save();
+	ctx.fillStyle = "blue";
+  ctx.fillText(text,pt.x,pt.y);
+	ctx.restore();
+}
+
 
 function printTitle(text = "No Title") {
   drawState.currentTitle = text;
@@ -344,7 +363,9 @@ function numbersToPoints(coords) {
 export {
   toRadians,
   toDegrees,
+  convertParabPtsToLines,
   createNodes,
+  createPrintNodes,
   drawParabs,
   displayPoint,
   drawCircle,
@@ -355,6 +376,7 @@ export {
   midpoint,
   _m,
   printCircNum,
+  printText,
   printTitle,
   stitcher,
   ptsOnLine,

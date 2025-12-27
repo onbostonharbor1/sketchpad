@@ -31,9 +31,6 @@
 ------------------------------------------------------------ */
 
 import { fileLayer } from "./fileLayer.js";
-
-console.log("manifest.js (new generic loader) LOADED", Date.now());
-
 export class ManifestManager {
 
   constructor() {

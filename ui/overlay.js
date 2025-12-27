@@ -108,10 +108,6 @@ export function initOverlay() {
     overlayManager.clearAll();  // panel overlays only
   }; // end onclick
 
-  console.log("overlay.js registered:",
-    overlayManager.layers,
-    overlayManager.canvasLayers
-  );
 } // end initOverlay
 
 ////////////////////////////////////////////////////////////////

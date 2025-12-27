@@ -1,42 +1,31 @@
-import { Line, Point }     from "../../classes/classes.js";
-import { CurveStitch }     from "../../classes/curveStitchClass.js";
-import { drawInverseStar } from "../../draw/drawRegular.js";
-import { printTitle }      from "../../draw/draw_utilities.js";
+import { drawParametric, buildParametricDomain, chooseNumPointsForFreq,
+          autoFitParametricToCanvas }    from "/draw/parametrics.js";
+import { Parametric }                    from "/classes/parametric.js";
 
 export function runPattern() {
 
-    printTitle("Four Inverse Stars");
-    let s = {midpoint: new Point(125,125),
-	     radius:   100,
-	     color:    "blue"};
-    let thing = new CurveStitch(s);
-    drawInverseStar(thing);
+	// Define the semantic range first (what curve interval you want)
+	const domain = {
+		tMin: 0,
+		tMax: 2 * Math.PI,
+		numPoints: 0
+	};
 
-    // add rotation
-    s = {midpoint: new Point(350,125),
-	 radius:   100,
-	 rotate:   45,
-	 color:    "green"};
-    thing = new CurveStitch(s);
-    drawInverseStar(thing);
+	// Choose sampling density based on the fastest frequency used
+	// (here: max of 198 and 201 => 201)
+	domain.numPoints = chooseNumPointsForFreq(domain, 201, 30);
 
-    // change nodes
-    s = {midpoint: new Point(450,450),
-	 radius:   100,
-	 rotate:   45,
-	 numNodes: 8,
-	 color:    "orange"};
-    thing = new CurveStitch(s);
-    drawInverseStar(thing);
+	let s = {
+		pts:  buildParametricDomain(domain),
+        funcX: function(t) { return .1*Math.sin(t); },
+	    funcY: function(t) { return .1*Math.cos(t); }
+	};
 
-    // add scale
-    s = {midpoint: new Point(175,450),
-	 radius:   100,
-	 xScale:   1.5,
-	 yScale:   1.2,
-	 color:    "red"};
-    thing = new CurveStitch(s);
-    drawInverseStar(thing);
-}
+	let thing = new Parametric(s);
 
+	autoFitParametricToCanvas(thing, 600, 600, 20);
+	thing.printEquations();
+	drawParametric(thing);
+
+} // end test
 

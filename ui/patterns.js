@@ -12,7 +12,7 @@
 import { renderCategories }     from "./categories.js";
 import { setCaptionBar }        from "./caption.js";
 import { menuManager }          from "./menuManager.js";
-import { editPatternItemTitle } from "./patternsMenuCmds.js";
+import { editPatternItemTitle, addPatternThumbnail } from "./patternsMenuCmds.js";
 import { loadScriptModule, executeScriptToCanvas } from "./scriptRunner.js";
 import { showScriptOffcanvas, renderThumbnailGrid,
          buildCategoryDescriptor } from "./ui_utilities.js";
@@ -368,6 +368,39 @@ function addPatternSubtab(category) {
   };
 } // end addPatternSubtab
 
+/* ============================================================
+   renderPatternThumbGrid(category)
+
+   Rebuilds the thumbnail grid for the given category into #action.
+   Click behavior remains "select pattern idx".
+=========================================================== */
+export function renderPatternThumbGrid(category) {
+
+  if (!category) throw new Error("renderPatternThumbGrid: category missing");
+
+  const list = manifest.cache.patterns[category];
+  if (!Array.isArray(list)) {
+    throw new Error("renderPatternThumbGrid: list missing for category: " + category);
+  }
+
+  renderThumbnailGrid(
+    "action",
+    list,
+    (entry) => `./patterns/${category}/images/thumb_${entry.filename}.png`,
+    (_, idx) => {
+      uiState.patterns.activeCategory = category;
+      uiState.patterns.activeItem     = idx;
+      uiState.patterns.saved = {
+        view: "pattern",
+        activeCategory: category,
+        activeItem: idx
+      };
+      showSelectedPattern(category, idx);
+    }
+  );
+
+} // end renderPatternThumbGrid
+
 
 /* ============================================================
    showSelectedPattern(category, index)
@@ -440,23 +473,7 @@ async function showSelectedPattern(category, index) {
     return;
   }
 
-  // Thumbnail grid
-  renderThumbnailGrid(
-    "action",
-    list,
-    (entry) =>
-      `./patterns/${category}/images/thumb_${entry.filename}.png`,
-    (_, idx) => {
-      uiState.patterns.activeCategory = category;
-      uiState.patterns.activeItem     = idx;
-      uiState.patterns.saved = {
-        view: "pattern",
-        activeCategory: category,
-       activeItem: idx
-      };
-      showSelectedPattern(category, idx);
-    }
-  );
+   renderPatternThumbGrid(category);
 
   // Caption bar
   setCaptionBar({
@@ -549,6 +566,14 @@ async function buildPatternsMenuItems(tabName, helpKey, scriptPath) {
     });
   }
 
+  // ADD THUMBNAIL
+  items.push({
+    label: "Add Thumbnail",
+    onClick: async () => {
+      await addPatternThumbnail();
+    }
+  });
+
   // EDIT MANIFEST TITLE
   items.push({
     label: "Edit Manifest Title",
@@ -583,23 +608,5 @@ function savePatternsState() {
     activeItem: uiState.patterns.saved.activeItem
   };
 } // end savePatternsState
-
-
-/* ============================================================
-   patternsDivs (REMOVED)
-   ------------------------------------------------------------
-   This entire structure is now obsolete under the TabSpec
-   architecture and has been intentionally omitted.
-
-   Region clearing is done exclusively in:
-     setUI → initTab(tabKey) → clearDivs()
-
-   Region rebuilding is done via:
-     initPatternsTab  → (cold start)
-     restorePatternsTab → (state restore)
-     controller functions → (dynamic updates)
-
-   No patternsDivs object remains in the rewritten file.
-=========================================================== */
 
 // end of rewritten patterns.js

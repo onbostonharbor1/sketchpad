@@ -43,7 +43,6 @@
                   items: [ { name, onClick, hasSubitems? }, ... ]
 ============================================================ */
 export function renderCategories(targetId, descriptor) {
-  console.log("renderCategories:", targetId, descriptor);
 
   // Fail-fast container check
   const container = document.getElementById(targetId);
@@ -68,11 +67,28 @@ export function renderCategories(targetId, descriptor) {
   outer.id = "categories";
   container.appendChild(outer);
 
-  // Render each category frame
-  descriptor.forEach((frameDesc) => {
-    if (!frameDesc || typeof frameDesc !== "object") {
+  // ------------------------------------------------------------
+  // Sort categories by title (case-insensitive)
+  // ------------------------------------------------------------
+  const frames = descriptor.slice();
+  frames.sort((a, b) => {
+    if (!a || typeof a !== "object") {
       throw new Error("renderCategories: invalid frame descriptor");
     }
+    if (!b || typeof b !== "object") {
+      throw new Error("renderCategories: invalid frame descriptor");
+    }
+
+    const at = (a.title || "").toString().toLowerCase();
+    const bt = (b.title || "").toString().toLowerCase();
+
+    if (at < bt) return -1;
+    if (at > bt) return 1;
+    return 0;
+  });
+
+  // Render each category frame
+  frames.forEach((frameDesc) => {
 
     const { frame, header, content } =
       buildCategoryFrameElement(frameDesc.title);
@@ -85,7 +101,33 @@ export function renderCategories(targetId, descriptor) {
       );
     }
 
-    items.forEach((itemDesc) => {
+    // ----------------------------------------------------------
+    // Sort items by name (case-insensitive)
+    // ----------------------------------------------------------
+    const sortedItems = items.slice();
+    sortedItems.sort((a, b) => {
+      if (!a || typeof a !== "object") {
+        throw new Error("renderCategories: invalid item descriptor");
+      }
+      if (!b || typeof b !== "object") {
+        throw new Error("renderCategories: invalid item descriptor");
+      }
+      if (typeof a.name !== "string") {
+        throw new Error("renderCategories: item.name must be a string");
+      }
+      if (typeof b.name !== "string") {
+        throw new Error("renderCategories: item.name must be a string");
+      }
+
+      const an = a.name.toLowerCase();
+      const bn = b.name.toLowerCase();
+
+      if (an < bn) return -1;
+      if (an > bn) return 1;
+      return 0;
+    });
+
+    sortedItems.forEach((itemDesc) => {
       if (
         !itemDesc ||
         typeof itemDesc !== "object" ||
@@ -117,7 +159,6 @@ export function renderCategories(targetId, descriptor) {
     outer.appendChild(frame);
   });
 } // end renderCategories
-
 
 
 /* ============================================================

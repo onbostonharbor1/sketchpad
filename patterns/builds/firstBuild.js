@@ -7,6 +7,8 @@ import { crossHair }          		from "/draw/unicorns.js";
 
 export function runPattern () {
 
+	let numNodes = 4;
+
 	let s = { 	color:    "green",
 		        midpoint: new Point(320,350),
 		        radius:   300,

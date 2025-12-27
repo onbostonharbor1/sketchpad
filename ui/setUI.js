@@ -140,7 +140,6 @@ function initTab(tabKey) {
 =========================================================== */
 function activateTab(tab) {
   let tabKey = tab;
-  console.log(`>>> activateTab: ${tabKey}`);
 
   if (tab === START) {
     tabKey = "draw";

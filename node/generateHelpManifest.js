@@ -64,4 +64,4 @@ fs.writeFileSync(
   "utf8"
 );
 
-console.log("manifest.json for help updated.");
+

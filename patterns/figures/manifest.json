@@ -1,3 +1,12 @@
 [
-  { "filename": "circleInSquare", "path": "spirals/circleInSquare.js" }
+  {
+    "filename": "circleInSquare",
+    "path": "spirals/circleInSquare.js",
+    "title": "Circle in Square"
+  },
+  {
+    "filename": "complicatedParabolas",
+    "path": "complicatedParabolas.js",
+    "title": "Complicated Parabolas"
+  }
 ]
