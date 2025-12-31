@@ -1,0 +1,87 @@
+import { Line, StringThing, Point }                  from "/classes/classes.js";
+import { arcPoints }                                 from "/draw/drawEllipse.js";
+import { drawState }                                 from "/draw/drawState.js";
+import { comparePoints, createPrintNodes, drawLine, ptsOnLine }
+                                                     from "/draw/draw_utilities.js";
+
+function runPattern() {
+	// Figure 158
+	ctx.fillStyle="black";
+	let mid = new Point(300,300);
+	let s = {numSteps: 20,
+	        numNodes: 6,
+	        midpoint: mid,
+	        color: "blue",
+	        rotate: 30,
+	        lineWidth: .4
+	      };
+	let thing = new StringThing(s);
+	let nodes = createPrintNodes(thing);
+
+	// create an arm for each spoke
+	let Arm1 = [];
+	for (let i=0; i < drawState.pts.length; i++) {
+    let line = new Line(mid, drawState.pts[i]);
+		Arm1.push(ptsOnLine(thing, line));
+  }
+
+	// now create each of the loops
+	let Arm2 = [];
+	for (let i=0; i < drawState.pts.length; i++) {
+	    let j = (i+1) % drawState.pts.length;
+	    Arm2.push(arcPoints(drawState.pts[i], drawState.pts[j], .7, thing.numSteps+1));
+	}
+	// draw outside
+	for (let i=0;i<Arm2.length;i++) {
+	    for (let j=0; j<Arm2[i].length-1;j++) {
+        drawLine(Arm2[i][j],Arm2[i][j+1],"blue");
+      }
+	}
+	let loops = [];
+	let temp = [];
+
+	// all three elements of the loop combined into one array
+	for (let i=0; i<nodes.length; i++){
+	    let k = (i+1) % nodes.length;
+	    let temp1 = Arm2[i];
+	    let temp2 = Arm1[i].concat(temp1);
+	    let temp3 = Arm1[k].toReversed();
+	    let temp4 = temp2.concat(temp3);
+	    loops[i] = temp4;
+	}
+	// the number added is how far into arc to begin drawing
+	let startPos = thing.numSteps + 2;
+	let color = "blue";
+	for (let i=0;i < loops.length; i++) {
+      let j=0;
+	    while ((j+startPos) < loops[i].length) {
+			  drawLine(loops[i][j],
+			         loops[i][j+startPos],color);
+			  if ((j+startPos) < loops[i].length-1) {
+		    	if (comparePoints(loops[i][j],
+				      loops[i][j+1]))          j++;
+		    	if (comparePoints(loops[i][j+startPos],
+				      loops[i][j+startPos+1])) j++;
+			  }
+		    j++;
+	    }
+	}
+
+	color = "green";
+	for (let i=0;i < loops.length; i++) {
+	    let length = loops[i].length;
+	    let armLength = Arm1[i].length;
+	    let temp = loops[i].slice(-armLength);
+	    let temp1 = loops[i].slice(0,armLength);
+	    loops[i] = temp.concat(loops[i]);
+	    loops[i] = loops[i].concat(temp1);
+	    for (let j=0;j<length;j+=2) {
+			drawLine(loops[i][j],
+			 		loops[i][j+armLength+1],color);
+			if (comparePoints(loops[i][j],
+				  loops[i][j+1]))          j++;
+			if (comparePoints(loops[i][j+startPos],
+				  loops[i][j+startPos+1])) j++;
+	    }
+	}
+}

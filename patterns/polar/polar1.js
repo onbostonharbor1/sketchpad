@@ -2,7 +2,7 @@
 // ------------------------------------------------------------
 // Polar pattern using drawPolar(s)
 // ------------------------------------------------------------
-import { drawPolar } from "/draw/parametrics.js";
+import { drawPolar } from "/draw/drawParametrics.js";
 
 export function runPattern() {
 

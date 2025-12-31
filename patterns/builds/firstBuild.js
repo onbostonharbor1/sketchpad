@@ -3,7 +3,7 @@ import { Point, StringThing, Line } from "/classes/classes.js";
 import { createNodes, ptsOnLine, stitcher, drawLine, drawLines }
                                   	from "/draw/draw_utilities.js";
 import { drawRegularPolygonTouch, drawInnerStar } from "/draw/drawRegular.js";
-import { crossHair }          		from "/draw/unicorns.js";
+import { crossHair }          		from "/draw/drawUnicorns.js";
 
 export function runPattern () {
 

@@ -63,8 +63,16 @@ class StringThing {
 	   		both:        false,
             shorten:     0,
 //          yIncrement:  1,
-            trunc:       false
+            trunc:       false,
 
+
+  			// Cutoff control for “don’t run the circle” end behavior.
+      		// 0 means no trimming. Typical useful range: 0.05 .. 0.25
+      		cutoffFrac: 0.0,
+
+      		// Optional explicit override. If >= 0, use this directly.
+      		// If null, compute from cutoffFrac + nodes/steps.
+      		cutoffLines: null
         };
 
         const merged = Object.assign({}, defaults, s);
@@ -164,7 +172,7 @@ class Line {
     constructor(start, end, label = null) {
 	this.start = start;
 	this.end = end;
-	this.label = label;
+	// this.label = label;
     }
 
     startPt() { // return a *copy* so callers don’t mutate internal points directly

@@ -1,0 +1,17 @@
+[
+  {
+    "filename": "joiningPoints",
+    "path": "pursuit/joiningPoints.js",
+    "title": "Joining Points"
+  },
+  {
+    "filename": "sineWave",
+    "path": "sineWave.js",
+    "title": "Sine Wave"
+  },
+  {
+    "filename": "sineWavePoints",
+    "path": "sineWavePoints.js",
+    "title": "Sine Wave Points"
+  }
+]

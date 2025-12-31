@@ -1,6 +1,6 @@
 import { Ellipse, START_END, FULL, TAPER, START_TAPER, END_TAPER }
                          from "../../classes/ellipseClass.js";
-import { drawInEllipse } from "../../draw/ellipse.js";
+import { drawInEllipse } from "../../draw/drawEllipse.js";
 import { Point }         from "../../classes/classes.js";
 //import { printTitle }   from "../../draw/draw_utilities";
 

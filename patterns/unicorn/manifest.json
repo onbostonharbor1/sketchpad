@@ -23,5 +23,10 @@
     "filename": "drawInSquare",
     "path": "drawInSquare.js",
     "title": "drawInSquare"
+  },
+  {
+    "filename": "multipleCycloids",
+    "path": "multipleCycloids.js",
+    "title": "Multiple Cycloids"
   }
 ]

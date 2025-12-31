@@ -1,20 +1,57 @@
-[ 
-    { "filename": "fourInverseStar",  "path": "curve_stitch/fourInverseStar.js",
-      "title":    "Four Inverse Stars"},
-    { "filename": "regularPolygon",   "path": "curve_stitch/regularPolygon.js",
-      "title":    "Regular Polygon"},
-    { "filename": "innerStar",        "path": "curve_stitch/innerStar.js",
-      "title":    "Inner Star"},
-    { "filename": "regularTouching",  "path": "curve_stitch/regularTouching.js",
-      "title":    "Regular Polygon Touching"},
-    { "filename": "regularCorners",   "path": "curve_stitch/regularCorners.js",
-      "title":    "Regular Polycon Corners"},
-    { "filename": "inverseCurved",    "path": "curve_stitch/inverseCurved.js",
-      "title":    "Circular Inverse Star"},
-    { "filename": "twoParabolas",     "path": "curve_stitch/twoParabolas.js",
-      "title":    "Two Parabolas"},
-    { "filename": "twoMoreParabolas", "path": "curve_stitch/twoMoreParabolas.js",
-      "title":    "Two Parabolas & Twist" } ,
-    { "filename": "twistedBentArms",  "path": "curve_stitch/twistedBentArms.js",
-      "title":    "Twisted & Bent Parabola"} 
-] 
+[
+  {
+    "filename": "fourInverseStar",
+    "path": "curve_stitch/fourInverseStar.js",
+    "title": "Four Inverse Stars"
+  },
+  {
+    "filename": "regularPolygon",
+    "path": "curve_stitch/regularPolygon.js",
+    "title": "Regular Polygon"
+  },
+  {
+    "filename": "innerStar",
+    "path": "curve_stitch/innerStar.js",
+    "title": "Inner Star"
+  },
+  {
+    "filename": "regularTouching",
+    "path": "curve_stitch/regularTouching.js",
+    "title": "Regular Polygon Touching"
+  },
+  {
+    "filename": "regularCorners",
+    "path": "curve_stitch/regularCorners.js",
+    "title": "Regular Polycon Corners"
+  },
+  {
+    "filename": "inverseCurved",
+    "path": "curve_stitch/inverseCurved.js",
+    "title": "Circular Inverse Star"
+  },
+  {
+    "filename": "twoParabolas",
+    "path": "curve_stitch/twoParabolas.js",
+    "title": "Two Parabolas"
+  },
+  {
+    "filename": "twoMoreParabolas",
+    "path": "curve_stitch/twoMoreParabolas.js",
+    "title": "Two Parabolas & Twist"
+  },
+  {
+    "filename": "twistedBentArms",
+    "path": "curve_stitch/twistedBentArms.js",
+    "title": "Twisted & Bent Parabola"
+  },
+  {
+    "filename": "circularParabolaInnerStar",
+    "path": "circularParabolaInnerStar.js",
+    "title": "Circular Parabola & Inner Star"
+  },
+  {
+    "filename": "manyParabolas",
+    "path": "manyParabolas.js",
+    "title": "Many Parabolas"
+  }
+]

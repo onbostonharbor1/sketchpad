@@ -118,8 +118,8 @@ function ptsOnArc(pt1, pt2, radius, segments = 50) {
 /////////////////////////////////////////////////////////////////
 // arcPoints
 /////////////////////////////////////////////////////////////////
-//NOT USED
-      function arcPoints(a, b, r_frac, n) {
+
+function arcPoints(a, b, r_frac, n) {
 	  // a:      origin point
 	  // b:      destination point
 	  // r_frac: arc radius as a fraction of half the distance
@@ -127,92 +127,85 @@ function ptsOnArc(pt1, pt2, radius, segments = 50) {
 	  //         -- 1 results in a semicircle arc, the arc flattens out the
 	  //            closer to 0 the number is set, 0 is invalid
 	  // n:      number of points to sample from arc
-	  let c = getCenter(a, b, r_frac);
-	  let r = dist(c, a);
 
-	  let aAngle = Math.atan2(a.y - c.y, a.x - c.x),
-	      bAngle = Math.atan2(b.y - c.y, b.x - c.x);
+    function getCenter(a, b, frac) {
+        let c  = getP3(a, b, frac);
+        let b1 = yIntercept(a, b);
+        let b2 = yIntercept(a, c);
+        let m1 = inverseSlope(a, b);
+        let m2 = inverseSlope(a, c);
 
-	  if (aAngle > bAngle) {
-	      bAngle += 2 * Math.PI;
-	  }
+        // find the intersection of the two perpendicular bisectors
+        // i.e. solve m1 * x + b2 = m2 * x + b2 for x
+        let x = (b2 - b1) / (m1 - m2);
+        // sub x back into one of the linear equations to get y
+        let y = m1 * x + b1;
+        return new Point(x,y);
+    }
 
-          let points = range(aAngle, bAngle, (bAngle-aAngle)/n);
-	  let sampledPoints = points.map(
+    function dist(a, b) {
+        return Math.sqrt(Math.pow(a.x - b.x, 2) + Math.pow(a.y - b.y, 2));
+    }
+
+    function inverseSlope(a, b) {
+        // returns the inverse of the slope of the line from point A to B
+     // which is the slope of the perpendicular bisector
+        return -1 * (1 / slope(a, b));
+    }
+
+    function midpoint(a, b) {
+        return new Point((a.x + b.x)/2, (a.y + b.y)/2);
+    }
+
+    function slope(a, b) {
+        // returns the slope of the line from point A to B
+        return (b.y - a.y) / (b.x - a.x);
+    }
+
+    function yIntercept(a, b) {
+        // returns the y intercept of the perpendicular bisector of
+        // the line from point A to B
+        let m = inverseSlope(a, b);
+        let p = midpoint(a, b);
+        let x = p.x;
+        let y = p.y;
+        return y - m * x;
+    }
+
+    function getP3(a, b, frac) {
+        let mid = midpoint(a, b);
+
+        let m = inverseSlope(a, b);
+         // check if B is below A
+        let bLower = b.y < a.y ? -1 : 1;
+
+        // distance from midpoint along slope: between 0 and half
+        // the distance between the two points
+        let d = 0.5 * dist(a, b) * frac;
+
+        let x = d / Math.sqrt(1 + Math.pow(m, 2));
+        let y = m * x;
+        return new Point(bLower * x + mid.x, bLower * y + mid.y);
+        // return [mid[0] + d, mid[1] - (d * (b[0] - a[0])) / (b[1] - a[1])];
+    }
+
+    let c = getCenter(a, b, r_frac);
+	let r = dist(c, a);
+
+	let aAngle = Math.atan2(a.y - c.y, a.x - c.x),
+	                bAngle = Math.atan2(b.y - c.y, b.x - c.x);
+
+	if (aAngle > bAngle) {
+	    bAngle += 2 * Math.PI;
+	}
+
+    let points = range(aAngle, bAngle, (bAngle-aAngle)/n);
+	let sampledPoints = points.map(
 	      (d) => new Point(Math.cos(d) * r + c.x,
 			       Math.sin(d) * r + c.y));
-	  return sampledPoints;
-      }
-
-/////////////////////////////////////////////////////////////////
-// dist
-/////////////////////////////////////////////////////////////////
-//NOT USED
-function dist(a, b) {
-    return Math.sqrt(Math.pow(a.x - b.x, 2) + Math.pow(a.y - b.y, 2));
+	return sampledPoints;
 }
 
-/////////////////////////////////////////////////////////////////
-// getCenter
-/////////////////////////////////////////////////////////////////
-//NOT USED
-function getCenter(a, b, frac) {
-    let c  = getP3(a, b, frac);
-    let b1 = yIntercept(a, b);
-    let b2 = yIntercept(a, c);
-    let m1 = inverseSlope(a, b);
-    let m2 = inverseSlope(a, c);
-
-    // find the intersection of the two perpendicular bisectors
-    // i.e. solve m1 * x + b2 = m2 * x + b2 for x
-    let x = (b2 - b1) / (m1 - m2);
-    // sub x back into one of the linear equations to get y
-    let y = m1 * x + b1;
-    return new Point(x,y);
-}
-
-/////////////////////////////////////////////////////////////////
-// getP3
-/////////////////////////////////////////////////////////////////
-//NOT USED
-function getP3(a, b, frac) {
-    let mid = midpoint(a, b);
-
-    let m = inverseSlope(a, b);
-    // check if B is below A
-    let bLower = b.y < a.y ? -1 : 1;
-
-    // distance from midpoint along slope: between 0 and half
-    // the distance between the two points
-    let d = 0.5 * dist(a, b) * frac;
-
-    let x = d / Math.sqrt(1 + Math.pow(m, 2));
-    let y = m * x;
-    return new Point(bLower * x + mid.x, bLower * y + mid.y);
-    // return [mid[0] + d, mid[1] - (d * (b[0] - a[0])) / (b[1] - a[1])];
-}
-
-/////////////////////////////////////////////////////////////////
-// inverseSlope
-/////////////////////////////////////////////////////////////////
-//NOT USED
-function inverseSlope(a, b) {
-    // returns the inverse of the slope of the line from point A to B
-    // which is the slope of the perpendicular bisector
-    return -1 * (1 / slope(a, b));
-}
-
-/////////////////////////////////////////////////////////////////
-// midpoint
-/////////////////////////////////////////////////////////////////
-//NOT USED
-function midpoint(a, b) {
-    return new Point((a.x + b.x)/2, (a.y + b.y)/2);
-}
-//NOT USED
-function _m(a, b) {
-    return new Point((a.x + b.x)/2, (a.y + b.y)/2);
-}
 
 /////////////////////////////////////////////////////////////////
 // range
@@ -226,28 +219,6 @@ function range(start, end,step=1){
     return result;
 }
 
-/////////////////////////////////////////////////////////////////
-// slope
-/////////////////////////////////////////////////////////////////
-//NOT USED
-function slope(a, b) {
-    // returns the slope of the line from point A to B
-    return (b.y - a.y) / (b.x - a.x);
-}
-
-/////////////////////////////////////////////////////////////////
-// yIntercept
-/////////////////////////////////////////////////////////////////
-//NOT USED
-function yIntercept(a, b) {
-    // returns the y intercept of the perpendicular bisector of
-    // the line from point A to B
-    let m = inverseSlope(a, b);
-    let p = midpoint(a, b);
-    let x = p.x;
-    let y = p.y;
-    return y - m * x;
-}
 
     function test7() {
 	printTitle("Test 7: Arc Points");

@@ -3,5 +3,15 @@
     "filename": "firstBuild",
     "path": "spirals/firstBuild.js",
     "title": "First Build"
+  },
+  {
+    "filename": "OverlappingStars",
+    "path": "OverlappingStars.js",
+    "title": "Overlapping Stars"
+  },
+  {
+    "filename": "parabolasWithinCircles",
+    "path": "parabolasWithinCircles.js",
+    "title": "Circular Parabola & Inner Star"
   }
 ]

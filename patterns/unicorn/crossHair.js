@@ -1,5 +1,5 @@
 import { Point, StringThing }          from '/classes/classes.js';
-import { crossHair }                   from '/draw/unicorns.js'
+import { crossHair }                   from '/draw/drawUnicorns.js'
 
 export function runPattern() {
     let pt1 = new Point(60, 60);

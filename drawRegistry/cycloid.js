@@ -1,6 +1,6 @@
 /* drawRegistry/cycloid.js */
 import { Point, StringThing }       from '../classes/classes.js';
-import { drawCycloid }           from '../draw/unicorns.js';
+import { drawCycloid }           from '../draw/drawUnicorns.js';
 
 window.drawRegistry_cycloid = {
     name:         "Cycloid",

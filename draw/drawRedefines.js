@@ -50,7 +50,7 @@ function restore() {
 function save(){
     ctx.save();
 }
-    
+
 function stroke(){
     if (!drawState.dot) ctx.stroke();
 }

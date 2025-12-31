@@ -3,7 +3,7 @@
 // Parametric pattern (domain now handled by Parametric;
 // ------------------------------------------------------------
 
-import { drawParametric} from "/draw/parametrics.js";
+import { drawParametric} from "/draw/drawParametrics.js";
 import { Parametric }                                from "/classes/parametric.js";
 
 export function runPattern() {

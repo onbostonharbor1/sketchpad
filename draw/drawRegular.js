@@ -12,9 +12,10 @@
 // drawRegularPolygon
 // drawRegularPolygonCorner
 // drawRegularPolygonTouch
+import { drawState } from "/draw/drawState.js";
 import { Line, Point, StringThing }       from "../classes/classes.js";
 import { createNodes, drawLines, drawParabs, drawNodes,
-	 ptsOnLine, stitcher, getPreviousIndex }            from "./draw_utilities.js";
+	 ptsOnLine, stitcher, getPreviousIndex, applyCutoffToParabSegments }            from "./draw_utilities.js";
 
 function createArms(thing, lines) {
   const arms = [];
@@ -69,52 +70,121 @@ function drawAParab(thing, line1, line2) {
     drawParab(thing,pts);
 }
 
-// drawParab
-//   Note saving, setting to 0, then restoring
-//   lineTransform. This is because transformations
-//   only happen on the 2nd line.
+/* ============================================================
+   drawParab(thing, pts)
+   ------------------------------------------------------------
+   PURPOSE
+   - Build two arms from two lines and stitch them into a parabola.
+   - Apply cutoff AFTER stitching and BEFORE drawing.
+
+   HOW cutoff works (high level)
+   - stitcher(arm1, arm2) returns an array of points (the “segments”).
+   - applyCutoffToParabSegments trims the LAST k points from that array.
+   - This prevents the last few lines from “running the circularity”
+     near the end where the stitch converges toward the arc.
+
+   NOTE
+   - arm1.length is passed as armPointCount only as an available anchor.
+     Your current applyCutoff function doesn’t actually require it, but
+     it’s fine to pass it for future tuning.
+   ============================================================ */
 function drawParab(thing, pts) {
-  if (pts.length == 3) pts.splice(1, 0, pts[1]);
-  // build lines
+
+  if (pts.length === 3) pts.splice(1, 0, pts[1]);
+
+  // Build the two defining lines
   const line1 = new Line(pts[0], pts[1]);
   const line2 = new Line(pts[2], pts[3]);
-  // build arms. Don't transform first line
-  let lineTransform = thing.lineTransform;
+
+  // Build arms. Don't transform first line.
+  const savedTransform = thing.lineTransform;
   thing.lineTransform = 0;
-  let arm1 = ptsOnLine(thing, line1);
-  // restore lineTransform
-  thing.lineTransform = lineTransform;
-  let arm2 = ptsOnLine(thing, line2);
-  //
-  const parab = createParab(arm1, arm2);
+  const arm1 = ptsOnLine(thing, line1);
+
+  // Restore transform for second line.
+  thing.lineTransform = savedTransform;
+  const arm2 = ptsOnLine(thing, line2);
+
+  // Stitch into a parabola (array of points)
+  let parab = stitcher(arm1, arm2);
+
+  // Apply cutoff here (this is the only new behavior)
+  // parab = applyCutoffToParabSegments(thing, parab, arm1.length);
+
+  // Draw the (possibly trimmed) parabola
   drawLines(thing, parab);
-}
+
+} // end drawParab
+
+
 
 function drawCircularParabola(thing) {
+
   const numSteps = thing.numSteps;
+
+  // ------------------------------------------------------------
+  // Arms1: radial arms from center to the N polygon nodes
+  // ------------------------------------------------------------
+  const origNodes = thing.numNodes;
+
   let nodes = createNodes(thing);
   const linesInner = createLinesFromNodesMiddle(nodes, thing.midpoint);
   const arms1 = createArms(thing, linesInner);
 
-  const origNodes = thing.numNodes;
+  // ------------------------------------------------------------
+  // Arms2: subdivide the circle perimeter into N arc-arms,
+  // each with (numSteps + 1) points INCLUDING BOTH ENDPOINTS.
+  // ------------------------------------------------------------
   thing.numNodes = origNodes * numSteps;
   nodes = createNodes(thing);
-  drawNodes(nodes, thing.color);
+
+  // Confining circle
+  drawNodes(thing, nodes);
+
+  function buildWrappedArm(circleNodes, startIndex, steps) {
+    const arm = [];
+    for (let k = 0; k <= steps; k++) {
+      arm.push(circleNodes[(startIndex + k) % circleNodes.length]);
+    }
+    return arm;
+  } // end buildWrappedArm
+
   let arms2 = [];
   for (let i = 0; i < nodes.length; i += numSteps) {
-    arms2.push(nodes.slice(i, i + numSteps));
+    arms2.push(buildWrappedArm(nodes, i, numSteps));
   }
+
+  // ------------------------------------------------------------
+  // Clockwise set (apply cutoff HERE)
+  // ------------------------------------------------------------
   let parabs = createParabs(thing, arms1, arms2);
+
+  if (thing.cutoffFrac > 0 || (thing.cutoffLines !== null && thing.cutoffLines !== undefined)) {
+    const armPointCount = numSteps + 1;
+    parabs = parabs.map(p => applyCutoffToParabSegments(thing, p, armPointCount));
+  }
+
   drawParabs(thing, parabs);
 
-  // now draw counter-clockwise
-  for (let arm of arms2) {
-    arm.reverse();
-  }
+  // ------------------------------------------------------------
+  // Counter-clockwise set (apply cutoff again)
+  // ------------------------------------------------------------
+  for (let arm of arms2) arm.reverse();
   arms2 = [arms2[arms2.length - 1], ...arms2.slice(0, -1)];
+
   parabs = createParabs(thing, arms1, arms2);
+
+  if (thing.cutoffFrac > 0 || (thing.cutoffLines !== null && thing.cutoffLines !== undefined)) {
+    const armPointCount = numSteps + 1;
+    parabs = parabs.map(p => applyCutoffToParabSegments(thing, p, armPointCount));
+  }
+
   drawParabs(thing, parabs);
-}
+
+  // Restore original polygon node count
+  thing.numNodes = origNodes;
+
+} // end drawCircularParabola
 
 function drawInnerStar(thing) {
   const nodes = createNodes(thing);

@@ -4,7 +4,7 @@
               drawLines, _m}
                                   from "/draw/draw_utilities.js";
     import { drawParab} from "/draw/drawRegular.js";
-    import { drawRadiate }          from "/draw/unicorns.js";
+    import { drawRadiate }          from "/draw/drawUnicorns.js";
     import { drawState } from "/draw/drawState.js";
 
 ///////////////////////////////////////////////////

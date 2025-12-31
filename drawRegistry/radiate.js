@@ -13,7 +13,7 @@
 import { Line, Point } from "../classes/classes.js";
 import { Radiate }     from "../classes/radiate.js";
 import { drawALine }   from "../draw/draw_utilities.js";
-import { drawRadiate } from "../draw/unicorns.js";
+import { drawRadiate } from "../draw/drawUnicorns.js";
 
 window.drawRegistry_radiate = {
   name:        "Radiate",

@@ -43,5 +43,10 @@
     "filename": "cycloid",
     "path": "cycloid.js",
     "title": "Cycloid (one node)"
+  },
+  {
+    "filename": "twoEllipses",
+    "path": "twoEllipses.js",
+    "title": "Two Ellipses"
   }
 ]

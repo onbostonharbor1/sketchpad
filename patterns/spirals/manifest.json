@@ -1,7 +1,57 @@
 [
   {
-    "filename": "fig1",
-    "path": "spirals/fig1.js",
-    "title": "Placeholder"
+    "filename": "cruciform",
+    "path": "cruciform.js",
+    "title": "Cruciform"
+  },
+  {
+    "filename": "fermatSpiral",
+    "path": "fermatSpiral.js",
+    "title": "Fermat Spiral"
+  },
+  {
+    "filename": "funnyEuler",
+    "path": "funnyEuler.js",
+    "title": "Funny Euler"
+  },
+  {
+    "filename": "funnyTriangle",
+    "path": "funnyTriangle.js",
+    "title": "Funny Triangle"
+  },
+  {
+    "filename": "logSpiral",
+    "path": "logSpiral.js",
+    "title": "Log Spiral"
+  },
+  {
+    "filename": "pureSpiral",
+    "path": "pureSpiral.js",
+    "title": "Pure Spiral"
+  },
+  {
+    "filename": "pureSpiralA",
+    "path": "pureSpiralA.js",
+    "title": "pureSpiralB"
+  },
+  {
+    "filename": "pureSpiralB",
+    "path": "pureSpiralB.js",
+    "title": "Pure Spiral B"
+  },
+  {
+    "filename": "spiralInBox",
+    "path": "spiralInBox.js",
+    "title": "Spiral In Box"
+  },
+  {
+    "filename": "spiralInBoxRotated",
+    "path": "spiralInBoxRotated.js",
+    "title": "Spiral In Box Rotated"
+  },
+  {
+    "filename": "theodorusSpiral",
+    "path": "theodorusSpiral.js",
+    "title": "Theodorus Spiral"
   }
 ]

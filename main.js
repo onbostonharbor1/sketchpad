@@ -15,8 +15,8 @@ import "./draw/color.js";
 import "./draw/draw_utilities.js";
 import "./draw/drawLinkedCircles.js";
 import "./draw/drawRegular.js";
-import "./draw/ellipse.js";
-import "./draw/unicorns.js";
+import "./draw/drawEllipse.js";
+import "./draw/drawUnicorns.js";
 
 // === drawRegistry items ===
 import "./drawRegistry/2lines.js";

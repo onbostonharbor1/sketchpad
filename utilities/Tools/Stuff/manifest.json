@@ -1,4 +1,5 @@
 [
     { "filename": "addPatternFiles", "path": "Stuff/AddPatternFiles.js", "title": "Add Pattern Scripts" },
+    { "filename": "getLineEquation", "path": "Stuff/getLineEquation.js", "title": "Get Equation of Line" },
     { "filename": "inchesToPixels",  "path": "Stuff/inchesToPixels.js",  "title": "Inches To Pixels" }
 ]

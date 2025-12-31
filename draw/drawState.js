@@ -33,6 +33,7 @@ Object.defineProperty(window, "ctx", {
 export let drawState = {
     currentTitle:    "",
     currentFileName: "",
+    debug:           false,
     dot:             false,
     final:           false,
     newLine:         10,

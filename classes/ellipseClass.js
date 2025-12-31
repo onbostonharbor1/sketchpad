@@ -1,4 +1,4 @@
-/* classes/ellipse.js
+/* classes/drawEllipse.js
    ------------------------------------------------------------
    Ellipse
 
@@ -147,7 +147,7 @@ export class Ellipse {
     // --------------------------------------------------------
     const defaults = {
       // Stroke / appearance
-      color: "black",
+      color:     "black",
       lineWidth: 1,
 
       // Ellipse geometry (semi-axes)
@@ -164,26 +164,29 @@ export class Ellipse {
       // Sampling density: number of nodes around the perimeter
       numNodes: 150,
 
-      // “Skip windows” used by certain drawing modes
-      // (Often used when tapering or drawing partial arcs.)
+          // Used when tapering or drawing partial arcs.
       startSkip: 0,
-      endSkip: 0,
+      endSkip:   0,
 
-      // Legacy / convenience radius value
-      radius: 200,
+      // Convenience radius value
+      radius:     200,
 
       // Rotation (units depend on draw code; typically radians)
-      rotate: 0,
+      rotate:     0,
 
       // Constraint or tuning parameter for chord-based drawing
       chordLength: 10,
 
       // withinCirc mode constant (FULL by default)
-      withinCirc: FULL,
+      withinCirc:  FULL,
 
       // Additional scaling multipliers
-      xScale: 1,
-      yScale: 1,
+      xScale:      1,
+      yScale:      1,
+
+      // Adding arms to a circle
+      arm1:        null,
+	  arm2:        null
     };
 
     // --------------------------------------------------------

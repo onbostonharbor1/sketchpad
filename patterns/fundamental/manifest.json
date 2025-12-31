@@ -1,3 +1,17 @@
 [
-  { "filename": "radiate", "path": "fundamental/radiate.js", "title": "Radiate"}
+  {
+    "filename": "radiate",
+    "path": "fundamental/radiate.js",
+    "title": "Radiate"
+  },
+  {
+    "filename": "radiateInBlues",
+    "path": "radiateInBlues.js",
+    "title": "Radiate In Blues"
+  },
+  {
+    "filename": "radiateInCircle",
+    "path": "radiateInCircle.js",
+    "title": "Radiate In Circle"
+  }
 ]

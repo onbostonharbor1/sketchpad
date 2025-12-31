@@ -8,5 +8,20 @@
     "filename": "complicatedParabolas",
     "path": "complicatedParabolas.js",
     "title": "Complicated Parabolas"
+  },
+  {
+    "filename": "lotsInCircles",
+    "path": "lotsInCircles.js",
+    "title": "Lots In Circles"
+  },
+  {
+    "filename": "lotsOfParabs",
+    "path": "lotsOfParabs.js",
+    "title": "Lots Of Parabolas"
+  },
+  {
+    "filename": "moreInCircles",
+    "path": "moreInCircles.js",
+    "title": "More In Circles"
   }
 ]
