@@ -9,16 +9,18 @@
      • GalleryController             → pure action functions
 ------------------------------------------------------------ */
 
-import { renderCategories } from "./categories.js";
-import { fileLayer } from "./fileLayer.js";
-import { setCaptionBar }    from "./caption.js";
+import { renderCategories }       from "./categories.js";
+import { fileLayer }              from "./fileLayer.js";
+import { setCaptionBar }          from "./caption.js";
+import { editGalleryScriptTitle } from "./galleryMenuCmds.js"
+
 import {
   clearDivs,
   renderThumbnailGrid,
   showScriptOffcanvas
 } from "./ui_utilities.js";
-import { manifest }         from "./manifest.js";
 
+import { manifest }         from "./manifest.js";
 import { menuManager }      from "./menuManager.js";
 
 /* ============================================================
@@ -995,7 +997,8 @@ async function showNextGalleryItem(domain) {
 /* ============================================================
    updateGalleryCaption()
 ============================================================ */
-function updateGalleryCaption(domain) {
+export function updateGalleryCaption(domain) {
+
   const item = uiState.gallery.activeItem;
   if (!item) return;
 
@@ -1011,6 +1014,7 @@ function updateGalleryCaption(domain) {
     const items = [];
 
     if (domain === DOMAIN_SCRIPTS) {
+
       items.push({
         label: "Show Script",
         onClick: () =>
@@ -1019,10 +1023,20 @@ function updateGalleryCaption(domain) {
             item.filename
           )
       });
+
+      items.push({
+        label: "Edit Manifest Title",
+        onClick: () => editGalleryScriptTitle()
+      });
+
     }
 
     menuManager.open(items, anchor);
   };
+
+  const captionDiv = document.getElementById("caption");
+  if (!captionDiv) throw new Error("updateGalleryCaption: #caption missing");
+  captionDiv.innerHTML = "";   // <<< ADD THIS LINE
 
   setCaptionBar({
     targetId: "caption",
@@ -1031,4 +1045,7 @@ function updateGalleryCaption(domain) {
     onNext,
     onMenu
   });
+
 } // end updateGalleryCaption
+
+

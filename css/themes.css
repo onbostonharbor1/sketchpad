@@ -13,14 +13,20 @@
 #utilities-tab { background: linear-gradient(to bottom, var(--utilities-tint) 0%, #ffffff 100%); }
 
 :root {
+
+  --gray-dark: #444;
+
+
   /* Draw (blue1) */
+ /* --draw-tint:   #f6f9ff; */
   --draw-tint:   #f6f9ff;
   --draw-mid:    #a5c8ff;
   --draw-base:   #2f6fe8;
   --draw-divider:#8da6cf;
 
   /* Patterns (blue2) */
-  --patterns-tint:   #f1f6ff;
+  /* --patterns-tint:   #f1f6ff; */
+  --patterns-tint:   #88abec;
   --patterns-mid:    #a5c8ff;
   --patterns-base:   #2f6fe8;
   --patterns-divider:#8da6cf;

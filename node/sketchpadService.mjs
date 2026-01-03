@@ -51,6 +51,8 @@
      • directoryRegistry.json is the ONLY source of categories
      • Titles cannot be inferred → filename used as placeholder
 
+
+
    =========================================================== */
 
 import fs   from "fs";
@@ -106,10 +108,135 @@ export async function dispatchService(requestName, payload = {}) {
     case "renamePackageScript":
       return await renamePackageScript(payload);
 
+    case "listLogFiles":
+      return await listLogFiles(payload);
+
+    case "readLogFile":
+      return await readLogFile(payload);
+
+
+
     default:
       throw new Error(`dispatchService: unknown requestName: ${requestName}`);
   }
 } // end dispatchService
+
+
+/* ===========================================================
+   TASK: listLogFiles
+
+   DESCRIPTION
+   -----------
+   Returns newest N log files from ./utilities/logfiles.
+
+   Payload (optional):
+     { limit : 10 }
+
+   Returns:
+     {
+       request: "listLogFiles",
+       status: "ok",
+       dir: "<absolute dir>",
+       limit: <number>,
+       files: [
+         { name, mtimeMs, mtimeIso, size }
+       ]
+     }
+=========================================================== */
+export async function listLogFiles(payload = {}) {
+
+  const limitRaw = payload.limit;
+  const limit = (typeof limitRaw === "number" && limitRaw > 0) ? limitRaw : 10;
+
+  const logDir = path.resolve("./utilities/logfiles");
+  assertDirectoryExists(logDir, "listLogFiles: log dir missing: " + logDir);
+
+  const entries = fs.readdirSync(logDir, { withFileTypes: true });
+
+  const files = [];
+
+  for (const ent of entries) {
+    if (!ent.isFile()) continue;
+
+    const name = ent.name;
+
+    // You can broaden this later if needed.
+    if (!name.toLowerCase().endsWith(".txt")) continue;
+
+    const full = path.join(logDir, name);
+    const st = fs.statSync(full);
+
+    files.push({
+      name,
+      mtimeMs: st.mtimeMs,
+      mtimeIso: new Date(st.mtimeMs).toISOString(),
+      size: st.size
+    });
+  }
+
+  // newest first
+  files.sort((a, b) => b.mtimeMs - a.mtimeMs);
+
+  const sliced = files.slice(0, limit);
+
+  return {
+    request: "listLogFiles",
+    status: "ok",
+    dir: logDir,
+    limit,
+    files: sliced
+  };
+
+} // end listLogFiles
+
+
+/* ===========================================================
+   TASK: readLogFile
+
+   DESCRIPTION
+   -----------
+   Reads one logfile from ./utilities/logfiles and returns text.
+
+   Payload:
+     { name : "<filename>" }
+
+   Returns:
+     {
+       request: "readLogFile",
+       status: "ok",
+       name: "<filename>",
+       text: "<file contents>"
+     }
+=========================================================== */
+export async function readLogFile(payload = {}) {
+
+  const name = payload.name;
+
+  if (typeof name !== "string" || name.trim() === "") {
+    throw new Error("readLogFile: name missing/invalid");
+  }
+
+  // fail-fast: disallow path separators
+  if (name.indexOf("/") >= 0 || name.indexOf("\\") >= 0) {
+    throw new Error("readLogFile: invalid name (no path separators allowed): " + name);
+  }
+
+  const logDir = path.resolve("./utilities/logfiles");
+  assertDirectoryExists(logDir, "readLogFile: log dir missing: " + logDir);
+
+  const full = path.join(logDir, name);
+  assertFileExists(full, "readLogFile: file missing: " + full);
+
+  const text = fs.readFileSync(full, "utf8");
+
+  return {
+    request: "readLogFile",
+    status: "ok",
+    name,
+    text
+  };
+
+} // end readLogFile
 
 
 /* ===========================================================
@@ -140,18 +267,44 @@ export async function dispatchService(requestName, payload = {}) {
 
    =========================================================== */
 
-export async function addPatternScripts(payload = {}) {
-  const patternsRoot = payload.patternsRoot || "./patterns";
-  const absRoot = path.resolve(patternsRoot);
+/* ===========================================================
+   TASK: addPatternScripts  (AUGMENTED)
 
-  /* ---- validate patterns root ---- */
+   Adds support for Gallery Scripts in addition to Patterns.
+
+   NEW BEHAVIOR
+   ------------
+   In addition to scanning ./patterns/* categories, this function
+   now also scans:
+
+     ./gallery/Scripts/
+       manifest.json
+       *.js
+
+   Differences vs Patterns:
+     • No directoryRegistry.json
+     • Single manifest.json
+     • Flat directory (no categories)
+
+   Gallery entries are appended using the same placeholder logic
+   (filename → title).
+
+   =========================================================== */
+
+export async function addPatternScripts(payload = {}) {
+
+  const patternsRoot = payload.patternsRoot || "./patterns";
+  const galleryRoot  = payload.galleryRoot  || "./gallery/Scripts";
+
+  const absPatternsRoot = path.resolve(patternsRoot);
+  const absGalleryRoot  = path.resolve(galleryRoot);
+
   assertDirectoryExists(
-    absRoot,
-    `Patterns root not found or not a directory: ${absRoot}`
+    absPatternsRoot,
+    `Patterns root not found or not a directory: ${absPatternsRoot}`
   );
 
-  /* ---- load category registry ---- */
-  const registryPath = path.join(absRoot, "directoryRegistry.json");
+  const registryPath = path.join(absPatternsRoot, "directoryRegistry.json");
   assertFileExists(
     registryPath,
     `directoryRegistry.json not found: ${registryPath}`
@@ -164,40 +317,26 @@ export async function addPatternScripts(payload = {}) {
 
   const updatedCategories = [];
 
-  /* ---- process each category ---- */
   for (const category of categories) {
 
-    if (typeof category !== "string" || category.trim() === "") {
-      throw new Error(`Invalid category name in registry: ${String(category)}`);
-    }
-
-    const categoryDir = path.join(absRoot, category);
-    assertDirectoryExists(
-      categoryDir,
-      `Category directory missing: ${categoryDir}`
-    );
+    const categoryDir = path.join(absPatternsRoot, category);
+    assertDirectoryExists(categoryDir, `Category directory missing: ${categoryDir}`);
 
     const manifestPath = path.join(categoryDir, "manifest.json");
+    if (!fs.existsSync(manifestPath)) continue;
 
-    /* ---- no manifest → nothing to update ---- */
-    if (!fs.existsSync(manifestPath)) {
-      continue;
-    }
-
-    /* ---- load and validate manifest ---- */
     const manifest = readJsonFileSync(manifestPath);
     if (!Array.isArray(manifest)) {
       throw new Error(`Manifest must be an array: ${manifestPath}`);
     }
 
-    /* ---- build lookup indices ---- */
     const indexByPath     = buildIndexByPath(manifest);
     const indexByFilename = buildIndexByFilename(manifest);
 
-    /* ---- scan directory for JS files ---- */
     const jsFiles = listJsFiles(categoryDir);
 
     const result = {
+      domain: "patterns",
       category,
       manifestPath,
       totalBefore: manifest.length,
@@ -205,20 +344,12 @@ export async function addPatternScripts(payload = {}) {
       added: []
     };
 
-    /* ---- compare filesystem vs manifest ---- */
     for (const fileName of jsFiles) {
       const baseName = fileName.replace(/\.js$/i, "");
-      const relPath  = normalizePath(fileName); // per-category short path
+      const relPath  = normalizePath(fileName);
 
-      const alreadyPresent =
-        indexByPath.has(relPath) ||
-        indexByFilename.has(baseName);
+      if (indexByPath.has(relPath) || indexByFilename.has(baseName)) continue;
 
-      if (alreadyPresent) {
-        continue;
-      }
-
-      /* ---- missing file → add placeholder entry ---- */
       const entry = makeManifestEntry(relPath);
       manifest.push(entry);
 
@@ -228,7 +359,6 @@ export async function addPatternScripts(payload = {}) {
       result.added.push(entry);
     }
 
-    /* ---- persist only if changed ---- */
     if (result.added.length > 0) {
       writeJsonFileSync(manifestPath, manifest);
       result.totalAfter = manifest.length;
@@ -236,14 +366,72 @@ export async function addPatternScripts(payload = {}) {
     }
   }
 
-  /* ---- final report returned to caller ---- */
+  const updatedGallery = [];
+
+  if (fs.existsSync(absGalleryRoot)) {
+
+    assertDirectoryExists(absGalleryRoot, `Gallery Scripts dir invalid: ${absGalleryRoot}`);
+
+    const galleryManifestPath = path.join(absGalleryRoot, "manifest.json");
+    assertFileExists(galleryManifestPath, `Gallery Scripts manifest missing: ${galleryManifestPath}`);
+
+    const manifest = readJsonFileSync(galleryManifestPath);
+    if (!Array.isArray(manifest)) {
+      throw new Error("Gallery Scripts manifest must be an array");
+    }
+
+    const indexByPath     = buildIndexByPath(manifest);
+    const indexByFilename = buildIndexByFilename(manifest);
+
+    const jsFiles = listJsFiles(absGalleryRoot);
+
+    const result = {
+      domain: "gallery",
+      section: "Scripts",
+      manifestPath: galleryManifestPath,
+      totalBefore: manifest.length,
+      totalAfter:  manifest.length,
+      added: []
+    };
+
+    for (const fileName of jsFiles) {
+      const baseName = fileName.replace(/\.js$/i, "");
+      const relPath  = normalizePath(fileName);
+
+      if (indexByPath.has(relPath) || indexByFilename.has(baseName)) continue;
+
+      const entry = makeManifestEntry(relPath);
+      manifest.push(entry);
+
+      indexByPath.add(relPath);
+      indexByFilename.add(baseName);
+
+      result.added.push(entry);
+    }
+
+    if (result.added.length > 0) {
+      writeJsonFileSync(galleryManifestPath, manifest);
+      result.totalAfter = manifest.length;
+      updatedGallery.push(result);
+    }
+  }
+
+  const hasUpdates =
+    updatedCategories.length > 0 ||
+    updatedGallery.length > 0;
+
   return {
     request: "addPatternScripts",
-    patternsRoot: absRoot,
+    patternsRoot: absPatternsRoot,
+    galleryRoot:  absGalleryRoot,
     categoriesScanned: categories.slice(),
-    updatedCategories
+    updatedCategories,
+    updatedGallery,
+    hasUpdates
   };
+
 } // end addPatternScripts
+
 
 
 /* ===========================================================
@@ -304,17 +492,22 @@ export async function writePatternThumbnail(payload = {}) {
   if (!fs.existsSync(imagesDir)) {
     fs.mkdirSync(imagesDir, { recursive: true });
   }
+
   assertDirectoryExists(
     imagesDir,
     "writePatternThumbnail: images dir not a directory: " + imagesDir
   );
 
-  /* ---- write thumbnail file ---- */
+  /* ---- write thumbnail file (force overwrite) ---- */
   const outName = "thumb_" + filename + ".png";
   const outPath = path.join(imagesDir, outName);
 
+  if (fs.existsSync(outPath)) {
+    fs.unlinkSync(outPath);    // fail fast if locked or read-only
+  }
+
   const buf = Buffer.from(pngBase64, "base64");
-  fs.writeFileSync(outPath, buf);
+  fs.writeFileSync(outPath, buf, { flag: "w" });
 
   assertFileExists(outPath, "writePatternThumbnail: write failed: " + outPath);
 
@@ -379,6 +572,41 @@ export async function deletePackageScript(payload = {}) {
 
    =========================================================== */
 
+
+/* -----------------------------------------------------------
+   resolveManifestPath(patternsRoot, manifestPathInput)
+
+   DESCRIPTION
+   -----------
+   Resolves a UI-provided manifest path safely and ensures
+   it remains inside the patterns root.
+
+   Examples accepted:
+     "/patterns/circles/manifest.json"
+     "patterns/circles/manifest.json"
+
+----------------------------------------------------------- */
+
+/* ===========================================================
+   TASK: editPackageScript
+
+   DESCRIPTION
+   -----------
+   Updates the title of a single manifest entry identified
+   by filename within a manifest.json.
+
+   Allowed manifest locations:
+     • ./patterns/../manifest.json
+     • ./gallery/../manifest.json
+
+   Payload:
+     {
+       manifestPath : "/patterns/<category>/manifest.json"  OR "/gallery/Scripts/manifest.json",
+       filename     : "<base filename>",
+       title        : "<new title>"
+     }
+   =========================================================== */
+
 export async function editPackageScript(payload = {}) {
   console.log("editPackageScript file:", import.meta.url);
 
@@ -401,9 +629,15 @@ export async function editPackageScript(payload = {}) {
 
   const newTitle = newTitleRaw.trim();
 
-  /* ---- resolve and validate manifest path ---- */
+  /* ---- resolve and validate manifest path (patterns OR gallery) ---- */
   const patternsRoot = path.resolve("./patterns");
-  const manifestPath = resolveManifestPath(patternsRoot, manifestPathInput);
+  const galleryRoot  = path.resolve("./gallery");
+
+  const manifestPath = resolveManifestPathAllowed(
+    [patternsRoot, galleryRoot],
+    manifestPathInput,
+    "editPackageScript"
+  );
 
   /* ---- load manifest ---- */
   const manifest = readJsonFileSync(manifestPath);
@@ -450,20 +684,26 @@ export async function editPackageScript(payload = {}) {
 
 } // end editPackageScript
 
+
 /* -----------------------------------------------------------
-   resolveManifestPath(patternsRoot, manifestPathInput)
+   resolveManifestPathAllowed(allowedRoots, manifestPathInput, tag)
 
    DESCRIPTION
    -----------
-   Resolves a UI-provided manifest path safely and ensures
-   it remains inside the patterns root.
+   Resolves a UI-provided manifest path safely and ensures it
+   remains inside ONE of the allowed roots.
 
    Examples accepted:
      "/patterns/circles/manifest.json"
      "patterns/circles/manifest.json"
-
+     "/gallery/Scripts/manifest.json"
+     "gallery/Scripts/manifest.json"
 ----------------------------------------------------------- */
-function resolveManifestPath(patternsRoot, manifestPathInput) {
+function resolveManifestPathAllowed(allowedRoots, manifestPathInput, tag) {
+
+  if (!Array.isArray(allowedRoots) || allowedRoots.length === 0) {
+    throw new Error("resolveManifestPathAllowed: allowedRoots missing/invalid");
+  }
 
   let rel = String(manifestPathInput);
 
@@ -474,18 +714,29 @@ function resolveManifestPath(patternsRoot, manifestPathInput) {
 
   const abs = path.resolve(rel);
 
-  /* ---- fail-fast traversal protection ---- */
-  if (!abs.startsWith(patternsRoot)) {
-    throw new Error(
-      "editPackageScript: manifestPath escapes patterns root: " + abs
-    );
+  /* ---- fail-fast traversal protection: must be inside one allowed root ---- */
+  let ok = false;
+
+  for (const root of allowedRoots) {
+    if (typeof root !== "string" || root.trim() === "") {
+      throw new Error("resolveManifestPathAllowed: invalid root");
+    }
+    if (abs.startsWith(root)) {
+      ok = true;
+      break;
+    }
+  }
+
+  if (!ok) {
+    throw new Error(`${tag}: manifestPath escapes allowed roots: ${abs}`);
   }
 
   assertFileExists(abs, "Manifest file not found: " + abs);
 
   return abs;
 
-} // end resolveManifestPath
+} // end resolveManifestPathAllowed
+
 
 
 /* ===========================================================
@@ -518,6 +769,8 @@ export async function renamePackageScript(payload = {}) {
    directory, excluding:
      • manifest.json
      • directoryRegistry.json
+
+   Files beginning with "." are ignored.
 ----------------------------------------------------------- */
 function listJsFiles(dir) {
   const entries = fs.readdirSync(dir, { withFileTypes: true });
@@ -527,6 +780,10 @@ function listJsFiles(dir) {
     if (!ent.isFile()) continue;
 
     const name = ent.name;
+
+    // ignore dotfiles
+    if (name.startsWith(".")) continue;
+
     if (name === "manifest.json") continue;
     if (name === "directoryRegistry.json") continue;
     if (!name.toLowerCase().endsWith(".js")) continue;
@@ -537,6 +794,7 @@ function listJsFiles(dir) {
   files.sort((a, b) => a.localeCompare(b));
   return files;
 } // end listJsFiles
+
 
 
 /* -----------------------------------------------------------

@@ -32,7 +32,7 @@ export async function editPatternItemTitle() {
 /* ============================================================
    addPatternThumbnail()
    ------------------------------------------------------------
-   Captures the CURRENT displayed canvas image, scales to 36x36,
+   Captures the CURRENT displayed canvas image, scales to 50x50,
    and asks the Node service to write:
 
      ./patterns/<category>/images/thumb_<filename>.png
@@ -49,7 +49,7 @@ export async function addPatternThumbnail() {
     throw new Error("addPatternThumbnail: window.drawCanvas missing");
   }
 
-  const pngBase64 = buildCanvasThumbnailBase64(window.drawCanvas, 36, 36);
+  const pngBase64 = buildCanvasThumbnailBase64(window.drawCanvas, 50, 50);
 
   const result = await nodeDispatch("writePatternThumbnail", {
     category: itemInfo.category,
@@ -96,10 +96,15 @@ export async function addPatternThumbnail() {
      - Uses alpha > 0 as "drawn".
      - If canvas is blank, falls back to scaling full canvas.
      - Adds small padding so strokes don't touch the edge.
+
+   This version treats “background” as near-white pixels and
+   crops to pixels that are NOT near-white.
+
+   Returns BASE64 ONLY (no data: prefix).
 =========================================================== */
 function buildCanvasThumbnailBase64(sourceCanvas, w, h) {
 
-  /* ---- validate inputs ---- */
+  // ---- validate inputs ----
   if (!sourceCanvas) throw new Error("buildCanvasThumbnailBase64: sourceCanvas missing");
   if (typeof w !== "number" || w <= 0) throw new Error("buildCanvasThumbnailBase64: invalid w");
   if (typeof h !== "number" || h <= 0) throw new Error("buildCanvasThumbnailBase64: invalid h");
@@ -111,7 +116,7 @@ function buildCanvasThumbnailBase64(sourceCanvas, w, h) {
     throw new Error("buildCanvasThumbnailBase64: sourceCanvas has no width/height");
   }
 
-  /* ---- read pixels from source ---- */
+  // ---- read pixels from source ----
   const scanCanvas = document.createElement("canvas");
   scanCanvas.width = sw;
   scanCanvas.height = sh;
@@ -125,14 +130,31 @@ function buildCanvasThumbnailBase64(sourceCanvas, w, h) {
   const img = scanCtx.getImageData(0, 0, sw, sh);
   const data = img.data;
 
-  /* ---- find bounding box of alpha>0 ---- */
+  // ---- find bounding box of NON-WHITE-ish pixels ----
+  // Treat pixels as background if they are very close to white.
+  // If you ever change the background color, adjust these numbers.
+  const WHITE_CUTOFF = 245; // 245..255 are "near white"
+
   let minX = sw, minY = sh, maxX = -1, maxY = -1;
 
   for (let y = 0; y < sh; y++) {
     const row = y * sw * 4;
+
     for (let x = 0; x < sw; x++) {
-      const a = data[row + x * 4 + 3]; // alpha
-      if (a !== 0) {
+      const i = row + x * 4;
+
+      const r = data[i + 0];
+      const g = data[i + 1];
+      const b = data[i + 2];
+      const a = data[i + 3];
+
+      // If truly transparent, ignore it (rare in your current setup)
+      if (a === 0) continue;
+
+      // Background test: "near white"
+      const isNearWhite = (r >= WHITE_CUTOFF && g >= WHITE_CUTOFF && b >= WHITE_CUTOFF);
+
+      if (!isNearWhite) {
         if (x < minX) minX = x;
         if (y < minY) minY = y;
         if (x > maxX) maxX = x;
@@ -141,7 +163,7 @@ function buildCanvasThumbnailBase64(sourceCanvas, w, h) {
     }
   }
 
-  /* ---- if blank canvas, fall back to full canvas ---- */
+  // ---- if nothing found (blank or all-white), fall back to full canvas ----
   let cropX = 0;
   let cropY = 0;
   let cropW = sw;
@@ -154,8 +176,8 @@ function buildCanvasThumbnailBase64(sourceCanvas, w, h) {
     cropH = (maxY - minY + 1);
   }
 
-  /* ---- add padding (in source pixels), clamp to canvas ---- */
-  const pad = 4; // tweak if you want (e.g. 2, 4, 6)
+  // ---- add padding (source pixels), clamp to canvas ----
+  const pad = 4;
   cropX = cropX - pad;
   cropY = cropY - pad;
   cropW = cropW + pad * 2;
@@ -170,7 +192,7 @@ function buildCanvasThumbnailBase64(sourceCanvas, w, h) {
     throw new Error("buildCanvasThumbnailBase64: computed invalid crop region");
   }
 
-  /* ---- draw cropped region into a crop canvas ---- */
+  // ---- draw cropped region into crop canvas ----
   const cropCanvas = document.createElement("canvas");
   cropCanvas.width = cropW;
   cropCanvas.height = cropH;
@@ -181,7 +203,7 @@ function buildCanvasThumbnailBase64(sourceCanvas, w, h) {
   cropCtx.clearRect(0, 0, cropW, cropH);
   cropCtx.drawImage(sourceCanvas, cropX, cropY, cropW, cropH, 0, 0, cropW, cropH);
 
-  /* ---- scale cropped region into final thumb canvas ---- */
+  // ---- scale to final thumb canvas ----
   const tmp = document.createElement("canvas");
   tmp.width = w;
   tmp.height = h;
@@ -280,7 +302,7 @@ function openEditTitleOverlay(itemInfo) {
         "<input id='editTitleInput' class='ctrl-text' type='text' />" +
       "</div>" +
       "<div style='margin-top:10px; display:flex; gap:10px;'>" +
-        "<button id='editTitleApply'>Apply</button>" +
+        "<button id='editTitleApply'>OK</button>" +
         "<button id='editTitleCancel'>Cancel</button>" +
       "</div>" +
     "</div>";

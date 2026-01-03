@@ -21,6 +21,7 @@
    =========================================================== */
 
 import { nodeAddPatternScripts } from "/ui/nodeLayer.js";
+import { manifest } from "/ui/manifest.js";
 
 /* ===========================================================
    runPattern()
@@ -43,6 +44,10 @@ export async function runPattern() {
   action.innerHTML = "";
 
   const report = await nodeAddPatternScripts();
+
+  // Force all manifests to be reread next time they are requested.
+  // This is exactly what ManifestManager.clearCache() is for.
+  manifest.clearCache();
 
   return buildReportHtml(report);
 } // end runPattern
@@ -79,58 +84,47 @@ function buildReportHtml(report) {
     throw new Error(`addPatternFiles: unexpected report.request: ${String(report.request)}`);
   }
 
-  const updated = report.updatedCategories;
-  if (!Array.isArray(updated)) {
+  const updatedPatterns = report.updatedCategories;
+  const updatedGallery  = report.updatedGallery || [];
+
+  if (!Array.isArray(updatedPatterns)) {
     throw new Error("addPatternFiles: report.updatedCategories must be an array");
   }
+  if (!Array.isArray(updatedGallery)) {
+    throw new Error("addPatternFiles: report.updatedGallery must be an array");
+  }
 
-  if (updated.length === 0) {
+  if (updatedPatterns.length === 0 && updatedGallery.length === 0) {
     return "No new pattern files were found.";
   }
 
   let html = "";
-  html += "Added pattern files:<br><br>";
+  html += "Added files:<br><br>";
 
-  // Group by category with a simple indented bullet list.
-  // No special CSS required; keep it plain.
-  for (const cat of updated) {
-    if (!cat || typeof cat !== "object") {
-      throw new Error("addPatternFiles: invalid category report entry");
-    }
-
+  /* ---- Patterns ---- */
+  for (const cat of updatedPatterns) {
     const categoryName = cat.category;
     const added = cat.added;
 
-    if (typeof categoryName !== "string" || categoryName.trim() === "") {
-      throw new Error("addPatternFiles: category name missing/invalid");
-    }
-
-    if (!Array.isArray(added)) {
-      throw new Error(`addPatternFiles: added list missing/invalid for category ${categoryName}`);
-    }
-
-    // Category header
     html += `${escapeHtml(categoryName)}<br>`;
-
-    // Items as bullet points (using a unicode bullet)
     for (const entry of added) {
-      if (!entry || typeof entry !== "object") {
-        throw new Error(`addPatternFiles: invalid added entry in category ${categoryName}`);
-      }
-
-      const p = entry.path;
-      if (typeof p !== "string" || p.trim() === "") {
-        throw new Error(`addPatternFiles: entry.path missing/invalid in category ${categoryName}`);
-      }
-
-      html += `&nbsp;&nbsp;• ${escapeHtml(p)}<br>`;
+      html += `&nbsp;&nbsp;• ${escapeHtml(entry.path)}<br>`;
     }
+    html += "<br>";
+  }
 
+  /* ---- Gallery Scripts ---- */
+  for (const section of updatedGallery) {
+    html += "Gallery / Scripts<br>";
+    for (const entry of section.added) {
+      html += `&nbsp;&nbsp;• ${escapeHtml(entry.path)}<br>`;
+    }
     html += "<br>";
   }
 
   return html;
 } // end buildReportHtml
+
 
 
 /* ===========================================================

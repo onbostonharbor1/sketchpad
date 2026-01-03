@@ -89,7 +89,14 @@ body {
   background-color: var(--theme-tint);
   padding: 8px;
   overflow-y: auto;
-}
+  overflow-x: hidden;
+
+  display: flex;
+  justify-content: center;     /* center the white panel */
+  align-items: flex-start;
+}  /* end #action */
+
+
 
 /* ---- Right main column ---- */
 #main {
@@ -99,7 +106,9 @@ body {
   box-sizing: border-box;
   display: flex;
   flex-direction: column;
+  min-width: 0;     /* allow column to shrink smaller than canvas */
 }
+
 
 /* ---- Sketchpad anchoring ---- */
 #sketchpad-wrapper {
@@ -144,7 +153,6 @@ body {
    [CAPTION]
    =========================================================== */
 
-/* ---- Caption bar ---- */
 #caption {
   display: flex;
   justify-content: space-between;
@@ -155,19 +163,26 @@ body {
   font-weight: 600;
   font-size: 0.9rem;
   color: #222;
+  min-width: 0;     /* allow flex shrink */
 }
 
-/* ---- Caption title ---- */
 .caption-title {
   font-weight: bold;
   font-size: 0.9rem;
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
 }
 
-/* ---- Caption buttons ---- */
 .caption-buttons {
   display: flex;
   gap: 8px;
+  flex: 0 0 auto;
+  margin-left: auto;
 }
+
 
 .caption-buttons button {
   padding: 2px 10px;
@@ -389,14 +404,22 @@ input.ctrl-text[type="text"] {
 /* ---- Thumbnail panel ---- */
 .thumb-panel {
   display: grid;
-  grid-template-columns: repeat(6, 1fr);
-  gap: 6px;
-  padding: 6px;
-  background-color: #fafafa;
-  border-top: 1px solid var(--outline);
-  overflow-y: auto;
-  max-height: calc(36px * 10 + 6px * 9 + 12px);
-}
+
+  grid-template-columns: repeat(5, 50px);  /* FIXED columns, no stretching */
+  gap: 2px;
+
+  padding: 12px;                           /* small, even border */
+  box-sizing: border-box;
+
+  background: #ffffff;
+  border: 1px solid var(--outline);
+
+  width: max-content;                      /* shrink-wrap to grid width */
+}  /* end thumb-panel */
+
+
+
+
 
 /* ---- Thumbnail items ---- */
 .thumb-box {
@@ -408,11 +431,11 @@ input.ctrl-text[type="text"] {
 }
 
 .thumb-image {
-  width: 36px;
-  height: 36px;
+  width: 50px;
+  height: 50px;
   object-fit: cover;
-  border: 1px solid var(--blue-base);
-  border-radius: 4px;
+  border: 1px solid var(--gray-dark);
+  border-radius: 3px;
   background-color: white;
   cursor: pointer;
   transition: transform 0.15s;
@@ -437,4 +460,86 @@ input.ctrl-text[type="text"] {
   border-radius: 50%;
   pointer-events: auto;
   z-index: 2;
+}
+
+.ctrl-static-text {
+  width: 100%;
+  box-sizing: border-box;
+  white-space: pre-wrap;
+  overflow-wrap: break-word;
+  padding: 6px 8px;
+  line-height: 1.25;
+}
+
+
+/* ------------------------------------------------------------
+   Alternate range control (rangeHeader)
+------------------------------------------------------------ */
+/* Full-width "header range" control (black-style layout) */
+.ctrl-rangehdr-wrap {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+} /* end .ctrl-rangehdr-wrap */
+
+.ctrl-rangehdr-head {
+  width: 100%;
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+} /* end .ctrl-rangehdr-head */
+
+.ctrl-rangehdr-label {
+  font-size: 0.95rem;
+} /* end .ctrl-rangehdr-label */
+
+.ctrl-rangehdr-value {
+  font-size: 0.95rem;
+  text-align: right;
+  min-width: 3.5rem;
+} /* end .ctrl-rangehdr-value */
+
+.ctrl-rangehdr {
+  width: 100%;
+} /* end .ctrl-rangehdr */
+
+/* ===========================================================
+   THEMED ACTION BUTTON (used by parameterControls)
+   =========================================================== */
+
+.ctrl-button {
+  display: inline-block;                /* size to content */
+  padding: 0.45rem 1.1rem;
+  font-size: 0.9rem;
+  line-height: 1.2;
+
+  color: #fff;
+  background-color: var(--theme-base);
+
+  border: none;
+  border-radius: 999px;                 /* pill shape */
+  cursor: pointer;
+
+  box-shadow: 0 1px 2px rgba(0,0,0,0.25);
+  transition: background-color 120ms ease,
+              box-shadow 120ms ease,
+              transform 80ms ease;
+}
+
+/* Hover / focus */
+.ctrl-button:hover {
+  background-color: var(--theme-mid);
+}
+
+.ctrl-button:active {
+  transform: translateY(1px);
+  box-shadow: 0 0 1px rgba(0,0,0,0.3);
+}
+
+/* Optional: center buttons in full-width control rows */
+.ctrl-field > .ctrl-button,
+.ctrl-field > div > .ctrl-button {
+  margin: 0.25rem auto;
+  display: block;
 }

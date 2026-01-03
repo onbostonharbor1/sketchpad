@@ -163,6 +163,42 @@ async function processDomain(domain, log) {
   }
 }
 
+/* ============================================================
+   NEW: prune logfiles (keep only most recent N)
+=========================================================== */
+function pruneLogFiles(dir, keepCount) {
+  if (typeof dir !== "string" || dir.trim() === "") {
+    throw new Error("pruneLogFiles: dir missing/invalid");
+  }
+  if (typeof keepCount !== "number" || keepCount < 1) {
+    throw new Error("pruneLogFiles: keepCount missing/invalid");
+  }
+
+  // Only prune the logs created by THIS script.
+  const re = /^newGalleryImages_\d{4}-\d{2}-\d{2}T\d{2}-\d{2}-\d{2}\.txt$/;
+
+  const files = fs
+    .readdirSync(dir)
+    .filter((name) => re.test(name))
+    .sort((a, b) => a.localeCompare(b)); // timestamp is in filename → lexical sort works
+
+  // Keep newest keepCount; delete the rest (oldest first).
+  const toDelete = files.slice(0, Math.max(0, files.length - keepCount));
+
+  for (const name of toDelete) {
+    const full = path.join(dir, name);
+
+    // fail-fast: must be a file we can delete
+    if (!fs.statSync(full).isFile()) {
+      throw new Error("pruneLogFiles: not a file: " + full);
+    }
+
+    fs.unlinkSync(full);
+  }
+} // end pruneLogFiles
+
+
+
 async function main() {
   ensureDir(LOG_DIR);
 
@@ -184,10 +220,17 @@ async function main() {
   } catch (err) {
     log.push("\nFATAL ERROR:\n" + err.toString());
     fs.writeFileSync(logPath, log.join("\n"), "utf8");
+
+    // NEW: keep only the most recent 10 log files
+    pruneLogFiles(LOG_DIR, 10);
+
     throw err;
   }
 
   fs.writeFileSync(logPath, log.join("\n"), "utf8");
+
+  // NEW: keep only the most recent 10 log files
+  pruneLogFiles(LOG_DIR, 10);
 }
 
 main();

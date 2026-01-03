@@ -48,5 +48,30 @@
     "filename": "twoEllipses",
     "path": "twoEllipses.js",
     "title": "Two Ellipses"
+  },
+  {
+    "filename": "armsInCircles",
+    "path": "armsInCircles.js",
+    "title": "Arms In Circles"
+  },
+  {
+    "filename": "gradientCircularParabola",
+    "path": "gradientCircularParabola.js",
+    "title": "Gradient Circular Parabola"
+  },
+  {
+    "filename": "linesInThree",
+    "path": "linesInThree.js",
+    "title": "Lines In Three Circles"
+  },
+  {
+    "filename": "threeEllipses",
+    "path": "threeEllipses.js",
+    "title": "Three Within Ellipse"
+  },
+  {
+    "filename": "whirlsInCircle",
+    "path": "whirlsInCircle.js",
+    "title": "Whirls In Circle"
   }
 ]

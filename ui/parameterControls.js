@@ -227,13 +227,19 @@ function buildScriptParameterData(sourceInfo) {
   // ---------------------------------------------------------
   // Normalize script parameter schema exactly the same way
   // as Draw parameters so rendering code can be shared.
+  //
+  // IMPORTANT:
+  // Button controls require def.action (function or string).
+  // The normalized item MUST preserve it, because it is not a
+  // “value” field and it may not be JSON-safe.
   // ---------------------------------------------------------
   return keys.map((key) => {
+
     const def = schema[key];
 
     const value = sourceInfo.parameters?.[key] ?? def.default ?? "";
 
-    return {
+    const item = {
       key: key,                         // parameter identifier
       label: def.label || key,          // UI label
       widget: def.widget || def.type || "text",
@@ -242,10 +248,23 @@ function buildScriptParameterData(sourceInfo) {
       step: def.step ?? null,
       options: def.options ?? null,
       value: value,                     // current script value
-      default: def.default ?? null,
+      default: def.default ?? null
     };
+
+    // -------------------------------------------------------
+    // Button-only metadata that must be preserved in memory.
+    // -------------------------------------------------------
+    if (item.widget === "button") {
+      item.action = def.action;               // function OR string
+      item.redraw = def.redraw ?? false;      // optional
+    }
+
+    return item;
+
   });
 } // end buildScriptParameterData
+
+
 
 /* ===========================================================
    renderParameterControls()
@@ -326,6 +345,62 @@ function buildScriptParameterData(sourceInfo) {
 =========================================================== */
 
 
+/* ===========================================================
+   renderParameterControls(sourceInfo, controlData, targetTabId)
+   -----------------------------------------------------------
+   GENERIC DOM RENDERER FOR PARAMETER CONTROLS
+
+   WHAT THIS FUNCTION DOES
+   -----------------------
+   1. Locates the active tab’s Action Area container: #action
+   2. Clears that area (destructive rebuild)
+   3. Creates a new controls container (#drawControls)
+   4. Renders each control in controlData using buildSingleControl()
+   5. Appends each resulting field to #drawControls
+   6. Special-case: skip null fields (hidden controls)
+
+   TAB ENVIRONMENT (WHERE IT WRITES)
+   --------------------------------
+   This function writes ONLY to DOM under:
+
+       <div id="action"> ... </div>
+
+   The meaning of #action depends on which top-level tab is active.
+
+   • Draw tab:
+       - #action is the left-side controls panel for the Draw tab
+       - Controls typically drive live redraw to #sketchpad canvas
+
+   • Scripts/Tools tab:
+       - #action is the controls panel for script parameters
+       - Controls configure scripts; script output usually goes to #text
+
+   • Other/future tabs:
+       - #action is still the designated “Action Area”
+       - This renderer is tab-agnostic; behavior depends on handlers
+
+   IMPORTANT ARCHITECTURAL CONTRACT
+   --------------------------------
+   • #action MUST exist for the active tab layout.
+   • This function assumes that the UI shell for the active tab
+     has already been created by that tab’s init/restore logic.
+   • This function does NOT create tab structure; it only fills #action.
+   • This function is destructive: it clears #action and rebuilds
+     controls every time it runs.
+   • This function does NOT update uiState directly.
+     It only creates DOM controls; event wiring is inside
+     buildSingleControl() (or helpers called by it).
+   • targetTabId is passed through to buildSingleControl() so that
+     control builders can vary behavior per tab (e.g., change handlers).
+
+   NOTE ABOUT THE "MINIMAL EDIT"
+   -----------------------------
+   Hidden controls return null from buildSingleControl().
+   This renderer must skip appending those null fields so that:
+     - no empty rows appear
+     - hidden controls do not consume DOM space
+
+=========================================================== */
 /* ===========================================================
    renderParameterControls(sourceInfo, controlData, targetTabId)
    -----------------------------------------------------------
@@ -483,41 +558,26 @@ function renderParameterControls(
 
     // -------------------------------------------------------
     // Lookup the schema definition for this specific parameter.
-    // If missing, def will be undefined and buildSingleControl()
-    // may throw (fail-fast) or handle it (depending on your style).
     // -------------------------------------------------------
     const def = schemaSource[item.key];
 
     // -------------------------------------------------------
     // BUILD ONE CONTROL FIELD
     //
-    // buildSingleControl() is the per-control factory.
-    // It is responsible for:
-    //   - creating the DOM for the control row
-    //   - wiring events
-    //   - tab-specific behaviors based on targetTabId
-    //
-    // ENVIRONMENT:
-    //   Returned value should be a DOM element representing
-    //   one complete control row/field — or null if hidden.
+    // CHANGE (BUTTON ONLY):
+    //   For button controls, pass the FULL normalized item
+    //   so action/redraw metadata survives normalization.
     // -------------------------------------------------------
     const field = buildSingleControl(
-      sourceInfo,     // context object (tabState or scriptInfo)
-      item.key,       // parameter name
-      def,            // schema definition for this parameter
-      item.value,     // current value (already resolved earlier)
-      targetTabId     // tab environment hint for handlers
+      sourceInfo,
+      item.key,
+      def,
+      (item.widget === "button") ? item : item.value,
+      targetTabId
     );
 
     // -------------------------------------------------------
-    // HIDDEN CONTROL RULE (MINIMAL EDIT)
-    //
-    // Hidden controls return null so they produce no DOM.
-    // This prevents empty rows and keeps layout stable.
-    //
-    // ENVIRONMENT:
-    //   If field is non-null, it is appended into:
-    //     #action → #drawControls
+    // HIDDEN CONTROL RULE
     // -------------------------------------------------------
     if (field) controlsDiv.appendChild(field);
   });
@@ -525,16 +585,29 @@ function renderParameterControls(
 
 
 
+
 /* ------------------------------------------------------------
-   buildSingleControl() — MINIMAL EDIT
-   - Add a new case: "hidden"
+   buildSingleControl() — UPDATE
+   - Add a new case: "radio"
 ------------------------------------------------------------ */
 function buildSingleControl(info, key, def, value, tabId) {
+
   // Hidden controls do not render a field at all.
-  // This keeps the "controls list drives keys" model intact
-  // without displaying a UI element.
   if (def.widget === "hidden") {
     return setHiddenControl(info, key, def, value, tabId);
+  }
+
+  // ----------------------------------------------------------
+  // staticText controls can be conditionally suppressed without
+  // creating an empty row.
+  //
+  // If def.showKey exists and the corresponding parameter is false,
+  // we return null so renderParameterControls() skips it.
+  // ----------------------------------------------------------
+  if (def.widget === "staticText") {
+    if (def.showKey) {
+      if (info.parameters[def.showKey] !== true) return null;
+    }
   }
 
   const field = document.createElement("div");
@@ -549,11 +622,38 @@ function buildSingleControl(info, key, def, value, tabId) {
     case "range":
       setRangeControl(field, label, def, value, info, key, tabId);
       break;
+
+    // inside buildSingleControl() switch
+    case "rangeHeader":
+      setRangeHeaderControl(field, label, def, value, info, key, tabId);
+      break;
+
     case "checkbox":
       setCheckboxControl(field, label, def, value, info, key, tabId);
       break;
+
     case "select":
       setSelectControl(field, label, def, value, info, key, tabId);
+      break;
+
+    case "button": {
+      // Button controls: value is expected to be the FULL normalized item.
+      const item = value;
+
+      const def2 = Object.assign({}, def);
+      def2.action = item.action;
+      def2.redraw = item.redraw;
+
+      setButtonControl(field, label, def2, null, info, key, tabId);
+      break;
+    }
+
+    case "staticText":
+      setStaticTextControl(field, label, def, value, info, key, tabId);
+      break;
+
+    case "radio":
+      setRadioControl(field, label, def, value, info, key, tabId);
       break;
 
     case "pointPicker":
@@ -568,6 +668,7 @@ function buildSingleControl(info, key, def, value, tabId) {
     case "colorPicker":
       setColorControl(field, label, def, value, info, key, tabId);
       break;
+
     case "text":
     default:
       setDefaultControl(field, label, def, value, info, key, tabId);
@@ -575,6 +676,7 @@ function buildSingleControl(info, key, def, value, tabId) {
   }
 
   return field;
+
 } // end buildSingleControl
 
 
@@ -591,11 +693,119 @@ function setHiddenControl(info, key, def, value, tabId) {
 } // end setHiddenControl
 
 
+/* ------------------------------------------------------------
+   setRangeHeaderControl()
+
+   DESCRIPTION
+   -----------
+   Alternate range control UI:
+     - header line: "Label: <value>"
+     - slider below (full width)
+     - no min/max/readout row
+
+   PURPOSE
+   -------
+   Match the “black-background” style UI shown in your reference.
+
+   REQUIRED
+   --------
+   - info.parameters exists
+   - info.onParamChange() exists
+   - info.redrawHandler() exists
+
+------------------------------------------------------------ */
+function setRangeHeaderControl(field, _label, def, value, info, key, tabId) {
+
+  // ----------------------------------------------------------
+  // FAIL-FAST: required structures
+  // ----------------------------------------------------------
+  if (!field) throw new Error("setRangeHeaderControl: field missing");
+  if (!def) throw new Error("setRangeHeaderControl: def missing for key " + key);
+  if (!info) throw new Error("setRangeHeaderControl: info missing for key " + key);
+  if (!info.parameters) throw new Error("setRangeHeaderControl: info.parameters missing for key " + key);
+  if (typeof info.onParamChange !== "function") throw new Error("setRangeHeaderControl: info.onParamChange is not a function");
+  if (typeof info.redrawHandler !== "function") throw new Error("setRangeHeaderControl: info.redrawHandler is not a function");
+  if (!tabId) throw new Error("setRangeHeaderControl: tabId missing");
+  if (!key) throw new Error("setRangeHeaderControl: key missing");
+
+  // ----------------------------------------------------------
+  // Defaults (no ?? / no optional chaining)
+  // ----------------------------------------------------------
+  const min  = (def.min  !== undefined) ? def.min  : 0;
+  const max  = (def.max  !== undefined) ? def.max  : 100;
+  const step = (def.step !== undefined) ? def.step : 1;
+
+  // ----------------------------------------------------------
+  // Full-row wrapper: spans BOTH grid columns
+  // ----------------------------------------------------------
+  const wrap = document.createElement("div");
+  wrap.className = "ctrl-rangehdr-wrap";
+  wrap.style.gridColumn = "1 / -1";     // << key fix: full width across the 2-col grid
+
+  // ----------------------------------------------------------
+  // Header row: label (left) + current value (right)
+  // (NO external label element for this control type)
+  // ----------------------------------------------------------
+  const head = document.createElement("div");
+  head.className = "ctrl-rangehdr-head";
+
+  const lbl = document.createElement("div");
+  lbl.className = "ctrl-rangehdr-label";
+  lbl.textContent = def.label || key;
+
+  const val = document.createElement("div");
+  val.className = "ctrl-rangehdr-value";
+  val.textContent = String(value);
+
+  head.appendChild(lbl);
+  head.appendChild(val);
+
+  // ----------------------------------------------------------
+  // Slider
+  // ----------------------------------------------------------
+  const input = document.createElement("input");
+  input.type = "range";
+  input.className = "ctrl-rangehdr";
+  input.id = tabId + "-" + key;
+  input.min = String(min);
+  input.max = String(max);
+  input.step = String(step);
+  input.value = String(value);
+
+  input.addEventListener("input", () => {
+
+    const newVal = parseFloat(input.value);
+
+    val.textContent = String(newVal);
+    info.parameters[key] = newVal;
+
+    info.onParamChange();
+    info.redrawHandler();
+
+    if (def.rebuildControls) {
+      const data = buildDrawParameterData(info);
+      renderParameterControls(info, data, tabId);
+    }
+
+  }); // end input.addEventListener
+
+  // ----------------------------------------------------------
+  // Assemble
+  // ----------------------------------------------------------
+  wrap.appendChild(head);
+  wrap.appendChild(input);
+
+  field.appendChild(wrap);
+
+} // end setRangeHeaderControl
+
+
 
 /* ------------------------------------------------------------
    setRangeControl()
 ------------------------------------------------------------ */
 function setRangeControl(field, label, def, value, info, key, tabId) {
+
   const wrapper = document.createElement("div");
   wrapper.className = "ctrl-range-wrapper";
 
@@ -625,29 +835,37 @@ function setRangeControl(field, label, def, value, info, key, tabId) {
   input.id = tabId + "-" + key;
   input.className = "ctrl-range";
 
-input.addEventListener("input", () => {
-  const newVal = parseFloat(input.value);
+  input.addEventListener("input", () => {
 
-  readout.textContent = newVal;
-  info.parameters[key] = newVal;
+    const newVal = parseFloat(input.value);
 
-  info.onParamChange();
-  info.redrawHandler();
+    readout.textContent = newVal;
+    info.parameters[key] = newVal;
 
-  if (def.rebuildControls) {
-    const data = buildDrawParameterData(info);
-    renderParameterControls(info, data, tabId);
-  }
-}); // end input.addEventListener
+    // IMPORTANT:
+    // Some scriptInfo objects do not define onParamChange().
+    // ParameterControls must be generic; do not require it.
+    if (typeof info.onParamChange === "function") {
+      info.onParamChange();
+    }
 
+    info.redrawHandler();
 
+    if (def.rebuildControls) {
+      const data = buildDrawParameterData(info);
+      renderParameterControls(info, data, tabId);
+    }
+
+  }); // end input.addEventListener
 
   wrapper.appendChild(row);
   wrapper.appendChild(input);
 
   field.appendChild(label);
   field.appendChild(wrapper);
+
 } // end setRangeControl
+
 
 /* ------------------------------------------------------------
    setCheckboxControl()
@@ -1091,7 +1309,310 @@ function setPointPickerArrayControl(field, label, def, value, info, key, tabId) 
   }
 } // end setPointPickerArrayControl
 
+/* ------------------------------------------------------------
+   setRadioControl()
 
+   DESCRIPTION
+   -----------
+   Renders a radio-button group driven by def.options.
+   Exactly one option is selectable at a time.
+
+   CONTROL SCHEMA (USAGE)
+   ---------------------
+   Example controls block:
+
+     controls: {
+       mode: {
+         label: "Mode",
+         widget: "radio",
+         options: [
+           "linear",
+           "radial",
+           { value: "spiral", label: "Spiral Mode" }
+         ],
+         default: "linear",
+         rebuildControls: false   // optional
+       }
+     }
+
+   OPTIONS FORMAT
+   --------------
+   def.options may be:
+     • ["A", "B", "C"]
+     • [
+         { value: "A", label: "Option A" },
+         { value: "B", label: "Option B" }
+       ]
+
+   VALUE RULES
+   -----------
+   • Stored in info.parameters[key]
+   • Stored value is:
+       - the string itself (for string options)
+       - opt.value (for object options)
+   • DOM radio values are strings; matching is done as strings,
+     but stored values preserve original typing where possible.
+
+   RUNTIME BEHAVIOR
+   ----------------
+   • Selecting a radio updates info.parameters[key]
+   • Calls info.onParamChange() if defined
+   • Calls info.redrawHandler()
+   • If def.rebuildControls === true:
+       - control panel is rebuilt after change
+
+   FAIL-FAST CONDITIONS
+   --------------------
+   • def.options missing or not an array
+   • def.options empty
+   • option value missing or undefined
+------------------------------------------------------------ */
+
+
+function setRadioControl(field, label, def, value, info, key, tabId) {
+
+  if (!def.options || !Array.isArray(def.options) || def.options.length === 0) {
+    throw new Error("setRadioControl: def.options missing/invalid for key " + key);
+  }
+
+  // Group container (keeps radios aligned as a single control row)
+  const group = document.createElement("div");
+  group.className = "ctrl-radio-group";
+
+  // A stable name groups the radios so only one can be selected.
+  const groupName = tabId + "-" + key;
+
+  for (let i = 0; i < def.options.length; i++) {
+
+    const opt = def.options[i];
+
+    let optValue;
+    let optLabel;
+
+    if (typeof opt === "object" && opt !== null) {
+      optValue = opt.value;
+      optLabel = opt.label ?? String(opt.value);
+    } else {
+      optValue = opt;
+      optLabel = String(opt);
+    }
+
+    if (optValue === undefined || optValue === null) {
+      throw new Error("setRadioControl: option value missing for key " + key);
+    }
+
+    const row = document.createElement("div");
+    row.className = "ctrl-radio-row";
+
+    const input = document.createElement("input");
+    input.type = "radio";
+    input.name = groupName;
+    input.id = groupName + "-" + i;
+    input.className = "ctrl-radio";
+    input.value = String(optValue);
+
+    // Compare as strings for consistent matching (DOM radio values are strings).
+    input.checked = String(value) === String(optValue);
+
+    const lab = document.createElement("label");
+    lab.className = "ctrl-radio-label";
+    lab.htmlFor = input.id;
+    lab.textContent = optLabel;
+
+    input.addEventListener("change", () => {
+      if (!input.checked) return;
+
+      // Store original typed value when possible:
+      // - if opt was an object, store opt.value as-is
+      // - if opt was a string, store the string
+      info.parameters[key] = (typeof opt === "object" && opt !== null) ? optValue : String(optValue);
+
+      if (typeof info.onParamChange === "function") info.onParamChange();
+      info.redrawHandler();
+
+      if (def.rebuildControls) {
+        const data = buildDrawParameterData(info);
+        renderParameterControls(info, data, tabId);
+      }
+    }); // end input.addEventListener
+
+    row.appendChild(input);
+    row.appendChild(lab);
+
+    group.appendChild(row);
+  }
+
+  field.appendChild(label);
+  field.appendChild(group);
+
+} // end setRadioControl
+
+/* ------------------------------------------------------------
+   setButtonControl()
+
+   DESCRIPTION
+   -----------
+   Renders a push-button control that invokes a command.
+
+   LAYOUT RULE
+   -----------
+   Buttons do NOT use the external label element.
+   They must either:
+     A) appear in column 2 (normal control column), or
+     B) span both columns (full-row), typically centered.
+
+   We support:
+     def.fullRow === true  -> span both columns (1 / -1)
+     otherwise             -> column 2
+
+   COMPATIBILITY (WITH YOUR EXISTING CONVERSION NOTES)
+   ---------------------------------------------------
+   Button actions must be preserved IN MEMORY.
+
+   Style A:
+     def.action is a function
+
+   Style B:
+     def.action is a string, resolved via info.actions[def.action]
+
+   OPTIONAL FLAGS
+   --------------
+   def.redraw === true
+     If set, info.redrawHandler() is called after the action.
+
+------------------------------------------------------------ */
+function setButtonControl(field, label, def, value, info, key, tabId) {
+
+  // ----------------------------------------------------------
+  // Resolve the action function (fail-fast)
+  // ----------------------------------------------------------
+  let fn = null;
+
+  // Style A: function-valued def.action (in-memory contract)
+  if (typeof def.action === "function") {
+    fn = def.action;
+  }
+
+  // Style B: string-valued def.action that indexes info.actions
+  else if (typeof def.action === "string") {
+
+    const actions = info.actions;
+    if (!actions || typeof actions !== "object") {
+      throw new Error("setButtonControl: info.actions missing for key " + key);
+    }
+
+    fn = actions[def.action];
+    if (typeof fn !== "function") {
+      throw new Error(
+        "setButtonControl: action '" + def.action + "' not found or not a function"
+      );
+    }
+  }
+
+  // Anything else is invalid
+  else {
+    throw new Error("setButtonControl: def.action missing/invalid for key " + key);
+  }
+
+  // ----------------------------------------------------------
+  // Build the button
+  // ----------------------------------------------------------
+  const button = document.createElement("button");
+  button.type = "button";
+  button.className = "ctrl-button";
+  button.textContent = def.label || key;
+  button.id = tabId + "-" + key;
+
+  // ----------------------------------------------------------
+  // Grid placement:
+  //   - default: column 2 (control column)
+  //   - fullRow: span both columns
+  // ----------------------------------------------------------
+  if (def.fullRow === true) {
+    button.style.gridColumn = "1 / -1";
+    button.style.justifySelf = "center";
+  } else {
+    button.style.gridColumn = "2";
+    button.style.justifySelf = "start";
+  }
+
+  // ----------------------------------------------------------
+  // Click behavior
+  // ----------------------------------------------------------
+  button.addEventListener("click", () => {
+
+    // Provide info/key/def for in-memory action functions
+    fn.call(info, info, key, def);
+
+    if (def.redraw === true) {
+      if (typeof info.redrawHandler !== "function") {
+        throw new Error("setButtonControl: redrawHandler missing");
+      }
+      info.redrawHandler();
+    }
+
+  }); // end button.addEventListener
+
+  // ----------------------------------------------------------
+  // Assemble (NO external label for buttons)
+  // ----------------------------------------------------------
+  field.appendChild(button);
+
+} // end setButtonControl
+
+
+function setStaticTextControl(field, label, def, value, info, key, tabId) {
+
+  // ----------------------------------------------------------
+  // staticText
+  //
+  // Display-only block of text in the Action panel.
+  //
+  // • No label
+  // • No parameter storage
+  // • No redraw
+  // • Text must be provided in-memory
+  //
+  // Text source:
+  //   - def.text     : string
+  //   - def.getText  : function(info, key, def) -> string
+  // ----------------------------------------------------------
+
+  let text;
+
+  if (typeof def.text === "string") {
+    text = def.text;
+  } else if (typeof def.getText === "function") {
+    text = def.getText(info, key, def);
+  } else {
+    throw new Error(
+      "setStaticTextControl: def.text or def.getText required for key " + key
+    );
+  }
+
+  // Force this control row to behave like a block, not a label+input flex row.
+  field.style.display = "block";
+
+  const box = document.createElement("div");
+  box.className = "ctrl-static-text";
+  box.id = tabId + "-" + key;
+
+  // Make it expand to full available width (fixes the “one word per line” collapse).
+  box.style.display = "block";
+  box.style.width = "100%";
+  box.style.boxSizing = "border-box";
+
+  // Preserve your explicit newlines, wrap normally.
+  box.style.whiteSpace = "pre-wrap";
+  box.style.wordBreak = "normal";
+  box.style.overflowWrap = "break-word";
+
+  box.textContent = text;
+
+  // IMPORTANT: no label appended. This control is text-only.
+  field.appendChild(box);
+
+} // end setStaticTextControl
 
 
 

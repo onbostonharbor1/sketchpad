@@ -58,6 +58,7 @@ import "./ui/draw.js";
 import "./ui/drawMenuCmds.js";
 import "./ui/figures.js";
 import "./ui/gallery.js";
+import "./ui/galleryMenuCmds.js";
 import "./ui/patterns.js";
 import "./ui/patternsMenuCmds.js";
 import "./ui/utilities.js";

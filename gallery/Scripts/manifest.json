@@ -1,7 +1,77 @@
-[ 
-      { "filename": "fig1",        "path": "fig1.js",        "title": "Four Touches" } 
-    , { "filename": "ellipseDemo", "path": "ellipseDemo.js", "title": "Ellipse Demo"} 
-    , { "filename": "fig2",        "path": "fig2.js",        "title": "Corner to Midpoint"} 
-    , { "filename": "fig3",        "path": "fig3.js",        "title": "Overlapping Corners" } 
-    , { "filename": "fig4",        "path": "fig4.js",        "title": "Four Inverse Stars" } 
-] 
+[
+  {
+    "filename": "fig1",
+    "path": "fig1.js",
+    "title": "Four Touches"
+  },
+  {
+    "filename": "ellipseDemo",
+    "path": "ellipseDemo.js",
+    "title": "Ellipse Demo"
+  },
+  {
+    "filename": "fig2",
+    "path": "fig2.js",
+    "title": "Corner to Midpoint"
+  },
+  {
+    "filename": "pursuit",
+    "path": "pursuit.js",
+    "title": "Pusuit"
+  },
+  {
+    "filename": "lissajous",
+    "path": "lissajous.js",
+    "title": "Lissajous (interactive)"
+  },
+  {
+    "filename": "PursuitSecond",
+    "path": "PursuitSecond.js",
+    "title": "Pursuit 2"
+  },
+  {
+    "filename": "pursuit3",
+    "path": "pursuit3.js",
+    "title": "Pursuit 3"
+  },
+  {
+    "filename": "pursuit4",
+    "path": "pursuit4.js",
+    "title": "Polygon Edge Weaving"
+  },
+  {
+    "filename": "pursuitStatic4",
+    "path": "pursuitStatic4.js",
+    "title": "Pursuit Static 4"
+  },
+  {
+    "filename": "pursuitDynamic4",
+    "path": "pursuitDynamic4.js",
+    "title": "Pursuit Dynamic 4"
+  },
+  {
+    "filename": "pursuitMice",
+    "path": "pursuitMice.js",
+    "title": "Pursuit Mice"
+  },
+  {
+    "filename": "ellipseCurveStitching",
+    "path": "ellipseCurveStitching.js",
+    "title": "ellipseCurveStitching"
+  },
+  {
+    "filename": "voronoi",
+    "path": "voronoi.js",
+    "title": "voronoi"
+  },
+  {
+    "filename": "nautilusInteractive",
+    "path": "nautilusInteractive.js",
+    "title": "nautilusInteractive"
+  },
+  {
+    "filename": "nautilus2",
+    "path": "nautilus2.js",
+    "title": "nautilus2"
+  }
+]

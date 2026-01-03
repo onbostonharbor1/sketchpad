@@ -53,5 +53,10 @@
     "filename": "manyParabolas",
     "path": "manyParabolas.js",
     "title": "Many Parabolas"
+  },
+  {
+    "filename": "twoPolygons",
+    "path": "twoPolygons.js",
+    "title": "twoPolygons"
   }
 ]

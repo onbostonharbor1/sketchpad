@@ -77,3 +77,14 @@ export async function nodeAddPatternScripts() {
     patternsRoot: "./patterns"
   });
 } // end nodeAddPatternScripts
+
+
+
+export async function nodeListLogFiles(limit = 10) {
+  return await nodeDispatch("listLogFiles", { limit });
+} // end nodeListLogFiles
+
+
+export async function nodeReadLogFile(name) {
+  return await nodeDispatch("readLogFile", { name });
+} // end nodeReadLogFile
