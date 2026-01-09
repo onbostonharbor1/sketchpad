@@ -20,6 +20,7 @@ window.drawRegistry_inEllipse = {
   tags: ["Ellipse", "Curve Stitch"],
   description:
     "Draws chord patterns inside an ellipse using skip, taper, and withinCirc modes.",
+  status:      "",
   hover:       "",
 
   background: null,

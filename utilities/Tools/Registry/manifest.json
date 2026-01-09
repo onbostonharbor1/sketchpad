@@ -1,4 +1,4 @@
-[ 
-    { "filename": "validateDrawRegistry", "path": "Registry/validateDrawRegistry.js",
-      "title": "Validate Draw Registry"} 
-] 
+[
+    { "filename": "validateDrawRegistry", "path": "validateDrawRegistry.js",   "status": "current",
+      "title": "Validate Draw Registry"}
+]

@@ -1,22 +1,101 @@
-[ 
-  { "filename": "260", "path": "working/260.jpg" } 
-, { "filename": "260a", "path": "working/260a.JPG" } 
-, { "filename": "270", "path": "working/270.JPG" } 
-, { "filename": "272", "path": "working/272.JPG" } 
-, { "filename": "275", "path": "working/275.jpg" } 
-, { "filename": "280", "path": "working/280.jpg" } 
-, { "filename": "281", "path": "working/281.jpg" } 
-, { "filename": "282", "path": "working/282.jpg" } 
-, { "filename": "291", "path": "working/291.jpg" } 
-, { "filename": "292", "path": "working/292.jpg" } 
-, { "filename": "308", "path": "working/308.jpg" } 
-, { "filename": "309", "path": "working/309.jpg" } 
-, { "filename": "312", "path": "working/312.jpg" } 
-, { "filename": "318", "path": "working/318.jpg" } 
-, { "filename": "IMG_8362", "path": "working/IMG_8362.JPG" } 
-, { "filename": "IMG_8488", "path": "working/IMG_8488.JPG" } 
-, { "filename": "IMG_8490", "path": "working/IMG_8490.JPG" } 
-, { "filename": "206", "path": "working/206.PNG" } 
-, { "filename": "274", "path": "working/274.PNG" } 
-, { "filename": "277", "path": "working/277.PNG" } 
-] 
+[
+  {
+    "filename": "206",
+    "path": "206.PNG"
+  },
+  {
+    "filename": "260",
+    "path": "260.jpg",
+    "title": "260.jpg"
+  },
+  {
+    "filename": "260a",
+    "path": "260a.JPG",
+    "title": "260a.JPG"
+  },
+  {
+    "filename": "270",
+    "path": "270.JPG",
+    "title": "270.JPG"
+  },
+  {
+    "filename": "272",
+    "path": "272.JPG",
+    "title": "272.JPG"
+  },
+  {
+    "filename": "274",
+    "path": "274.PNG",
+    "title": "274.PNG"
+  },
+  {
+    "filename": "275",
+    "path": "275.jpg",
+    "title": "275.jpg"
+  },
+  {
+    "filename": "277",
+    "path": "277.PNG",
+    "title": "277.PNG"
+  },
+  {
+    "filename": "280",
+    "path": "280.jpg",
+    "title": "280.jpg"
+  },
+  {
+    "filename": "281",
+    "path": "281.jpg",
+    "title": "281.jpg"
+  },
+  {
+    "filename": "282",
+    "path": "282.jpg",
+    "title": "282.jpg"
+  },
+  {
+    "filename": "291",
+    "path": "291.jpg",
+    "title": "291.jpg"
+  },
+  {
+    "filename": "292",
+    "path": "292.jpg",
+    "title": "292.jpg"
+  },
+  {
+    "filename": "308",
+    "path": "308.jpg",
+    "title": "308.jpg"
+  },
+  {
+    "filename": "309",
+    "path": "309.jpg",
+    "title": "309.jpg"
+  },
+  {
+    "filename": "312",
+    "path": "312.jpg",
+    "title": "312.jpg"
+  },
+  {
+    "filename": "318",
+    "path": "318.jpg",
+    "title": "318.jpg"
+  },
+  {
+    "filename": "IMG_8362",
+    "path": "IMG_8362.JPG",
+    "title": "IMG_8362.JPG"
+  },
+  {
+    "filename": "IMG_8488",
+    "path": "IMG_8488.JPG",
+    "title": "IMG_8488.JPG"
+  },
+  {
+    "filename": "IMG_8490",
+    "path": "IMG_8490.JPG",
+    "title": "IMG_8490.JPG"
+  }
+]

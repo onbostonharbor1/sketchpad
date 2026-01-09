@@ -59,26 +59,6 @@ export async function nodeDispatch(requestName, payload = {}) {
 } // end nodeDispatch
 
 
-/* ===========================================================
-   nodeAddPatternScripts()
-
-   DESCRIPTION
-   -----------
-   Convenience wrapper used by the Utilities command:
-     “Add Pattern Files”
-
-   Returns the service report:
-     { request, patternsRoot, categoriesScanned, updatedCategories }
-
-   =========================================================== */
-
-export async function nodeAddPatternScripts() {
-  return await nodeDispatch("addPatternScripts", {
-    patternsRoot: "./patterns"
-  });
-} // end nodeAddPatternScripts
-
-
 
 export async function nodeListLogFiles(limit = 10) {
   return await nodeDispatch("listLogFiles", { limit });
@@ -88,3 +68,8 @@ export async function nodeListLogFiles(limit = 10) {
 export async function nodeReadLogFile(name) {
   return await nodeDispatch("readLogFile", { name });
 } // end nodeReadLogFile
+
+
+export async function nodeRebuildAndValidateManifests() {
+  return await nodeDispatch("manifestMaintenance", {});
+} // end nodeRebuildAndValidateManifests

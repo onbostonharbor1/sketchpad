@@ -10,6 +10,7 @@ window.drawRegistry_bird = {
   source:      "internal",
   tags:        ["Geometry", "Primitive"],
   description: "Draws two independent lines sharing a common style.",
+  status:      "",
   hover:       "",
 
   background: null,

@@ -1,4 +1,4 @@
-[ 
-    { "filename": "background", "path": "Backgrounds/background.js",
-      "title":    "Basic background"} 
-] 
+[
+    { "filename": "background", "path": "background.js",
+      "title":    "Basic background"}
+]

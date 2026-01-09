@@ -13,7 +13,8 @@ window.drawRegistry_circularParabola = {
     source:       "internal",
     tags:         ["Curve Stitch"],
     description:  "Parabola with arm on defining circle",
-  hover:       "",
+    status:      "",
+    hover:       "",
 
     // -- visual styling ---
     background: null,

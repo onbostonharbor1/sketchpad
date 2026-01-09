@@ -2,88 +2,189 @@
    ------------------------------------------------------------
    Universal Script Loader + Execution Helpers
    ------------------------------------------------------------
-   Used by:
-     • Patterns tab      (canvas)
-     • Gallery Scripts   (canvas)
-     • Utilities → Lab   (canvas)
-     • Utilities → Tools (text)
+   PURPOSE
+   -------
+   This module is the *single execution pipeline* for all
+   runnable scripts in Sketchpad.
 
-   Provides:
-     1) loadScriptModule()     – dynamic ES-module loader
-     2) executeScriptToCanvas() – runPattern()/drawPattern() to canvas
-     3) executeScriptToText()   – runPattern()/render() to #text
+   It deliberately does NOT:
+     - interpret script meaning
+     - manage UI state
+     - decide where scripts come from
+
+   It ONLY:
+     - loads ES modules by path
+     - executes them in a controlled, deterministic way
+     - routes output either to the canvas or to #text
+
+   ------------------------------------------------------------
+   USED BY
+   -------
+     • Patterns tab      → canvas
+     • Gallery Scripts   → canvas
+     • Utilities → Lab   → canvas
+     • Utilities → Tools → text
+
+   ------------------------------------------------------------
+   CONTRACT
+   --------
+   A script must export ONE of:
+     - runPattern()
+     - drawPattern(params)
+     - render()   (text-only utilities)
+
+   ------------------------------------------------------------
+   FAIL-FAST PHILOSOPHY
+   -------------------
+   Any ambiguity (missing file, wrong MIME type, missing export)
+   MUST throw immediately with a readable error.
    ------------------------------------------------------------
 */
 
+/*
+   Canvas reset helper.
+   This MUST be a concrete file import (".js") so the browser
+   never falls back to index.html.
+*/
+import { resetCanvas } from "/draw/drawState.js";
+
 
 /* ===========================================================
-   loadScriptModule(modulePath)
-   -----------------------------------------------------------
-   Dynamically loads an ES module with fail-fast behavior.
+   loadScriptModule(path)
+   ===========================================================
+   RESPONSIBILITY
+   --------------
+   Given a rooted path like:
+     "/patterns/foo/bar.js"
 
-   Arguments:
-     modulePath (string) – relative module URL (e.g. "../patterns/foo.js")
+   This function:
+     1. Normalizes the path
+     2. Cache-busts it (dev only)
+     3. PROBE-FETCHES it
+        - verifies HTTP success
+        - verifies JavaScript MIME type
+     4. Dynamically imports the module
+     5. Verifies it exports runPattern()
 
-   Returns:
-     The imported module object.
+   WHY PROBE FETCH?
+   ---------------
+   Vite returns index.html (text/html) when a path is wrong.
+   Dynamic import alone produces misleading MIME errors.
 
-   Notes:
-     - Uses @vite-ignore to prevent Vite from rewriting paths.
-     - Does not handle caching or execution.
+   Probe fetch turns that into:
+     "non-JS response" with a visible HTML snippet.
+
+   This is the *only reliable existence check* in browser code.
 =========================================================== */
-export async function loadScriptModule(modulePath) {
-  try {
-    // MUST load exactly as written, no optional chaining.
-    const mod = await import(/* @vite-ignore */ modulePath);
-    return mod;
-  } catch (err) {
-    console.error("loadScriptModule error:", err);
-    throw new Error(`Failed to load module: ${modulePath}`);
+export async function loadScriptModule(path) {
+  // --- defensive input validation ---
+  if (typeof path !== "string" || path.trim() === "") {
+    throw new Error("loadScriptModule: path must be a non-empty string");
   }
-} // end loadScriptModule
 
+  let spec = path.trim();
+
+  // --- normalize to a rooted browser URL ---
+  // Home, Patterns, Gallery all pass rooted paths
+  if (!spec.startsWith("/")) spec = "/" + spec;
+
+  // --- remove accidental double slashes ---
+  while (spec.startsWith("//")) spec = spec.slice(1);
+
+  // --- cache busting ---
+  // Prevents “clicked B but got A” during dev
+  const bust = "t=" + Date.now();
+  spec = (spec.indexOf("?") >= 0) ? (spec + "&" + bust) : (spec + "?" + bust);
+
+  // ------------------------------------------------------------
+  // PROBE FETCH
+  // ------------------------------------------------------------
+  // This is NOT redundant.
+  // It catches:
+  //   - wrong path
+  //   - wrong casing
+  //   - missing file
+  //   - server fallback to index.html
+  // BEFORE import() gives a useless MIME error.
+  // ------------------------------------------------------------
+  const res = await fetch(spec, { cache: "no-store" });
+
+  const ct = (res.headers.get("content-type") || "").toLowerCase();
+
+  // --- HTTP-level failure ---
+  if (!res.ok) {
+    throw new Error(
+      "loadScriptModule: fetch failed " + res.status +
+      " for " + spec +
+      " (content-type: " + ct + ")"
+    );
+  }
+
+  // --- MIME validation ---
+  // JS must be application/javascript or equivalent.
+  // If we get HTML here, it means:
+  //   → Vite served index.html
+  //   → the path is wrong
+  if (ct.indexOf("javascript") === -1 && ct.indexOf("ecmascript") === -1) {
+    const body = await res.text();
+    const snippet = body.slice(0, 200).replace(/\s+/g, " ");
+    throw new Error(
+      "loadScriptModule: non-JS response for " + spec +
+      " (content-type: " + ct + ") snippet: " + snippet
+    );
+  }
+
+  // --- dynamic ES module import ---
+  // @vite-ignore is REQUIRED because the specifier is dynamic
+  const mod = await import(/* @vite-ignore */ spec);
+
+  // --- enforce execution contract ---
+  if (!mod || typeof mod.runPattern !== "function") {
+    throw new Error(
+      "loadScriptModule: module has no exported runPattern(): " + path
+    );
+  }
+
+  return mod;
+} // end loadScriptModule
 
 
 /* ===========================================================
    executeScriptToCanvas(mod, title)
-   -----------------------------------------------------------
-   Executes a script into the shared drawing canvas.
+   ===========================================================
+   RESPONSIBILITY
+   --------------
+   Execute a previously-loaded module into the shared canvas.
 
-   Used by:
-     • Patterns tab
-     • Gallery tab (Scripts)
-     • Utilities → Lab
+   THIS FUNCTION:
+     - clears #sketchpad
+     - reattaches the shared canvas
+     - resets drawing state
+     - runs the script ONCE
 
-   Behavior:
-     - Clears #sketchpad
-     - Appends window.drawCanvas
-     - Clears canvas to white
-     - Executes:
-         mod.runPattern()   OR
-         mod.drawPattern(params)
-
-   Notes:
-     - Never rewrites existing draw algorithms.
-     - Matches Patterns/Gallery behavior exactly.
+   IMPORTANT
+   ---------
+   Multiple draw calls *inside* runPattern() are expected
+   and correct. This function resets ONCE per execution.
 =========================================================== */
 export function executeScriptToCanvas(mod, title) {
   const pad = document.getElementById("sketchpad");
   if (!pad) throw new Error("executeScriptToCanvas: #sketchpad not found");
 
-  // Clear region and insert shared canvas
+  // --- ensure no stale DOM remains ---
   pad.innerHTML = "";
   pad.appendChild(window.drawCanvas);
 
-  // Reset canvas to white background
-  ctx.fillStyle = "#ffffff";
-  ctx.fillRect(0, 0, drawCanvas.width, drawCanvas.height);
+  // --- reset drawing state deterministically ---
+  resetCanvas();
 
-  // ---- Execute drawing code (fail-fast style) ----
+  // --- primary execution path ---
   if (typeof mod.runPattern === "function") {
     mod.runPattern();
     return;
   }
 
+  // --- secondary legacy-style path ---
   if (typeof mod.drawPattern === "function") {
     let params = {};
     if (typeof mod.initPattern === "function") {
@@ -93,31 +194,29 @@ export function executeScriptToCanvas(mod, title) {
     return;
   }
 
+  // --- nothing usable found ---
   throw new Error(
-    "Script module contains neither runPattern() nor drawPattern()"
+    "executeScriptToCanvas: module has neither runPattern() nor drawPattern()"
   );
 } // end executeScriptToCanvas
 
 
-
 /* ===========================================================
    executeScriptToText(mod, title)
-   -----------------------------------------------------------
-   Executes a script and writes **HTML output** into #text.
+   ===========================================================
+   RESPONSIBILITY
+   --------------
+   Execute a script that produces TEXT/HTML output
+   (Utilities → Tools).
 
-   Used by:
-     • Utilities → Tools
+   DOES NOT TOUCH:
+     - canvas
+     - drawing state
 
-   Behavior:
-     - Clears #text
-     - Executes:
-         mod.runPattern()    → may return HTML string
-         mod.render()        → returns HTML string
-     - Inserts HTML into #text
-
-   Notes:
-     - Does not modify canvas.
-     - Tools scripts may return either HTML or plain text.
+   EXPECTED BEHAVIOR
+   -----------------
+   - runPattern() may return HTML
+   - render() may return HTML
 =========================================================== */
 export function executeScriptToText(mod, title) {
   const text = document.getElementById("text");
@@ -125,19 +224,18 @@ export function executeScriptToText(mod, title) {
 
   text.innerHTML = "";
 
-  // ---- Preferred: runPattern() returns HTML ----
+  // --- preferred contract ---
   if (typeof mod.runPattern === "function") {
     const out = mod.runPattern();
     if (typeof out === "string") {
       text.innerHTML = out;
       return;
     }
-    // If nothing returned → show placeholder
     text.innerHTML = "<p>(Script executed — no HTML returned)</p>";
     return;
   }
 
-  // ---- Alternative: render() produces HTML ----
+  // --- alternate legacy contract ---
   if (typeof mod.render === "function") {
     const html = mod.render();
     if (typeof html === "string") {
@@ -148,10 +246,9 @@ export function executeScriptToText(mod, title) {
     return;
   }
 
-  // No supported entry point
+  // --- nothing usable ---
   text.innerHTML = "<p style='color:red'>(No usable output from script)</p>";
   throw new Error(
     "Script has neither runPattern() nor render() — cannot output to text"
   );
 } // end executeScriptToText
-

@@ -3,72 +3,101 @@
    -----------------------------------------------------------
    Displays a dropdown listing all drawRegistry entries.
    Selecting an entry validates it and prints the results into #text.
+
+   UPDATED:
+   --------
+   Uses parameterControls.js for the dropdown UI (select widget).
+
 =========================================================== */
 
-export function runPattern() {
-  const actionDiv = document.getElementById("action");
-  const textDiv = document.getElementById("text");
-
-  if (!actionDiv || !textDiv) {
-    console.error("validateDrawRegistry: missing #action or #text");
-    return;
-  }
-
-  // clear output panels
-  actionDiv.innerHTML = "";
-  textDiv.innerHTML = "";
-
-  // ---------------------------------------------------------
-  // Build dropdown using ONLY existing ctrl-field CSS
-  // ---------------------------------------------------------
-  const keys = Object.keys(window.drawRegistry);
-  const params = { target: keys[0] };
-
-  const row = document.createElement("div");
-  row.className = "ctrl-field";
-
-  const label = document.createElement("label");
-  label.textContent = "Validate:";
-
-  const select = document.createElement("select");
-
-  keys.forEach(k => {
-    const opt = document.createElement("option");
-    opt.value = k;
-    opt.textContent = k;
-    select.appendChild(opt);
-  });
-
-  select.value = params.target;
-
-  select.addEventListener("input", () => {
-    params.target = select.value;
-    validate(params.target, textDiv);
-  });
-
-  row.appendChild(label);
-  row.appendChild(select);
-  actionDiv.appendChild(row);
-
-  // ---------------------------------------------------------
-  // Initial validation
-  // ---------------------------------------------------------
-  validate(params.target, textDiv);
-
-  return null;
-} // end runPattern
+import { buildParameterControls } from "/ui/parameterControls.js";
 
 
 /* ===========================================================
-   validate(target, textDiv)
+   runPattern()
+=========================================================== */
+export function runPattern() {
+
+  const actionDiv = document.getElementById("action");
+  const textDiv   = document.getElementById("text");
+
+  if (!actionDiv) throw new Error("validateDrawRegistry: missing #action");
+  if (!textDiv)   throw new Error("validateDrawRegistry: missing #text");
+
+  // Clear output panels (deterministic)
+  actionDiv.innerHTML = "";
+  textDiv.innerHTML   = "";
+
+  // ---------------------------------------------------------
+  // Build dropdown using parameterControls
+  // ---------------------------------------------------------
+  const keys = Object.keys(window.drawRegistry);
+  if (!keys || keys.length === 0) throw new Error("validateDrawRegistry: window.drawRegistry is empty");
+
+  const scriptInfo = {
+
+    title: "Validate drawRegistry",
+
+    controls: {
+      target: {
+        label: "Validate:",
+        widget: "select",
+        options: keys,
+        default: keys[0]
+      } // end target
+    }, // end controls
+
+    params: {
+      target: keys[0]
+    }, // end params
+
+    parameters: null,
+
+    onParamChange() {
+      // ParameterControls calls this in some flows; keep it.
+      // We do our work in redrawHandler so it always runs after changes.
+    }, // end onParamChange
+
+    redrawHandler() {
+      // Validate selected target into #text
+      validate(this.params.target, textDiv);
+    } // end redrawHandler
+
+  }; // end scriptInfo
+
+
+  // ParameterControls compatibility alias
+  scriptInfo.parameters = scriptInfo.params;
+
+  // Build controls into #action
+  buildParameterControls(
+    scriptInfo,
+    "tab-scripts",
+    true
+  );
+
+  // Initial validation
+  scriptInfo.redrawHandler();
+
+  return null;
+
+} // end runPattern
+
+
+
+/* ===========================================================
+   validate(key, textDiv)
    Core validation logic moved into its own helper function.
 =========================================================== */
 function validate(key, textDiv) {
+
+  if (!textDiv) throw new Error("validate: textDiv missing");
+
   textDiv.innerHTML = "";
 
   const reg = window.drawRegistry[key];
   if (!reg) {
-    textDiv.textContent = `No drawRegistry entry named "${key}"`;
+    textDiv.textContent = 'No drawRegistry entry named "' + key + '"';
     return;
   }
 
@@ -83,27 +112,25 @@ function validate(key, textDiv) {
 
   const lines = [];
 
-  expected.forEach(prop => {
+  expected.forEach((prop) => {
     if (Object.prototype.hasOwnProperty.call(reg, prop)) {
-      lines.push({ msg: `✔ ${prop}: present`, ok: true });
+      lines.push({ msg: "✔ " + prop + ": present", ok: true });
     } else {
-      lines.push({ msg: `❌ missing ${prop}`, ok: false });
+      lines.push({ msg: "❌ missing " + prop, ok: false });
     }
   });
 
-  Object.keys(reg).forEach(k => {
-    if (!expected.includes(k)) {
-      lines.push({ msg: `⚠ extra member: ${k}`, ok: false });
+  Object.keys(reg).forEach((k) => {
+    if (expected.indexOf(k) === -1) {
+      lines.push({ msg: "⚠ extra member: " + k, ok: false });
     }
   });
 
-  if (typeof reg.create !== "function")
-    lines.push({ msg: "❌ create is not a function", ok: false });
-  if (typeof reg.draw !== "function")
-    lines.push({ msg: "❌ draw is not a function", ok: false });
+  if (typeof reg.create !== "function") lines.push({ msg: "❌ create is not a function", ok: false });
+  if (typeof reg.draw   !== "function") lines.push({ msg: "❌ draw is not a function", ok: false });
 
   // Append results
-  lines.forEach(l => {
+  lines.forEach((l) => {
     const p = document.createElement("div");
     p.textContent = l.msg;
     p.style.color = l.ok ? "green" : "red";
@@ -117,4 +144,5 @@ function validate(key, textDiv) {
   pre.textContent = JSON.stringify(reg, null, 2);
   pre.style.whiteSpace = "pre-wrap";
   textDiv.appendChild(pre);
+
 } // end validate

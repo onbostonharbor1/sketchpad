@@ -1,0 +1,44 @@
+[
+  {
+    "filename": "pursuit",
+    "path": "pursuit.js",
+    "title": "Pusuit"
+  },
+  {
+    "filename": "Pursuit2",
+    "path": "Pursuit2.js",
+    "title": "Pursuit Curves in Polygon"
+  },
+  {
+    "filename": "pursuit3",
+    "path": "pursuit3.js",
+    "title": "Pursuit 3"
+  },
+  {
+    "filename": "pursuit4",
+    "path": "pursuit4.js",
+    "title": "Polygon Edge Weaving"
+  },
+  {
+    "filename": "pursuitStatic5",
+    "path": "pursuitStatic5.js",
+    "title": "Pursuit Static 5"
+  },
+  {
+    "filename": "pursuitDynamic5",
+    "path": "pursuitDynamic5.js",
+    "status": "favorite",
+    "title": "Pursuit Dynamic 5"
+  },
+  {
+    "filename": "pursuitMice",
+    "path": "pursuitMice.js",
+    "title": "Pursuit Mice"
+  },
+  {
+    "filename": "pursuit2",
+    "path": "pursuit2.js",
+    "title": "pursuit2.js",
+    "status": "new"
+  }
+]

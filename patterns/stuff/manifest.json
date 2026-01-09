@@ -1,7 +1,8 @@
 [
   {
     "filename": "joiningPoints",
-    "path": "pursuit/joiningPoints.js",
+    "path": "joiningPoints.js",
+    "status": "working",
     "title": "Joining Points"
   },
   {

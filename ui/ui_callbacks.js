@@ -6,14 +6,14 @@
    - Only event routing lives here.
    ------------------------------------------------------------ */
 
-import { uiState } from "./uiState.js";
+import { uiState }        from "./uiState.js";
 import { overlayManager } from "./overlay.js";
 
-import * as draw from "./draw.js";
-import * as patterns from "./patterns.js";
-import * as gallery from "./gallery.js";
-import * as figures from "./figures.js";
-import * as utility from "./utilities.js"; // ⭐ NEW
+import * as draw          from "./draw.js";
+import * as patterns      from "./patterns.js";
+import * as gallery       from "./gallery.js";
+import * as figures       from "./figures.js";
+import * as utility       from "./utilities.js"; // ⭐ NEW
 
 /* ===========================================================
    TAB ACTIVATION

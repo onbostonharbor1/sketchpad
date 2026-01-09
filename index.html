@@ -11,6 +11,7 @@
          ├── tabs
          └── content
               ├── control
+              │     └── button
               │     └── action
               └── main
               |     ├── subtabs
@@ -42,6 +43,7 @@
     <link rel="stylesheet" href="./css/tabs.css" />
     <link rel="stylesheet" href="./css/categories.css" />
     <link rel="stylesheet" href="./css/offcanvas.css" />
+    <link rel="stylesheet" href="./css/parameterControls.css" />
     <link rel="stylesheet" href="./css/overlay.css" />
   </head>
   <body>
@@ -49,8 +51,21 @@
       <div id="tabs">
         <ul class="nav nav-tabs" id="mainTabs" role="tablist">
           <li class="nav-item" role="presentation">
+             <button
+                class="nav-link active"
+               id="home-tab"
+               data-bs-toggle="tab"
+               data-bs-target="#home"
+               type="button"
+               role="tab"
+              >
+               Home
+              </button>
+          </li>
+
+          <li class="nav-item" role="presentation">
             <button
-              class="nav-link active"
+              class="nav-link"
               id="draw-tab"
               data-bs-toggle="tab"
               data-bs-target="#draw"
@@ -113,6 +128,13 @@
 
       <div id="content">
         <div id="control">
+          <div id="button">
+            <button id="commandsButton" class="cmdButton" type="button">
+              Commands </button>
+          </div>
+
+      <div id="buttonSeparator"></div>
+
           <div id="action">TBD</div>
         </div>
 

@@ -16,10 +16,50 @@ import { copyActiveDrawObject, resetActiveDrawObject }
                                   from "./drawMenuCmds.js";
 import { menuManager }            from "./menuManager.js";
 import { buildParameterControls } from "./parameterControls.js";
-import { clearDivs, showScriptOffcanvas }              from "./ui_utilities.js";
+import {
+  clearDivs,
+  setCommandsButtonLabel,
+  setCommandsButton,
+  showCommandsOffcanvas,
+  showScriptOffcanvas
+} from "./ui_utilities.js";
+import { nodeRebuildAndValidateManifests } from "./nodeLayer.js";
 
 const DEFAULT_DRAW_SUBTAB = "tab-categories";   // Categories is always the root
 const TAB_NAME            = "draw";             // Used for help/menu lookups
+
+function consumeLaunchIfForDraw() {
+  if (!uiState.launch) {
+    throw new Error("consumeLaunchIfForDraw: uiState.launch missing");
+  }
+
+  if (!uiState.launch.pending) return null;
+
+  if (uiState.launch.targetTab !== "draw") {
+    return null;
+  }
+
+  // Copy intent locally, then clear launch (consume-and-clear)
+  const intent = {
+    sourceTab: uiState.launch.sourceTab,
+    sourceType: uiState.launch.sourceType,
+    registryKey: uiState.launch.registryKey
+  };
+
+  clearLaunch();   // consume-and-clear rule
+
+  return intent;
+} // end consumeLaunchIfForDraw
+
+
+function clearLaunch() {
+  uiState.launch.pending = false;
+  uiState.launch.sourceTab = null;
+  uiState.launch.targetTab = null;
+  uiState.launch.sourceType = null;
+  uiState.launch.registryKey = null;
+} // end clearLaunch
+
 
 /* ===========================================================
    DrawTabSpec
@@ -94,41 +134,79 @@ export const DrawController = {
    - Restores previous active subtab or defaults to Categories
 =========================================================== */
 export function initDrawTab(restored = false) {
-  // Ensure the tabs dictionary exists
-  if (!uiState.draw.tabs) {
 
-    uiState.draw.tabs = {}; // Initialize the tabs if not present
+  if (!uiState.draw.tabs) {
+    uiState.draw.tabs = {};
   }
 
   clearDivs();
-
+  setCommandsButtonLabel("Draw Commands");
+  wireDrawCommandsButton();
   setDrawSubtabs();
 
-  const activeId =
-    uiState.draw.activeSubtab || DEFAULT_DRAW_SUBTAB;
+  // LAUNCH OVERRIDE (wins over restore/default)
+  const intent = consumeLaunchIfForDraw();
+  if (intent && intent.sourceType === "drawRegistry") {
 
+    const reg = window.drawRegistry;
+    if (!reg) throw new Error("Draw launch: window.drawRegistry missing");
+
+    const entry = reg[intent.registryKey];
+    if (!entry) throw new Error("Draw launch: unknown registryKey: " + intent.registryKey);
+
+    // Always open a NEW tab (no dedupe)
+    addDrawSubtab({ name: entry.name || intent.registryKey, entry: entry });
+
+    return;
+  }
+
+  const activeId = uiState.draw.activeSubtab || DEFAULT_DRAW_SUBTAB;
   switchTab(activeId);
+consumePendingLaunchIntoDraw();
+
+
+
 } // end initDrawTab
+
 
 function restoreDrawTab() {
 
-  // 1. Rebuild subtabs from uiState.draw.tabs
+  setCommandsButtonLabel("Draw Commands");
+  wireDrawCommandsButton();
   setDrawSubtabs();
 
-  // 2. Identify which tab was active last time
+  // LAUNCH OVERRIDE (wins over restored active tab)
+  const intent = consumeLaunchIfForDraw();
+  if (intent && intent.sourceType === "drawRegistry") {
+
+    const reg = window.drawRegistry;
+    if (!reg) throw new Error("Draw launch: window.drawRegistry missing");
+
+    const entry = reg[intent.registryKey];
+    if (!entry) throw new Error("Draw launch: unknown registryKey: " + intent.registryKey);
+
+    // Always open a NEW tab (no dedupe)
+    addDrawSubtab({ name: entry.name || intent.registryKey, entry: entry });
+
+    return;
+  }
+
   const activeId = uiState.draw.activeSubtab || DEFAULT_DRAW_SUBTAB;
 
-  // 3. If tab does not exist (edge case), fall back to Categories
   if (!uiState.draw.tabs[activeId]) {
     uiState.draw.activeSubtab = DEFAULT_DRAW_SUBTAB;
     clearDivs();
+    setCommandsButtonLabel("Draw Commands");
+    wireDrawCommandsButton();
     renderDrawCategories();
     return;
   }
 
-  // 4. Switch into the restored tab
   switchTab(activeId);
+consumePendingLaunchIntoDraw();
+
 } // end restoreDrawTab
+
 
 
 
@@ -724,3 +802,162 @@ function renderDrawCategories() {
 
   renderCategories("text", descriptor);
 } // end renderDrawCategories
+
+
+function consumePendingLaunchIntoDraw() {
+
+  if (!uiState.launch) throw new Error("consumePendingLaunchIntoDraw: uiState.launch missing");
+
+  if (!uiState.launch.pending) return;
+
+  if (uiState.launch.sourceType !== "drawRegistry") {
+    throw new Error("Draw launch: unsupported sourceType: " + String(uiState.launch.sourceType));
+  }
+
+  const registryKey = uiState.launch.registryKey;
+  if (!registryKey) throw new Error("Draw launch: missing registryKey");
+
+  const resolvedKey = resolveDrawRegistryKeyOrId(registryKey);
+
+  // Clear the pending launch FIRST so we cannot loop if something throws later.
+  uiState.launch.pending = false;
+
+  // If you store draw selection in uiState.draw.saved, set it here in YOUR existing shape.
+  // The key requirement is: set the Draw selection to the resolved registry key.
+  if (!uiState.draw) throw new Error("Draw launch: uiState.draw missing");
+  if (!uiState.draw.saved) throw new Error("Draw launch: uiState.draw.saved missing");
+
+  uiState.draw.saved.view = "workspace";          // or whatever your Draw “object view” is called
+  uiState.draw.saved.activeId = resolvedKey;      // MUST be the key your Draw tab expects
+
+  // Now do whatever your Draw tab already does to show the active object view.
+  // (Call your existing controller entry point here.)
+  showDrawWorkspaceFromState();
+
+} // end consumePendingLaunchIntoDraw
+
+function resolveDrawRegistryKeyOrId(registryKeyOrId) {
+
+  if (!registryKeyOrId) throw new Error("resolveDrawRegistryKeyOrId: key/id missing");
+
+  // 1) Direct key match (what inverseStar is using)
+  if (window.drawRegistry && window.drawRegistry[registryKeyOrId]) {
+    return registryKeyOrId;
+  }
+
+  // 2) Fallback: treat incoming value as an "id" and search for a matching entry.id
+  if (!window.drawRegistry) throw new Error("resolveDrawRegistryKeyOrId: window.drawRegistry missing");
+
+  const keys = Object.keys(window.drawRegistry);
+  for (let i = 0; i < keys.length; i++) {
+    const k = keys[i];
+    const item = window.drawRegistry[k];
+
+    if (!item || typeof item !== "object") continue;
+
+    const id = item.id;
+    if (id === registryKeyOrId) {
+      return k; // return the REAL key that Draw expects
+    }
+  }
+
+  throw new Error("Draw launch: unknown registryKey: " + registryKeyOrId);
+
+} // end resolveDrawRegistryKeyOrId
+
+export function wireDrawCommandsButton() {
+
+  setCommandsButtonLabel("Draw Commands");
+  setCommandsButton("Commands", () => {
+
+    showCommandsOffcanvas({
+      title: "Draw Maintenance",
+      buildBody(offcanvasBodyEl) {
+
+        if (!offcanvasBodyEl) {
+          throw new Error("Draw Commands: offcanvasBodyEl missing");
+        }
+
+        offcanvasBodyEl.innerHTML = `
+          <div class="cmdButtonRow">
+            <button id="drawRebuildValidateButton" class="cmdButton" type="button">
+              Rebuild &amp; Validate
+            </button>
+          </div>
+
+          <div class="buttonSeparator"></div>
+
+          <div id="drawRebuildReport" class="drawRebuildReport"></div>
+        `;
+
+        const btn = document.getElementById("drawRebuildValidateButton");
+        if (!btn) throw new Error("wireDrawCommandsButton: button missing");
+
+        btn.addEventListener("click", async () => {
+
+          const out = document.getElementById("drawRebuildReport");
+          if (!out) throw new Error("wireDrawCommandsButton: report div missing");
+
+          out.textContent = "Running...";
+
+          const report = await nodeRebuildAndValidateManifests();
+
+          out.textContent = formatRebuildReport(report);
+
+        }); // end click
+
+      } // end buildBody
+    });
+
+  });
+
+} // end wireDrawCommandsButton
+
+function formatRebuildReport(report) {
+
+  if (!report) throw new Error("formatRebuildReport: report missing");
+
+  if (report.request !== "manifestMaintenance") {
+    throw new Error("formatRebuildReport: unexpected request: " + String(report.request));
+  }
+
+  const lines = [];
+
+  lines.push("Log: " + (report.logName || "(none)"));
+  lines.push("");
+
+  const addedMap  = report.added  || {};
+  const brokenMap = report.broken || {};
+
+  const addedKeys  = Object.keys(addedMap).sort((a, b) => a.localeCompare(b));
+  const brokenKeys = Object.keys(brokenMap).sort((a, b) => a.localeCompare(b));
+
+  if (addedKeys.length) {
+    lines.push("ADDED (status=new):");
+    for (const group of addedKeys) {
+      lines.push("  " + group);
+      for (const item of (addedMap[group] || [])) {
+        lines.push("    • " + item);
+      }
+    }
+    lines.push("");
+  }
+
+  if (brokenKeys.length) {
+    lines.push("BROKEN (virtual home items):");
+    for (const group of brokenKeys) {
+      lines.push("  " + group);
+      for (const item of (brokenMap[group] || [])) {
+        lines.push("    • " + (item && item.path ? item.path : String(item)));
+      }
+    }
+    lines.push("");
+  }
+
+  if (!addedKeys.length && !brokenKeys.length) {
+    lines.push("No Added or Broken items.");
+  }
+
+  return lines.join("\n");
+
+} // end formatRebuildReport

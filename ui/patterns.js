@@ -8,14 +8,26 @@
      • PatternsController             → pure action functions
    ------------------------------------------------------------
 */
+import { nodeRebuildAndValidateManifests } from "./nodeLayer.js";
+import { getPatternsCaptionMenuItems } from "./patternsMenuCmds.js";
 
 import { renderCategories }     from "./categories.js";
 import { setCaptionBar }        from "./caption.js";
 import { menuManager }          from "./menuManager.js";
-import { editPatternItemTitle, addPatternThumbnail } from "./patternsMenuCmds.js";
-import { loadScriptModule, executeScriptToCanvas } from "./scriptRunner.js";
-import { showScriptOffcanvas, renderThumbnailGrid,
-         buildCategoryDescriptor } from "./ui_utilities.js";
+import { editPatternItemTitle, addPatternThumbnail }
+                                from "./patternsMenuCmds.js";
+import { loadScriptModule, executeScriptToCanvas }
+                                from "./scriptRunner.js";
+import {
+  showScriptOffcanvas,
+  renderThumbnailGrid,
+  buildCategoryDescriptor,
+  markSelectedThumbnail,
+  setCommandsButtonLabel,
+  setCommandsButton,
+  showCommandsOffcanvas
+} from "./ui_utilities.js";
+
 import { manifest }            from "./manifest.js";
 
 /* ============================================================
@@ -112,6 +124,8 @@ export async function initPatternsTab(restored) {
   if (!uiState.patterns) {
     uiState.patterns = {};
   }
+  setCommandsButtonLabel("Patterns Commands");
+  wirePatternsCommandsButton();
 
   // This init is called only on cold start; restored flag is ignored
   // by design in the new architecture.
@@ -214,6 +228,9 @@ async function restorePatternsTab() {
   const saved = uiState.patterns.saved;
   const view  = saved.view;
 
+  setCommandsButtonLabel("Patterns Commands");
+  wirePatternsCommandsButton();
+
   // Ensure manifest is loaded before reconstructing
   await ensurePatternsManifestLoaded();
 
@@ -252,15 +269,56 @@ async function restorePatternsTab() {
 } // end restorePatternsTab
 
 /* ============================================================
+   updatePatternsCaption(category, item, filename, helpKey, scriptPath)
+   ------------------------------------------------------------
+   Title rule: "{category}: {title}"
+=========================================================== */
+/* ============================================================
+   updatePatternsCaption(category, item, filename, helpKey, scriptPath)
+   ------------------------------------------------------------
+   Title rule: "{category}: {title}"
+=========================================================== */
+function updatePatternsCaption(category, item, filename, helpKey, scriptPath) {
+
+  if (typeof category !== "string" || category.trim() === "") {
+    throw new Error("updatePatternsCaption: category missing");
+  }
+
+  if (!item) {
+    throw new Error("updatePatternsCaption: item missing");
+  }
+
+  const rawTitle = item.title || filename || "(untitled)";
+  const title = category + ": " + rawTitle;
+
+  setCaptionBar({
+    targetId: "caption",
+    title: title,
+    onPrev: () => onPrev(),
+    onNext: () => onNext(),
+    onMenu: async (anchor) => {
+      const menuItems = await getPatternsCaptionMenuItems(
+        "patterns",
+        helpKey,
+        scriptPath
+      );
+      menuManager.open(menuItems, anchor);
+    }
+  });
+
+} // end updatePatternsCaption
+
+
+/* ============================================================
    showCategoryList()
    ------------------------------------------------------------
-   Cold and restore both use this to show category frames
-   inside #text.  Uses manifest.cache.patterns exclusively.
+   Shows category frames inside #text.
+   Uses manifest.cache.patterns exclusively.
 =========================================================== */
 async function showCategoryList() {
-  const textDiv = document.getElementById("text");
+  const textDiv   = document.getElementById("text");
   const actionDiv = document.getElementById("action");
-  const padDiv = document.getElementById("sketchpad");
+  const padDiv    = document.getElementById("sketchpad");
 
   if (!textDiv || !actionDiv || !padDiv) {
     throw new Error("showCategoryList: required region missing");
@@ -275,41 +333,30 @@ async function showCategoryList() {
   const groups = manifest.cache.patterns;
 
   if (!groups) {
-    textDiv.innerHTML =
-      "<p style='color:red'>Patterns manifest not available.</p>";
-    return;
+    throw new Error("showCategoryList: manifest.cache.patterns missing");
   }
 
-  // Descriptor drives the categories UI
   const descriptor = buildCategoryDescriptor(
     groups,
-    entry => entry.title || entry.filename,   // label
-    (category, sortedList, entry, idx) => {   // click handler
-      uiState.patterns.activeCategory = category;
+    function (entry) { return entry.title || entry.filename; }, // label
+    function (categoryName, sortedList, entry, idx) {           // click handler
+      uiState.patterns.activeCategory = categoryName;
       uiState.patterns.activeItem     = idx;
       uiState.patterns.saved = {
         view: "pattern",
-        activeCategory: category,
+        activeCategory: categoryName,
         activeItem: idx
       };
 
-      addPatternSubtab(category);
-      showSelectedPattern(category, idx);
+      addPatternSubtab(categoryName);
+      showSelectedPattern(categoryName, idx);
     }
   );
 
   textDiv.innerHTML = "";
   renderCategories("text", descriptor);
-
-  // Caption: Patterns root
-  setCaptionBar({
-    targetId: "caption",
-    title: "Patterns",
-    onPrev: null,
-    onNext: null,
-    onMenu: null
-  });
 } // end showCategoryList
+
 
 
 /* ============================================================
@@ -374,6 +421,7 @@ function addPatternSubtab(category) {
    Rebuilds the thumbnail grid for the given category into #action.
    Click behavior remains "select pattern idx".
 =========================================================== */
+// renderPatternThumbGrid(category)
 export function renderPatternThumbGrid(category) {
 
   if (!category) throw new Error("renderPatternThumbGrid: category missing");
@@ -395,11 +443,18 @@ export function renderPatternThumbGrid(category) {
         activeCategory: category,
         activeItem: idx
       };
+
+      // IMPORTANT: showSelectedPattern will rebuild the grid anyway.
       showSelectedPattern(category, idx);
     }
   );
 
+  // AFTER the grid exists, mark the selected one.
+  // This is the key: first arg is the panel id, second is the index.
+  markSelectedThumbnail("action", uiState.patterns.activeItem);
+
 } // end renderPatternThumbGrid
+
 
 
 /* ============================================================
@@ -475,21 +530,8 @@ async function showSelectedPattern(category, index) {
 
    renderPatternThumbGrid(category);
 
-  // Caption bar
-  setCaptionBar({
-    targetId: "caption",
-    title: item.title || filename,
-    onPrev: () => onPrev(),
-    onNext: () => onNext(),
-    onMenu: async (anchor) => {
-      const menuItems = await buildPatternsMenuItems(
-        "patterns",
-        helpKey,
-        scriptPath
-      );
-      menuManager.open(menuItems, anchor);
-    }
-  });
+   // Caption bar: "{category}: {title}"
+  updatePatternsCaption(category, item, filename, helpKey, scriptPath);
 
   // Ensure Pattern subtab active
   addPatternSubtab(category);
@@ -609,4 +651,122 @@ function savePatternsState() {
   };
 } // end savePatternsState
 
-// end of rewritten patterns.js
+
+function buildPatternsOffcanvasHtml() {
+
+  return `
+    <div class="cmdButtonRow">
+      <button id="patternsRebuildValidateButton" class="cmdButton" type="button">
+        Rebuild &amp; Validate
+      </button>
+    </div>
+
+    <div class="buttonSeparator"></div>
+
+    <div id="patternsRebuildReport" class="patternsRebuildReport"></div>
+  `;
+
+} // end buildPatternsOffcanvasHtml
+
+function formatRebuildReport(report) {
+
+  if (!report) throw new Error("formatRebuildReport: report missing");
+
+  if (report.request !== "manifestMaintenance") {
+    throw new Error("formatRebuildReport: unexpected request: " + String(report.request));
+  }
+
+  const lines = [];
+
+  lines.push("Log: " + (report.logName || "(none)"));
+  lines.push("");
+
+  const addedMap  = report.added  || {};
+  const brokenMap = report.broken || {};
+
+  const addedKeys  = Object.keys(addedMap).sort((a, b) => a.localeCompare(b));
+  const brokenKeys = Object.keys(brokenMap).sort((a, b) => a.localeCompare(b));
+
+  if (addedKeys.length) {
+    lines.push("ADDED (status=new):");
+    for (const group of addedKeys) {
+      lines.push("  " + group);
+      for (const item of (addedMap[group] || [])) {
+        lines.push("    • " + item);
+      }
+    }
+    lines.push("");
+  }
+
+  if (brokenKeys.length) {
+    lines.push("BROKEN (virtual home items):");
+    for (const group of brokenKeys) {
+      lines.push("  " + group);
+      for (const item of (brokenMap[group] || [])) {
+        lines.push("    • " + (item && item.path ? item.path : String(item)));
+      }
+    }
+    lines.push("");
+  }
+
+  if (!addedKeys.length && !brokenKeys.length) {
+    lines.push("No Added or Broken items.");
+  }
+
+  return lines.join("\n");
+
+} // end formatRebuildReport
+
+export function wirePatternsCommandsButton() {
+
+  setCommandsButton("Commands", () => {
+
+    showCommandsOffcanvas({
+      title: "Patterns Maintenance",
+      buildBody(offcanvasBodyEl) {
+
+        if (!offcanvasBodyEl) {
+          throw new Error("Patterns Commands: offcanvasBodyEl missing");
+        }
+
+        offcanvasBodyEl.innerHTML = buildPatternsOffcanvasHtml();
+
+        const btn = document.getElementById("patternsRebuildValidateButton");
+        if (!btn) throw new Error("wirePatternsCommandsButton: button missing");
+
+        btn.addEventListener("click", async () => {
+
+          const out = document.getElementById("patternsRebuildReport");
+          if (!out) throw new Error("wirePatternsCommandsButton: report div missing");
+
+          out.textContent = "Running...";
+
+          const report = await nodeRebuildAndValidateManifests();
+
+          manifest.clearCache();
+          if (manifest.cache) delete manifest.cache.patterns;
+
+          await ensurePatternsManifestLoaded();
+
+          if (uiState.patterns.saved.view === "pattern") {
+            await showSelectedPattern(
+              uiState.patterns.saved.activeCategory,
+              uiState.patterns.saved.activeItem
+            );
+          } else {
+            await showCategoryList();
+          }
+
+          out.textContent = formatRebuildReport(report);
+
+        }); // end click
+
+      } // end buildBody
+    });
+
+  });
+
+} // end wirePatternsCommandsButton
+
+
+// end patterns.js

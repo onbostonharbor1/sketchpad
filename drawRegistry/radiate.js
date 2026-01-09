@@ -17,13 +17,14 @@ import { drawRadiate } from "../draw/drawUnicorns.js";
 
 window.drawRegistry_radiate = {
   name:        "Radiate",
-  id:          "drawRadiate",
+  id:          "radiate",
   version:     0.2,
   category:    "fundamental",
   firstOrder:  true,
   source:      "internal",
   tags:        ["Geometry", "Primitive"],
   description: "Draws many lines from start to end of another line",
+  status:      "",
   hover:       "",
 
   background: null,

@@ -12,6 +12,8 @@ import { nodeDispatch } from "./nodeLayer.js";
 import { manifest } from "./manifest.js";
 import { overlayManager } from "./overlay.js";
 import { renderPatternThumbGrid } from "./patterns.js";
+import { menuManager } from "./menuManager.js";
+import { showScriptOffcanvas } from "./ui_utilities.js";
 
 /* ============================================================
    editPatternItemTitle()
@@ -393,5 +395,69 @@ function closeFormsOverlay() {
   container.style.display = "none";
 
 } // end closeFormsOverlay
+
+
+/* ============================================================
+   showPatternScript()
+   ------------------------------------------------------------
+   Caption menu command: show the current pattern script in the
+   offcanvas viewer.
+=========================================================== */
+export async function showPatternScript() {
+
+  const info = derivePatternsContext();
+
+  if (!info.item) {
+    throw new Error("showPatternScript: no active pattern item");
+  }
+
+  // This is the same helpKey + scriptPath pattern you already use in patterns.js
+  const scriptPath = `../patterns/${info.category}/${info.filename}.js`;
+  const helpKey    = `${info.category}/${info.filename}`;
+
+  showScriptOffcanvas(scriptPath, helpKey);
+
+} // end showPatternScript
+
+
+/* ============================================================
+   getPatternsCaptionMenuItems(tabName, helpKey, scriptPath)
+   ------------------------------------------------------------
+   Centralizes ALL caption menu command wiring for Patterns.
+=========================================================== */
+export async function getPatternsCaptionMenuItems(tabName, helpKey, scriptPath) {
+
+  const items = [];
+
+  // Help item is still built by menuManager (same behavior as before)
+  const helpItem = await menuManager.buildHelpItem(tabName, helpKey);
+  items.push(helpItem);
+
+  // Show Script
+  items.push({
+    label: "Show Script",
+    onClick: () => showPatternScript()
+  });
+
+  // Add Thumbnail
+  items.push({
+    label: "Add Thumbnail",
+    onClick: async () => {
+      await addPatternThumbnail();
+    }
+  });
+
+  // Edit Manifest Title
+  items.push({
+    label: "Edit Manifest Title",
+    onClick: () => {
+      editPatternItemTitle();
+    }
+  });
+
+  return items;
+
+} // end getPatternsCaptionMenuItems
+
 
 // end patternsMenuCmds.js

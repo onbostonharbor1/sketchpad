@@ -9,13 +9,14 @@ import { drawAParab }               from "../draw/drawRegular.js";
 
 window.drawRegistry_parabola = {
   name:        "Parabola",
-  id:          "drawParabola",
+  id:          "parabola",
   version:     0.1,
   category:    "fundamental",
   firstOrder:  true,
   source:      "internal",
   tags:        ["Geometry", "Curve Stitch"],
   description: "Draws a stitched parabola using two lines and a shared style.",
+  status:      "",
   hover:       "",
 
   background: null,

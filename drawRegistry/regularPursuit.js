@@ -5,14 +5,15 @@ import { createNodes }              from "../draw/draw_utilities.js";
 
 window.drawRegistry_regularPursuit = {
     name:         "Pursuit (temp)",
-    id:           "regularPolygon",
+    id:           "regularPursuit",
     version:      0.4,
     category:     "pursuit",
     firstOrder:   true,
     source:       "internal",
     tags:         ["Curve Stitch"],
     description:  "Regular Polygon draws from each node",
-  hover:       "",
+    status:      "",
+    hover:       "",
     // -- visual styling ---
     background: null,
     overlays:   [],

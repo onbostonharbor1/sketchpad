@@ -58,6 +58,7 @@ window.drawRegistry_line = {
   source:      "internal",
   tags:        ["Geometry", "Primitive"],
   description: "Draws a line with draggable endpoints and midpoint.",
+  status:      "",
   hover:       "",
 
   // ----------------------------------------------------------

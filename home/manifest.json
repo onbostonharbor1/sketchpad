@@ -1,0 +1,71 @@
+[
+  {
+    "file": "validateDrawRegistry",
+    "path": "/utilities/Tools/Registry/validateDrawRegistry.js",
+    "title": "Validate Draw Registry",
+    "status": "current"
+  },
+  {
+    "file": "pursuitDynamic5",
+    "path": "/gallery/Scripts/Pursuit/pursuitDynamic5.js",
+    "title": "Pursuit Dynamic 5",
+    "status": "favorite"
+  },
+  {
+    "file": "inverseStar.js",
+    "path": "/drawRegistry/inverseStar.js",
+    "title": "Inverse Star",
+    "status": "new",
+    "category": "curve_stitch",
+    "sourceType": "drawRegistry",
+    "registryKey": "inverseStar"
+  },
+  {
+    "file": "linkedCircles.js",
+    "path": "/drawRegistry/linkedCircles.js",
+    "title": "Linked Circles",
+    "status": "new",
+    "category": "unicorns",
+    "sourceType": "drawRegistry",
+    "registryKey": "linkedCircles"
+  },
+  {
+    "file": "mysticRoseEllipse.js",
+    "path": "/drawRegistry/mysticRoseEllipse.js",
+    "title": "Mystic Rose (ellipse)",
+    "status": "new",
+    "category": "unicorns",
+    "sourceType": "drawRegistry",
+    "registryKey": "mysticRoseEllipse"
+  },
+  {
+    "file": "pureSpiral",
+    "path": "/patterns/spirals/pureSpiral.js",
+    "title": "Pure Spiral",
+    "status": "new"
+  },
+  {
+    "file": "pureSpiralA",
+    "path": "/patterns/spirals/pureSpiralA.js",
+    "title": "Pure Spiral A Filled",
+    "status": "new"
+  },
+  {
+    "file": "pursuit2",
+    "path": "/gallery/Scripts/Pursuit/pursuit2.js",
+    "title": "pursuit2.js",
+    "status": "new"
+  },
+  {
+    "file": "parabolasWithinCircles",
+    "path": "/patterns/builds/parabolasWithinCircles.js",
+    "title": "Circular Parabola & Inner Star",
+    "status": "working"
+  },
+  {
+    "file": "joiningPoints",
+    "path": "/patterns/stuff/joiningPoints.js",
+    "title": "Joining Points",
+    "status": "working"
+  }
+]

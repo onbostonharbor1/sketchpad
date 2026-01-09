@@ -1,318 +1,396 @@
 [
   {
     "filename": "012",
-    "path": "possible/012.jpg"
+    "path": "012.jpg"
   },
   {
     "filename": "015",
-    "path": "possible/015.jpg"
+    "path": "015.jpg",
+    "title": "015.jpg"
   },
   {
     "filename": "017",
-    "path": "possible/017.jpg"
+    "path": "017.jpg",
+    "title": "017.jpg"
   },
   {
     "filename": "018",
-    "path": "possible/018.jpg"
+    "path": "018.jpg",
+    "title": "018.jpg"
   },
   {
     "filename": "019",
-    "path": "possible/019.jpg"
+    "path": "019.jpg",
+    "title": "019.jpg"
   },
   {
     "filename": "020",
-    "path": "possible/020.jpg"
+    "path": "020.jpg",
+    "title": "020.jpg"
   },
   {
     "filename": "021",
-    "path": "possible/021.jpg"
+    "path": "021.jpg",
+    "title": "021.jpg"
   },
   {
     "filename": "022",
-    "path": "possible/022.jpg"
+    "path": "022.jpg",
+    "title": "022.jpg"
   },
   {
     "filename": "023",
-    "path": "possible/023.jpg"
+    "path": "023.jpg",
+    "title": "023.jpg"
   },
   {
     "filename": "024",
-    "path": "possible/024.jpg"
+    "path": "024.jpg",
+    "title": "024.jpg"
   },
   {
     "filename": "025",
-    "path": "possible/025.JPG"
+    "path": "025.JPG",
+    "title": "025.JPG"
   },
   {
     "filename": "026",
-    "path": "possible/026.JPG"
+    "path": "026.JPG",
+    "title": "026.JPG"
   },
   {
     "filename": "027",
-    "path": "possible/027.WEBP"
+    "path": "027.WEBP",
+    "title": "027.WEBP"
   },
   {
     "filename": "028",
-    "path": "possible/028.jpg"
+    "path": "028.jpg",
+    "title": "028.jpg"
   },
   {
     "filename": "029",
-    "path": "possible/029.JPG"
+    "path": "029.JPG",
+    "title": "029.JPG"
   },
   {
     "filename": "030",
-    "path": "possible/030.JPG"
+    "path": "030.JPG",
+    "title": "030.JPG"
   },
   {
     "filename": "031",
-    "path": "possible/031.JPG"
+    "path": "031.JPG",
+    "title": "031.JPG"
   },
   {
     "filename": "032",
-    "path": "possible/032.jpg"
+    "path": "032.jpg",
+    "title": "032.jpg"
   },
   {
     "filename": "033",
-    "path": "possible/033.jpg"
+    "path": "033.jpg",
+    "title": "033.jpg"
   },
   {
     "filename": "0506",
-    "path": "possible/0506.jpg"
+    "path": "0506.jpg",
+    "title": "0506.jpg"
   },
   {
     "filename": "060",
-    "path": "possible/060.jpg"
+    "path": "060.jpg",
+    "title": "060.jpg"
   },
   {
     "filename": "061a",
-    "path": "possible/061a.jpg"
+    "path": "061a.jpg",
+    "title": "061a.jpg"
   },
   {
     "filename": "061b",
-    "path": "possible/061b.jpg"
+    "path": "061b.jpg",
+    "title": "061b.jpg"
   },
   {
     "filename": "064a",
-    "path": "possible/064a.jpg"
+    "path": "064a.jpg",
+    "title": "064a.jpg"
   },
   {
     "filename": "082",
-    "path": "possible/082.jpg"
+    "path": "082.jpg",
+    "title": "082.jpg"
   },
   {
     "filename": "085",
-    "path": "possible/085.jpg"
+    "path": "085.jpg",
+    "title": "085.jpg"
   },
   {
     "filename": "160",
-    "path": "possible/160.PNG"
+    "path": "160.PNG",
+    "title": "160.PNG"
   },
   {
     "filename": "207",
-    "path": "possible/207.PNG"
+    "path": "207.PNG",
+    "title": "207.PNG"
   },
   {
     "filename": "210",
-    "path": "possible/210.PNG"
+    "path": "210.PNG",
+    "title": "210.PNG"
   },
   {
     "filename": "217",
-    "path": "possible/217.PNG"
+    "path": "217.PNG",
+    "title": "217.PNG"
   },
   {
     "filename": "223",
-    "path": "possible/223.PNG"
+    "path": "223.PNG",
+    "title": "223.PNG"
   },
   {
     "filename": "229",
-    "path": "possible/229.jpg"
+    "path": "229.jpg",
+    "title": "229.jpg"
   },
   {
     "filename": "230",
-    "path": "possible/230.jpg"
+    "path": "230.jpg",
+    "title": "230.jpg"
   },
   {
     "filename": "259",
-    "path": "possible/259.jpg"
+    "path": "259.jpg",
+    "title": "259.jpg"
   },
   {
     "filename": "261a",
-    "path": "possible/261a.jpg"
+    "path": "261a.jpg",
+    "title": "261a.jpg"
   },
   {
     "filename": "261b",
-    "path": "possible/261b.jpg"
+    "path": "261b.jpg",
+    "title": "261b.jpg"
   },
   {
     "filename": "266",
-    "path": "possible/266.jpg"
+    "path": "266.jpg",
+    "title": "266.jpg"
   },
   {
     "filename": "282",
-    "path": "possible/282.jpg"
+    "path": "282.jpg",
+    "title": "282.jpg"
   },
   {
     "filename": "290",
-    "path": "possible/290.jpg"
+    "path": "290.jpg",
+    "title": "290.jpg"
   },
   {
     "filename": "299",
-    "path": "possible/299.jpg"
+    "path": "299.jpg",
+    "title": "299.jpg"
   },
   {
     "filename": "61",
-    "path": "possible/61.GIF"
+    "path": "61.GIF",
+    "title": "61.GIF"
   },
   {
     "filename": "62",
-    "path": "possible/62.GIF"
+    "path": "62.GIF",
+    "title": "62.GIF"
   },
   {
     "filename": "63",
-    "path": "possible/63.GIF"
+    "path": "63.GIF",
+    "title": "63.GIF"
   },
   {
     "filename": "64",
-    "path": "possible/64.GIF"
+    "path": "64.GIF",
+    "title": "64.GIF"
   },
   {
     "filename": "65",
-    "path": "possible/65.GIF"
+    "path": "65.GIF",
+    "title": "65.GIF"
   },
   {
     "filename": "67",
-    "path": "possible/67.GIF"
+    "path": "67.GIF",
+    "title": "67.GIF"
   },
   {
     "filename": "68",
-    "path": "possible/68.jpg"
+    "path": "68.jpg",
+    "title": "68.jpg"
   },
   {
     "filename": "69",
-    "path": "possible/69.jpg"
+    "path": "69.jpg",
+    "title": "69.jpg"
   },
   {
     "filename": "73",
-    "path": "possible/73.jpg"
+    "path": "73.jpg",
+    "title": "73.jpg"
   },
   {
     "filename": "74",
-    "path": "possible/74.jpg"
+    "path": "74.jpg",
+    "title": "74.jpg"
   },
   {
     "filename": "75",
-    "path": "possible/75.jpg"
+    "path": "75.jpg",
+    "title": "75.jpg"
   },
   {
     "filename": "76",
-    "path": "possible/76.jpg"
+    "path": "76.jpg",
+    "title": "76.jpg"
   },
   {
     "filename": "77",
-    "path": "possible/77.jpg"
+    "path": "77.jpg",
+    "title": "77.jpg"
   },
   {
     "filename": "78",
-    "path": "possible/78.jpg"
+    "path": "78.jpg",
+    "title": "78.jpg"
   },
   {
     "filename": "Copy of _pointa",
-    "path": "possible/Copy of _pointa.jpg"
+    "path": "Copy of _pointa.jpg",
+    "title": "Copy of _pointa.jpg"
   },
   {
     "filename": "IMG_8505",
-    "path": "possible/IMG_8505.JPG"
+    "path": "IMG_8505.JPG",
+    "title": "IMG_8505.JPG"
   },
   {
     "filename": "IMG_8674",
-    "path": "possible/IMG_8674.jpg"
+    "path": "IMG_8674.jpg",
+    "title": "IMG_8674.jpg"
   },
   {
     "filename": "IMG_8678",
-    "path": "possible/IMG_8678.jpg"
+    "path": "IMG_8678.jpg",
+    "title": "IMG_8678.jpg"
   },
   {
     "filename": "IMG_8679",
-    "path": "possible/IMG_8679.jpg"
+    "path": "IMG_8679.jpg",
+    "title": "IMG_8679.jpg"
   },
   {
     "filename": "IMG_8680",
-    "path": "possible/IMG_8680.jpg"
+    "path": "IMG_8680.jpg",
+    "title": "IMG_8680.jpg"
   },
   {
     "filename": "IMG_8681",
-    "path": "possible/IMG_8681.jpg"
+    "path": "IMG_8681.jpg",
+    "title": "IMG_8681.jpg"
   },
   {
     "filename": "IMG_8730",
-    "path": "possible/IMG_8730.JPG"
+    "path": "IMG_8730.JPG",
+    "title": "IMG_8730.JPG"
   },
   {
     "filename": "IMG_8731",
-    "path": "possible/IMG_8731.JPG"
+    "path": "IMG_8731.JPG",
+    "title": "IMG_8731.JPG"
   },
   {
     "filename": "IMG_9388",
-    "path": "possible/IMG_9388.jpg"
+    "path": "IMG_9388.jpg",
+    "title": "IMG_9388.jpg"
   },
   {
     "filename": "IMG_9389",
-    "path": "possible/IMG_9389.jpg"
+    "path": "IMG_9389.jpg",
+    "title": "IMG_9389.jpg"
   },
   {
     "filename": "IMG_9390",
-    "path": "possible/IMG_9390.jpg"
+    "path": "IMG_9390.jpg",
+    "title": "IMG_9390.jpg"
   },
   {
     "filename": "IMG_9391",
-    "path": "possible/IMG_9391.PNG"
+    "path": "IMG_9391.PNG",
+    "title": "IMG_9391.PNG"
   },
   {
     "filename": "IMG_9392",
-    "path": "possible/IMG_9392.jpg"
+    "path": "IMG_9392.jpg",
+    "title": "IMG_9392.jpg"
   },
   {
     "filename": "IMG_9393",
-    "path": "possible/IMG_9393.jpg"
+    "path": "IMG_9393.jpg",
+    "title": "IMG_9393.jpg"
   },
   {
     "filename": "IMG_9394",
-    "path": "possible/IMG_9394.jpg"
+    "path": "IMG_9394.jpg",
+    "title": "IMG_9394.jpg"
   },
   {
     "filename": "IMG_9397",
-    "path": "possible/IMG_9397.jpg"
+    "path": "IMG_9397.jpg",
+    "title": "IMG_9397.jpg"
   },
   {
     "filename": "IMG_9398",
-    "path": "possible/IMG_9398.jpg"
+    "path": "IMG_9398.jpg",
+    "title": "IMG_9398.jpg"
   },
   {
     "filename": "IMG_9399",
-    "path": "possible/IMG_9399.jpg"
+    "path": "IMG_9399.jpg",
+    "title": "IMG_9399.jpg"
   },
   {
     "filename": "IMG_9400",
-    "path": "possible/IMG_9400.jpg"
+    "path": "IMG_9400.jpg",
+    "title": "IMG_9400.jpg"
   },
   {
     "filename": "IMG_9401",
-    "path": "possible/IMG_9401.jpg"
+    "path": "IMG_9401.jpg",
+    "title": "IMG_9401.jpg"
   },
   {
     "filename": "IMG_9402",
-    "path": "possible/IMG_9402.jpg"
+    "path": "IMG_9402.jpg",
+    "title": "IMG_9402.jpg"
   },
   {
     "filename": "IMG_9405",
-    "path": "possible/IMG_9405.jpg"
+    "path": "IMG_9405.jpg",
+    "title": "IMG_9405.jpg"
   },
   {
     "filename": "IMG_9406",
-    "path": "possible/IMG_9406.jpg"
+    "path": "IMG_9406.jpg",
+    "title": "IMG_9406.jpg"
   },
   {
     "filename": "IMG_9407",
-    "path": "possible/IMG_9407.jpg"
+    "path": "IMG_9407.jpg",
+    "title": "IMG_9407.jpg"
   }
 ]

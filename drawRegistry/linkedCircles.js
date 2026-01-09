@@ -58,8 +58,8 @@
    ============================================================
 */
 
-import { LinkedCircles }     from "../classes/linkedCircles.js";
-import { drawLinkedCircles } from "../draw/drawLinkedCircles.js";
+import { LinkedCircles }     from "/classes/linkedCircles.js";
+import { drawLinkedCircles } from "/draw/drawLinkedCircles.js";
 
 /* ============================================================
    Registry object
@@ -76,13 +76,14 @@ window.drawRegistry_linkedCircles = {
      ---------------------------------------------------------- */
 
   name:        "Linked Circles",          // display name in UI
-  id:          "drawLinkedCircles",       // unique stable id
+  id:          "linkedCircles",       // unique stable id
   version:     0.3,                      // bumped: midpoint dragging enabled
   category:    "unicorns",               // category grouping in Draw (your current value)
   firstOrder:  true,                     // your own taxonomy flag
   source:      "internal",               // internal vs external
   tags:        ["Geometry", "String Art", "Circles"],
   description: "Draws linked-circle string art in pairwise, ring, or all-to-all mode.",
+  status:      "new",
   hover:       "",
 
   /* ----------------------------------------------------------

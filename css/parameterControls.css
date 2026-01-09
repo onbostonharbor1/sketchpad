@@ -1,0 +1,329 @@
+/* ===========================================================
+   [CONTROLS]
+   =========================================================== */
+
+/* ---- Draw controls base ---- */
+.draw-controls {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  color: #fff;
+}
+
+.draw-controls label {
+  align-self: center;
+  font-size: 0.8rem;
+}
+
+/* ---- Inputs and selects ---- */
+.draw-controls input,
+.draw-controls select {
+  background-color: #ffffff;
+  color: #111;
+  border: 1px solid var(--theme-divider);
+  border-radius: 4px;
+  padding: 2px 4px;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+/* ---- Readout values ---- */
+.draw-controls .ctrl-readout {
+  color: #000;
+  font-weight: 600;
+  margin-left: 6px;
+}
+
+/* ---- Text output ---- */
+#text pre {
+  font-size: 0.75rem;
+  line-height: 1.2;
+}
+
+/* ---- Validation output ---- */
+#validationResults {
+  font-size: 0.8rem;
+  line-height: 1.2;
+  margin-bottom: 8px;
+}
+
+/* ---- Control row grid ---- */
+.ctrl-field {
+  display: grid;
+  grid-template-columns: 60px 1fr;
+  align-items: start;
+  column-gap: 6px;
+  margin-bottom: 10px;
+  padding-left: 4px;
+}
+
+.ctrl-field label {
+  text-align: right;
+  font-size: 0.8rem;
+  font-weight: 600;
+  line-height: 1.2;
+  color: #000 !important;
+}
+
+/* ---- Range slider layout ---- */
+.ctrl-range-wrapper {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+}
+
+.ctrl-range-values {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+  font-size: 0.9em;
+  color: #000;
+  font-weight: bold;
+  margin-bottom: 2px;
+  white-space: nowrap;
+}
+
+.ctrl-range-values .ctrl-readout {
+  flex: 1;
+  text-align: center;
+  font-weight: normal;
+}
+
+.ctrl-range-wrapper input[type="range"] {
+  width: 100%;
+}
+
+/* Align label with slider (not value row) */
+.ctrl-field:has(.ctrl-range-wrapper) {
+  align-items: end;
+}
+
+.ctrl-field:has(.ctrl-range-wrapper) label {
+  align-self: center;
+  padding-top: 14px;
+}
+
+/* ---- Text controls ---- */
+input.ctrl-text[type="text"] {
+  background-color: #ffffff !important;
+  color: #000000 !important;
+  border: 1px solid #888 !important;
+  border-radius: 4px;
+  padding: 2px 4px;
+}
+
+/* Readonly text controls (display-only) */
+#action .draw-controls input.ctrl-text[readonly] {
+  background: transparent !important;
+  border: none !important;
+  color: #222 !important;
+  box-shadow: none !important;
+  cursor: default;
+}
+
+/* ---- Checkbox alignment ---- */
+.ctrl-field input[type="checkbox"] {
+  width: auto !important;
+  justify-self: start !important;
+  margin-left: 0 !important;
+}
+
+/* ---- Script controls harmonization ---- */
+#action .draw-controls,
+#action .draw-controls label,
+#action .draw-controls input,
+#action .draw-controls select,
+#action .draw-controls span {
+  font-size: 0.8rem;
+  color: inherit;
+  background: none;
+  border: none;
+  box-shadow: none;
+}
+
+.draw-controls .ctrl-range-values span {
+  font-size: 0.8em !important;
+  line-height: 1;
+}
+
+.draw-controls select {
+  border: 1px solid var(--outline);
+  border-radius: 4px;
+  background-color: #fff;
+  padding: 2px 4px;
+  box-shadow: 0 0 2px rgba(0, 0, 0, 0.08);
+}
+
+
+/* ------------------------------------------------------------
+   Alternate range control (rangeHeader)
+------------------------------------------------------------ */
+/* Full-width "header range" control (black-style layout) */
+.ctrl-rangehdr-wrap {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+} /* end .ctrl-rangehdr-wrap */
+
+.ctrl-rangehdr-head {
+  width: 100%;
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+} /* end .ctrl-rangehdr-head */
+
+.ctrl-rangehdr-label {
+  font-size: 0.95rem;
+} /* end .ctrl-rangehdr-label */
+
+.ctrl-rangehdr-value {
+  font-size: 0.95rem;
+  text-align: right;
+  min-width: 3.5rem;
+} /* end .ctrl-rangehdr-value */
+
+.ctrl-rangehdr {
+  width: 100%;
+} /* end .ctrl-rangehdr */
+
+/* ===========================================================
+   THEMED ACTION BUTTON (used by parameterControls)
+   =========================================================== */
+
+.ctrl-button {
+  display: inline-block;                /* size to content */
+  padding: 0.45rem 1.1rem;
+  font-size: 0.9rem;
+  line-height: 1.2;
+
+  color: #fff;
+  background-color: var(--theme-base);
+
+  border: none;
+  border-radius: 999px;                 /* pill shape */
+  cursor: pointer;
+
+  box-shadow: 0 1px 2px rgba(0,0,0,0.25);
+  transition: background-color 120ms ease,
+              box-shadow 120ms ease,
+              transform 80ms ease;
+}
+
+/* Hover / focus */
+.ctrl-button:hover {
+  background-color: var(--theme-mid);
+}
+
+.ctrl-button:active {
+  transform: translateY(1px);
+  box-shadow: 0 0 1px rgba(0,0,0,0.3);
+}
+
+/* Optional: center buttons in full-width control rows */
+.ctrl-field > .ctrl-button,
+.ctrl-field > div > .ctrl-button {
+  margin: 0.25rem auto;
+  display: block;
+}
+
+/* ---- Point picker overlay ---- */
+.point-picker-dot {
+  position: absolute;
+  width: 7px;
+  height: 7px;
+  background: red;
+  border-radius: 50%;
+  pointer-events: auto;
+  z-index: 2;
+}
+
+.ctrl-static-text {
+  width: 100%;
+  box-sizing: border-box;
+  white-space: pre-wrap;
+  overflow-wrap: break-word;
+  padding: 6px 8px;
+  line-height: 1.25;
+}
+
+
+/* ===========================================================
+   Commands Button (global tab-level chrome)
+=========================================================== */
+
+/* ===========================================================
+   Commands Button (shared style)
+=========================================================== */
+
+.cmdButton {
+  padding: 6px 18px;
+  font-size: 0.85rem;
+
+  border-radius: 10px;
+  border: 1px solid #7a7a9a;
+
+  background: #f8f9ff;
+  color: #444;
+
+  cursor: pointer;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.25);
+} /* end .cmdButton */
+
+.cmdButton:hover {
+  background: #ffffff;
+} /* end .cmdButton:hover */
+
+.cmdButton:active {
+  box-shadow: 0 1px 2px rgba(0,0,0,0.25) inset;
+} /* end .cmdButton:active */
+
+
+/* optional: if you want the offcanvas button centered like the control one */
+.cmdButtonRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between; /* or center */
+  gap: 12px;
+  margin-bottom: 12px;
+} /* end .cmdButtonRow */
+
+#button {
+  display: flex;
+  justify-content: center;
+  width: 100%;
+  padding: 8px 0;
+
+  margin-bottom: 12px;   /* space between button area and separator */
+} /* end #button */
+
+.buttonSeparator,
+#buttonSeparator {
+  height: 2px;           /* bolder line */
+  width: 90%;            /* slightly inset, feels deliberate */
+  margin: 0 auto 18px;   /* center + space AFTER line */
+
+  background: rgba(0,0,0,0.28);
+  border-radius: 1px;    /* softens the edge */
+  margin-bottom: 16px;   /* space AFTER the line before first control */
+} /* end #buttonSeparator */
+
+/* ===========================================================
+   Offcanvas command button row
+   =========================================================== */
+
+.cmdButtonRow {
+  display: flex;
+  justify-content: center;   /* ← center, not space-between */
+  align-items: center;
+  width: 100%;
+  margin-bottom: 12px;
+} /* end .cmdButtonRow */
+
+
+
+
+
+
+

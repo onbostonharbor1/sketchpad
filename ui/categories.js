@@ -90,10 +90,6 @@ export function renderCategories(targetId, descriptor) {
   // Render each category frame
   frames.forEach((frameDesc) => {
 
-    const { frame, header, content } =
-      buildCategoryFrameElement(frameDesc.title);
-
-    // Items for this frame
     const items = frameDesc.items || [];
     if (!Array.isArray(items)) {
       throw new Error(
@@ -101,31 +97,40 @@ export function renderCategories(targetId, descriptor) {
       );
     }
 
+    const { frame, header, content } =
+      buildCategoryFrameElement(frameDesc.title, items.length);
+
     // ----------------------------------------------------------
     // Sort items by name (case-insensitive)
     // ----------------------------------------------------------
-    const sortedItems = items.slice();
-    sortedItems.sort((a, b) => {
-      if (!a || typeof a !== "object") {
-        throw new Error("renderCategories: invalid item descriptor");
-      }
-      if (!b || typeof b !== "object") {
-        throw new Error("renderCategories: invalid item descriptor");
-      }
-      if (typeof a.name !== "string") {
-        throw new Error("renderCategories: item.name must be a string");
-      }
-      if (typeof b.name !== "string") {
-        throw new Error("renderCategories: item.name must be a string");
-      }
+    let sortedItems = items.slice();
 
-      const an = a.name.toLowerCase();
-      const bn = b.name.toLowerCase();
+    const shouldSortItems =
+      frameDesc.sortItems === undefined ? true : !!frameDesc.sortItems;
 
-      if (an < bn) return -1;
-      if (an > bn) return 1;
-      return 0;
-    });
+    if (shouldSortItems) {
+      sortedItems.sort((a, b) => {
+        if (!a || typeof a !== "object") {
+          throw new Error("renderCategories: invalid item descriptor");
+        }
+        if (!b || typeof b !== "object") {
+          throw new Error("renderCategories: invalid item descriptor");
+        }
+        if (typeof a.name !== "string") {
+          throw new Error("renderCategories: item.name must be a string");
+        }
+        if (typeof b.name !== "string") {
+          throw new Error("renderCategories: item.name must be a string");
+        }
+
+        const an = a.name.toLowerCase();
+        const bn = b.name.toLowerCase();
+
+        if (an < bn) return -1;
+        if (an > bn) return 1;
+        return 0;
+      });
+    }
 
     sortedItems.forEach((itemDesc) => {
       if (
@@ -144,10 +149,8 @@ export function renderCategories(targetId, descriptor) {
         itemDesc.hasSubitems
       );
 
-      // Highlight support
       itemEl.setAttribute("data-key", itemDesc.name);
 
-      // Attach item handler
       itemEl.addEventListener("click", () => {
         setActiveItem(targetId, itemDesc.name);
         itemDesc.onClick();
@@ -159,6 +162,8 @@ export function renderCategories(targetId, descriptor) {
     outer.appendChild(frame);
   });
 } // end renderCategories
+
+
 
 
 /* ============================================================
@@ -198,13 +203,18 @@ export function setActiveItem(targetId, itemKey) {
 //   <div class="category-content"></div>
 // </div>
 // ------------------------------------------------------------
-function buildCategoryFrameElement(title) {
+function buildCategoryFrameElement(title, count) {
   const frame = document.createElement("div");
   frame.className = "category-frame";
 
   const header = document.createElement("div");
   header.className = "category-header";
-  header.textContent = title || "";
+
+  const safeTitle = title || "";
+  const safeCount =
+    typeof count === "number" ? ` (${count})` : "";
+
+  header.textContent = safeTitle + safeCount;
 
   const content = document.createElement("div");
   content.className = "category-content";
@@ -214,6 +224,7 @@ function buildCategoryFrameElement(title) {
 
   return { frame, header, content };
 } // end buildCategoryFrameElement
+
 
 
 

@@ -11,6 +11,7 @@ window.drawRegistry_cycloid = {
     source:       "internal",
     tags:         ["cycloid "],
     description:  "Cycloid",
+    status:      "",
     hover:        "",
 
     // -- visual styling ---

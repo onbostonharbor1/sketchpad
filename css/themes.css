@@ -1,92 +1,189 @@
 /* ===========================================================
-   THEME COLOR VARIABLES
-   Each tab family defines its palette, then a theme class
-   maps those to the generic --theme-* variables.
+   themes.css
+   -----------------------------------------------------------
+   Theme Color Variables (HSL-based families)
+   -----------------------------------------------------------
+   Anchors you selected (or confirmed):
+     Home     = Indigo  #4B0082   (H≈275 S=100 L≈25)
+     Draw     = Blue    #0000FF   (H=240 S=100 L=50)
+     Figures  = Green   #008000   (H=120 S=100 L≈25)
+     Patterns = MediumTurquoise
+     Gallery  = Terracotta
+     Utilities = Brown (deepened)
    =========================================================== */
+
+
 /* ===========================================================
-   FIXED TAB COLORS — each top-level tab keeps its own tint
+   FIXED TAB COLORS — top-level tab background washes
    =========================================================== */
+#home-tab      { background: linear-gradient(to bottom, var(--home-tint) 0%, #ffffff 100%); }
 #draw-tab      { background: linear-gradient(to bottom, var(--draw-tint) 0%, #ffffff 100%); }
 #patterns-tab  { background: linear-gradient(to bottom, var(--patterns-tint) 0%, #ffffff 100%); }
 #figures-tab   { background: linear-gradient(to bottom, var(--figures-tint) 0%, #ffffff 100%); }
 #gallery-tab   { background: linear-gradient(to bottom, var(--gallery-tint) 0%, #ffffff 100%); }
 #utilities-tab { background: linear-gradient(to bottom, var(--utilities-tint) 0%, #ffffff 100%); }
 
+
 :root {
 
-  --gray-dark: #444;
-
-
-  /* Draw (blue1) */
- /* --draw-tint:   #f6f9ff; */
-  --draw-tint:   #f6f9ff;
-  --draw-mid:    #a5c8ff;
-  --draw-base:   #2f6fe8;
-  --draw-divider:#8da6cf;
-
-  /* Patterns (blue2) */
-  /* --patterns-tint:   #f1f6ff; */
-  --patterns-tint:   #88abec;
-  --patterns-mid:    #a5c8ff;
-  --patterns-base:   #2f6fe8;
-  --patterns-divider:#8da6cf;
-
-  /* Figures (blue3) */
-  --figures-tint:   #ecf3ff;
-  --figures-mid:    #a5c8ff;
-  --figures-base:   #2f6fe8;
-  --figures-divider:#8da6cf;
-
-  /* Gallery (green) */
-  --gallery-tint:   #e2f7e2;
-  --gallery-mid:    #a8e6a8;
-  --gallery-base:   #1f9132;
-  --gallery-divider:#7ca67c;
-
-  /* Utilities (brown) */
-  --utilities-tint:   #f3e8da;
-  --utilities-mid:    #e0c9a6;
-  --utilities-base:   #8b5e3c;
-  --utilities-divider:#a17d58;
-
+  --gray-dark: #555;
   --outline: rgba(0,0,0,0.45);
-}
+
+/* =========================================================
+   HOME (Indigo) — anchor ≈ #4B0082
+   Replace the HOME block only
+   ========================================================= */
+  --home-hue: 275;
+  --home-sat: 100%;
+
+  --home-tint:    hsl(var(--home-hue), var(--home-sat), 88%);
+  --home-mid:     hsl(var(--home-hue), var(--home-sat), 58%);
+  --home-base:    hsl(var(--home-hue), var(--home-sat), 25%);
+  --home-divider: hsl(var(--home-hue), var(--home-sat), 18%);
+
+
+
+  /* =========================================================
+     DRAW (Blue) — anchor #0000FF
+     ========================================================= */
+  --draw-hue: 240;
+  --draw-sat: 100%;
+
+  --draw-tint:    hsl(var(--draw-hue), var(--draw-sat), 88%);
+  --draw-mid:     hsl(var(--draw-hue), var(--draw-sat), 62%);
+  --draw-base:    hsl(var(--draw-hue), var(--draw-sat), 50%);
+  --draw-divider: hsl(var(--draw-hue), var(--draw-sat), 38%);
+
+
+  /* =========================================================
+     PATTERNS (MediumTurquoise-anchored)
+     Anchor ≈ #48D1CC
+     Hue ≈ 172°, saturation slightly reduced for seriousness
+     ========================================================= */
+  --patterns-hue: 172;
+  --patterns-sat: 62%;
+
+  --patterns-tint:    hsl(var(--patterns-hue), var(--patterns-sat), 90%);
+  --patterns-mid:     hsl(var(--patterns-hue), var(--patterns-sat), 60%);
+  --patterns-base:    hsl(var(--patterns-hue), var(--patterns-sat), 45%);
+  --patterns-divider: hsl(var(--patterns-hue), var(--patterns-sat), 32%);
+
+
+
+  /* =========================================================
+     FIGURES (Green) — anchor #008000 (brighter ladder)
+     ========================================================= */
+  --figures-hue: 120;
+  --figures-sat: 100%;
+
+  --figures-tint:    hsl(var(--figures-hue), var(--figures-sat), 88%);
+  --figures-mid:     hsl(var(--figures-hue), var(--figures-sat), 52%);
+  --figures-base:    hsl(var(--figures-hue), var(--figures-sat), 25%);
+  --figures-divider: hsl(var(--figures-hue), var(--figures-sat), 18%);
+
+
+  /* =========================================================
+     GALLERY (Terracotta) — anchor ≈ #C65D3B
+     ========================================================= */
+  --gallery-hue: 14.7;
+  --gallery-sat: 55%;
+
+  --gallery-tint:    hsl(var(--gallery-hue), var(--gallery-sat), 90%);
+  --gallery-mid:     hsl(var(--gallery-hue), var(--gallery-sat), 66%);
+  --gallery-base:    hsl(var(--gallery-hue), var(--gallery-sat), 50%);
+  --gallery-divider: hsl(var(--gallery-hue), var(--gallery-sat), 36%);
+
+
+  /* =========================================================
+     UTILITIES (Brown) — deepened
+     ========================================================= */
+  --utilities-hue: 29.4;
+  --utilities-sat: 53%;
+
+  --utilities-tint:    hsl(var(--utilities-hue), var(--utilities-sat), 88%);
+  --utilities-mid:     hsl(var(--utilities-hue), var(--utilities-sat), 56%);
+  --utilities-base:    hsl(var(--utilities-hue), var(--utilities-sat), 28%);
+  --utilities-divider: hsl(var(--utilities-hue), var(--utilities-sat), 18%);
+
+} /* end :root */
+
 
 /* ===========================================================
    THEME CLASSES
-   Applying one of these sets the active --theme-* colors.
    =========================================================== */
+
+.theme-home {
+  --theme-tint:    var(--home-tint);
+  --theme-mid:     var(--home-mid);
+  --theme-base:    var(--home-base);
+  --theme-divider: var(--home-divider);
+}
+
 .theme-draw {
-  --theme-tint: var(--draw-tint);
-  --theme-mid:  var(--draw-mid);
-  --theme-base: var(--draw-base);
+  --theme-tint:    var(--draw-tint);
+  --theme-mid:     var(--draw-mid);
+  --theme-base:    var(--draw-base);
   --theme-divider: var(--draw-divider);
 }
 
 .theme-patterns {
-  --theme-tint: var(--patterns-tint);
-  --theme-mid:  var(--patterns-mid);
-  --theme-base: var(--patterns-base);
+  --theme-tint:    var(--patterns-tint);
+  --theme-mid:     var(--patterns-mid);
+  --theme-base:    var(--patterns-base);
   --theme-divider: var(--patterns-divider);
 }
 
 .theme-figures {
-  --theme-tint: var(--figures-tint);
-  --theme-mid:  var(--figures-mid);
-  --theme-base: var(--figures-base);
+  --theme-tint:    var(--figures-tint);
+  --theme-mid:     var(--figures-mid);
+  --theme-base:    var(--figures-base);
   --theme-divider: var(--figures-divider);
 }
 
 .theme-gallery {
-  --theme-tint: var(--gallery-tint);
-  --theme-mid:  var(--gallery-mid);
-  --theme-base: var(--gallery-base);
+  --theme-tint:    var(--gallery-tint);
+  --theme-mid:     var(--gallery-mid);
+  --theme-base:    var(--gallery-base);
   --theme-divider: var(--gallery-divider);
 }
 
 .theme-utilities {
-  --theme-tint: var(--utilities-tint);
-  --theme-mid:  var(--utilities-mid);
-  --theme-base: var(--utilities-base);
+  --theme-tint:    var(--utilities-tint);
+  --theme-mid:     var(--utilities-mid);
+  --theme-base:    var(--utilities-base);
   --theme-divider: var(--utilities-divider);
 }
+
+
+/* ===========================================================
+   UI ALIASES — component-level knobs
+   =========================================================== */
+
+.theme-home,
+.theme-draw,
+.theme-patterns,
+.theme-figures,
+.theme-gallery,
+.theme-utilities {
+
+  --ui-main-strip-bg:          var(--theme-base);
+
+  --ui-subtab-idle-bg:         var(--theme-mid);
+  --ui-subtab-active-bg:       var(--theme-base);
+
+  --ui-category-frame-border:  var(--theme-base);
+  --ui-category-header-bg:     var(--theme-mid);
+
+  --ui-action-bg:              var(--theme-tint);
+  --ui-caption-bg:             var(--theme-mid);
+  --ui-control-bg:             var(--theme-tint);
+}
+
+/* ===========================================================
+   DRAW-SPECIFIC OVERRIDES
+   =========================================================== */
+
+.theme-draw {
+  --ui-control-bg: hsl(var(--draw-hue), var(--draw-sat), 92%);
+  --ui-action-bg:  hsl(var(--draw-hue), var(--draw-sat), 92%);
+} /* end .theme-draw */

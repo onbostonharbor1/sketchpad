@@ -4,6 +4,7 @@
    ------------------------------------------------------------
 */
 
+import { HomeTabSpec }      from "./home.js";
 import { DrawTabSpec }      from "./draw.js";
 import { PatternsTabSpec }  from "./patterns.js";
 import { GalleryTabSpec }   from "./gallery.js";
@@ -21,6 +22,7 @@ const START = "START_APP";
    All TabSpec objects must be registered here.
 =========================================================== */
 const TabRegistry = {
+  home:      HomeTabSpec,
   draw:      DrawTabSpec,
   patterns:  PatternsTabSpec,
   gallery:   GalleryTabSpec,
@@ -55,6 +57,7 @@ function setActiveTab(tabKey) {
 =========================================================== */
 function mapTabIdToKey(tabId) {
   const map = {
+    "home-tab":      "home",
     "draw-tab":      "draw",
     "patterns-tab":  "patterns",
     "gallery-tab":   "gallery",
@@ -76,6 +79,7 @@ function applyTheme(tabKey) {
 
   // Remove any existing theme class
   const themeClasses = [
+    "theme-home",
     "theme-draw",
     "theme-patterns",
     "theme-gallery",
@@ -86,6 +90,7 @@ function applyTheme(tabKey) {
 
   // Map tab key → theme class
   const themeMap = {
+    home:      "theme-home",
     draw:      "theme-draw",
     patterns:  "theme-patterns",
     gallery:   "theme-gallery",
@@ -142,7 +147,7 @@ function activateTab(tab) {
   let tabKey = tab;
 
   if (tab === START) {
-    tabKey = "draw";
+    tabKey = "home";
     initTab(tabKey);
   } else {
     const saved = uiState[tabKey] && uiState[tabKey].saved;
@@ -164,31 +169,59 @@ function activateTab(tab) {
    PUBLIC ENTRY: All tab switches call this.
 =========================================================== */
 export function setUI(tab) {
-  let tabName;
-  if (tab === START)
-    tabName = "draw"
-  else
-      tabName = tab;
 
-  if (!TabRegistry[tabName] && tabName !== START) {
+  let tabName;
+
+  if (tab === START) {
+    tabName = START;
+  } else {
+    tabName = tab;
+  }
+
+  if (tabName !== START && !TabRegistry[tabName]) {
     throw new Error("setUI: unknown tab " + tabName);
   }
 
-  // ---- SAVE STATE OF PREVIOUS TAB ----
-  const prev = uiState.activeTab;
-  if (prev && TabRegistry[prev] && TabRegistry[prev].save) {
-    uiState[prev].saved = TabRegistry[prev].save();
+  // ----------------------------------------------------------
+  // Apply theme first (must happen before init/restore)
+  // ----------------------------------------------------------
+  if (tabName === START) {
+    applyTheme("home");
+  } else {
+    applyTheme(tabName);
   }
 
-
-  applyTheme(tabName); // Ensure the theme is reset first
-
-  // Now activate the tab (this will call initTab() or restoreTab() accordingly)
-  if (tab === START)
+  // ----------------------------------------------------------
+  // Activate tab
+  // ----------------------------------------------------------
+  if (tabName === START) {
     activateTab(START);
-  else
+  } else {
     activateTab(tabName);
+  }
+
+  // ----------------------------------------------------------
+  // Consume launch intent (Home → Draw, etc.)
+  // ----------------------------------------------------------
+  if (!uiState.launch) return;
+  if (uiState.launch.pending !== true) return;
+
+  const targetTab = uiState.launch.targetTab;
+  if (!targetTab) {
+    throw new Error("setUI: launch.pending but targetTab missing");
+  }
+
+  // Clear FIRST to avoid recursion loops
+  uiState.launch.pending = false;
+
+  // If we're already on the target tab, do nothing
+  if (uiState.activeTab === targetTab) return;
+
+  // Jump to the requested tab
+  setUI(targetTab);
+
 } // end setUI
+
 
 
 /* ============================================================

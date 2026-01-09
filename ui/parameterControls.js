@@ -212,7 +212,7 @@ function buildDrawParameterData(tabState) {
      - batch operations
 
 =========================================================== */
-function buildScriptParameterData(sourceInfo) {
+export function buildScriptParameterData(sourceInfo) {
 
   // ---------------------------------------------------------
   // Guard:
@@ -457,7 +457,7 @@ function buildScriptParameterData(sourceInfo) {
      - hidden controls do not consume DOM space
 
 =========================================================== */
-function renderParameterControls(
+export function renderParameterControls(
   sourceInfo,
   controlData,
   targetTabId = "tab-generic"

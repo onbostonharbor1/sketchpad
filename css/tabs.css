@@ -1,104 +1,267 @@
 /* ===========================================================
-   MAIN TAB BAR (folder-style tabs)
+   tabs.css
    =========================================================== */
-.nav-tabs {
+
+/* ===========================================================
+   MAIN TAB BAR — OVERLAPPING SLOPED TABS (ONLY #mainTabs)
+   =========================================================== */
+
+ul#mainTabs.nav-tabs {
   display: flex;
   align-items: flex-end;
-  border-bottom: 1px solid var(--outline);
-  font-size: 0.82rem;
-  font-weight: 500;
-  padding-left: 6px;
+  border-bottom: none;
+  padding-left: 10px;
   margin-top: 8px;
-}
-
-.nav-tabs .nav-link {
   position: relative;
-  border: 1px solid var(--outline);
-  border-bottom: 1px solid rgba(0,0,0,0.25);
-  color: #000;
-  padding: 4px 24px;
-  margin-right: -6px;
-  clip-path: polygon(8% 0, 100% 0, 92% 100%, 0 100%);
+  overflow: visible;
+}
+
+/* full-width strip under main tabs only */
+ul#mainTabs.nav-tabs::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -2px;
+  height: 10px;
+  background: var(--theme-base);
+  z-index: 0;
+}
+
+/* per-tab colors */
+#home-tab      { --tab-base: var(--home-base);      --tab-text: #fff; }
+#draw-tab      { --tab-base: var(--draw-base);      --tab-text: #fff; }
+#patterns-tab  { --tab-base: var(--patterns-base);  --tab-text: #fff; }
+#figures-tab   { --tab-base: var(--figures-base);   --tab-text: #fff; }
+#gallery-tab   { --tab-base: var(--gallery-base);   --tab-text: #fff; }
+#utilities-tab { --tab-base: var(--utilities-base); --tab-text: #fff; }
+
+/* ===========================================================
+   SHAPE DEFINITION — ROUNDED TRAPEZOID MASK
+   =========================================================== */
+
+:root {
+  --tabMaskRoundedTrapezoid:
+    url("data:image/svg+xml;utf8,\
+<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100' preserveAspectRatio='none'>\
+  <path fill='white' d='\
+    M18 0 \
+    H82 \
+    Q96 0 96 32 \
+    L100 100 \
+    H0 \
+    L4 26 \
+    Q4 0 18 0 \
+    Z'/>\
+</svg>");
+} /* end :root */
+
+
+/* ===========================================================
+   MAIN TAB BUTTONS
+   =========================================================== */
+
+ul#mainTabs.nav-tabs .nav-link {
+  position: relative;
+
+  padding: 8px 44px;
+  height: 36px;
+
+  font-size: 0.95rem;
+  font-weight: 700;
+
+  background: var(--tab-base);
+  color: var(--tab-text);
+
+  border: none;
+  margin-right: -18px;
+
   cursor: pointer;
-  background: linear-gradient(to bottom, var(--theme-tint) 0%, #f1f1f1 100%);
-  transition: background-color 0.2s, transform 0.2s;
-  height: 28px;
+  z-index: 1;
+
+  transition: filter 0.15s ease;
+
+  /* REAL rounded trapezoid */
+  -webkit-mask-image: var(--tabMaskRoundedTrapezoid);
+  -webkit-mask-size: 100% 100%;
+  -webkit-mask-repeat: no-repeat;
+  -webkit-mask-position: center;
+
+  mask-image: var(--tabMaskRoundedTrapezoid);
+  mask-size: 100% 100%;
+  mask-repeat: no-repeat;
+  mask-position: center;
 }
 
-/* Tint edges with the theme divider */
-.nav-tabs .nav-link {
-  border-right: 2px solid var(--theme-divider);
+/* bottom curved lip */
+ul#mainTabs.nav-tabs .nav-link::after {
+  content: "";
+  position: absolute;
+  left: 6%;
+  right: 6%;
+  bottom: -6px;
+  height: 10px;
+  background: inherit;
+  border-radius: 0 0 40px 40px;
+  z-index: 2;
 }
 
-.nav-tabs .nav-link:hover {
-  filter: brightness(0.96);
+ul#mainTabs.nav-tabs .nav-link:hover {
+  filter: brightness(1.06);
 }
 
-.nav-tabs .nav-link.active {
-  transform: translateY(-2px);
-  font-weight: 700;
-  border-bottom: none;
+/* ACTIVE MAIN TAB */
+ul#mainTabs.nav-tabs .nav-link.active {
+  height: 42px;
+  margin-top: -6px;
+  padding-top: 12px;
+  z-index: 10;
+  filter: brightness(1.12);
+  box-shadow: 0 3px 10px rgba(0,0,0,0.25);
 }
 
-
-.nav-tabs .nav-link.active {
-  background: linear-gradient(to bottom, #ffffff 0%, #f8f8f8 100%);
-  font-weight: 700;
-  transform: translateY(-2px);
-  border-bottom: none;
-  box-shadow:
-    0 -2px 4px rgba(0,0,0,0.15),
-    inset -1px 0 rgba(255,255,255,0.5);
+ul#mainTabs.nav-tabs .nav-link.active::after {
+  bottom: -8px;
+  height: 12px;
 }
 
 /* ===========================================================
-   SIDEBAR COLOR TINTS
-   (can later be tied to themes if desired)
+   SUBTABS — SAME SHAPE, NO LIP
+   Goals:
+     1) Selected tab is obvious (FONT ONLY)
+     2) Tabs don’t merge (seam divider + odd/even variation)
+     3) “Categories” readable (white text)
    =========================================================== */
-#drawControl      { background-color: var(--draw-tint); }
-#patternsControl  { background-color: var(--patterns-tint); }
-#figuresControl   { background-color: var(--figures-tint); }
-#galleryControl   { background-color: var(--gallery-tint); }
-#utilitiesControl { background-color: var(--utilities-tint); }
 
-/* ===========================================================
-   SUBTABS (Gallery & Utilities examples)
-   =========================================================== */
 .gallery-subtabs,
+.home-subtabs,
 .utilities-subtabs,
+.patterns-subtabs,
 .draw-subtabs {
   display: flex;
   align-items: flex-end;
-  border-bottom: 1px solid var(--outline);
-  padding: 0 0.5rem;
+  padding-left: 6px;
+  position: relative;
 }
 
-.gallery-subtabs .nav-link.active {
-  background: var(--gallery-tint);
-}
-.utilities-subtabs .nav-link.active {
-  background: var(--utilities-tint);
-}
-.draw-subtabs .nav-link.active {
-  background: var(--draw-tint);
+.gallery-subtabs::after,
+.home-subtabs::after,
+.utilities-subtabs::after,
+.patterns-subtabs::after,
+.draw-subtabs::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 2px;
+  background: var(--theme-base);
 }
 
-/* Optional hover and cursor consistency */
+/* subtab buttons (base) */
 .draw-subtabs .nav-link,
 .gallery-subtabs .nav-link,
+.home-subtabs .nav-link,
+.patterns-subtabs .nav-link,
 .utilities-subtabs .nav-link {
+  position: relative;
+
+  padding: 6px 26px;
+  height: 32px;
+  margin-top: 0;
+
+  font-size: 0.92rem;
+
+  /* CHANGE A: inactive lighter weight */
+  font-weight: 300;
+
+  background: var(--theme-mid);
+
+  /* make “Categories” readable */
+  color: rgba(255,255,255,0.96);
+
+  border: none;
+
+  /* keep overlap, but we’ll add a seam divider */
+  margin-right: -14px;
+
   cursor: pointer;
+  z-index: 1;
+
+  -webkit-mask-image: var(--tabMaskRoundedTrapezoid);
+  -webkit-mask-size: 100% 100%;
+  -webkit-mask-repeat: no-repeat;
+  -webkit-mask-position: center;
+
+  mask-image: var(--tabMaskRoundedTrapezoid);
+  mask-size: 100% 100%;
+  mask-repeat: no-repeat;
+  mask-position: center;
+
+  transition:
+    filter 0.12s ease,
+    box-shadow 0.12s ease,
+    transform 0.12s ease;
+}
+
+/* seam divider so tabs don’t visually merge */
+.draw-subtabs .nav-link,
+.gallery-subtabs .nav-link,
+.patterns-subtabs .nav-link,
+.utilities-subtabs .nav-link {
+  box-shadow: inset 1px 0 0 rgba(255,255,255,0.4);
+}
+
+/* Odd/even subtle variation for inactive tabs */
+.draw-subtabs .nav-item:nth-child(odd) .nav-link:not(.active),
+.gallery-subtabs .nav-item:nth-child(odd) .nav-link:not(.active),
+.home-subtabs .nav-item:nth-child(odd) .nav-link:not(.active),
+.utilities-subtabs .nav-item:nth-child(odd) .nav-link:not(.active) {
+  filter: brightness(2);
+}
+
+.draw-subtabs .nav-item:nth-child(even) .nav-link:not(.active),
+.gallery-subtabs .nav-item:nth-child(even) .nav-link:not(.active),
+.home-subtabs .nav-item:nth-child(even) .nav-link:not(.active),
+.utilities-subtabs .nav-item:nth-child(even) .nav-link:not(.active) {
+  filter: brightness(0.93);
+}
+
+/* Patterns subtabs: no alternation */
+.patterns-subtabs .nav-link:not(.active) {
+  filter: none;
+}
+
+
+/* Active subtabs: FONT ONLY (no raise, no outline) */
+.draw-subtabs .nav-link.active,
+.gallery-subtabs .nav-link.active,
+.home-subtabs .nav-link.active,
+.patterns-subtabs .nav-link.active,
+.utilities-subtabs .nav-link.active {
+  background: var(--theme-base);
+  color: #fff;
+
+  /* CHANGE B: active bold weight */
+  font-weight: 800;
+
+  /* keep your stronger separation, but NO transform/outline */
+  box-shadow:
+    0 2px 8px rgba(0,0,0,0.25),
+    inset 1px 0 0 rgba(255,255,255,0.20);
+
+  z-index: 10;
 }
 
 /* ===========================================================
-   CLOSE BUTTON FOR DRAW SUBTABS (right-aligned)
+   DRAW SUBTAB CLOSE BUTTON
    =========================================================== */
+
 .draw-subtabs .nav-link {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 6px;
-  padding-right: 16px;  /* room for the close button */
+  gap: 8px;
+  padding-right: 18px;
 }
 
 .tab-label {
@@ -106,10 +269,9 @@
   text-align: left;
 }
 
-/* close button itself */
 .tab-close {
   margin-left: auto;
-  color: #666;
+  color: rgba(255,255,255,0.85);
   cursor: pointer;
   font-weight: bold;
   font-size: 0.8em;
@@ -118,5 +280,110 @@
 }
 
 .tab-close:hover {
-  color: #c00;
+  color: #ffd0d0;
+}
+
+/* ===========================================================
+   BOOTSTRAP OVERRIDES (SCOPED)
+   =========================================================== */
+
+ul#mainTabs.nav-tabs .nav-link {
+  margin-bottom: 0 !important;
+  border: none !important;
+}
+
+ul#mainTabs.nav-tabs .nav-link,
+ul#mainTabs.nav-tabs .nav-link:hover,
+ul#mainTabs.nav-tabs .nav-link:focus,
+ul#mainTabs.nav-tabs .nav-link.active {
+  border: none !important;
+  border-bottom: 0 !important;
+  outline: none !important;
+  box-shadow: none !important;
+}
+
+
+/* ===========================================================
+   PATTERNS TAB ONLY — CATEGORIES LABEL CLARITY
+   =========================================================== */
+
+.patterns-subtabs .nav-item:first-child .nav-link:not(.active) {
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  color: rgba(255,255,255,0.98);
+}
+
+/* ===========================================================
+   GALLERY SUBTABS — FIX OVERLAP STACKING (BUTTON LEVEL)
+   =========================================================== */
+
+.gallery-subtabs .nav-item { position: relative; }
+
+.gallery-subtabs .nav-item:nth-child(1) .nav-link { z-index: 3; }
+.gallery-subtabs .nav-item:nth-child(2) .nav-link { z-index: 4; }
+.gallery-subtabs .nav-item:nth-child(3) .nav-link { z-index: 5; }
+.gallery-subtabs .nav-item:nth-child(4) .nav-link { z-index: 6; } /* Results */
+
+/* GALLERY ONLY — force inactive tab fill (no washout) */
+.gallery-subtabs .nav-link:not(.active) {
+  filter: none !important;
+  opacity: 1 !important;
+  background: var(--theme-mid) !important;
+}
+
+/* ===========================================================
+   GALLERY SUBTABS ONLY — INACTIVE ALTERNATION (BACKGROUND ONLY)
+   -----------------------------------------------------------
+   No filters. No global impact. Just a subtle odd/even lift.
+   =========================================================== */
+
+/* odd inactive: slightly darker */
+.gallery-subtabs .nav-item:nth-child(odd) .nav-link:not(.active) {
+  background:
+    linear-gradient(to bottom, rgba(0,0,0,0.06), rgba(0,0,0,0.06)),
+    var(--theme-mid) !important;
+}
+
+
+
+/* ===========================================================
+   UTILITIES SUBTABS — FIX 3RD TAB WASHOUT + CLEAN ALTERNATION
+   -----------------------------------------------------------
+   Problem: global odd/even filter alternation brightens tab 3
+            so much the white text disappears.
+   Fix:     utilities-only override:
+              - no filters
+              - force solid inactive background
+              - background-only alternation
+              - z-index stacking like Gallery
+   =========================================================== */
+
+.utilities-subtabs .nav-item { position: relative; }
+
+/* stacking so overlaps remain readable */
+.utilities-subtabs .nav-item:nth-child(1) .nav-link { z-index: 3; }
+.utilities-subtabs .nav-item:nth-child(2) .nav-link { z-index: 4; }
+.utilities-subtabs .nav-item:nth-child(3) .nav-link { z-index: 5; }
+
+/* UTILITIES ONLY — force inactive tab fill (no washout) */
+.utilities-subtabs .nav-link:not(.active) {
+  filter: none !important;
+  opacity: 1 !important;
+  background: var(--theme-mid) !important;
+}
+
+/* UTILITIES ONLY — background-only alternation (no filters) */
+
+/* odd inactive: slightly darker */
+.utilities-subtabs .nav-item:nth-child(odd) .nav-link:not(.active) {
+  background:
+    linear-gradient(to bottom, rgba(0,0,0,0.06), rgba(0,0,0,0.06)),
+    var(--theme-mid) !important;
+}
+
+/* even inactive: slightly lighter */
+.utilities-subtabs .nav-item:nth-child(even) .nav-link:not(.active) {
+  background:
+    linear-gradient(to bottom, rgba(255,255,255,0.06), rgba(255,255,255,0.06)),
+    var(--theme-mid) !important;
 }

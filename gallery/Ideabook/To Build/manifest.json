@@ -1,21 +1,96 @@
-[ 
-  { "filename": "028a", "path": "To Build/028a.jpg" } 
-, { "filename": "032", "path": "To Build/032.jpg" } 
-, { "filename": "044", "path": "To Build/044.jpg" } 
-, { "filename": "049", "path": "To Build/049.jpg" } 
-, { "filename": "057", "path": "To Build/057.jpg" } 
-, { "filename": "151", "path": "To Build/151.jpg" } 
-, { "filename": "157", "path": "To Build/157.jpg" } 
-, { "filename": "209", "path": "To Build/209.jpg" } 
-, { "filename": "245", "path": "To Build/245.jpg" } 
-, { "filename": "70", "path": "To Build/70.jpg" } 
-, { "filename": "81", "path": "To Build/81.jpg" } 
-, { "filename": "84", "path": "To Build/84.jpg" } 
-, { "filename": "Figure172", "path": "To Build/Figure172.jpg" } 
-, { "filename": "Figure237", "path": "To Build/Figure237.jpg" } 
-, { "filename": "219", "path": "To Build/219.PNG" } 
-, { "filename": "Figure 151", "path": "To Build/Figure 151.png" } 
-, { "filename": "Figure 81", "path": "To Build/Figure 81.png" } 
-, { "filename": "Figure 84", "path": "To Build/Figure 84.png" } 
-, { "filename": "Figure 98", "path": "To Build/Figure 98.png" } 
-] 
+[
+  {
+    "filename": "028a",
+    "path": "028a.jpg"
+  },
+  {
+    "filename": "032",
+    "path": "032.jpg",
+    "title": "032.jpg"
+  },
+  {
+    "filename": "044",
+    "path": "044.jpg",
+    "title": "044.jpg"
+  },
+  {
+    "filename": "049",
+    "path": "049.jpg",
+    "title": "049.jpg"
+  },
+  {
+    "filename": "057",
+    "path": "057.jpg",
+    "title": "057.jpg"
+  },
+  {
+    "filename": "151",
+    "path": "151.jpg",
+    "title": "151.jpg"
+  },
+  {
+    "filename": "157",
+    "path": "157.jpg",
+    "title": "157.jpg"
+  },
+  {
+    "filename": "209",
+    "path": "209.jpg",
+    "title": "209.jpg"
+  },
+  {
+    "filename": "219",
+    "path": "219.PNG",
+    "title": "219.PNG"
+  },
+  {
+    "filename": "245",
+    "path": "245.jpg",
+    "title": "245.jpg"
+  },
+  {
+    "filename": "70",
+    "path": "70.jpg",
+    "title": "70.jpg"
+  },
+  {
+    "filename": "81",
+    "path": "81.jpg",
+    "title": "81.jpg"
+  },
+  {
+    "filename": "84",
+    "path": "84.jpg",
+    "title": "84.jpg"
+  },
+  {
+    "filename": "Figure 151",
+    "path": "Figure 151.png",
+    "title": "Figure 151.png"
+  },
+  {
+    "filename": "Figure 81",
+    "path": "Figure 81.png",
+    "title": "Figure 81.png"
+  },
+  {
+    "filename": "Figure 84",
+    "path": "Figure 84.png",
+    "title": "Figure 84.png"
+  },
+  {
+    "filename": "Figure 98",
+    "path": "Figure 98.png",
+    "title": "Figure 98.png"
+  },
+  {
+    "filename": "Figure172",
+    "path": "Figure172.jpg",
+    "title": "Figure172.jpg"
+  },
+  {
+    "filename": "Figure237",
+    "path": "Figure237.jpg",
+    "title": "Figure237.jpg"
+  }
+]

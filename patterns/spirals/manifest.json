@@ -27,11 +27,13 @@
   {
     "filename": "pureSpiral",
     "path": "pureSpiral.js",
+    "status": "new",
     "title": "Pure Spiral"
   },
   {
     "filename": "pureSpiralA",
     "path": "pureSpiralA.js",
+     "status": "new",
     "title": "Pure Spiral A Filled"
   },
   {

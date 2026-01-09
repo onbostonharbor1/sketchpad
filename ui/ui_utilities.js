@@ -116,6 +116,31 @@ function wrapIndex(i, len) {
   return (i + len) % len;
 } // end wrapIndex
 
+
+/**
+ * Set the Commands button label for the active top-level tab.
+ *
+ * Assumptions (fail-fast):
+ * - #commandsButton exists in the DOM
+ * - caller supplies a non-empty string
+ *
+ * @param {string} label - Full label text (e.g. "Draw Commands")
+ */
+export function setCommandsButtonLabel(label) {
+  if (!label) {
+    throw new Error("setCommandsButtonLabel: label is required");
+  }
+
+  const btn = document.getElementById("commandsButton");
+  if (!btn) {
+    throw new Error("setCommandsButtonLabel: #commandsButton not found");
+  }
+
+  btn.textContent = label;
+} // end setCommandsButtonLabel
+
+
+
 ////////////////////////////////////////////////////////////////
 // clearOverlaysForTabSwitch()
 ////////////////////////////////////////////////////////////////
@@ -176,6 +201,19 @@ export function showScriptOffcanvas(scriptPath, titleText) {
       bsCanvas.show();
     });
 } // end showScriptOffcanvas
+
+export function markSelectedThumbnail(actionDivId, selectedIndex) {
+  const panel = document.getElementById(actionDivId);
+  if (!panel) throw new Error("markSelectedThumbnail: panel not found: " + actionDivId);
+
+  const thumbs = panel.querySelectorAll("img.thumb-image");
+  if (!thumbs.length) throw new Error("markSelectedThumbnail: no .thumb-image found in " + actionDivId);
+
+  thumbs.forEach((img, i) => {
+    if (i === selectedIndex) img.classList.add("thumb-selected");
+    else img.classList.remove("thumb-selected");
+  });
+} // end markSelectedThumbnail
 
 
 export function renderThumbnailGrid(targetId, items, buildSrc, onClick) {
@@ -257,3 +295,112 @@ export async function loadHelpManifest() {
   helpManifest = data;
   return helpManifest;
 } // end loadHelpManifest
+
+/*************************************************************
+   setCommandsButtonHandler(onClick)
+   -----------------------------------------------------------
+   Replaces the Commands button click handler deterministically.
+*************************************************************/
+export function setCommandsButtonHandler(onClick) {
+
+  const btn = document.getElementById("commandsButton");
+  if (!btn) throw new Error("setCommandsButtonHandler: #commandsButton not found");
+
+  if (typeof onClick !== "function") {
+    throw new Error("setCommandsButtonHandler: onClick must be a function");
+  }
+
+  // Deterministic: overwrite any previous handler.
+  btn.onclick = onClick;
+
+} // end setCommandsButtonHandler
+
+
+/*************************************************************
+   showCommandsOffcanvas({ title, buildBody })
+   -----------------------------------------------------------
+   Uses the permanent offcanvas shell (#offcanvasPanel).
+   Dynamically populates the body and shows it.
+*************************************************************/
+export function showCommandsOffcanvas({ title, buildBody }) {
+
+  const panel = document.getElementById("offcanvasPanel");
+  if (!panel) throw new Error("showCommandsOffcanvas: #offcanvasPanel not found");
+
+  const titleEl = panel.querySelector(".offcanvas-title");
+  if (!titleEl) throw new Error("showCommandsOffcanvas: .offcanvas-title not found");
+
+  const bodyEl = panel.querySelector(".offcanvas-body");
+  if (!bodyEl) throw new Error("showCommandsOffcanvas: .offcanvas-body not found");
+
+  if (typeof buildBody !== "function") {
+    throw new Error("showCommandsOffcanvas: buildBody must be a function");
+  }
+
+  titleEl.textContent = title || "Commands";
+
+  bodyEl.innerHTML = "";
+  buildBody(bodyEl);
+
+  if (!window.bootstrap || !window.bootstrap.Offcanvas) {
+    throw new Error("showCommandsOffcanvas: Bootstrap Offcanvas not available on window.bootstrap");
+  }
+
+  const oc = window.bootstrap.Offcanvas.getOrCreateInstance(panel);
+  oc.show();
+
+} // end showCommandsOffcanvas
+
+/* ===========================================================
+   Commands button wiring + Offcanvas helper
+   (ADD to ui_utilities.js)
+=========================================================== */
+
+export function setCommandsButton(label, onClick) {
+
+  const btn = document.getElementById("commandsButton");
+  if (!btn) throw new Error("setCommandsButton: #commandsButton not found");
+
+  btn.textContent = label || "Commands";
+
+  // fail-fast: remove prior handler cleanly by cloning
+  const fresh = btn.cloneNode(true);
+  btn.parentNode.replaceChild(fresh, btn);
+
+  fresh.addEventListener("click", () => {
+    if (!onClick) throw new Error("setCommandsButton: onClick missing");
+    onClick();
+  });
+
+} // end setCommandsButton
+
+
+export function showOffcanvasPanel({ title, bodyHtml }) {
+
+  const panel = document.getElementById("offcanvasPanel");
+  if (!panel) throw new Error("showOffcanvasPanel: #offcanvasPanel not found");
+
+  const titleEl = panel.querySelector(".offcanvas-title");
+  const bodyEl  = panel.querySelector(".offcanvas-body");
+
+  if (!titleEl) throw new Error("showOffcanvasPanel: .offcanvas-title not found");
+  if (!bodyEl)  throw new Error("showOffcanvasPanel: .offcanvas-body not found");
+
+  titleEl.textContent = title || "";
+  bodyEl.innerHTML = bodyHtml || "";
+
+  // Bootstrap is already loaded (bundle). Fail-fast if not.
+  const oc = bootstrap.Offcanvas.getOrCreateInstance(panel);
+  oc.show();
+
+} // end showOffcanvasPanel
+
+
+export function escapeHtml(text) {
+  return String(text)
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#39;");
+} // end escapeHtml

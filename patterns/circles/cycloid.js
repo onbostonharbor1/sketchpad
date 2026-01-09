@@ -1,6 +1,6 @@
 // cycloid.js
-import { Point, StringThing } from "../../classes/classes";
-import { drawCycloid } from "../../draw/unicorns";
+import { Point, StringThing } from "/classes/classes.js";
+import { drawCycloid } from "/draw/drawUnicorns.js";
 
 export function runPattern() {
 	let s = { numNodes:   240,

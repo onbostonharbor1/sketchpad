@@ -19,14 +19,6 @@
      - caption title + buttons
      - caption dropdown menu
 
-   [CONTROLS]
-     - draw-controls base
-     - ctrl-field grid
-     - range sliders
-     - text inputs (editable + readonly)
-     - checkbox alignment
-     - validation / text output
-
    [THUMBS_OVERLAYS]
      - thumbnail panel
      - thumbnail items
@@ -76,7 +68,7 @@ body {
 /* ---- Left control column ---- */
 #control {
   width: 300px;
-  background-color: var(--theme-tint);
+  background-color: var(--ui-control-bg);
   display: flex;
   flex-direction: column;
   padding: 10px;
@@ -86,7 +78,7 @@ body {
 /* ---- Action area inside control ---- */
 #action {
   flex: 1;
-  background-color: var(--theme-tint);
+  background-color: var(--ui-action-bg);
   padding: 8px;
   overflow-y: auto;
   overflow-x: hidden;
@@ -95,7 +87,6 @@ body {
   justify-content: center;     /* center the white panel */
   align-items: flex-start;
 }  /* end #action */
-
 
 
 /* ---- Right main column ---- */
@@ -183,7 +174,6 @@ body {
   margin-left: auto;
 }
 
-
 .caption-buttons button {
   padding: 2px 10px;
   border: 1px solid var(--theme-base);
@@ -242,162 +232,6 @@ body {
 
 
 /* ===========================================================
-   [CONTROLS]
-   =========================================================== */
-
-/* ---- Draw controls base ---- */
-.draw-controls {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  color: #222;
-}
-
-.draw-controls label {
-  align-self: center;
-  font-size: 0.8rem;
-}
-
-/* ---- Inputs and selects ---- */
-.draw-controls input,
-.draw-controls select {
-  background-color: #ffffff;
-  color: #111;
-  border: 1px solid var(--theme-divider);
-  border-radius: 4px;
-  padding: 2px 4px;
-  width: 100%;
-  box-sizing: border-box;
-}
-
-/* ---- Readout values ---- */
-.draw-controls .ctrl-readout {
-  color: #000;
-  font-weight: 600;
-  margin-left: 6px;
-}
-
-/* ---- Text output ---- */
-#text pre {
-  font-size: 0.75rem;
-  line-height: 1.2;
-}
-
-/* ---- Validation output ---- */
-#validationResults {
-  font-size: 0.8rem;
-  line-height: 1.2;
-  margin-bottom: 8px;
-}
-
-/* ---- Control row grid ---- */
-.ctrl-field {
-  display: grid;
-  grid-template-columns: 60px 1fr;
-  align-items: start;
-  column-gap: 6px;
-  margin-bottom: 10px;
-  padding-left: 4px;
-}
-
-.ctrl-field label {
-  text-align: right;
-  font-size: 0.8rem;
-  line-height: 1.2;
-  color: #222;
-}
-
-/* ---- Range slider layout ---- */
-.ctrl-range-wrapper {
-  display: flex;
-  flex-direction: column;
-  width: 100%;
-}
-
-.ctrl-range-values {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  width: 100%;
-  font-size: 0.7em;
-  color: #222;
-  margin-bottom: 2px;
-  white-space: nowrap;
-}
-
-.ctrl-range-values .ctrl-readout {
-  flex: 1;
-  text-align: center;
-  font-weight: normal;
-}
-
-.ctrl-range-wrapper input[type="range"] {
-  width: 100%;
-}
-
-/* Align label with slider (not value row) */
-.ctrl-field:has(.ctrl-range-wrapper) {
-  align-items: end;
-}
-
-.ctrl-field:has(.ctrl-range-wrapper) label {
-  align-self: center;
-  padding-top: 14px;
-}
-
-/* ---- Text controls ---- */
-input.ctrl-text[type="text"] {
-  background-color: #ffffff !important;
-  color: #000000 !important;
-  border: 1px solid #888 !important;
-  border-radius: 4px;
-  padding: 2px 4px;
-}
-
-/* Readonly text controls (display-only) */
-#action .draw-controls input.ctrl-text[readonly] {
-  background: transparent !important;
-  border: none !important;
-  color: #222 !important;
-  box-shadow: none !important;
-  cursor: default;
-}
-
-/* ---- Checkbox alignment ---- */
-.ctrl-field input[type="checkbox"] {
-  width: auto !important;
-  justify-self: start !important;
-  margin-left: 0 !important;
-}
-
-/* ---- Script controls harmonization ---- */
-#action .draw-controls,
-#action .draw-controls label,
-#action .draw-controls input,
-#action .draw-controls select,
-#action .draw-controls span {
-  font-size: 0.8rem;
-  color: inherit;
-  background: none;
-  border: none;
-  box-shadow: none;
-}
-
-.draw-controls .ctrl-range-values span {
-  font-size: 0.8em !important;
-  line-height: 1;
-}
-
-.draw-controls select {
-  border: 1px solid var(--outline);
-  border-radius: 4px;
-  background-color: #fff;
-  padding: 2px 4px;
-  box-shadow: 0 0 2px rgba(0, 0, 0, 0.08);
-}
-
-
-/* ===========================================================
    [THUMBS_OVERLAYS]
    =========================================================== */
 
@@ -416,9 +250,6 @@ input.ctrl-text[type="text"] {
 
   width: max-content;                      /* shrink-wrap to grid width */
 }  /* end thumb-panel */
-
-
-
 
 
 /* ---- Thumbnail items ---- */
@@ -451,95 +282,28 @@ input.ctrl-text[type="text"] {
   font-size: 0.65rem;
 }
 
-/* ---- Point picker overlay ---- */
-.point-picker-dot {
-  position: absolute;
-  width: 7px;
-  height: 7px;
-  background: red;
-  border-radius: 50%;
-  pointer-events: auto;
-  z-index: 2;
-}
-
-.ctrl-static-text {
-  width: 100%;
-  box-sizing: border-box;
-  white-space: pre-wrap;
-  overflow-wrap: break-word;
-  padding: 6px 8px;
-  line-height: 1.25;
-}
-
-
-/* ------------------------------------------------------------
-   Alternate range control (rangeHeader)
------------------------------------------------------------- */
-/* Full-width "header range" control (black-style layout) */
-.ctrl-rangehdr-wrap {
-  width: 100%;
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-} /* end .ctrl-rangehdr-wrap */
-
-.ctrl-rangehdr-head {
-  width: 100%;
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-} /* end .ctrl-rangehdr-head */
-
-.ctrl-rangehdr-label {
-  font-size: 0.95rem;
-} /* end .ctrl-rangehdr-label */
-
-.ctrl-rangehdr-value {
-  font-size: 0.95rem;
-  text-align: right;
-  min-width: 3.5rem;
-} /* end .ctrl-rangehdr-value */
-
-.ctrl-rangehdr {
-  width: 100%;
-} /* end .ctrl-rangehdr */
 
 /* ===========================================================
-   THEMED ACTION BUTTON (used by parameterControls)
+   THUMBNAILS — SELECTED INDICATOR (NO REFLOW)
    =========================================================== */
 
-.ctrl-button {
-  display: inline-block;                /* size to content */
-  padding: 0.45rem 1.1rem;
-  font-size: 0.9rem;
-  line-height: 1.2;
-
-  color: #fff;
-  background-color: var(--theme-base);
-
-  border: none;
-  border-radius: 999px;                 /* pill shape */
-  cursor: pointer;
-
-  box-shadow: 0 1px 2px rgba(0,0,0,0.25);
-  transition: background-color 120ms ease,
-              box-shadow 120ms ease,
-              transform 80ms ease;
+.thumb-image.thumb-selected {
+  box-shadow:
+    0 0 0 2px rgba(255,255,255,0.95),
+    0 0 0 5px var(--theme-base);
 }
 
-/* Hover / focus */
-.ctrl-button:hover {
-  background-color: var(--theme-mid);
+.thumb-image.selected {
+  outline: 3px solid #000;
+  outline-offset: -3px;
 }
 
-.ctrl-button:active {
-  transform: translateY(1px);
-  box-shadow: 0 0 1px rgba(0,0,0,0.3);
+.thumb-image.selected {
+  box-shadow: 0 0 0 2px #fff, 0 0 0 5px #000;
 }
 
-/* Optional: center buttons in full-width control rows */
-.ctrl-field > .ctrl-button,
-.ctrl-field > div > .ctrl-button {
-  margin: 0.25rem auto;
-  display: block;
-}
+/* Subtabs: improve INACTIVE readability only */
+#subtabs .nav-link:not(.active) {
+  color: #111;          /* dark text on bright/pastel tab */
+  font-weight: 700;     /* optional: remove if you dislike */
+} /* end inactive subtab */

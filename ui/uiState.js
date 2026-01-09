@@ -11,6 +11,17 @@
    ------------------------------------------------------------ */
 
 export const uiState = {
+  // It is TRANSIENT intent only; it is NOT saved/persisted.
+  // It must be cleared after consumption.
+  launch: {
+    pending: false,        // boolean
+    sourceTab: null,       // string, e.g. "home"
+    targetTab: null,       // string, e.g. "draw"
+    sourceType: null,      // string, e.g. "drawRegistry"
+    registryKey: null      // string, e.g. "linkedCircles"
+  }, // end launch
+
+
   /* =========================================================
      Canvas configuration
   ========================================================= */
@@ -20,16 +31,27 @@ export const uiState = {
   /* =========================================================
      Active tab
   ========================================================= */
-  activeTab: "draw",
+  activeTab: "home",
 
   /* =========================================================
      Per-tab state containers
-     (Tabs may store anything they want inside their section.)
   ========================================================= */
+  home: {
+    // Minimal “restore contract” object for Home.
+    // null means “cold start”.
+    saved: {
+      view: "categories",     // "categories" | "results"
+      activeStatus: null,     // status string (or null)
+      activeIndex: null,      // index within activeStatus group (or null)
+      activeEntry: null       // manifest entry object (or null)
+    }
+  },
+
+
   draw: {
     activeSubtab: null,     // e.g., "ellipse", "categories"
     tabs: {},               // keyed by subtab-id
-    saved: null             // last saved state from DrawSpec.save()
+    saved: null             // last saved state from DrawSpec.restore contract
   },
 
   patterns: {
@@ -39,16 +61,36 @@ export const uiState = {
   },
 
   gallery: {
+    /* -------------------------------------------------------
+       Explicit members used by gallery.js (Architectural Change 1)
+    ------------------------------------------------------- */
+
+    // Which fixed domain subtab is currently selected.
+    // "Ideabook" | "Patterns" | "Scripts" | null
+    activeDomain: null,
+
+    // For results view (Ideabook/Patterns/Scripts), which category is active.
+    // For categories view, null.
     activeCategory: null,
+
+    // Current manifest entry (object) when in results view; otherwise null.
     activeItem: null,
 
-    // persistent indices for Prev/Next restoration
-    index: {
-      ideabook: 0,
-      patterns: 0,
-      scripts: 0
+    // Which Gallery subtab is active in the UI.
+    // "ideabook" | "patterns" | "scripts" | "results"
+    activeSubtab: "ideabook",
+
+    // Default saved-state template (explicit, never written by logic unless copied).
+    defaultSaved: {
+      view: "categories",      // "categories" | "results"
+      domain: "Ideabook",      // "Ideabook" | "Patterns" | "Scripts"
+      category: null,          // string | null
+      index: null              // number | null
     },
 
+    // The actual restore contract used by GalleryTabSpec.restore().
+    // gallery.js owns this object and rewrites it on navigation.
+    // null means “cold start”.
     saved: null
   },
 

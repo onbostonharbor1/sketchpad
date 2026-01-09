@@ -12,7 +12,8 @@ window.drawRegistry_boxes= {
     source:       "internal",
     tags:         ["Curve Stitch"],
     description:  "An inverse star goes from the center outward",
-  hover:       "",
+    status:      "",
+    hover:       "",
 
     // -- visual styling ---
     background: null,

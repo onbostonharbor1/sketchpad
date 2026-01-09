@@ -1,7 +1,7 @@
 [
   {
     "filename": "firstBuild",
-    "path": "spirals/firstBuild.js",
+    "path": "firstBuild.js",
     "title": "First Build"
   },
   {
@@ -12,6 +12,7 @@
   {
     "filename": "parabolasWithinCircles",
     "path": "parabolasWithinCircles.js",
+    "status": "working",
     "title": "Circular Parabola & Inner Star"
   }
 ]

@@ -8,32 +8,35 @@
   flex-wrap: wrap;
   gap: 10px;
   padding: 6px;
-}
+} /* end #categories */
 
 /* Individual category frame */
 .category-frame {
   background-color: #ffffff;
-  border: 4px solid var(--blue-base);
+  border: 4px solid var(--theme-base);
   border-radius: 10px;
   width: 220px;
   box-shadow: 3px 4px 6px rgba(0, 0, 0, 0.35);
   overflow: hidden;
   display: flex;
   flex-direction: column;
-}
+} /* end .category-frame */
 
 /* Category header */
 .category-header {
-  background-color: var(--blue-mid);
+  background-color: var(--theme-mid);
   color: #ffffff;
   font-weight: 700;
   font-size: 0.74rem;
   padding: 4px 8px;
-  border-top-left-radius: 10px;
-  border-top-right-radius: 10px;
+
+  /* KEY FIX: header does NOT round itself; frame clips it */
+  border-top-left-radius: 0;
+  border-top-right-radius: 0;
+
   letter-spacing: 0.04em;
   text-transform: uppercase;
-}
+} /* end .category-header */
 
 /* Category content area (scrollable list if long) */
 .category-content {
@@ -42,7 +45,7 @@
   color: #222;
   overflow-y: auto;
   max-height: 200px;
-}
+} /* end .category-content */
 
 /* Individual item entries */
 .item {
@@ -55,26 +58,19 @@
   color: #333;
   cursor: pointer;
   transition: background-color 0.15s;
-}
+} /* end .item */
 
 .item:last-child {
   border-bottom: none;
-}
+} /* end .item:last-child */
 
 .item:hover {
   background-color: #e8f0fe;
-}
+} /* end .item:hover */
 
 /* Optional chevron icon (for future offcanvas use) */
 .item i.bi {
   font-size: 0.9rem;
   color: #666;
   margin-left: 6px;
-}
-
-.category-frame {
-  border: 4px solid var(--theme-base);
-}
-.category-header {
-  background-color: var(--theme-mid);
-}
+} /* end .item i.bi */

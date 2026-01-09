@@ -1,86 +1,106 @@
 [
   {
     "filename": "001",
-    "path": "ideas/001.jpg"
+    "path": "001.jpg"
   },
   {
     "filename": "002",
-    "path": "ideas/002.jpg"
+    "path": "002.jpg",
+    "title": "002.jpg"
   },
   {
     "filename": "003",
-    "path": "ideas/003.jpg"
+    "path": "003.jpg",
+    "title": "003.jpg"
   },
   {
     "filename": "004",
-    "path": "ideas/004.jpg"
+    "path": "004.jpg",
+    "title": "004.jpg"
   },
   {
     "filename": "005",
-    "path": "ideas/005.jpg"
+    "path": "005.jpg",
+    "title": "005.jpg"
   },
   {
     "filename": "030",
-    "path": "ideas/030.jpg"
+    "path": "030.jpg",
+    "title": "030.jpg"
   },
   {
     "filename": "031",
-    "path": "ideas/031.jpg"
+    "path": "031.jpg",
+    "title": "031.jpg"
   },
   {
     "filename": "032",
-    "path": "ideas/032.jpg"
+    "path": "032.jpg",
+    "title": "032.jpg"
   },
   {
     "filename": "050",
-    "path": "ideas/050.jpg"
+    "path": "050.jpg",
+    "title": "050.jpg"
   },
   {
     "filename": "0505",
-    "path": "ideas/0505.jpg"
+    "path": "0505.jpg",
+    "title": "0505.jpg"
   },
   {
     "filename": "051",
-    "path": "ideas/051.jpg"
+    "path": "051.jpg",
+    "title": "051.jpg"
   },
   {
     "filename": "052",
-    "path": "ideas/052.jpg"
+    "path": "052.jpg",
+    "title": "052.jpg"
   },
   {
     "filename": "100",
-    "path": "ideas/100.jpg"
+    "path": "100.jpg",
+    "title": "100.jpg"
   },
   {
     "filename": "101",
-    "path": "ideas/101.jpg"
+    "path": "101.jpg",
+    "title": "101.jpg"
   },
   {
     "filename": "102",
-    "path": "ideas/102.jpg"
+    "path": "102.jpg",
+    "title": "102.jpg"
   },
   {
     "filename": "200",
-    "path": "ideas/200.jpg"
+    "path": "200.jpg",
+    "title": "200.jpg"
   },
   {
     "filename": "201",
-    "path": "ideas/201.jpg"
+    "path": "201.jpg",
+    "title": "201.jpg"
   },
   {
     "filename": "202",
-    "path": "ideas/202.JPG"
+    "path": "202.JPG",
+    "title": "202.JPG"
   },
   {
     "filename": "203",
-    "path": "ideas/203.JPG"
+    "path": "203.JPG",
+    "title": "203.JPG"
   },
   {
     "filename": "300",
-    "path": "ideas/300.JPG"
+    "path": "300.JPG",
+    "title": "300.JPG"
   },
   {
     "filename": "IMG_8130",
-    "path": "ideas/IMG_8130.JPG"
+    "path": "IMG_8130.JPG",
+    "title": "IMG_8130.JPG"
   }
 ]

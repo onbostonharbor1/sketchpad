@@ -4,13 +4,14 @@ import { drawMysticRose }           from '../draw/drawUnicorns.js';
 
 window.drawRegistry_mysticRoseEllipse = {
     name:         "Mystic Rose (ellipse)",
-    id:           "mysticRose",
+    id:           "mysticRoseEllipse",
     version:      0.1,
     category:     "unicorns",
     firstOrder:   true,
     source:       "internal",
     tags:         ["circular"],
     description:  "Lines drawn to all nodes from each node in an ellipse",
+    status:      "new",
     hover:        "",
 
     // -- visual styling ---

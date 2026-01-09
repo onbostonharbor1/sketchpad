@@ -1,23 +1,30 @@
 /* gallery.js
    ------------------------------------------------------------
-   Gallery Tab — New Architecture (Cold Init + Restore Model)
+   Gallery Tab — Architectural Change 1
    ------------------------------------------------------------
-   Structure:
-     • ensureGalleryCacheLoaded() → builds manifest.cache.gallery
-     • initGalleryTab(restoredFlag)  → cold-start only
-     • restoreGalleryTab()           → rebuild from uiState.gallery.saved
-     • GalleryController             → pure action functions
------------------------------------------------------------- */
+   New rules:
+     1) Fixed subtabs: Ideabook, Patterns, Scripts
+     2) One shared Results tab (spawned once and reused)
+     3) Only ONE remembered results context in uiState.gallery.saved
+     4) Caption title is "{category}: {title}" (Scripts uses "Scripts: {title}")
+     5) Category frames still built exactly the same way (renderCategories)
+   ------------------------------------------------------------ */
 
+   // ADD to imports at top of gallery.js
+
+import { nodeRebuildAndValidateManifests } from "./nodeLayer.js";
 import { renderCategories }       from "./categories.js";
 import { fileLayer }              from "./fileLayer.js";
 import { setCaptionBar }          from "./caption.js";
-import { editGalleryScriptTitle } from "./galleryMenuCmds.js"
-
+import { editGalleryScriptTitle } from "./galleryMenuCmds.js";
 import {
   clearDivs,
   renderThumbnailGrid,
-  showScriptOffcanvas
+  showScriptOffcanvas,
+  markSelectedThumbnail,
+  setCommandsButtonLabel,
+  setCommandsButton,
+  showCommandsOffcanvas
 } from "./ui_utilities.js";
 
 import { manifest }         from "./manifest.js";
@@ -31,10 +38,12 @@ const DOMAIN_IDEABOOK = "Ideabook";
 const DOMAIN_PATTERNS = "Patterns";
 const DOMAIN_SCRIPTS  = "Scripts";
 
-const SUBTAB_CATEGORIES = "gallery-categories";
-const SUBTAB_IDEABOOK   = "gallery-ideabook";
-const SUBTAB_PATTERNS   = "gallery-patterns";
-const SUBTAB_SCRIPTS    = "gallery-scripts";
+const GALLERY_COMMAND = "Gallery Commands";
+
+const SUBTAB_IDEABOOK = "gallery-ideabook";
+const SUBTAB_PATTERNS = "gallery-patterns";
+const SUBTAB_SCRIPTS  = "gallery-scripts";
+const SUBTAB_RESULTS  = "gallery-results";
 
 /* ============================================================
    Local module state
@@ -71,14 +80,20 @@ export const GalleryTabSpec = {
 
 export const GalleryController = {
   initGalleryTab,
-  showGalleryCategories: setGalleryCategories,
   showPrev: showPrevGalleryItem,
   showNext: showNextGalleryItem
 }; // end GalleryController
 
-
 /* ============================================================
    ensureGalleryCacheLoaded()
+============================================================ */
+/* ============================================================
+   ensureGalleryCacheLoaded()
+   ------------------------------------------------------------
+   NEW GALLERY DIRECTORY MODEL (Change 1 correction)
+   ------------------------------------------------------------
+   /gallery/<Domain>/directoryRegistry.json
+   /gallery/<Domain>/<Category>/manifest.json
 ============================================================ */
 async function ensureGalleryCacheLoaded() {
   if (manifest.cache && manifest.cache.gallery) {
@@ -86,74 +101,96 @@ async function ensureGalleryCacheLoaded() {
     return;
   }
 
-  const ideabookRaw      = await manifest.get("gallery/Ideabook");
-  const patternsRaw      = await manifest.get("gallery/Patterns");
-  const ideabookRegistry = manifest.getRegistry("gallery/Ideabook");
-  const patternsRegistry = manifest.getRegistry("gallery/Patterns");
+  const loadJSON = async (url) => {
+    const resp = await fetch(url);
+    if (!resp.ok) {
+      throw new Error("ensureGalleryCacheLoaded: missing or unreadable " + url);
+    }
+    const data = await resp.json();
+    return data;
+  }; // end loadJSON
 
-  if (!Array.isArray(ideabookRaw) ||
-      !Array.isArray(patternsRaw) ||
-      !Array.isArray(ideabookRegistry) ||
-      !Array.isArray(patternsRegistry)) {
-    throw new Error("ensureGalleryCacheLoaded: invalid gallery manifest data");
-  }
+  //   const loadJSON = async (url) => {
+  //   const resp = await fetch(url);
+  //   if (!resp.ok) {
+  //     // This catches 404 returning HTML as well.
+  //     const text = await resp.text();
+  //     console.error("HTTP ERROR:", resp.status, url);
+  //     console.error("FIRST 200 CHARS:\n" + text.slice(0, 200));
+  //     throw new Error("loadJSON: HTTP " + resp.status + " for " + url);
+  //   }
 
-  const scriptsPath = fileLayer.path.flatManifest("gallery/Scripts");
-  const scriptsRaw  = await fileLayer.loadJSON(scriptsPath);
-  if (!Array.isArray(scriptsRaw)) {
-    throw new Error("ensureGalleryCacheLoaded: Scripts manifest must be an array");
-  }
+  //   const text = await resp.text();
 
-  if (!manifest.cache) manifest.cache = {};
+  //   // show the first bytes so we can see BOM / garbage
+  //   const head = text.slice(0, 60);
+  //   const codes = [];
+  //   for (let i = 0; i < Math.min(10, text.length); i++) {
+  //     codes.push(text.charCodeAt(i));
+  //   }
+
+  //   try {
+  //     return JSON.parse(text);
+  //   } catch (err) {
+  //     console.error("BAD JSON FILE:", url);
+  //     console.error("FIRST 60 CHARS:\n" + head);
+  //     console.error("FIRST 10 CHAR CODES:", codes);
+  //     throw err;
+  //   }
+  // }; // end loadJSON
+
+
+
+  const loadDomain = async (domain) => {
+    const registryUrl = `/gallery/${domain}/directoryRegistry.json`;
+    const registry = await loadJSON(registryUrl);
+
+    if (!Array.isArray(registry)) {
+      throw new Error("ensureGalleryCacheLoaded: registry must be an array: " + registryUrl);
+    }
+
+    const out = {};
+
+    for (let i = 0; i < registry.length; i++) {
+      const cat = registry[i];
+
+      if (typeof cat !== "string" || cat.trim() === "") {
+        throw new Error("ensureGalleryCacheLoaded: invalid category name in " + registryUrl);
+      }
+
+      const manifestUrl = `/gallery/${domain}/${cat}/manifest.json`;
+      const list = await loadJSON(manifestUrl);
+
+      if (!Array.isArray(list)) {
+        throw new Error("ensureGalleryCacheLoaded: manifest must be an array: " + manifestUrl);
+      }
+
+      out[cat] = list;
+    }
+
+    return out;
+  }; // end loadDomain
 
   const gallery = {
-    Ideabook: {},
-    Patterns: {},
-    Scripts: scriptsRaw
+    Ideabook: await loadDomain("Ideabook"),
+    Patterns: await loadDomain("Patterns"),
+    Scripts:  await loadDomain("Scripts")
   };
 
-  for (let i = 0; i < ideabookRegistry.length; i++) {
-    const cat = ideabookRegistry[i];
-    gallery.Ideabook[cat] = ideabookRaw[i] || [];
-  }
-
-  for (let j = 0; j < patternsRegistry.length; j++) {
-    const cat = patternsRegistry[j];
-    gallery.Patterns[cat] = patternsRaw[j] || [];
-  }
-
+  if (!manifest.cache) manifest.cache = {};
   manifest.cache.gallery = gallery;
   galleryCache = gallery;
 } // end ensureGalleryCacheLoaded
 
+
 /* ============================================================
    initGalleryTab(restored)
-   ------------------------------------------------------------
-   Cold-start initializer.
 ============================================================ */
 export async function initGalleryTab(restored) {
-  // Ensure uiState.gallery exists
-  if (!uiState.gallery) {
-    uiState.gallery = {
-      activeCategory: null,
-      activeItem: null,
-      activeSubtab: SUBTAB_CATEGORIES,
-      saved: null,
-      perDomain: {
-        Ideabook: { category: null, index: 0 },
-        Patterns: { category: null, index: 0 },
-        Scripts:  { category: null, index: 0 }
-      }
-    };
-  }
 
-  // If perDomain is missing for any reason, patch it
-  if (!uiState.gallery.perDomain) {
-    uiState.gallery.perDomain = {
-      Ideabook: { category: null, index: 0 },
-      Patterns: { category: null, index: 0 },
-      Scripts:  { category: null, index: 0 }
-    };
+  // Ensure uiState.gallery exists (STRUCTURAL CHANGE applied in uiState.js)
+  if (!uiState.gallery) {
+    throw new Error("initGalleryTab: uiState.gallery missing");
   }
 
   // Reset local state
@@ -163,156 +200,42 @@ export async function initGalleryTab(restored) {
   currentIndex    = 0;
   galleryCache    = null;
 
-  // Load manifests and build cache
   await ensureGalleryCacheLoaded();
 
-  // Build the fixed "Categories" subtab
-  setGallerySubtabs();
+  buildGallerySubtabs();
+  setCommandsButtonLabel(GALLERY_COMMAND);
+  wireGalleryCommandsButton();
 
-  // Default view: top-level categories
+  // Cold start defaults: Ideabook categories
+  uiState.gallery.activeDomain   = DOMAIN_IDEABOOK;
   uiState.gallery.activeCategory = null;
   uiState.gallery.activeItem     = null;
-  uiState.gallery.activeSubtab   = SUBTAB_CATEGORIES;
+  uiState.gallery.activeSubtab   = "ideabook";
+
   uiState.gallery.saved = {
     view: "categories",
-    domain: null,
+    domain: DOMAIN_IDEABOOK,
     category: null,
     index: null
   };
 
-  await setGalleryCategories();
+  await showIdeabookCategories();
+  activateGallerySubtab(SUBTAB_IDEABOOK);
+  clearCaption();
 } // end initGalleryTab
-
-
 
 /* ============================================================
    saveGalleryState()
 ============================================================ */
 export function saveGalleryState() {
+  // One remembered results context only is stored in uiState.gallery.saved.
+  // This return object is informational only (TabSpec.save contract).
   return {
     domain: currentDomain,
     category: currentCategory,
     index: currentIndex
   };
 } // end saveGalleryState
-
-/* ============================================================
-   addGallerySubtab(domain)
-   ------------------------------------------------------------
-   Ensure a subtab exists for Ideabook / Patterns / Scripts.
-   Clicking the subtab ALWAYS restores that domain view, never
-   the Categories list.
-============================================================ */
-function addGallerySubtab(domain) {
-  const container = document.getElementById("subtabs");
-  if (!container) throw new Error("addGallerySubtab: #subtabs missing");
-
-  const bar = container.querySelector("ul.gallery-subtabs");
-  if (!bar) throw new Error("addGallerySubtab: .gallery-subtabs missing");
-
-  let id;
-  if (domain === DOMAIN_IDEABOOK) {
-    id = SUBTAB_IDEABOOK;
-  } else if (domain === DOMAIN_PATTERNS) {
-    id = SUBTAB_PATTERNS;
-  } else if (domain === DOMAIN_SCRIPTS) {
-    id = SUBTAB_SCRIPTS;
-  } else {
-    throw new Error("addGallerySubtab: invalid domain " + domain);
-  }
-
-  if (bar.querySelector(`[data-tab-id="${id}"]`)) {
-    return;
-  }
-
-  const li = document.createElement("li");
-  li.className = "nav-item";
-
-  const btn = document.createElement("button");
-  btn.className = "nav-link";
-  btn.dataset.tabId = id;
-  btn.textContent =
-    domain === DOMAIN_IDEABOOK ? "Ideabook" :
-    domain === DOMAIN_PATTERNS ? "Patterns" :
-    "Scripts";
-
-  btn.addEventListener("click", () => {
-    switchGallerySubtab(domain);
-  });
-
-  li.appendChild(btn);
-  bar.appendChild(li);
-} // end addGallerySubtab
-
-
-/* ============================================================
-   switchGallerySubtab(domain)
-============================================================ */
-function switchGallerySubtab(domain) {
-  activateGallerySubtab(domain);
-
-  // IDEABOOK
-  if (domain === DOMAIN_IDEABOOK) {
-    const mem = uiState.gallery.perDomain.Ideabook;
-    if (mem.category && galleryCache.Ideabook[mem.category]) {
-      currentDomain   = DOMAIN_IDEABOOK;
-      currentCategory = mem.category;
-      currentList     = galleryCache.Ideabook[mem.category];
-      currentIndex    = mem.index || 0;
-
-      // FIX: ensure correct index restored
-      uiState.gallery.saved.index = currentIndex;
-
-      showGalleryCategory(DOMAIN_IDEABOOK, mem.category, currentIndex);
-    } else {
-      setGalleryCategories();
-    }
-    return;
-  }
-
-  // PATTERNS
-  if (domain === DOMAIN_PATTERNS) {
-    const mem = uiState.gallery.perDomain.Patterns;
-    if (mem.category && galleryCache.Patterns[mem.category]) {
-      currentDomain   = DOMAIN_PATTERNS;
-      currentCategory = mem.category;
-      currentList     = galleryCache.Patterns[mem.category];
-      currentIndex    = mem.index || 0;
-
-      // FIX
-      uiState.gallery.saved.index = currentIndex;
-
-      showGalleryCategory(DOMAIN_PATTERNS, mem.category, currentIndex);
-    } else {
-      setGalleryCategories();
-    }
-    return;
-  }
-
-  // SCRIPTS
-  if (domain === DOMAIN_SCRIPTS) {
-    const mem = uiState.gallery.perDomain.Scripts;
-    if (galleryCache.Scripts[mem.index]) {
-      currentDomain   = DOMAIN_SCRIPTS;
-      currentCategory = null;
-      currentList     = galleryCache.Scripts;
-      currentIndex    = mem.index;
-
-      // FIX
-      uiState.gallery.saved.index = currentIndex;
-
-      showGalleryScript(currentList[currentIndex]);
-    } else {
-      setGalleryCategories();
-    }
-    return;
-  }
-
-  setGalleryCategories();
-} // end switchGallerySubtab
-
-
-
 
 /* ============================================================
    restoreGalleryTab()
@@ -322,412 +245,507 @@ async function restoreGalleryTab() {
     throw new Error("restoreGalleryTab: no saved Gallery state found");
   }
 
+  await ensureGalleryCacheLoaded();
+  buildGallerySubtabs();
+  setCommandsButtonLabel(GALLERY_COMMAND);
+  wireGalleryCommandsButton();
+
   const saved = uiState.gallery.saved;
 
-  await ensureGalleryCacheLoaded();
-  setGallerySubtabs();
-
-  const opened = uiState.gallery.openedSubtabs || {};
-  for (const key of Object.keys(opened)) {
-    ensureDomainSubtab(key);
-  }
-
-  const domain   = saved.domain;
-  const category = saved.category;
-  let   index    = typeof saved.index === "number" ? saved.index : 0;
-
-  if (saved.view === "categories" || !domain) {
-    currentDomain   = null;
-    currentCategory = null;
-    currentList     = [];
-    currentIndex    = 0;
-    uiState.gallery.activeSubtab = SUBTAB_CATEGORIES;
-    await setGalleryCategories();
-    return;
-  }
-
-  if (domain === DOMAIN_SCRIPTS) {
-    const list = galleryCache.Scripts;
-
-    if (!Array.isArray(list) || !list.length) {
-      throw new Error("restoreGalleryTab: empty Scripts manifest");
+  // If saved says “categories”, restore the fixed domain categories view.
+  if (saved.view === "categories") {
+    if (saved.domain === DOMAIN_IDEABOOK) {
+      uiState.gallery.activeDomain = DOMAIN_IDEABOOK;
+      uiState.gallery.activeSubtab = "ideabook";
+      await showIdeabookCategories();
+      activateGallerySubtab(SUBTAB_IDEABOOK);
+      clearCaption();
+      return;
     }
 
-    if (index < 0 || index >= list.length) index = 0;
+    if (saved.domain === DOMAIN_PATTERNS) {
+      uiState.gallery.activeDomain = DOMAIN_PATTERNS;
+      uiState.gallery.activeSubtab = "patterns";
+      await showPatternsCategories();
+      activateGallerySubtab(SUBTAB_PATTERNS);
+      clearCaption();
+      return;
+    }
 
-    currentDomain   = DOMAIN_SCRIPTS;
-    currentCategory = null;
-    currentList     = list;
-    currentIndex    = index;
+    if (saved.domain === DOMAIN_SCRIPTS) {
+      uiState.gallery.activeDomain = DOMAIN_SCRIPTS;
+      uiState.gallery.activeSubtab = "scripts";
+      await showScriptsCategories();
+      activateGallerySubtab(SUBTAB_SCRIPTS);
+      clearCaption();
+      return;
+    }
 
-    uiState.gallery.activeItem   = list[index];
-    uiState.gallery.activeSubtab = SUBTAB_SCRIPTS;
+    throw new Error("restoreGalleryTab: invalid saved.domain for categories view");
+  }
 
-    // FIX: retain correct index
-    uiState.gallery.perDomain.Scripts.index = index;
+  // Results view restore (the only remembered results context).
+  if (saved.view === "results") {
 
-    await showGalleryScript(list[index]);
-    activateGallerySubtab(SUBTAB_SCRIPTS);
-    updateGalleryCaption(DOMAIN_SCRIPTS);
+    if (!saved.domain) {
+      throw new Error("restoreGalleryTab: results missing domain");
+    }
+
+    // Ensure Results tab exists and activate it
+    ensureResultsSubtab(saved.domain);
+    activateGallerySubtab(SUBTAB_RESULTS);
+    uiState.gallery.activeSubtab = "results";
+
+    // Restore results content
+    const idx = typeof saved.index === "number" ? saved.index : 0;
+
+    if (saved.domain === DOMAIN_SCRIPTS) {
+      await showGalleryResultsScripts(saved.category, idx);
+      return;
+    }
+
+    if (!saved.category) {
+      throw new Error("restoreGalleryTab: results missing category for " + saved.domain);
+    }
+
+    await showGalleryResultsImages(saved.domain, saved.category, idx);
     return;
   }
 
-  if (!category) {
-    throw new Error("restoreGalleryTab: missing category for " + domain);
-  }
-
-  const domainMap = galleryCache[domain];
-  const list = domainMap[category];
-  if (!list || !list.length) {
-    throw new Error("restoreGalleryTab: missing or empty category '" + category + "'");
-  }
-
-  if (index < 0 || index >= list.length) index = 0;
-
-  currentDomain   = domain;
-  currentCategory = category;
-  currentList     = list;
-  currentIndex    = index;
-
-  uiState.gallery.activeCategory = category;
-  uiState.gallery.activeItem     = list[index];
-  uiState.gallery.activeSubtab   =
-    domain === DOMAIN_IDEABOOK ? SUBTAB_IDEABOOK : SUBTAB_PATTERNS;
-
-  // FIX: retain correct index
-  uiState.gallery.perDomain[domain].index = index;
-
-  await showGalleryCategory(domain, category, index);
-  activateGallerySubtab(uiState.gallery.activeSubtab);
-  updateGalleryCaption(domain);
+  throw new Error("restoreGalleryTab: invalid saved.view");
 } // end restoreGalleryTab
 
-
-
-
-
 /* ============================================================
-   setGallerySubtabs()
+   buildGallerySubtabs()
+   ------------------------------------------------------------
+   Fixed tabs: Ideabook, Patterns, Scripts.
+   Results tab is created on-demand (ensureResultsSubtab).
 ============================================================ */
-function setGallerySubtabs() {
+function buildGallerySubtabs() {
   const container = document.getElementById("subtabs");
-  if (!container) throw new Error("setGallerySubtabs: #subtabs not found");
+  if (!container) throw new Error("buildGallerySubtabs: #subtabs not found");
 
-  // ABSOLUTELY CLEAR everything including stray ULs
   container.replaceChildren();
 
-  // Create the correct UL INSIDE #subtabs
   const bar = document.createElement("ul");
   bar.className = "nav nav-tabs gallery-subtabs";
   container.appendChild(bar);
 
-  // Build Categories tab
+  bar.appendChild(buildSubtabButton(SUBTAB_IDEABOOK, "Ideabook", async () => {
+    setCommandsButtonLabel(GALLERY_COMMAND);
+
+    uiState.gallery.activeDomain = DOMAIN_IDEABOOK;
+    uiState.gallery.activeSubtab = "ideabook";
+    uiState.gallery.saved = {
+      view: "categories",
+      domain: DOMAIN_IDEABOOK,
+      category: null,
+      index: null
+    };
+    await showIdeabookCategories();
+    activateGallerySubtab(SUBTAB_IDEABOOK);
+    clearCaption();
+  }));
+
+  bar.appendChild(buildSubtabButton(SUBTAB_PATTERNS, "Patterns", async () => {
+    setCommandsButtonLabel(GALLERY_COMMAND);
+
+    uiState.gallery.activeDomain = DOMAIN_PATTERNS;
+    uiState.gallery.activeSubtab = "patterns";
+    uiState.gallery.saved = {
+      view: "categories",
+      domain: DOMAIN_PATTERNS,
+      category: null,
+      index: null
+    };
+    await showPatternsCategories();
+    activateGallerySubtab(SUBTAB_PATTERNS);
+    clearCaption();
+  }));
+
+  bar.appendChild(buildSubtabButton(SUBTAB_SCRIPTS, "Scripts", async () => {
+    setCommandsButtonLabel(GALLERY_COMMAND);
+
+    uiState.gallery.activeDomain = DOMAIN_SCRIPTS;
+    uiState.gallery.activeSubtab = "scripts";
+    uiState.gallery.saved = {
+      view: "categories",
+      domain: DOMAIN_SCRIPTS,
+      category: null,
+      index: null
+    };
+    await showScriptsCategories();
+    activateGallerySubtab(SUBTAB_SCRIPTS);
+    clearCaption();
+  }));
+
+} // end buildGallerySubtabs
+
+/* ============================================================
+   buildSubtabButton(tabId, label, onClick)
+============================================================ */
+function buildSubtabButton(tabId, label, onClick) {
   const li = document.createElement("li");
   li.className = "nav-item";
 
   const btn = document.createElement("button");
-  btn.className = "nav-link active";
-  btn.dataset.tabId = SUBTAB_CATEGORIES;
-  btn.textContent = "Categories";
+  btn.className = "nav-link";
+  btn.dataset.tabId = tabId;
+  btn.textContent = label;
 
-  btn.onclick = () => {
-    activateGallerySubtab(SUBTAB_CATEGORIES);
-    setGalleryCategories();
-  };
+  btn.addEventListener("click", () => { onClick(); });
 
   li.appendChild(btn);
-  bar.appendChild(li);
-} // end setGallerySubtabs
-
-
-
+  return li;
+} // end buildSubtabButton
 
 /* ============================================================
-   activateGallerySubtab()
-============================================================ */
-function activateGallerySubtab(subtabId) {
-  const buttons = document.querySelectorAll(".gallery-subtabs .nav-link");
-
-  buttons.forEach((btn) => {
-    if (btn.dataset.tabId === subtabId) {
-      btn.classList.add("active");
-    } else {
-      btn.classList.remove("active");
-    }
-  });
-
-  uiState.gallery.activeSubtab = subtabId;
-} // end activateGallerySubtab
-
-
-async function setGalleryCategories() {
-  const textDiv   = document.getElementById("text");
-  const actionDiv = document.getElementById("action");
-  const sketchDiv = document.getElementById("sketchpad");
-
-  if (!textDiv || !actionDiv || !sketchDiv) {
-    throw new Error("setGalleryCategories: required region missing");
-  }
-
-  textDiv.innerHTML   = "Loading Gallery categories...";
-  actionDiv.innerHTML = "";
-  sketchDiv.innerHTML = "";
-
-  await ensureGalleryCacheLoaded();
-
-  const frames = [];
-
-  const ideabookCats = Object.keys(galleryCache.Ideabook || {});
-  frames.push({
-    title: "Ideabook",
-    items: ideabookCats.map((cat) => ({
-      name: cat,
-      hasSubitems: false,
-      onClick: () => {
-        currentDomain   = DOMAIN_IDEABOOK;
-        currentCategory = cat;
-        currentList     = galleryCache.Ideabook[cat] || [];
-        currentIndex    = 0;
-
-        uiState.gallery.saved = {
-          view: "domain",
-          domain: DOMAIN_IDEABOOK,
-          category: cat,
-          index: 0
-        };
-
-        uiState.gallery.openedSubtabs = uiState.gallery.openedSubtabs || {};
-        uiState.gallery.openedSubtabs[DOMAIN_IDEABOOK] = true;
-
-        addGallerySubtab(DOMAIN_IDEABOOK);
-        activateGallerySubtab(SUBTAB_IDEABOOK);
-        showGalleryCategory(DOMAIN_IDEABOOK, cat);
-      }
-    }))
-  });
-
-  const patternCats = Object.keys(galleryCache.Patterns || {});
-  frames.push({
-    title: "Patterns",
-    items: patternCats.map((cat) => ({
-      name: cat,
-      hasSubitems: false,
-      onClick: () => {
-        currentDomain   = DOMAIN_PATTERNS;
-        currentCategory = cat;
-        currentList     = galleryCache.Patterns[cat] || [];
-        currentIndex    = 0;
-
-        uiState.gallery.saved = {
-          view: "domain",
-          domain: DOMAIN_PATTERNS,
-          category: cat,
-          index: 0
-        };
-
-        uiState.gallery.openedSubtabs = uiState.gallery.openedSubtabs || {};
-        uiState.gallery.openedSubtabs[DOMAIN_PATTERNS] = true;
-
-        addGallerySubtab(DOMAIN_PATTERNS);
-        activateGallerySubtab(SUBTAB_PATTERNS);
-        showGalleryCategory(DOMAIN_PATTERNS, cat);
-      }
-    }))
-  });
-
-  const scripts = galleryCache.Scripts || [];
-  frames.push({
-    title: "Scripts",
-    items: scripts.map((entry, idx) => ({
-      name: entry.title || entry.filename || "(untitled script)",
-      hasSubitems: false,
-      onClick: () => {
-        currentDomain   = DOMAIN_SCRIPTS;
-        currentCategory = null;
-        currentList     = scripts;
-        currentIndex    = idx;
-
-        uiState.gallery.saved = {
-          view: "scripts",
-          domain: DOMAIN_SCRIPTS,
-          category: null,
-          index: idx
-        };
-
-        uiState.gallery.openedSubtabs = uiState.gallery.openedSubtabs || {};
-        uiState.gallery.openedSubtabs[DOMAIN_SCRIPTS] = true;
-
-        addGallerySubtab(DOMAIN_SCRIPTS);
-        activateGallerySubtab(SUBTAB_SCRIPTS);
-        showGalleryScript(entry);
-      }
-    }))
-  });
-
-  textDiv.innerHTML = "";
-  renderCategories("text", frames);
-
-  const captionDiv = document.getElementById("caption");
-  if (captionDiv) captionDiv.innerHTML = "";
-} // end setGalleryCategories
-
-
-
-/* ============================================================
-   setGalleryCategories()
+   ensureResultsSubtab(domain)
    ------------------------------------------------------------
-   Shows the three top-level frames:
-     • Ideabook
-     • Patterns
-     • Scripts
-   No caption bar in this view; caption is cleared.
+   One shared Results tab, label depends on domain:
+     - Images for Ideabook/Patterns
+     - Drawings for Scripts
 ============================================================ */
-
-
-
-
-/* ============================================================
-   ensureDomainSubtab()
-   ------------------------------------------------------------
-   (Kept for compatibility; used by older flows if any remain)
-============================================================ */
-function ensureDomainSubtab(domain) {
+function ensureResultsSubtab(domain) {
   const container = document.getElementById("subtabs");
-  if (!container) throw new Error("ensureDomainSubtab: #subtabs missing");
+  if (!container) throw new Error("ensureResultsSubtab: #subtabs not found");
 
   const bar = container.querySelector("ul.gallery-subtabs");
-  if (!bar) throw new Error("ensureDomainSubtab: .gallery-subtabs missing");
+  if (!bar) throw new Error("ensureResultsSubtab: .gallery-subtabs missing");
 
-  // if already exists, do nothing
-  if (bar.querySelector(`#subtab-${domain}`)) return;
+  // If exists, update label only
+  const existing = bar.querySelector(`[data-tab-id="${SUBTAB_RESULTS}"]`);
+  const label = (domain === DOMAIN_SCRIPTS) ? "Drawings" : "Images";
 
-  const li  = document.createElement("li");
+  if (existing) {
+    existing.textContent = label;
+    return;
+  }
+
+  const li = document.createElement("li");
   li.className = "nav-item";
-  li.id = `subtab-${domain}`;
 
   const btn = document.createElement("button");
   btn.className = "nav-link";
-  btn.dataset.tabId =
-    domain === DOMAIN_IDEABOOK ? SUBTAB_IDEABOOK :
-    domain === DOMAIN_PATTERNS ? SUBTAB_PATTERNS :
-    SUBTAB_SCRIPTS;
+  btn.dataset.tabId = SUBTAB_RESULTS;
+  btn.textContent = label;
 
-  btn.textContent =
-    domain === DOMAIN_IDEABOOK ? "Ideabook" :
-    domain === DOMAIN_PATTERNS ? "Patterns" :
-    "Scripts";
+  btn.addEventListener("click", async () => {
+    // Clicking Results restores the one remembered results context.
+    const saved = uiState.gallery.saved;
+    if (!saved || saved.view !== "results") {
+      throw new Error("Results tab clicked but no saved results context exists");
+    }
+    activateGallerySubtab(SUBTAB_RESULTS);
+    uiState.gallery.activeSubtab = "results";
 
-  btn.onclick = () => {
-    activateGallerySubtab(btn.dataset.tabId);
-
-    if (domain === DOMAIN_IDEABOOK) {
-      const mem = uiState.gallery.perDomain.Ideabook;
-      if (mem.category && galleryCache.Ideabook[mem.category]) {
-        showGalleryCategory(DOMAIN_IDEABOOK, mem.category, mem.index);
-      } else {
-        setGalleryCategories();
-      }
+    if (saved.domain === DOMAIN_SCRIPTS) {
+      const idx = typeof saved.index === "number" ? saved.index : 0;
+      await showGalleryResultsScripts(saved.category, idx);
       return;
     }
 
-    if (domain === DOMAIN_PATTERNS) {
-      const mem = uiState.gallery.perDomain.Patterns;
-      if (mem.category && galleryCache.Patterns[mem.category]) {
-        showGalleryCategory(DOMAIN_PATTERNS, mem.category, mem.index);
-      } else {
-        setGalleryCategories();
-      }
-      return;
+    if (!saved.category) {
+      throw new Error("Results tab clicked but saved.category missing");
     }
 
-    if (domain === DOMAIN_SCRIPTS) {
-      const mem = uiState.gallery.perDomain.Scripts;
-      if (galleryCache.Scripts[mem.index]) {
-        showGalleryScript(galleryCache.Scripts[mem.index]);
-      } else {
-        setGalleryCategories();
-      }
-      return;
-    }
-
-    setGalleryCategories();
-  };
+    const idx = typeof saved.index === "number" ? saved.index : 0;
+    await showGalleryResultsImages(saved.domain, saved.category, idx);
+  });
 
   li.appendChild(btn);
   bar.appendChild(li);
-} // end ensureDomainSubtab
+} // end ensureResultsSubtab
 
+/* ============================================================
+   activateGallerySubtab(subtabId)
+============================================================ */
+function activateGallerySubtab(subtabId) {
+  const buttons = document.querySelectorAll(".gallery-subtabs .nav-link");
+  buttons.forEach((btn) => {
+    if (btn.dataset.tabId === subtabId) btn.classList.add("active");
+    else btn.classList.remove("active");
+  });
+} // end activateGallerySubtab
+
+/* ============================================================
+   clearCaption()
+============================================================ */
+function clearCaption() {
+  const captionDiv = document.getElementById("caption");
+  if (!captionDiv) throw new Error("clearCaption: #caption missing");
+  captionDiv.innerHTML = "";
+} // end clearCaption
 
 
 /* ============================================================
-   showGalleryCategory(domain, category, startIndex = 0)
+   showIdeabookCategories()
+   ------------------------------------------------------------
+   FIX: one frame per category (directoryRegistry entry)
+   Items come from that category’s manifest.json
 ============================================================ */
-async function showGalleryCategory(domain, category, startIndex = 0) {
-  const sketch = document.getElementById("sketchpad");
-  if (sketch) sketch.innerHTML = "";
+async function showIdeabookCategories() {
+  clearDivs();
+  await ensureGalleryCacheLoaded();
 
-  currentDomain   = domain;
-  currentCategory = category;
-  currentList     = galleryCache[domain][category];
+  const domainMap = galleryCache.Ideabook;
+  if (!domainMap) throw new Error("showIdeabookCategories: Ideabook cache missing");
 
-  if (!Array.isArray(currentList) || !currentList.length) {
-    throw new Error("showGalleryCategory: empty category '" + category + "'");
+  const cats = Object.keys(domainMap);
+
+  const frames = cats.map((cat) => {
+    const list = domainMap[cat];
+    if (!Array.isArray(list)) {
+      throw new Error("showIdeabookCategories: category list not an array: " + cat);
+    }
+
+    return {
+      title: cat,
+      items: list.map((entry, idx) => ({
+        name: entry.title || entry.filename || entry.path || "(untitled)",
+        hasSubitems: false,
+        onClick: async () => {
+          ensureResultsSubtab(DOMAIN_IDEABOOK);
+          activateGallerySubtab(SUBTAB_RESULTS);
+          uiState.gallery.activeSubtab = "results";
+          await showGalleryResultsImages(DOMAIN_IDEABOOK, cat, idx);
+        }
+      }))
+    };
+  });
+
+  renderCategories("text", frames);
+} // end showIdeabookCategories
+
+
+/* ============================================================
+   showPatternsCategories()
+   ------------------------------------------------------------
+   FIX: one frame per category (directoryRegistry entry)
+============================================================ */
+async function showPatternsCategories() {
+  clearDivs();
+  await ensureGalleryCacheLoaded();
+
+  const domainMap = galleryCache.Patterns;
+  if (!domainMap) throw new Error("showPatternsCategories: Patterns cache missing");
+
+  const cats = Object.keys(domainMap);
+
+  const frames = cats.map((cat) => {
+    const list = domainMap[cat];
+    if (!Array.isArray(list)) {
+      throw new Error("showPatternsCategories: category list not an array: " + cat);
+    }
+
+    return {
+      title: cat,
+      items: list.map((entry, idx) => ({
+        name: entry.title || entry.filename || entry.path || "(untitled)",
+        hasSubitems: false,
+        onClick: async () => {
+          ensureResultsSubtab(DOMAIN_PATTERNS);
+          activateGallerySubtab(SUBTAB_RESULTS);
+          uiState.gallery.activeSubtab = "results";
+          await showGalleryResultsImages(DOMAIN_PATTERNS, cat, idx);
+        }
+      }))
+    };
+  });
+
+  renderCategories("text", frames);
+} // end showPatternsCategories
+
+
+/* ============================================================
+   showScriptsCategories()
+   ------------------------------------------------------------
+   FIX: one frame per Scripts category.
+   IMPORTANT: we want manifest order for Scripts items.
+   This requires categories.js to support per-frame sortItems:false
+============================================================ */
+async function showScriptsCategories() {
+  clearDivs();
+  await ensureGalleryCacheLoaded();
+
+  const domainMap = galleryCache.Scripts;
+  if (!domainMap) throw new Error("showScriptsCategories: Scripts cache missing");
+
+  const cats = Object.keys(domainMap);
+
+  const frames = cats.map((cat) => {
+    const list = domainMap[cat];
+    if (!Array.isArray(list)) {
+      throw new Error("showScriptsCategories: category list not an array: " + cat);
+    }
+
+    return {
+      title: cat,
+
+      // This is the flag you asked for.
+      // categories.js must honor it (I’ll give you that next).
+      sortItems: false,
+
+      items: list.map((entry, idx) => ({
+        name: entry.title || entry.filename || "(untitled)",
+        hasSubitems: false,
+        onClick: async () => {
+          ensureResultsSubtab(DOMAIN_SCRIPTS);
+          activateGallerySubtab(SUBTAB_RESULTS);
+          uiState.gallery.activeSubtab = "results";
+          await showGalleryResultsScripts(cat, idx);
+        }
+      }))
+    };
+  });
+
+  renderCategories("text", frames);
+} // end showScriptsCategories
+
+
+/* ============================================================
+   showGalleryResultsImages(domain, category, startIndex)
+============================================================ */
+async function showGalleryResultsImages(domain, category, startIndex) {
+  clearDivs();
+  await ensureGalleryCacheLoaded();
+
+  if (domain !== DOMAIN_IDEABOOK && domain !== DOMAIN_PATTERNS) {
+    throw new Error("showGalleryResultsImages: invalid domain " + domain);
+  }
+
+  const domainMap = galleryCache[domain];
+  if (!domainMap) throw new Error("showGalleryResultsImages: domain map missing");
+
+  const list = domainMap[category];
+  if (!Array.isArray(list) || !list.length) {
+    throw new Error("showGalleryResultsImages: empty category '" + category + "'");
   }
 
   let idx = startIndex;
-  if (idx < 0 || idx >= currentList.length) idx = 0;
+  if (idx < 0 || idx >= list.length) idx = 0;
 
-  currentIndex = idx;
+  currentDomain   = domain;
+  currentCategory = category;
+  currentList     = list;
+  currentIndex    = idx;
 
+  uiState.gallery.activeDomain   = domain;
   uiState.gallery.activeCategory = category;
-  uiState.gallery.activeItem     = currentList[idx];
+  uiState.gallery.activeItem     = list[idx];
+
   uiState.gallery.saved = {
-    view: "domain",
-    domain,
-    category,
+    view: "results",
+    domain: domain,
+    category: category,
     index: idx
   };
 
-  // FIX: remember correct index for this domain
-  if (uiState.gallery.perDomain && uiState.gallery.perDomain[domain]) {
-    uiState.gallery.perDomain[domain].category = category;
-    uiState.gallery.perDomain[domain].index    = idx;
-  }
-
-  renderThumbnailGrid(
+ renderThumbnailGrid(
     "action",
-    currentList,
+    list,
     (entry) => `./gallery/${domain}/${category}/images/thumb_${entry.filename}.png`,
-    (_, i) => {
+    async (_, i) => {
       currentIndex = i;
-      uiState.gallery.activeItem = currentList[i];
+      uiState.gallery.activeItem = list[i];
       uiState.gallery.saved.index = i;
 
-      // FIX
-      uiState.gallery.perDomain[domain].index = i;
+      showGalleryImage(domain, category, list[i]);
+      updateGalleryCaption(domain, category);
 
-      showGalleryImage(domain, category, currentList[i]);
-      updateGalleryCaption(domain);
+      markSelectedThumbnail("action", i);
     }
   );
 
-  showGalleryImage(domain, category, currentList[idx]);
-  updateGalleryCaption(domain);
-} // end showGalleryCategory
+  markSelectedThumbnail("action", idx);
 
+  showGalleryImage(domain, category, list[idx]);
+  updateGalleryCaption(domain, category);
+} // end showGalleryResultsImages
 
+/* ============================================================
+   showGalleryResultsScripts(index)
+============================================================ */
+/* ============================================================
+   showGalleryResultsScripts(category, index)
+   ------------------------------------------------------------
+   Scripts results are now per-category.
+============================================================ */
+async function showGalleryResultsScripts(category, index) {
+  clearDivs();
+  await ensureGalleryCacheLoaded();
 
+  const domainMap = galleryCache.Scripts;
+  if (!domainMap) throw new Error("showGalleryResultsScripts: Scripts domain map missing");
 
+  const list = domainMap[category];
+  if (!Array.isArray(list) || !list.length) {
+    throw new Error("showGalleryResultsScripts: empty Scripts category '" + category + "'");
+  }
+
+  let idx = index;
+  if (idx < 0 || idx >= list.length) idx = 0;
+
+  currentDomain   = DOMAIN_SCRIPTS;
+  currentCategory = category;
+  currentList     = list;
+  currentIndex    = idx;
+
+  uiState.gallery.activeDomain   = DOMAIN_SCRIPTS;
+  uiState.gallery.activeCategory = category;
+  uiState.gallery.activeItem     = list[idx];
+
+  uiState.gallery.saved = {
+    view: "results",
+    domain: DOMAIN_SCRIPTS,
+    category: category,
+    index: idx
+  };
+
+  await showGalleryScript(category, list[idx]);
+  updateGalleryCaption(DOMAIN_SCRIPTS, category);
+} // end showGalleryResultsScripts
 
 
 /* ============================================================
-   showGalleryImage()
+   normalizeGalleryEntryPath(category, entry)
+   ------------------------------------------------------------
+   Manifest rule: entry.path must be relative to the category folder.
+
+   Reality today (Ideabook): some entries include "Category/filename".
+   Example: category="3D", entry.path="3D/401.jpg"
+
+   We normalize that to "401.jpg" so the final URL becomes:
+     ./gallery/<Domain>/<Category>/<relativePath>
 ============================================================ */
+function normalizeGalleryEntryPath(category, entry) {
+
+  let p = entry.path || entry.filename;
+  if (!p) {
+    throw new Error("normalizeGalleryEntryPath: entry missing path/filename");
+  }
+
+  // Remove leading "./" if present
+  if (p.startsWith("./")) {
+    p = p.slice(2);
+  }
+
+  // If path redundantly includes the category prefix, strip it.
+  const prefix = category + "/";
+  if (p.startsWith(prefix)) {
+    p = p.slice(prefix.length);
+  }
+
+  return p;
+} // end normalizeGalleryEntryPath
+
+
 /* ============================================================
    showGalleryImage(domain, category, entry)
    ------------------------------------------------------------
-   Uses entry.path exactly as provided by the manifest.
-   For Ideabook/Patterns, entry.path is like "3D/400.jpg".
+   With per-category manifests, entry.path must be relative to the
+   category folder:
+     /gallery/<Domain>/<Category>/<entry.path>
 ============================================================ */
 function showGalleryImage(domain, category, entry) {
   const text = document.getElementById("text");
@@ -737,9 +755,8 @@ function showGalleryImage(domain, category, entry) {
 
   const img = document.createElement("img");
 
-  // Build the full image path using entry.path from the manifest
-  // e.g., ./gallery/Ideabook/3D/400.jpg
-  const fullPath = `./gallery/${domain}/${entry.path}`;
+  const relPath  = normalizeGalleryEntryPath(category, entry);
+  const fullPath = `./gallery/${domain}/${category}/${relPath}`;
 
   img.src = fullPath;
   img.alt =
@@ -758,88 +775,47 @@ function showGalleryImage(domain, category, entry) {
 
 
 /* ============================================================
-   showGalleryImageByIndex()
+   showGalleryScript(category, entry)
+   ------------------------------------------------------------
+   Scripts are now located at:
+     /gallery/Scripts/<Category>/<filename>
 ============================================================ */
-function showGalleryImageByIndex(domain, category, index) {
-  const list =
-    galleryCache[domain] &&
-    galleryCache[domain][category]
-      ? galleryCache[domain][category]
-      : [];
-
-  if (!list.length) return;
-  if (index < 0 || index >= list.length) index = 0;
-
-  currentIndex = index;
-  uiState.gallery.activeItem = list[index];
-
-  uiState.gallery.saved = {
-    view: "domain",
-    domain,
-    category,
-    index
-  };
-
-  showGalleryImage(domain, category, list[index]);
-  updateGalleryCaption(domain);
-} // end showGalleryImageByIndex
-
-/* ============================================================
-   showGalleryScript(entry) — WITH CAPTION RESTORED
-============================================================ */
-async function showGalleryScript(entry) {
+async function showGalleryScript(category, entry) {
   const textDiv   = document.getElementById("text");
   const actionDiv = document.getElementById("action");
   const sketchDiv = document.getElementById("sketchpad");
+
+  if (!textDiv || !actionDiv || !sketchDiv) {
+    throw new Error("showGalleryScript: required region missing");
+  }
 
   textDiv.innerHTML   = "";
   actionDiv.innerHTML = "";
   sketchDiv.innerHTML = "";
 
-  currentDomain   = DOMAIN_SCRIPTS;
-  currentCategory = null;
-  currentList     = galleryCache.Scripts;
-
-  const idx = currentList.indexOf(entry);
-  currentIndex = idx >= 0 ? idx : 0;
-
-  uiState.gallery.activeItem = entry;
-  uiState.gallery.saved = {
-    view: "scripts",
-    domain: DOMAIN_SCRIPTS,
-    category: null,
-    index: currentIndex
-  };
-
-  // FIX: remember correct index for scripts
-  uiState.gallery.perDomain.Scripts.index = currentIndex;
-
-  // existing logic unchanged...
   sketchDiv.appendChild(window.drawCanvas);
 
   ctx.fillStyle = "#ffffff";
   ctx.fillRect(0, 0, drawCanvas.width, drawCanvas.height);
 
-  const moduleUrl = `/gallery/Scripts/${entry.filename}`;
-  let mod = await import( /* @vite-ignore */moduleUrl);
+  const moduleUrl = `/gallery/Scripts/${category}/${entry.filename}`;
+  const mod = await import(/* @vite-ignore */ moduleUrl);
 
   if (mod.patternMeta && mod.initPattern && mod.drawPattern) {
     const meta   = mod.patternMeta;
     const params = mod.initPattern();
     buildScriptControls(meta, params, actionDiv, () => mod.drawPattern(params));
     mod.drawPattern(params);
-    updateGalleryCaption(DOMAIN_SCRIPTS);
     return;
   }
 
   if (mod.runPattern) {
     await mod.runPattern(ctx);
-    updateGalleryCaption(DOMAIN_SCRIPTS);
     return;
   }
+
+  throw new Error("showGalleryScript: script module missing expected exports");
 } // end showGalleryScript
-
-
 
 
 /* ============================================================
@@ -935,77 +911,75 @@ function buildScriptControls(meta, params, panel, onChange) {
   panel.appendChild(box);
 } // end buildScriptControls
 
-
 /* ============================================================
    showPrevGalleryItem()
 ============================================================ */
 async function showPrevGalleryItem(domain) {
-  if (!currentList || !currentList.length) return;
-
-  const newIndex =
-    currentIndex <= 0 ? currentList.length - 1 : currentIndex - 1;
-
-  currentIndex = newIndex;
-  uiState.gallery.activeItem = currentList[newIndex];
-
-  if (domain === DOMAIN_SCRIPTS) {
-    await showGalleryScript(currentList[newIndex]);
-  } else {
-    showGalleryImage(domain, currentCategory, currentList[newIndex]);
+  if (!currentList || !currentList.length) {
+    throw new Error("showPrevGalleryItem: currentList is empty");
   }
 
-  uiState.gallery.saved = {
-    view: domain === DOMAIN_SCRIPTS ? "scripts" : "domain",
-    domain,
-    category: currentCategory,
-    index: newIndex
-  };
+  const newIndex = (currentIndex <= 0) ? currentList.length - 1 : currentIndex - 1;
+  currentIndex = newIndex;
 
-  updateGalleryCaption(domain);
+  uiState.gallery.activeItem = currentList[newIndex];
+  uiState.gallery.saved.index = newIndex;
+
+  if (domain === DOMAIN_SCRIPTS) {
+    await showGalleryResultsScripts(currentCategory, newIndex);
+    updateGalleryCaption(domain, currentCategory);
+    return;
+  }
+
+  showGalleryImage(domain, currentCategory, currentList[newIndex]);
+  updateGalleryCaption(domain, currentCategory);
+
+  markSelectedThumbnail("action", newIndex);
 } // end showPrevGalleryItem
 
 
-/* ============================================================
-   showNextGalleryItem()
-============================================================ */
 async function showNextGalleryItem(domain) {
-  if (!currentList || !currentList.length) return;
-
-  const newIndex =
-    currentIndex >= currentList.length - 1 ? 0 : currentIndex + 1;
-
-  currentIndex = newIndex;
-  uiState.gallery.activeItem = currentList[newIndex];
-
-  if (domain === DOMAIN_SCRIPTS) {
-    await showGalleryScript(currentList[newIndex]);
-  } else {
-    showGalleryImage(domain, currentCategory, currentList[newIndex]);
+  if (!currentList || !currentList.length) {
+    throw new Error("showNextGalleryItem: currentList is empty");
   }
 
-  uiState.gallery.saved = {
-    view: domain === DOMAIN_SCRIPTS ? "scripts" : "domain",
-    domain,
-    category: currentCategory,
-    index: newIndex
-  };
+  const newIndex = (currentIndex >= currentList.length - 1) ? 0 : currentIndex + 1;
+  currentIndex = newIndex;
 
-  updateGalleryCaption(domain);
+  uiState.gallery.activeItem = currentList[newIndex];
+  uiState.gallery.saved.index = newIndex;
+
+  if (domain === DOMAIN_SCRIPTS) {
+    await showGalleryResultsScripts(currentCategory, newIndex);
+    updateGalleryCaption(domain, currentCategory);
+    return;
+  }
+
+  showGalleryImage(domain, currentCategory, currentList[newIndex]);
+  updateGalleryCaption(domain, currentCategory);
+
+  markSelectedThumbnail("action", newIndex);
 } // end showNextGalleryItem
 
 
+
 /* ============================================================
-   updateGalleryCaption()
+   updateGalleryCaption(domain, categoryLabel)
+   ------------------------------------------------------------
+   Title rule (your Change 1): "{category}: {title}"
+   For Scripts too, categoryLabel is the Scripts category name.
 ============================================================ */
-export function updateGalleryCaption(domain) {
+export function updateGalleryCaption(domain, categoryLabel) {
 
   const item = uiState.gallery.activeItem;
-  if (!item) return;
+  if (!item) throw new Error("updateGalleryCaption: uiState.gallery.activeItem missing");
 
-  const title =
-    item.title ||
-    item.filename ||
-    "(untitled)";
+  if (typeof categoryLabel !== "string" || categoryLabel.trim() === "") {
+    throw new Error("updateGalleryCaption: categoryLabel missing");
+  }
+
+  const rawTitle = item.title || item.filename || "(untitled)";
+  const title = categoryLabel + ": " + rawTitle;
 
   const onPrev = () => showPrevGalleryItem(domain);
   const onNext = () => showNextGalleryItem(domain);
@@ -1014,12 +988,11 @@ export function updateGalleryCaption(domain) {
     const items = [];
 
     if (domain === DOMAIN_SCRIPTS) {
-
       items.push({
         label: "Show Script",
         onClick: () =>
           showScriptOffcanvas(
-            `/gallery/Scripts/${item.path}`,
+            `/gallery/Scripts/${currentCategory}/${item.filename}`,
             item.filename
           )
       });
@@ -1028,7 +1001,6 @@ export function updateGalleryCaption(domain) {
         label: "Edit Manifest Title",
         onClick: () => editGalleryScriptTitle()
       });
-
     }
 
     menuManager.open(items, anchor);
@@ -1036,7 +1008,7 @@ export function updateGalleryCaption(domain) {
 
   const captionDiv = document.getElementById("caption");
   if (!captionDiv) throw new Error("updateGalleryCaption: #caption missing");
-  captionDiv.innerHTML = "";   // <<< ADD THIS LINE
+  captionDiv.innerHTML = "";
 
   setCaptionBar({
     targetId: "caption",
@@ -1048,4 +1020,179 @@ export function updateGalleryCaption(domain) {
 
 } // end updateGalleryCaption
 
+function buildGalleryOffcanvasHtml() {
 
+  return `
+    <div class="cmdButtonRow">
+      <button id="galleryRebuildValidateButton" class="cmdButton" type="button">
+        Rebuild &amp; Validate
+      </button>
+    </div>
+
+    <div class="buttonSeparator"></div>
+
+    <div id="galleryRebuildReport" class="galleryRebuildReport"></div>
+  `;
+
+} // end buildGalleryOffcanvasHtml
+
+function formatRebuildReport(report) {
+
+  if (!report) throw new Error("formatRebuildReport: report missing");
+
+  if (report.request !== "manifestMaintenance") {
+    throw new Error("formatRebuildReport: unexpected request: " + String(report.request));
+  }
+
+  const lines = [];
+
+  lines.push("Log: " + (report.logName || "(none)"));
+  lines.push("");
+
+  const addedMap  = report.added  || {};
+  const brokenMap = report.broken || {};
+
+  const addedKeys  = Object.keys(addedMap).sort((a, b) => a.localeCompare(b));
+  const brokenKeys = Object.keys(brokenMap).sort((a, b) => a.localeCompare(b));
+
+  if (addedKeys.length) {
+    lines.push("ADDED (status=new):");
+    for (const group of addedKeys) {
+      lines.push("  " + group);
+      for (const item of (addedMap[group] || [])) {
+        lines.push("    • " + item);
+      }
+    }
+    lines.push("");
+  }
+
+  if (brokenKeys.length) {
+    lines.push("BROKEN (virtual home items):");
+    for (const group of brokenKeys) {
+      lines.push("  " + group);
+      for (const item of (brokenMap[group] || [])) {
+        lines.push("    • " + (item && item.path ? item.path : String(item)));
+      }
+    }
+    lines.push("");
+  }
+
+  if (!addedKeys.length && !brokenKeys.length) {
+    lines.push("No Added or Broken items.");
+  }
+
+  return lines.join("\n");
+
+} // end formatRebuildReport
+
+async function refreshGalleryAfterRebuild() {
+
+  // Force cache drop
+  if (manifest && typeof manifest.clearCache === "function") {
+    manifest.clearCache();
+  }
+  if (manifest.cache) delete manifest.cache.gallery;
+
+  galleryCache = null;
+  await ensureGalleryCacheLoaded();
+
+  const saved = uiState.gallery.saved;
+  if (!saved) throw new Error("refreshGalleryAfterRebuild: uiState.gallery.saved missing");
+
+  if (saved.view === "categories") {
+
+    if (saved.domain === DOMAIN_IDEABOOK) {
+      uiState.gallery.activeDomain = DOMAIN_IDEABOOK;
+      uiState.gallery.activeSubtab = "ideabook";
+      await showIdeabookCategories();
+      activateGallerySubtab(SUBTAB_IDEABOOK);
+      clearCaption();
+      return;
+    }
+
+    if (saved.domain === DOMAIN_PATTERNS) {
+      uiState.gallery.activeDomain = DOMAIN_PATTERNS;
+      uiState.gallery.activeSubtab = "patterns";
+      await showPatternsCategories();
+      activateGallerySubtab(SUBTAB_PATTERNS);
+      clearCaption();
+      return;
+    }
+
+    if (saved.domain === DOMAIN_SCRIPTS) {
+      uiState.gallery.activeDomain = DOMAIN_SCRIPTS;
+      uiState.gallery.activeSubtab = "scripts";
+      await showScriptsCategories();
+      activateGallerySubtab(SUBTAB_SCRIPTS);
+      clearCaption();
+      return;
+    }
+
+    throw new Error("refreshGalleryAfterRebuild: invalid saved.domain for categories view");
+  }
+
+  if (saved.view === "results") {
+
+    if (!saved.domain) throw new Error("refreshGalleryAfterRebuild: results missing domain");
+
+    ensureResultsSubtab(saved.domain);
+    activateGallerySubtab(SUBTAB_RESULTS);
+    uiState.gallery.activeSubtab = "results";
+
+    const idx = (typeof saved.index === "number") ? saved.index : 0;
+
+    if (saved.domain === DOMAIN_SCRIPTS) {
+      await showGalleryResultsScripts(saved.category, idx);
+      return;
+    }
+
+    if (!saved.category) {
+      throw new Error("refreshGalleryAfterRebuild: results missing category for " + saved.domain);
+    }
+
+    await showGalleryResultsImages(saved.domain, saved.category, idx);
+    return;
+  }
+
+  throw new Error("refreshGalleryAfterRebuild: invalid saved.view");
+
+} // end refreshGalleryAfterRebuild
+
+export function wireGalleryCommandsButton() {
+
+  setCommandsButton("Commands", () => {
+
+    showCommandsOffcanvas({
+      title: "Gallery Maintenance",
+      buildBody(offcanvasBodyEl) {
+
+        if (!offcanvasBodyEl) {
+          throw new Error("Gallery Commands: offcanvasBodyEl missing");
+        }
+
+        offcanvasBodyEl.innerHTML = buildGalleryOffcanvasHtml();
+
+        const btn = document.getElementById("galleryRebuildValidateButton");
+        if (!btn) throw new Error("wireGalleryCommandsButton: button missing");
+
+        btn.addEventListener("click", async () => {
+
+          const out = document.getElementById("galleryRebuildReport");
+          if (!out) throw new Error("wireGalleryCommandsButton: report div missing");
+
+          out.textContent = "Running...";
+
+          const report = await nodeRebuildAndValidateManifests();
+
+          await refreshGalleryAfterRebuild();
+
+          out.textContent = formatRebuildReport(report);
+
+        }); // end click
+
+      } // end buildBody
+    });
+
+  });
+
+} // end wireGalleryCommandsButton

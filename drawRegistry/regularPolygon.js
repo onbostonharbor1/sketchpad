@@ -13,7 +13,8 @@ window.drawRegistry_regularPolygon = {
     source:       "internal",
     tags:         ["Curve Stitch"],
     description:  "Regular Polygon draws from each node",
-  hover:       "",
+    status:      "",
+    hover:       "",
 
     // -- visual styling ---
     background: null,

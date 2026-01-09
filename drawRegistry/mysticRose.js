@@ -11,6 +11,7 @@ window.drawRegistry_mysticRose = {
     source:       "internal",
     tags:         ["circular"],
     description:  "Lines drawn to all nodes from each node in a circle",
+    status:      "",
     hover:        "",
 
     // -- visual styling ---
