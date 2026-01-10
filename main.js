@@ -48,6 +48,7 @@ import "./ui/caption.js";
 import "./ui/categories.js";
 import "./ui/fileLayer.js";
 import "./ui/manifest.js";
+import "./ui/menuCmds.js";
 import "./ui/menuManager.js";
 import './ui/nodeLayer.js'
 import "./ui/overlay.js";
@@ -60,6 +61,7 @@ import "./ui/figures.js";
 import "./ui/gallery.js";
 import "./ui/galleryMenuCmds.js";
 import "./ui/home.js";
+import "./ui/homeMenuCmds.js";
 import "./ui/patterns.js";
 import "./ui/patternsMenuCmds.js";
 import "./ui/utilities.js";

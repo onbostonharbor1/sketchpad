@@ -89,6 +89,9 @@ case "manifestMaintenance":
     case "writePatternThumbnail":
       return await writePatternThumbnail(payload);
 
+    case "editManifestEntry":
+      return await editManifestEntry(payload);
+
     case "deletePackageScript":
       return await deletePackageScript(payload);
 
@@ -110,6 +113,304 @@ case "manifestMaintenance":
       throw new Error(`dispatchService: unknown requestName: ${requestName}`);
   }
 } // end dispatchService
+
+
+
+
+/* ============================================================
+   TASK: editManifestEntry  (FIX: do NOT overwrite status:"ok")
+=========================================================== */
+/*
+  Payload:
+    {
+      manifestPath : "/home/manifest.json" | "/patterns/.../manifest.json" | "/gallery/.../manifest.json" | "/utilities/.../manifest.json",
+      matchField   : "path" | "filename" | "file",
+      matchValue   : "<string>",
+      title        : "<string>",
+      status       : "<string>"   // "" == clear
+    }
+*/
+/* ============================================================
+   TASK: editManifestEntry  (FIX: if Home manifest is edited, update the ORIGINAL manifest)
+=========================================================== */
+/*
+  Payload:
+    {
+      manifestPath : "/home/manifest.json" | "/patterns/.../manifest.json" | "/gallery/.../manifest.json" | "/utilities/.../manifest.json",
+      matchField   : "path" | "filename" | "file",
+      matchValue   : "<string>",
+      title        : "<string>",
+      status       : "<string>"   // "" == clear
+    }
+
+  FIX BEHAVIOR
+  ------------
+  If the UI calls editManifestEntry with manifestPath pointing to ./home/manifest.json,
+  that is a *virtual* aggregate manifest.
+
+  In that case:
+    1) We locate the ORIGINAL per-folder manifest entry by matching the rooted path.
+    2) We update THAT original manifest.json.
+    3) We ALSO update ./home/manifest.json so the Home UI is immediately consistent.
+*/
+export async function editManifestEntry(payload = {}) {
+
+  const manifestPathInput = payload.manifestPath;
+  const matchField        = payload.matchField;
+  const matchValue        = payload.matchValue;
+  const newTitle          = String(payload.title || "");
+  let   newStatus         = payload.status;
+
+  if (!manifestPathInput) throw new Error("editManifestEntry: manifestPath missing");
+  if (!matchField)        throw new Error("editManifestEntry: matchField missing");
+  if (!matchValue)        throw new Error("editManifestEntry: matchValue missing");
+
+  if (newStatus == null) newStatus = "";
+  newStatus = String(newStatus);
+
+  const allowedRoots = [
+    path.resolve("./home"),
+    path.resolve("./patterns"),
+    path.resolve("./gallery"),
+    path.resolve("./utilities")
+  ];
+
+  const manifestPath = resolveManifestPathAllowed(
+    allowedRoots,
+    manifestPathInput,
+    "editManifestEntry"
+  );
+
+  const homeManifestPath = path.resolve("./home/manifest.json");
+  const isHomeManifest   = (manifestPath === homeManifestPath);
+
+  // ------------------------------------------------------------
+  // Case A: Editing a real manifest directly (patterns/gallery/utilities/home-but-not-virtual use case)
+  // ------------------------------------------------------------
+  if (!isHomeManifest) {
+
+    const report = editManifestEntryInSingleFile({
+      manifestPath,
+      matchField,
+      matchValue,
+      newTitle,
+      newStatus
+    });
+
+    return {
+      request: "editManifestEntry",
+      status: "ok",
+      manifestPath: report.manifestPath,
+      indexUpdated: report.indexUpdated,
+      oldTitle: report.oldTitle,
+      newTitle: report.newTitle,
+      oldStatus: report.oldStatus,
+      newStatus: report.newStatus
+    };
+  }
+
+  // ------------------------------------------------------------
+  // Case B: Editing via Home (virtual aggregate) — MUST update original manifest
+  // ------------------------------------------------------------
+
+  // Home uses rooted paths ("/gallery/Ideabook/3D/IMG_9649.PNG", etc.)
+  const rootedPath = String(matchValue);
+  if (!rootedPath.startsWith("/")) {
+    throw new Error("editManifestEntry: Home edits require matchValue to be rooted path starting with '/'");
+  }
+
+  // 1) Find + update the original manifest entry that produced this Home item.
+  const original = findOriginalManifestEntryByRootedPath(rootedPath);
+
+  const originalReport = editManifestEntryInSingleFile({
+    manifestPath: original.manifestPath,
+    matchField:   original.matchField,
+    matchValue:   original.matchValue,
+    newTitle,
+    newStatus
+  });
+
+  // 2) Also update the Home manifest entry (so UI is consistent immediately).
+  //    (Home will be rebuilt later by your maintenance script anyway.)
+  const homeReport = editManifestEntryInSingleFile({
+    manifestPath: homeManifestPath,
+    matchField,
+    matchValue,
+    newTitle,
+    newStatus
+  });
+
+  return {
+    request: "editManifestEntry",
+    status: "ok",
+
+    // IMPORTANT: report the REAL target that was fixed
+    manifestPath: originalReport.manifestPath,
+    indexUpdated: originalReport.indexUpdated,
+
+    oldTitle: originalReport.oldTitle,
+    newTitle: originalReport.newTitle,
+    oldStatus: originalReport.oldStatus,
+    newStatus: originalReport.newStatus,
+
+    // Extra diagnostics (useful while validating)
+    homeManifestAlsoUpdated: true,
+    homeIndexUpdated: homeReport.indexUpdated,
+    homeManifestPath: homeManifestPath
+  };
+
+} // end editManifestEntry
+
+
+/* ============================================================
+   editManifestEntryInSingleFile(params)
+
+   Updates exactly one manifest file in place (array of entries).
+=========================================================== */
+function editManifestEntryInSingleFile(params) {
+
+  const manifestPath = params.manifestPath;
+  const matchField   = params.matchField;
+  const matchValue   = params.matchValue;
+  const newTitle     = params.newTitle;
+  const newStatus    = params.newStatus;
+
+  if (!manifestPath) throw new Error("editManifestEntryInSingleFile: manifestPath missing");
+  if (!matchField)   throw new Error("editManifestEntryInSingleFile: matchField missing");
+  if (!matchValue)   throw new Error("editManifestEntryInSingleFile: matchValue missing");
+
+  const manifest = readJsonFileSync(manifestPath);
+  if (!Array.isArray(manifest)) {
+    throw new Error("editManifestEntryInSingleFile: manifest is not an array");
+  }
+
+  let indexFound = -1;
+
+  for (let i = 0; i < manifest.length; i++) {
+    const entry = manifest[i];
+    if (!entry || typeof entry !== "object") continue;
+
+    if (String(entry[matchField]) === String(matchValue)) {
+      indexFound = i;
+      break;
+    }
+  }
+
+  if (indexFound < 0) {
+    throw new Error(
+      `editManifestEntryInSingleFile: entry not found (${matchField}=${matchValue}) in ${manifestPath}`
+    );
+  }
+
+  const entry     = manifest[indexFound];
+  const oldTitle  = String(entry.title || "");
+  const oldStatus = ("status" in entry) ? String(entry.status) : "";
+
+  entry.title = String(newTitle);
+
+  if (String(newStatus) === "") {
+    delete entry.status;
+  } else {
+    entry.status = String(newStatus);
+  }
+
+  writeJsonFileSync(manifestPath, manifest);
+
+  return {
+    manifestPath,
+    indexUpdated: indexFound,
+    oldTitle,
+    newTitle: String(newTitle),
+    oldStatus,
+    newStatus: String(newStatus)
+  };
+
+} // end editManifestEntryInSingleFile
+
+
+/* ============================================================
+   findOriginalManifestEntryByRootedPath(rootedPath)
+
+   Searches ALL real manifests under:
+     ./patterns, ./gallery, ./utilities
+
+   For each entry, computes its rooted path using the same
+   rule you already use for Home:
+     makeRootedPath(manifestDirAbs, entry)
+
+   When it finds a match, it returns:
+     {
+       manifestPath : "<absolute manifest.json path>",
+       matchField   : "path",
+       matchValue   : "<original entry.path value>"
+     }
+
+   Why matchField/path?
+   Because the original manifests store entry.path as a relative
+   value (local filename or cat/file), not the rooted path.
+=========================================================== */
+function findOriginalManifestEntryByRootedPath(rootedPath) {
+
+  if (!rootedPath || typeof rootedPath !== "string") {
+    throw new Error("findOriginalManifestEntryByRootedPath: rootedPath missing/invalid");
+  }
+  if (!rootedPath.startsWith("/")) {
+    throw new Error("findOriginalManifestEntryByRootedPath: rootedPath must start with '/'");
+  }
+
+  const roots = [
+    path.resolve("./patterns"),
+    path.resolve("./gallery"),
+    path.resolve("./utilities")
+  ];
+
+  const manifestFiles = [];
+
+  for (const r of roots) {
+    if (!fs.existsSync(r)) continue;
+    walkFindManifests(r, manifestFiles);
+  }
+
+  for (let k = 0; k < manifestFiles.length; k++) {
+
+    const mf = manifestFiles[k];
+    const list = readJsonFileSync(mf);
+    if (!Array.isArray(list)) throw new Error("findOriginalManifestEntryByRootedPath: manifest must be array: " + mf);
+
+    const manifestDir = path.dirname(mf);
+
+    for (let i = 0; i < list.length; i++) {
+
+      const entry = list[i];
+      if (!entry || typeof entry !== "object") continue;
+
+      const rp = makeRootedPath(manifestDir, entry);
+
+      if (rp === rootedPath) {
+
+        // We will edit the original entry by its local "path" value,
+        // because that is what editManifestEntryInSingleFile understands.
+        const localPath = entry.path;
+        if (!localPath || typeof localPath !== "string") {
+          throw new Error("findOriginalManifestEntryByRootedPath: matched entry has no entry.path in " + mf);
+        }
+
+        return {
+          manifestPath: mf,
+          matchField: "path",
+          matchValue: String(localPath)
+        };
+      }
+    }
+  }
+
+  throw new Error("findOriginalManifestEntryByRootedPath: no original manifest entry found for " + rootedPath);
+
+} // end findOriginalManifestEntryByRootedPath
+
+
+
+
 
 
 /* ===========================================================

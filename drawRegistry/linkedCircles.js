@@ -61,14 +61,6 @@
 import { LinkedCircles }     from "/classes/linkedCircles.js";
 import { drawLinkedCircles } from "/draw/drawLinkedCircles.js";
 
-/* ============================================================
-   Registry object
-
-   NOTE ON NAMING
-   - You have been using "window.drawRegistry_<name>" so each
-     registry entry can be loaded as a module, but still
-     register itself globally for the rest of the UI.
-   ============================================================ */
 
 window.drawRegistry_linkedCircles = {
   /* ----------------------------------------------------------

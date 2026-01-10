@@ -162,7 +162,7 @@ export function initDrawTab(restored = false) {
 
   const activeId = uiState.draw.activeSubtab || DEFAULT_DRAW_SUBTAB;
   switchTab(activeId);
-consumePendingLaunchIntoDraw();
+  consumePendingLaunchIntoDraw();
 
 
 

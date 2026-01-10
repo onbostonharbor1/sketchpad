@@ -1,38 +1,53 @@
-/* ui/homeCmds.js
+/* ui/homeMenuCmds.js
    ------------------------------------------------------------
    Home Tab — Caption Menu Commands
    ------------------------------------------------------------
-   Rules:
-     - Menu command builders live here (like patternsMenuCmds.js).
-     - home.js owns caption wiring and menuManager.open().
-     - "Show Script" is DISABLED (grayed) when current result is an image.
 */
 
 import { showScriptOffcanvas } from "./ui_utilities.js";
+import { openEditManifestDialog } from "./menuCmds.js";
+import { refreshHomeCategoriesFromManifestEdit } from "./home.js";
 
 /* ============================================================
-   getHomeCaptionMenuItems(entry)
-   ------------------------------------------------------------
-   Returns menu items for the Home caption bar menu.
+   getHomeCaptionMenuItems(info)
 =========================================================== */
-export function getHomeCaptionMenuItems(entry) {
+export async function getHomeCaptionMenuItems(info) {
 
-  if (!entry) throw new Error("getHomeCaptionMenuItems: entry missing");
-
-  const path = entry.path || "";
-  const isJs = isJsPath(path);
-
-  const label = entry.file || entry.title || path || "(untitled)";
+  if (!info) throw new Error("getHomeCaptionMenuItems: info missing");
 
   const items = [];
 
+  /* ----------------------------------------------------------
+     Show Script
+     -------------------------------------------------------- */
+  const isScript = !!info.isScript;
+  const scriptPath = info.scriptPath || "";
+
+  const label =
+    info.file ||
+    info.title ||
+    info.entryPath ||
+    scriptPath ||
+    "(untitled)";
+
   items.push({
     label: "Show Script",
-    disabled: !isJs,
+    disabled: !isScript,
     onClick: () => {
-      if (!isJs) return;
-      showScriptOffcanvas(path, label);
-    }
+      if (!isScript) return;
+      showScriptOffcanvas(scriptPath, label);
+    } // end onClick
+  });
+
+  /* ----------------------------------------------------------
+     Edit Manifest
+     -------------------------------------------------------- */
+  items.push({
+    label: "Edit Manifest",
+    disabled: false,
+    onClick: async () => {
+      await editHomeManifestItem(info);
+    } // end onClick
   });
 
   return items;
@@ -41,11 +56,40 @@ export function getHomeCaptionMenuItems(entry) {
 
 
 /* ============================================================
-   isJsPath(p)
+   editHomeManifestItem(homeItem)
 =========================================================== */
-function isJsPath(p) {
-  if (typeof p !== "string") return false;
-  return p.toLowerCase().endsWith(".js");
-} // end isJsPath
+export async function editHomeManifestItem(homeItem) {
 
-// end homeCmds.js
+  if (!homeItem) throw new Error("editHomeManifestItem: homeItem missing");
+
+  const manifestPath = homeItem.manifestPath;
+  const entryPath    = homeItem.entryPath;
+
+  if (!manifestPath) throw new Error("editHomeManifestItem: homeItem.manifestPath missing");
+  if (!entryPath)    throw new Error("editHomeManifestItem: homeItem.entryPath missing");
+
+  const ok = await openEditManifestDialog({
+    dialogTitle:   "Edit Manifest",
+    manifestPath:  String(manifestPath),
+    matchField:    "path",
+    matchValue:    String(entryPath),
+
+    fileLabel:     String(homeItem.file || homeItem.title || entryPath),
+
+    initialTitle:  String(homeItem.title || ""),
+    initialStatus: String(homeItem.status || ""),
+
+    statusPresets: ["new", "working", "current", "favorite"],
+
+    allowCustomStatus: true,
+    allowClearStatus:  true
+  });
+
+  if (ok) {
+    await refreshHomeCategoriesFromManifestEdit();
+  }
+
+} // end editHomeManifestItem
+
+
+// end ui/homeMenuCmds.js

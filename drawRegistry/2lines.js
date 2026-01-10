@@ -8,7 +8,7 @@ import { drawALine } from "../draw/draw_utilities.js";
 
 window.drawRegistry_2lines = {
   name:        "Two Lines",
-  id:          "drawTwoLines",
+  id:          "twoLines",
   version:     0.2,
   category:    "fundamental",
   firstOrder:  true,

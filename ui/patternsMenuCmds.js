@@ -79,12 +79,6 @@ export async function addPatternThumbnail() {
 
 } // end addPatternThumbnail
 
-
-/* ============================================================
-   buildCanvasThumbnailBase64(sourceCanvas, w, h)
-   ------------------------------------------------------------
-   Returns BASE64 ONLY (no data: prefix).
-=========================================================== */
 /* ============================================================
    buildCanvasThumbnailBase64(sourceCanvas, w, h)
    ------------------------------------------------------------

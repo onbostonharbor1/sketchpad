@@ -10,40 +10,70 @@
      - Do not introduce Home manifest logic yet
    ------------------------------------------------------------ */
 
+/* ============================================================
+   IMPORTS
+   ------------------------------------------------------------
+   Role:
+     - External UI services (caption/menu/offcanvas)
+     - Shared utilities (clearDivs, commands button plumbing)
+     - Manifest and file loading
+     - Script execution to canvas
+============================================================ */
+
 import { menuManager } from "./menuManager.js";
 import { getHomeCaptionMenuItems } from "./homeMenuCmds.js";
 
-import { uiState }          from "./uiState.js";
-import { clearDivs, setCommandsButtonLabel }
-                            from "./ui_utilities.js";
-import { setCommandsButtonHandler, showCommandsOffcanvas }
-                            from "./ui_utilities.js";
-import { setCaptionBar }    from "./caption.js";
-import { manifest }         from "./manifest.js";
-import { fileLayer }        from "./fileLayer.js";
+import { uiState } from "./uiState.js";
+import { clearDivs, setCommandsButtonLabel } from "./ui_utilities.js";
+import { setCommandsButtonHandler, showCommandsOffcanvas } from "./ui_utilities.js";
+import { setCaptionBar } from "./caption.js";
+import { manifest } from "./manifest.js";
+import { fileLayer } from "./fileLayer.js";
 import { renderCategories } from "./categories.js";
-import { loadScriptModule, executeScriptToCanvas }
-                            from "./scriptRunner.js";
+import { loadScriptModule, executeScriptToCanvas } from "./scriptRunner.js";
 
 import { setCommandsButton, showOffcanvasPanel, escapeHtml } from "./ui_utilities.js";
 import { nodeRebuildAndValidateManifests } from "./nodeLayer.js";
 
+/* ============================================================
+   CONSTANTS / MODULE STATE
+   ------------------------------------------------------------
+   Role:
+     - Tab key constants
+     - Home view constants
+     - Home manifest in-memory cache (Home-only)
+     - Render token to prevent stale async draws
+============================================================ */
+
 const TAB_NAME = "home";
 let homeManifestLogged = false;
+
 const HOME_VIEW_CATEGORIES = "categories";
 const HOME_VIEW_RESULTS    = "results";
 
-let homeManifestData   = null;
+let homeManifestData    = null;
 let homeManifestGrouped = null;
+
 // Render sequencing token for Home Results (prevents stale async draws)
 let homeResultsRenderToken = 0;
 
+/* ============================================================
+   TAB SPEC (Consumed by setUI.js)
+   ------------------------------------------------------------
+   Role:
+     - Declarative description consumed by setUI.js
+     - Defines regions and lifecycle hooks
+============================================================ */
 
-/* ===========================================================
+/* ------------------------------------------------------------
    HomeTabSpec
-   -----------------------------------------------------------
-   Declarative description consumed by setUI.js
-=========================================================== */
+   Arguments:
+     - None (object literal consumed by setUI.js)
+   ------------------------------------------------------------
+   Role:
+     - Describes tab name/theme/regions and lifecycle hooks
+     - Supplies region builder functions
+------------------------------------------------------------ */
 export const HomeTabSpec = {
   name: TAB_NAME,
   theme: "theme-home",
@@ -68,49 +98,23 @@ export const HomeTabSpec = {
 }; // end HomeTabSpec
 
 
-/* ===========================================================
-   initHomeTab(restored = false)
-   -----------------------------------------------------------
-   Cold start path (called via setUI START logic or when
-   uiState.home.saved is null).
-=========================================================== */
-export function initHomeTab(restored = false) {
-  // Clear shared regions (matches your pattern in other tabs)
-  clearDivs();
-  setCommandsButtonLabel("Home Commands");
-  wireHomeCommandsButton();
+/* ============================================================
+   GENERAL FUNCTIONS
+   ------------------------------------------------------------
+   Role:
+     - Pure state guarantees / invariants
+     - Simple utilities that do not “belong” to a single div
+============================================================ */
 
-  // Build minimal UI
-  setHomeSubtabs();
-  setHomeCaption("Home (init)");
-  setHomeText("Home tab skeleton: init()");
-  setHomeAction();
-  setHomeSketchpad();
-
-  // Ensure saved state exists (fail-fast contract for future work)
-    ensureHomeSavedState();
-    switchHomeView(uiState.home.saved.view);
-    loadHomeManifestAndLog();
-} // end initHomeTab
-
-
-/* ===========================================================
-   saveHomeState()
-   -----------------------------------------------------------
-   Save contract: return a serializable snapshot.
-   For now, we just return uiState.home.saved.
-=========================================================== */
-export function saveHomeState() {
-  ensureHomeSavedState();
-  return uiState.home.saved;
-} // end saveHomeState
-
-
-/* ===========================================================
+/* ------------------------------------------------------------
    ensureHomeSavedState()
-   -----------------------------------------------------------
-   Guarantees uiState.home.saved exists with the expected shape.
-=========================================================== */
+   Arguments:
+     - None
+   ------------------------------------------------------------
+   Role:
+     - Guarantees uiState.home.saved exists with the expected shape.
+     - Fail-fast if uiState.home is missing.
+------------------------------------------------------------ */
 function ensureHomeSavedState() {
   if (!uiState.home) {
     throw new Error("ensureHomeSavedState: uiState.home missing");
@@ -129,9 +133,175 @@ function ensureHomeSavedState() {
 } // end ensureHomeSavedState
 
 
-/* ===========================================================
-   Region builders (minimal, deterministic)
-=========================================================== */
+/* ------------------------------------------------------------
+   isJsPath(p)
+   Arguments:
+     - p (string): path to test
+   ------------------------------------------------------------
+   Role:
+     - Returns true if the path ends in ".js" (case-insensitive).
+     - Fail-fast if p is not a string.
+------------------------------------------------------------ */
+function isJsPath(p) {
+  if (typeof p !== "string") throw new Error("isJsPath: path must be a string");
+  return p.toLowerCase().endsWith(".js");
+} // end isJsPath
+
+
+/* ------------------------------------------------------------
+   isImagePath(path)
+   Arguments:
+     - path (string): path to test
+   ------------------------------------------------------------
+   Role:
+     - Returns true for common image extensions: png/jpg/jpeg.
+------------------------------------------------------------ */
+function isImagePath(path) {
+  const dot = path.lastIndexOf(".");
+  if (dot < 0) return false;
+
+  const ext = path.slice(dot + 1).toLowerCase();
+
+  if (ext === "png") return true;
+  if (ext === "jpg") return true;
+  if (ext === "jpeg") return true;
+
+  return false;
+} // end isImagePath
+
+
+/* ------------------------------------------------------------
+   deriveHomeOriginFromPath(path)
+   Arguments:
+     - path (string): rooted content path (e.g., "/patterns/...")
+   ------------------------------------------------------------
+   Role:
+     - Derives a human-readable origin label based on rooted prefix.
+------------------------------------------------------------ */
+function deriveHomeOriginFromPath(path) {
+  if (typeof path !== "string" || !path.length) {
+    return "Unknown";
+  }
+
+  const p = path.toLowerCase();
+
+  if (p.startsWith("/patterns/"))   return "Patterns";
+  if (p.startsWith("/gallery/"))    return "Gallery";
+  if (p.startsWith("/utilities/"))  return "Utilities";
+  if (p.startsWith("/drawregistry/")) return "Draw";
+  if (p.startsWith("/home/"))       return "Home";
+
+  return "Unknown";
+} // end deriveHomeOriginFromPath
+
+
+/* ============================================================
+   TAB LIFECYCLE FUNCTIONS (init / restore / save)
+   ------------------------------------------------------------
+   Role:
+     - Called by setUI.js via HomeTabSpec
+     - Establishes deterministic cold start and restore behavior
+============================================================ */
+
+/* ------------------------------------------------------------
+   initHomeTab(restored = false)
+   Arguments:
+     - restored (boolean): present for contract parity; ignored here
+   ------------------------------------------------------------
+   Role:
+     - Cold start path (called via setUI START logic or when
+       uiState.home.saved is null).
+     - Clears regions, wires commands, builds minimal UI, then
+       enters the saved view and kicks manifest load.
+------------------------------------------------------------ */
+export function initHomeTab(restored = false) {
+  // Clear shared regions (matches your pattern in other tabs)
+  clearDivs();
+  setCommandsButtonLabel("Home Commands");
+  wireHomeCommandsButton();
+
+  // Build minimal UI
+  setHomeSubtabs();
+  setHomeCaption("Home (init)");
+  setHomeText("Home tab skeleton: init()");
+  setHomeAction();
+  setHomeSketchpad();
+
+  // Ensure saved state exists (fail-fast contract for future work)
+  ensureHomeSavedState();
+  switchHomeView(uiState.home.saved.view);
+  loadHomeManifestAndLog();
+} // end initHomeTab
+
+
+/* ------------------------------------------------------------
+   restoreHomeTab()
+   Arguments:
+     - None
+   ------------------------------------------------------------
+   Role:
+     - Restore path (called when uiState.home.saved exists).
+     - Rebuilds subtabs, kicks manifest load, re-enters saved view.
+     - Does not overwrite UI with placeholder text.
+------------------------------------------------------------ */
+function restoreHomeTab() {
+  clearDivs();
+  setCommandsButtonLabel("Home Commands");
+
+  // Ensure the saved object exists (fail-fast contract)
+  ensureHomeSavedState();
+
+  // Build subtabs first (Results tab appears only if activeEntry exists)
+  setHomeSubtabs();
+
+  // Kick manifest load once (cached by homeManifestLogged)
+  // If we are restoring into Categories, the manifest loader will
+  // render categories when grouped data becomes available.
+  loadHomeManifestAndLog();
+
+  // Re-enter the saved view deterministically.
+  // NOTE: switchHomeView is async because Results rendering can be async.
+  // We intentionally do NOT await here because HomeTabSpec.restore()
+  // is currently synchronous in this file. The view switch still runs,
+  // and any fail-fast errors will surface in the console.
+  switchHomeView(uiState.home.saved.view);
+
+} // end restoreHomeTab
+
+
+/* ------------------------------------------------------------
+   saveHomeState()
+   Arguments:
+     - None
+   ------------------------------------------------------------
+   Role:
+     - Save contract: return a serializable snapshot.
+     - For now, we just return uiState.home.saved.
+------------------------------------------------------------ */
+export function saveHomeState() {
+  ensureHomeSavedState();
+  return uiState.home.saved;
+} // end saveHomeState
+
+
+/* ============================================================
+   SUBTABS DIV FUNCTIONS (#subtabs)
+   ------------------------------------------------------------
+   Role:
+     - Builds and maintains the Home subtab bar
+     - Routes subtab clicks into switchHomeView()
+============================================================ */
+
+/* ------------------------------------------------------------
+   setHomeSubtabs()
+   Arguments:
+     - None
+   ------------------------------------------------------------
+   Role:
+     - Builds the Home subtab bar inside #subtabs.
+     - Adds Categories always; adds Results only if activeEntry exists.
+     - Activates the currently saved view.
+------------------------------------------------------------ */
 function setHomeSubtabs() {
   const el = document.getElementById("subtabs");
   if (!el) throw new Error("setHomeSubtabs: #subtabs not found");
@@ -157,7 +327,16 @@ function setHomeSubtabs() {
 } // end setHomeSubtabs
 
 
-
+/* ------------------------------------------------------------
+   addHomeSubtabButton(barEl, label, viewKey)
+   Arguments:
+     - barEl (HTMLElement): the <ul> container to append into
+     - label (string): button label
+     - viewKey (string): "categories" | "results"
+   ------------------------------------------------------------
+   Role:
+     - Creates a single subtab button that calls switchHomeView(viewKey).
+------------------------------------------------------------ */
 function addHomeSubtabButton(barEl, label, viewKey) {
   const li = document.createElement("li");
   li.className = "nav-item";
@@ -176,6 +355,15 @@ function addHomeSubtabButton(barEl, label, viewKey) {
 } // end addHomeSubtabButton
 
 
+/* ------------------------------------------------------------
+   activateHomeSubtabButton(viewKey)
+   Arguments:
+     - viewKey (string): "categories" | "results"
+   ------------------------------------------------------------
+   Role:
+     - Applies "active" class to the matching subtab button and
+       removes it from the others.
+------------------------------------------------------------ */
 function activateHomeSubtabButton(viewKey) {
   const bar = document.querySelector("#subtabs ul");
   if (!bar) throw new Error("activateHomeSubtabButton: #subtabs ul not found");
@@ -190,6 +378,17 @@ function activateHomeSubtabButton(viewKey) {
 } // end activateHomeSubtabButton
 
 
+/* ------------------------------------------------------------
+   switchHomeView(viewKey)
+   Arguments:
+     - viewKey (string): "categories" | "results"
+   ------------------------------------------------------------
+   Role:
+     - Updates uiState.home.saved.view.
+     - Rebuilds subtabs.
+     - For Categories view: clears caption/sketchpad/action and renders categories if ready.
+     - For Results view: calls renderHomeResults().
+------------------------------------------------------------ */
 async function switchHomeView(viewKey) {
   ensureHomeSavedState();
 
@@ -199,25 +398,24 @@ async function switchHomeView(viewKey) {
   setHomeSubtabs();
   activateHomeSubtabButton(viewKey);
 
-if (viewKey === HOME_VIEW_CATEGORIES) {
+  if (viewKey === HOME_VIEW_CATEGORIES) {
 
-  // Categories view does NOT use caption
-  clearHomeCaption();
+    // Categories view does NOT use caption
+    clearHomeCaption();
 
-  // Clear sketchpad so prior drawing does not remain
-  const padDiv = document.getElementById("sketchpad");
-  if (!padDiv) throw new Error("switchHomeView: #sketchpad not found");
-  padDiv.innerHTML = "";
+    // Clear sketchpad so prior drawing does not remain
+    const padDiv = document.getElementById("sketchpad");
+    if (!padDiv) throw new Error("switchHomeView: #sketchpad not found");
+    padDiv.innerHTML = "";
 
-  // Clear action area
-  const actionDiv = document.getElementById("action");
-  if (!actionDiv) throw new Error("switchHomeView: #action not found");
-  actionDiv.innerHTML = "";
+    // Clear action area
+    const actionDiv = document.getElementById("action");
+    if (!actionDiv) throw new Error("switchHomeView: #action not found");
+    actionDiv.innerHTML = "";
 
-  renderHomeCategoriesIfReady();
-  return;
-}
-
+    renderHomeCategoriesIfReady();
+    return;
+  }
 
   if (viewKey === HOME_VIEW_RESULTS) {
     await renderHomeResults();
@@ -231,6 +429,24 @@ if (viewKey === HOME_VIEW_CATEGORIES) {
 
 
 
+
+/* ============================================================
+   CAPTION DIV FUNCTIONS (#caption)
+   ------------------------------------------------------------
+   Role:
+     - Clears caption for Categories view
+     - Sets caption for placeholder and Results view
+     - Results caption includes full path injected into caption-buttons
+============================================================ */
+
+/* ------------------------------------------------------------
+   clearHomeCaption()
+   Arguments:
+     - None
+   ------------------------------------------------------------
+   Role:
+     - Clears #caption content.
+------------------------------------------------------------ */
 function clearHomeCaption() {
   const el = document.getElementById("caption");
   if (!el) throw new Error("clearHomeCaption: #caption not found");
@@ -238,6 +454,14 @@ function clearHomeCaption() {
 } // end clearHomeCaption
 
 
+/* ------------------------------------------------------------
+   setHomeCaption(titleText)
+   Arguments:
+     - titleText (string): caption title string
+   ------------------------------------------------------------
+   Role:
+     - Builds a minimal caption bar with a title and no prev/next/menu.
+------------------------------------------------------------ */
 function setHomeCaption(titleText) {
   setCaptionBar({
     targetId: "caption",
@@ -249,6 +473,120 @@ function setHomeCaption(titleText) {
 } // end setHomeCaption
 
 
+/* ------------------------------------------------------------
+   setHomeCaptionForResult(entry)
+   Arguments:
+     - entry (object): selected home manifest entry
+   ------------------------------------------------------------
+   Role:
+     - Builds caption bar for Results:
+         - Title from entry.title/entry.file
+         - Menu items from getHomeCaptionMenuItems(entry)
+     - Injects full rooted path into "#caption .caption-buttons"
+       immediately before the menu button.
+------------------------------------------------------------ */
+function setHomeCaptionForResult(entry) {
+
+  if (!entry) throw new Error("setHomeCaptionForResult: entry missing");
+  if (typeof entry !== "object") throw new Error("setHomeCaptionForResult: entry must be an object");
+
+  const title =
+    entry.title ||
+    entry.file  ||
+    "(untitled)";
+
+  const fullPath = entry.path || "";
+  if (typeof fullPath !== "string" || !fullPath.length) {
+    throw new Error("setHomeCaptionForResult: entry.path missing");
+  }
+
+  // Build a single “context bundle” (Patterns-style) to hand off to homeMenuCmds.js.
+  // Home’s manifest is flat: /home/manifest.json.
+  // Entry identity should be resolvable from this bundle (typically by entry.path).
+  const ctxBundle = {
+    tabName: "home",
+
+    // Manifest identity
+    manifestPath: "/home/manifest.json",
+
+    // Entry identity (pick ONE stable key; path is usually best)
+    entryPath: fullPath,
+
+    // Convenience fields for UI/editor defaults
+    title: entry.title || "",
+    file: entry.file || "",
+    status: (typeof entry.status === "string") ? entry.status : "",
+
+    // For menu enable/disable + “Show Script” / Help decisions
+    isScript: isJsPath(fullPath),
+    scriptPath: isJsPath(fullPath) ? fullPath : null,
+
+    // Optional: if you later add Home help items
+    helpKey: null
+  };
+
+  // Build the caption bar FIRST (this creates caption-buttons + menu button)
+  setCaptionBar({
+    targetId: "caption",
+    title: title,
+    onMenu: async (anchor) => {
+
+      // homeMenuCmds.js owns the menu list and dispatch targets.
+      // It should include (at least):
+      //   - Edit Manifest  → edits title + status ("" = none)
+      //   - Show Script    → enabled only when ctxBundle.isScript is true
+      //   - Help           → optional later
+      const items = await getHomeCaptionMenuItems(ctxBundle);
+      menuManager.open(items, anchor);
+
+    } // end onMenu
+  });
+
+  // ---- inject pathname into .caption-buttons ----
+  const btnBar = document.querySelector("#caption .caption-buttons");
+  if (!btnBar) {
+    throw new Error("setHomeCaptionForResult: .caption-buttons not found");
+  }
+
+  // Remove any existing path span
+  const old = btnBar.querySelector(".home-caption-path");
+  if (old) old.remove();
+
+  // Create path span (add spacing on the right)
+  const span = document.createElement("span");
+  span.className = "home-caption-path";
+  span.innerHTML = fullPath + "&nbsp;&nbsp;";
+
+  // Insert BEFORE the menu button (last button = menu)
+  const buttons = btnBar.querySelectorAll("button");
+  if (!buttons.length) {
+    throw new Error("setHomeCaptionForResult: no buttons in caption-buttons");
+  }
+
+  const menuBtn = buttons[buttons.length - 1];
+  btnBar.insertBefore(span, menuBtn);
+
+} // end setHomeCaptionForResult
+
+
+
+/* ============================================================
+   TEXT DIV FUNCTIONS (#text)
+   ------------------------------------------------------------
+   Role:
+     - Minimal placeholder text for skeleton init
+     - Categories view uses renderCategories("text", frames)
+============================================================ */
+
+/* ------------------------------------------------------------
+   setHomeText(message)
+   Arguments:
+     - message (string): message to display
+   ------------------------------------------------------------
+   Role:
+     - Writes a simple message into #text and echoes uiState.home.saved
+       as JSON for debugging/testing.
+------------------------------------------------------------ */
 function setHomeText(message) {
   const el = document.getElementById("text");
   if (!el) throw new Error("setHomeText: #text not found");
@@ -266,6 +604,22 @@ function setHomeText(message) {
 } // end setHomeText
 
 
+/* ============================================================
+   ACTION DIV FUNCTIONS (#action)
+   ------------------------------------------------------------
+   Role:
+     - Home itself does not populate #action in this skeleton
+     - Results view clears it
+============================================================ */
+
+/* ------------------------------------------------------------
+   setHomeAction()
+   Arguments:
+     - None
+   ------------------------------------------------------------
+   Role:
+     - Clears #action.
+------------------------------------------------------------ */
 function setHomeAction() {
   const el = document.getElementById("action");
   if (!el) throw new Error("setHomeAction: #action not found");
@@ -273,12 +627,106 @@ function setHomeAction() {
 } // end setHomeAction
 
 
+/* ============================================================
+   SKETCHPAD DIV FUNCTIONS (#sketchpad)
+   ------------------------------------------------------------
+   Role:
+     - Home clears sketchpad for Categories view
+     - Results view renders either shared canvas or an image element
+============================================================ */
+
+/* ------------------------------------------------------------
+   setHomeSketchpad()
+   Arguments:
+     - None
+   ------------------------------------------------------------
+   Role:
+     - Clears #sketchpad.
+------------------------------------------------------------ */
 function setHomeSketchpad() {
   const el = document.getElementById("sketchpad");
   if (!el) throw new Error("setHomeSketchpad: #sketchpad not found");
   el.innerHTML = "";
 } // end setHomeSketchpad
 
+
+/* ------------------------------------------------------------
+   renderHomeImageEntryToSketchpad(entry, myToken)
+   Arguments:
+     - entry (object): activeEntry (must include .path)
+     - myToken (number): render token for stale async prevention
+   ------------------------------------------------------------
+   Role:
+     - Loads an image from entry.path and displays it in #sketchpad.
+     - Uses token check to avoid stale async updates.
+------------------------------------------------------------ */
+async function renderHomeImageEntryToSketchpad(entry, myToken) {
+
+  const padDiv = document.getElementById("sketchpad");
+  if (!padDiv) throw new Error("Home Results: #sketchpad missing");
+
+  const textDiv = document.getElementById("text");
+  if (!textDiv) throw new Error("Home Results: #text missing");
+
+  // Clear sketchpad and show a minimal loading marker
+  padDiv.innerHTML = "<p>(Loading image...)</p>";
+
+  const img = new Image();
+
+  const loaded = await new Promise(function (resolve) {
+
+    img.onload = function () { resolve({ ok: true }); };   // end onload
+    img.onerror = function () { resolve({ ok: false }); }; // end onerror
+
+    // Rooted path is used directly
+    img.src = entry.path;
+
+  }); // end Promise
+
+  // Stale render: do nothing (newer click already took over)
+  if (myToken !== homeResultsRenderToken) return;
+
+  if (!loaded.ok) {
+    padDiv.innerHTML =
+      "<p><b>Home:</b> Image failed to load.</p>" +
+      "<p>Path: " + entry.path + "</p>";
+
+    textDiv.innerHTML =
+      "<p><b>Home:</b> Image failed to load: " + entry.path + "</p>";
+
+    throw new Error("Home Results: image failed to load: " + entry.path);
+  }
+
+  // Fit behavior: preserve aspect, contain within region
+  img.style.maxWidth = "100%";
+  img.style.maxHeight = "100%";
+  img.style.objectFit = "contain";
+  img.style.display = "block";
+
+  padDiv.innerHTML = "";
+  padDiv.appendChild(img);
+
+} // end renderHomeImageEntryToSketchpad
+
+
+/* ============================================================
+   HOME MANIFEST LOAD + CATEGORIES RENDERING (#text)
+   ------------------------------------------------------------
+   Role:
+     - Loads /home/manifest.json (flat array)
+     - Groups entries by "status"
+     - Renders categories frames into #text
+============================================================ */
+
+/* ------------------------------------------------------------
+   loadHomeManifestAndLog()
+   Arguments:
+     - None
+   ------------------------------------------------------------
+   Role:
+     - One-shot kick of async manifest load + console logging.
+     - Uses homeManifestLogged to prevent repeated loads.
+------------------------------------------------------------ */
 function loadHomeManifestAndLog() {
   if (homeManifestLogged) return;
 
@@ -292,6 +740,17 @@ function loadHomeManifestAndLog() {
 } // end loadHomeManifestAndLog
 
 
+/* ------------------------------------------------------------
+   loadHomeManifestAndLog_async(forceReload)
+   Arguments:
+     - forceReload (boolean|undefined): if true, busts cache with ?v=Date.now()
+   ------------------------------------------------------------
+   Role:
+     - Loads /home/manifest.json (flat array).
+     - Groups by status into homeManifestGrouped.
+     - Logs summary to console.
+     - If currently in Categories view, renders categories immediately.
+------------------------------------------------------------ */
 async function loadHomeManifestAndLog_async(forceReload) {
 
   const basePath = "/home/manifest.json";
@@ -334,7 +793,28 @@ async function loadHomeManifestAndLog_async(forceReload) {
 } // end loadHomeManifestAndLog_async
 
 
+export async function refreshHomeCategoriesFromManifestEdit() {
 
+  // Force a rebuild of the grouped data used by category frames.
+  // We do NOT touch homeManifestLogged; this is an explicit refresh.
+  homeManifestData    = null;
+  homeManifestGrouped = null;
+
+  // Bust browser cache and rebuild homeManifestGrouped.
+  await loadHomeManifestAndLog_async(true);
+
+} // end refreshHomeCategoriesFromManifestEdit
+
+
+/* ------------------------------------------------------------
+   groupHomeEntriesByStatus(list)
+   Arguments:
+     - list (array): flat manifest array
+   ------------------------------------------------------------
+   Role:
+     - Validates entries are objects and have required "status".
+     - Returns map: { statusKey: [entry, ...], ... }.
+------------------------------------------------------------ */
 function groupHomeEntriesByStatus(list) {
   const grouped = {};
 
@@ -355,12 +835,53 @@ function groupHomeEntriesByStatus(list) {
   return grouped;
 } // end groupHomeEntriesByStatus
 
+
+/* ------------------------------------------------------------
+   renderHomeCategories(grouped)
+   Arguments:
+     - grouped (object): map { status: [entries...] }
+   ------------------------------------------------------------
+   Role:
+     - Builds category descriptor frames and renders them into #text.
+------------------------------------------------------------ */
 function renderHomeCategories(grouped) {
   const frames = buildHomeCategoryDescriptor(grouped);
   renderCategories("text", frames);
 } // end renderHomeCategories
 
 
+/* ------------------------------------------------------------
+   renderHomeCategoriesIfReady()
+   Arguments:
+     - None
+   ------------------------------------------------------------
+   Role:
+     - If homeManifestGrouped not ready, shows a simple message in #text.
+     - Otherwise renders categories.
+------------------------------------------------------------ */
+function renderHomeCategoriesIfReady() {
+  if (!homeManifestGrouped) {
+    const el = document.getElementById("text");
+    if (!el) throw new Error("renderHomeCategoriesIfReady: #text not found");
+    el.innerHTML = "Home: manifest not loaded yet.";
+    return;
+  }
+
+  renderHomeCategories(homeManifestGrouped);
+} // end renderHomeCategoriesIfReady
+
+
+/* ------------------------------------------------------------
+   buildHomeCategoryDescriptor(grouped)
+   Arguments:
+     - grouped (object): map { status: [entries...] }
+   ------------------------------------------------------------
+   Role:
+     - Converts grouped data into the descriptor format expected by categories.js.
+     - Each item click either:
+         - Launches Draw for drawRegistry entries (no Home Results), or
+         - Stores selection and enters Results view.
+------------------------------------------------------------ */
 function buildHomeCategoryDescriptor(grouped) {
 
   const statuses = Object.keys(grouped).sort((a, b) =>
@@ -423,8 +944,7 @@ function buildHomeCategoryDescriptor(grouped) {
 
             switchHomeView(HOME_VIEW_RESULTS);
 
-            const origin = deriveHomeOriginFromPath(entry.path);
-            setHomeCaptionForResult(entry, origin);
+            setHomeCaptionForResult(entry);
 
           } // end onClick
         };
@@ -438,19 +958,27 @@ function buildHomeCategoryDescriptor(grouped) {
 
 
 
+/* ============================================================
+   HOME RESULTS VIEW (Mix of #caption/#text/#action/#sketchpad)
+   ------------------------------------------------------------
+   Role:
+     - Clears categories UI
+     - Sets Results caption
+     - Routes to JS (canvas) or image rendering
+     - Uses token to prevent stale async updates
+============================================================ */
 
-function renderHomeCategoriesIfReady() {
-  if (!homeManifestGrouped) {
-    const el = document.getElementById("text");
-    if (!el) throw new Error("renderHomeCategoriesIfReady: #text not found");
-    el.innerHTML = "Home: manifest not loaded yet.";
-    return;
-  }
-
-  renderHomeCategories(homeManifestGrouped);
-} // end renderHomeCategoriesIfReady
-
-
+/* ------------------------------------------------------------
+   renderHomeResults()
+   Arguments:
+     - None (reads uiState.home.saved.activeEntry)
+   ------------------------------------------------------------
+   Role:
+     - Enters Results rendering using the currently selected entry.
+     - Clears #text and #action.
+     - Sets caption for result.
+     - Routes to JS or image renderer (or fails fast).
+------------------------------------------------------------ */
 async function renderHomeResults() {
   ensureHomeSavedState();
 
@@ -463,7 +991,10 @@ async function renderHomeResults() {
 
   // Guard: drawRegistry entries are launch-only and are never valid Results.
   if (entry.sourceType === "drawRegistry") {
-    throw new Error("Home Results: drawRegistry items are launch-only (not runnable in Home): " + String(entry.path || entry.file));
+    throw new Error(
+      "Home Results: drawRegistry items are launch-only (not runnable in Home): " +
+      String(entry.path || entry.file)
+    );
   }
 
   // Results view must NOT leave categories visible
@@ -476,8 +1007,7 @@ async function renderHomeResults() {
   actionDiv.innerHTML = "";
 
   // Caption
-  const origin = deriveHomeOriginFromPath(entry.path);
-  setHomeCaptionForResult(entry, origin);
+  setHomeCaptionForResult(entry);
 
   if (isJsPath(entry.path)) {
     await renderHomeJsEntryToCanvas(entry, myToken);
@@ -500,168 +1030,15 @@ async function renderHomeResults() {
 } // end renderHomeResults
 
 
-function isImagePath(path) {
-  const dot = path.lastIndexOf(".");
-  if (dot < 0) return false;
-
-  const ext = path.slice(dot + 1).toLowerCase();
-
-  if (ext === "png") return true;
-  if (ext === "jpg") return true;
-  if (ext === "jpeg") return true;
-
-  return false;
-} // end isImagePath
-
-
-async function renderHomeImageEntryToSketchpad(entry, myToken) {
-
-  const padDiv = document.getElementById("sketchpad");
-  if (!padDiv) throw new Error("Home Results: #sketchpad missing");
-
-  const textDiv = document.getElementById("text");
-  if (!textDiv) throw new Error("Home Results: #text missing");
-
-  // Clear sketchpad and show a minimal loading marker
-  padDiv.innerHTML = "<p>(Loading image...)</p>";
-
-  const img = new Image();
-
-  const loaded = await new Promise(function (resolve) {
-
-    img.onload = function () { resolve({ ok: true }); }; // end onload
-    img.onerror = function () { resolve({ ok: false }); }; // end onerror
-
-    // Rooted path is used directly
-    img.src = entry.path;
-
-  }); // end Promise
-
-  // Stale render: do nothing (newer click already took over)
-  if (myToken !== homeResultsRenderToken) return;
-
-  if (!loaded.ok) {
-    padDiv.innerHTML =
-      "<p><b>Home:</b> Image failed to load.</p>" +
-      "<p>Path: " + entry.path + "</p>";
-
-    textDiv.innerHTML =
-      "<p><b>Home:</b> Image failed to load: " + entry.path + "</p>";
-
-    throw new Error("Home Results: image failed to load: " + entry.path);
-  }
-
-  // Fit behavior: preserve aspect, contain within region
-  img.style.maxWidth = "100%";
-  img.style.maxHeight = "100%";
-  img.style.objectFit = "contain";
-  img.style.display = "block";
-
-  padDiv.innerHTML = "";
-  padDiv.appendChild(img);
-
-} // end renderHomeImageEntryToSketchpad
-
-
-
-
-/* ============================================================
-   setHomeCaptionForResult(entry)
+/* ------------------------------------------------------------
+   clearHomeCanvasAndOverlays()
+   Arguments:
+     - None
    ------------------------------------------------------------
-   Home caption:
-     • title handled by setCaptionBar
-     • FULL PATH inserted into .caption-buttons
-     • path appears immediately BEFORE menu button ("v")
-     • NO Prev/Next for Home
-   ============================================================ */
-/* ============================================================
-   setHomeCaptionForResult(entry)
-   ------------------------------------------------------------
-   Home caption:
-     • title handled by setCaptionBar
-     • FULL PATH inserted into .caption-buttons
-     • path appears immediately BEFORE menu button ("v")
-     • NO Prev/Next for Home
-   ============================================================ */
-function setHomeCaptionForResult(entry) {
-
-  if (!entry) throw new Error("setHomeCaptionForResult: entry missing");
-
-  const title =
-    entry.title ||
-    entry.file  ||
-    "(untitled)";
-
-  const fullPath = entry.path || "";
-
-  // Build the caption bar FIRST (this creates caption-buttons + menu button)
-  setCaptionBar({
-    targetId: "caption",
-    title: title,
-    onMenu: (anchor) => {
-      const items = getHomeCaptionMenuItems(entry);
-      menuManager.open(items, anchor);
-    }
-  });
-
-  // ---- inject pathname into .caption-buttons ----
-  const btnBar = document.querySelector("#caption .caption-buttons");
-  if (!btnBar) {
-    throw new Error("setHomeCaptionForResult: .caption-buttons not found");
-  }
-
-  // Remove any existing path span
-  const old = btnBar.querySelector(".home-caption-path");
-  if (old) old.remove();
-
-  // Create path span (add spacing on the right)
-  const span = document.createElement("span");
-  span.className = "home-caption-path";
-  span.innerHTML = fullPath + "&nbsp;&nbsp;";
-
-  // Insert BEFORE the menu button (last button = menu)
-  const buttons = btnBar.querySelectorAll("button");
-  if (!buttons.length) {
-    throw new Error("setHomeCaptionForResult: no buttons in caption-buttons");
-  }
-
-  const menuBtn = buttons[buttons.length - 1];
-  btnBar.insertBefore(span, menuBtn);
-
-} // end setHomeCaptionForResult
-
-
-
-
-
-
-function deriveHomeOriginFromPath(path) {
-  if (typeof path !== "string" || !path.length) {
-    return "Unknown";
-  }
-
-  const p = path.toLowerCase();
-
-  if (p.startsWith("/patterns/"))  return "Patterns";
-  if (p.startsWith("/gallery/"))   return "Gallery";
-  if (p.startsWith("/utilities/")) return "Utilities";
-  if (p.startsWith("/drawregistry/")) return "Draw";
-  if (p.startsWith("/home/"))      return "Home";
-
-  return "Unknown";
-} // end deriveHomeOriginFromPath
-
-/* ============================================================
-   Home Results — run rooted .js module into shared canvas
-   Reuses scriptRunner.js (same pathway as Patterns).
-============================================================ */
-
-function isJsPath(p) {
-  if (typeof p !== "string") throw new Error("isJsPath: path must be a string");
-  return p.toLowerCase().endsWith(".js");
-} // end isJsPath
-
-
+   Role:
+     - Resets ctx transform and clears shared canvas to a known white background.
+     - Clears overlay layers if present.
+------------------------------------------------------------ */
 function clearHomeCanvasAndOverlays() {
   const canvas = window.drawCanvas;
   if (!canvas) throw new Error("clearHomeCanvasAndOverlays: window.drawCanvas missing");
@@ -687,7 +1064,16 @@ function clearHomeCanvasAndOverlays() {
 } // end clearHomeCanvasAndOverlays
 
 
-
+/* ------------------------------------------------------------
+   showHomeResultsError(where, err)
+   Arguments:
+     - where (string): "load" | "execute" | other marker
+     - err (Error): the error object
+   ------------------------------------------------------------
+   Role:
+     - Displays an error message into #sketchpad, then rethrows
+       to preserve fail-fast stack trace in console.
+------------------------------------------------------------ */
 function showHomeResultsError(where, err) {
   const padDiv = document.getElementById("sketchpad");
   if (!padDiv) throw new Error("showHomeResultsError: #sketchpad missing");
@@ -703,6 +1089,19 @@ function showHomeResultsError(where, err) {
   throw err;
 } // end showHomeResultsError
 
+
+/* ------------------------------------------------------------
+   renderHomeJsEntryToCanvas(entry, token)
+   Arguments:
+     - entry (object): activeEntry (must include .path)
+     - token (number): render token for stale async prevention
+   ------------------------------------------------------------
+   Role:
+     - Attaches shared canvas to #sketchpad.
+     - Clears canvas to known state.
+     - Loads and executes the module at entry.path.
+     - Aborts if token is stale after module load.
+------------------------------------------------------------ */
 async function renderHomeJsEntryToCanvas(entry, token) {
   if (!entry) throw new Error("renderHomeJsEntryToCanvas: entry missing");
   if (typeof entry.path !== "string") throw new Error("renderHomeJsEntryToCanvas: entry.path missing");
@@ -743,44 +1142,23 @@ async function renderHomeJsEntryToCanvas(entry, token) {
   }
 } // end renderHomeJsEntryToCanvas
 
-/* ===========================================================
-   restoreHomeTab()
-   -----------------------------------------------------------
-   Restore path (called when uiState.home.saved exists).
-   NOTE: setUI.js does not clear before calling restore().
-         Each tab owns its restore behavior.
 
-   REAL RESTORE BEHAVIOR
-   ---------------------
-   - Rebuild Home subtabs
-   - Re-enter the saved view ("categories" or "results")
-   - Do NOT overwrite the UI with skeleton placeholder text
-   - Manifest load is kicked (and categories will render once ready)
-=========================================================== */
-function restoreHomeTab() {
-  clearDivs();
-  setCommandsButtonLabel("Home Commands");
+/* ============================================================
+   OFFCANVAS / COMMANDS FUNCTIONS
+   ------------------------------------------------------------
+   Role:
+     - Builds Home Maintenance offcanvas content
+     - Runs manifest maintenance via nodeLayer and refreshes Home manifest
+============================================================ */
 
-  // Ensure the saved object exists (fail-fast contract)
-  ensureHomeSavedState();
-
-  // Build subtabs first (Results tab appears only if activeEntry exists)
-  setHomeSubtabs();
-
-  // Kick manifest load once (cached by homeManifestLogged)
-  // If we are restoring into Categories, the manifest loader will
-  // render categories when grouped data becomes available.
-  loadHomeManifestAndLog();
-
-  // Re-enter the saved view deterministically.
-  // NOTE: switchHomeView is async because Results rendering can be async.
-  // We intentionally do NOT await here because HomeTabSpec.restore()
-  // is currently synchronous in this file. The view switch still runs,
-  // and any fail-fast errors will surface in the console.
-  switchHomeView(uiState.home.saved.view);
-
-} // end restoreHomeTab
-
+/* ------------------------------------------------------------
+   buildHomeOffcanvasHtml()
+   Arguments:
+     - None
+   ------------------------------------------------------------
+   Role:
+     - Returns inner HTML string for the Home Maintenance offcanvas body.
+------------------------------------------------------------ */
 function buildHomeOffcanvasHtml() {
 
   return `
@@ -798,8 +1176,14 @@ function buildHomeOffcanvasHtml() {
 } // end buildHomeOffcanvasHtml
 
 
-
-
+/* ------------------------------------------------------------
+   formatRebuildReport(report)
+   Arguments:
+     - report (object): node service response object
+   ------------------------------------------------------------
+   Role:
+     - Formats rebuild/validate report into plain text block.
+------------------------------------------------------------ */
 function formatRebuildReport(report) {
 
   if (!report) throw new Error("formatRebuildReport: report missing");
@@ -852,6 +1236,16 @@ function formatRebuildReport(report) {
 } // end formatRebuildReport
 
 
+/* ------------------------------------------------------------
+   wireHomeCommandsButton()
+   Arguments:
+     - None
+   ------------------------------------------------------------
+   Role:
+     - Wires the global Commands button to open the Home Maintenance offcanvas.
+     - Runs rebuild/validate; clears manifest caches; forces Home manifest reload;
+       updates report text.
+------------------------------------------------------------ */
 export function wireHomeCommandsButton() {
 
   setCommandsButton("Commands", () => {
@@ -882,7 +1276,7 @@ export function wireHomeCommandsButton() {
 
           // force Home manifest reload
           homeManifestLogged  = false;
-          homeManifestData   = null;
+          homeManifestData    = null;
           homeManifestGrouped = null;
 
           homeManifestLogged = true;
@@ -902,6 +1296,23 @@ export function wireHomeCommandsButton() {
 
 } // end wireHomeCommandsButton
 
+
+/* ============================================================
+   LAUNCH / TAB SWITCH HELPERS
+   ------------------------------------------------------------
+   Role:
+     - Launches another tab via dynamic import of setUI.js
+     - Avoids circular dependency by using dynamic import
+============================================================ */
+
+/* ------------------------------------------------------------
+   launchTab(tabKey)
+   Arguments:
+     - tabKey (string): target tab key
+   ------------------------------------------------------------
+   Role:
+     - Dynamically imports setUI.js and calls setUI(tabKey).
+------------------------------------------------------------ */
 async function launchTab(tabKey) {
 
   if (!tabKey) throw new Error("launchTab: tabKey missing");
@@ -916,6 +1327,17 @@ async function launchTab(tabKey) {
 } // end launchTab
 
 
+/* ------------------------------------------------------------
+   launchTabViaSetUI(tabKey)
+   Arguments:
+     - tabKey (string): target tab key
+   ------------------------------------------------------------
+   Role:
+     - Dynamic import avoids circular dependency:
+         setUI.js imports home.js
+         home.js must NOT statically import setUI.js
+     - Returns a promise that calls mod.setUI(tabKey).
+------------------------------------------------------------ */
 function launchTabViaSetUI(tabKey) {
 
   // Dynamic import avoids circular dependency:
@@ -926,7 +1348,6 @@ function launchTabViaSetUI(tabKey) {
   });
 
 } // end launchTabViaSetUI
-
 
 
 // end home.js

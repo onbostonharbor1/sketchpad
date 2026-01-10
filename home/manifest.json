@@ -12,6 +12,48 @@
     "status": "favorite"
   },
   {
+    "file": "IMG_9649",
+    "path": "/gallery/Ideabook/3D/IMG_9649.PNG",
+    "title": "IMG_9649.PNG",
+    "status": "favorite"
+  },
+  {
+    "file": "IMG_9650",
+    "path": "/gallery/Ideabook/3D/IMG_9650.PNG",
+    "title": "IMG_9650.PNG",
+    "status": "working"
+  },
+  {
+    "file": "IMG_9651",
+    "path": "/gallery/Ideabook/3D/IMG_9651.PNG",
+    "title": "IMG_9651.PNG",
+    "status": "new"
+  },
+  {
+    "file": "IMG_9652",
+    "path": "/gallery/Ideabook/3D/IMG_9652.PNG",
+    "title": "IMG_9652.PNG",
+    "status": "new"
+  },
+  {
+    "file": "IMG_9654",
+    "path": "/gallery/Ideabook/3D/IMG_9654.PNG",
+    "title": "IMG_9654.PNG",
+    "status": "new"
+  },
+  {
+    "file": "IMG_9656",
+    "path": "/gallery/Ideabook/3D/IMG_9656.PNG",
+    "title": "IMG_9656.PNG",
+    "status": "new"
+  },
+  {
+    "file": "IMG_9657",
+    "path": "/gallery/Ideabook/3D/IMG_9657.PNG",
+    "title": "IMG_9657.PNG",
+    "status": "new"
+  },
+  {
     "file": "inverseStar.js",
     "path": "/drawRegistry/inverseStar.js",
     "title": "Inverse Star",
@@ -57,10 +99,22 @@
     "status": "new"
   },
   {
+    "file": "sineWave",
+    "path": "/patterns/stuff/sineWave.js",
+    "title": "Sine Wave",
+    "status": "useless"
+  },
+  {
+    "file": "sineWavePoints",
+    "path": "/patterns/stuff/sineWavePoints.js",
+    "title": "Sine Wave Points",
+    "status": "useless"
+  },
+  {
     "file": "parabolasWithinCircles",
     "path": "/patterns/builds/parabolasWithinCircles.js",
     "title": "Circular Parabola & Inner Star",
-    "status": "working"
+    "status": "bestfriend"
   },
   {
     "file": "joiningPoints",
