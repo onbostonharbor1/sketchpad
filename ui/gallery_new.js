@@ -11,13 +11,12 @@
    ------------------------------------------------------------ */
 
    // ADD to imports at top of gallery.js
-
+import { uiState } from "./uiState.js";
 import { nodeRebuildAndValidateManifests } from "./nodeLayer.js";
 import { renderCategories }       from "./categories.js";
 import { fileLayer }              from "./fileLayer.js";
 import { setCaptionBar }          from "./caption.js";
-import { getGalleryCaptionMenuItems } from "./galleryMenuCmds.js";
-
+import { editGalleryScriptTitle } from "./galleryMenuCmds.js";
 import {
   clearDivs,
   renderThumbnailGrid,
@@ -59,20 +58,97 @@ let galleryCache    = null;
    GalleryTabSpec
 ============================================================ */
 
+/* ============================================================
+   GalleryTabSpec  (contract-aligned with Home)
+   ------------------------------------------------------------
+   CHANGE #1:
+     - Include "subtabs" in regions
+     - Provide buildSubtabs + clearCaption hooks
+============================================================ */
+
+
 export const GalleryTabSpec = {
   name: "gallery",
   theme: "theme-gallery",
-  regions: ["caption", "text", "sketchpad", "action"],
+
+  // Match the shared region model used by Home/Draw
+  regions: ["subtabs", "sketchpad", "caption", "text", "action"],
 
   init: initGalleryTab,
   restore: restoreGalleryTab,
   save: saveGalleryState,
 
-  buildCaption: () => {},
-  buildText: () => {},
-  buildSketchpad: () => {},
-  buildAction: () => {}
+  // Gallery builds its own UI inside init/restore controllers.
+  // These are kept as no-ops to satisfy the TabSpec shape.
+  buildSubtabs: () => {},     // end buildSubtabs
+  clearCaption: () => {},     // end clearCaption
+  buildCaption: () => {},     // end buildCaption
+  buildText: () => {},        // end buildText
+  buildAction: () => {},      // end buildAction
+  buildSketchpad: () => {}    // end buildSketchpad
+
 }; // end GalleryTabSpec
+
+
+
+/* ------------------------------------------------------------
+   clearGalleryCaption()
+   ------------------------------------------------------------
+   Role:
+     - Home-style clearCaption hook for GalleryTabSpec.
+     - Calls the existing Gallery caption clearer.
+------------------------------------------------------------ */
+function clearGalleryCaption() {
+  clearCaption();
+} // end clearGalleryCaption
+
+function clearGalleryForCategoriesView() {
+
+  // Categories view uses:
+  //   - #text for category frames
+  //   - caption should be empty
+  //   - sketchpad/action should be empty
+
+  const caption = document.getElementById("caption");
+  if (!caption) throw new Error("clearGalleryForCategoriesView: #caption missing");
+  caption.innerHTML = "";
+
+  const text = document.getElementById("text");
+  if (!text) throw new Error("clearGalleryForCategoriesView: #text missing");
+  text.innerHTML = "";
+
+  const sketchpad = document.getElementById("sketchpad");
+  if (!sketchpad) throw new Error("clearGalleryForCategoriesView: #sketchpad missing");
+  sketchpad.innerHTML = "";
+
+  const action = document.getElementById("action");
+  if (!action) throw new Error("clearGalleryForCategoriesView: #action missing");
+  action.innerHTML = "";
+
+} // end clearGalleryForCategoriesView
+
+function clearGalleryForResultsView() {
+
+  // Results view uses:
+  //   - #text for the main image or drawing
+  //   - #action for thumbnails (images) or empty (scripts)
+  //   - caption is rebuilt separately
+  //   - sketchpad is unused for image results
+
+  const text = document.getElementById("text");
+  if (!text) throw new Error("clearGalleryForResultsView: #text missing");
+  text.innerHTML = "";
+
+  const action = document.getElementById("action");
+  if (!action) throw new Error("clearGalleryForResultsView: #action missing");
+  action.innerHTML = "";
+
+  const sketchpad = document.getElementById("sketchpad");
+  if (!sketchpad) throw new Error("clearGalleryForResultsView: #sketchpad missing");
+  sketchpad.innerHTML = "";
+
+} // end clearGalleryForResultsView
+
 
 /* ============================================================
    GalleryController (optional external API)
@@ -84,9 +160,7 @@ export const GalleryController = {
   showNext: showNextGalleryItem
 }; // end GalleryController
 
-/* ============================================================
-   ensureGalleryCacheLoaded()
-============================================================ */
+
 /* ============================================================
    ensureGalleryCacheLoaded()
    ------------------------------------------------------------
@@ -193,7 +267,7 @@ export async function initGalleryTab(restored) {
     throw new Error("initGalleryTab: uiState.gallery missing");
   }
 
-  // Reset local module state (this is fine on both paths)
+  // Reset local state
   currentDomain   = null;
   currentCategory = null;
   currentList     = [];
@@ -206,19 +280,7 @@ export async function initGalleryTab(restored) {
   setCommandsButtonLabel(GALLERY_COMMAND);
   wireGalleryCommandsButton();
 
-  // ==========================================================
-  // CRITICAL FIX:
-  // If we are restoring, DO NOT overwrite uiState.gallery.saved.
-  // Let restoreGalleryTab() rebuild the correct view.
-  // ==========================================================
-  if (restored) {
-    await restoreGalleryTab();
-    return;
-  }
-
-  // ----------------------------------------------------------
-  // Cold start ONLY (first time Gallery is entered)
-  // ----------------------------------------------------------
+  // Cold start defaults: Ideabook categories
   uiState.gallery.activeDomain   = DOMAIN_IDEABOOK;
   uiState.gallery.activeCategory = null;
   uiState.gallery.activeItem     = null;
@@ -234,7 +296,6 @@ export async function initGalleryTab(restored) {
   await showIdeabookCategories();
   activateGallerySubtab(SUBTAB_IDEABOOK);
   clearCaption();
-
 } // end initGalleryTab
 
 /* ============================================================
@@ -349,11 +410,12 @@ function buildGallerySubtabs() {
 
     uiState.gallery.activeDomain = DOMAIN_IDEABOOK;
     uiState.gallery.activeSubtab = "ideabook";
-
-    // IMPORTANT:
-    // Do NOT overwrite uiState.gallery.saved here.
-    // Results is global and persists across domain tabs.
-
+    uiState.gallery.saved = {
+      view: "categories",
+      domain: DOMAIN_IDEABOOK,
+      category: null,
+      index: null
+    };
     await showIdeabookCategories();
     activateGallerySubtab(SUBTAB_IDEABOOK);
     clearCaption();
@@ -364,9 +426,12 @@ function buildGallerySubtabs() {
 
     uiState.gallery.activeDomain = DOMAIN_PATTERNS;
     uiState.gallery.activeSubtab = "patterns";
-
-    // Do NOT overwrite uiState.gallery.saved here.
-
+    uiState.gallery.saved = {
+      view: "categories",
+      domain: DOMAIN_PATTERNS,
+      category: null,
+      index: null
+    };
     await showPatternsCategories();
     activateGallerySubtab(SUBTAB_PATTERNS);
     clearCaption();
@@ -377,16 +442,18 @@ function buildGallerySubtabs() {
 
     uiState.gallery.activeDomain = DOMAIN_SCRIPTS;
     uiState.gallery.activeSubtab = "scripts";
-
-    // Do NOT overwrite uiState.gallery.saved here.
-
+    uiState.gallery.saved = {
+      view: "categories",
+      domain: DOMAIN_SCRIPTS,
+      category: null,
+      index: null
+    };
     await showScriptsCategories();
     activateGallerySubtab(SUBTAB_SCRIPTS);
     clearCaption();
   }));
 
 } // end buildGallerySubtabs
-
 
 /* ============================================================
    buildSubtabButton(tabId, label, onClick)
@@ -438,11 +505,44 @@ function ensureResultsSubtab(domain) {
   btn.textContent = label;
 
   btn.addEventListener("click", async () => {
-    // Clicking Results restores the one remembered results context.
+
+    // Clicking Results should restore the one remembered results context IF it exists.
+    // If it does not exist (because saved was reset to categories), route back to
+    // the active domain categories view instead of throwing.
     const saved = uiState.gallery.saved;
+
     if (!saved || saved.view !== "results") {
-      throw new Error("Results tab clicked but no saved results context exists");
+
+      const activeDomain = uiState.gallery.activeDomain;
+
+      if (activeDomain === DOMAIN_IDEABOOK) {
+        activateGallerySubtab(SUBTAB_IDEABOOK);
+        uiState.gallery.activeSubtab = "ideabook";
+        await showIdeabookCategories();
+        clearCaption();
+        return;
+      }
+
+      if (activeDomain === DOMAIN_PATTERNS) {
+        activateGallerySubtab(SUBTAB_PATTERNS);
+        uiState.gallery.activeSubtab = "patterns";
+        await showPatternsCategories();
+        clearCaption();
+        return;
+      }
+
+      if (activeDomain === DOMAIN_SCRIPTS) {
+        activateGallerySubtab(SUBTAB_SCRIPTS);
+        uiState.gallery.activeSubtab = "scripts";
+        await showScriptsCategories();
+        clearCaption();
+        return;
+      }
+
+      throw new Error("Results tab clicked but uiState.gallery.activeDomain is invalid");
     }
+
+    // Normal results restore path
     activateGallerySubtab(SUBTAB_RESULTS);
     uiState.gallery.activeSubtab = "results";
 
@@ -463,6 +563,7 @@ function ensureResultsSubtab(domain) {
   li.appendChild(btn);
   bar.appendChild(li);
 } // end ensureResultsSubtab
+
 
 /* ============================================================
    activateGallerySubtab(subtabId)
@@ -492,7 +593,8 @@ function clearCaption() {
    Items come from that category’s manifest.json
 ============================================================ */
 async function showIdeabookCategories() {
-  clearDivs();
+  clearGalleryForCategoriesView();
+
   await ensureGalleryCacheLoaded();
 
   const domainMap = galleryCache.Ideabook;
@@ -531,7 +633,8 @@ async function showIdeabookCategories() {
    FIX: one frame per category (directoryRegistry entry)
 ============================================================ */
 async function showPatternsCategories() {
-  clearDivs();
+  clearGalleryForCategoriesView();
+
   await ensureGalleryCacheLoaded();
 
   const domainMap = galleryCache.Patterns;
@@ -572,7 +675,8 @@ async function showPatternsCategories() {
    This requires categories.js to support per-frame sortItems:false
 ============================================================ */
 async function showScriptsCategories() {
-  clearDivs();
+  clearGalleryForCategoriesView();
+
   await ensureGalleryCacheLoaded();
 
   const domainMap = galleryCache.Scripts;
@@ -614,7 +718,8 @@ async function showScriptsCategories() {
    showGalleryResultsImages(domain, category, startIndex)
 ============================================================ */
 async function showGalleryResultsImages(domain, category, startIndex) {
-  clearDivs();
+  clearGalleryForResultsView();
+
   await ensureGalleryCacheLoaded();
 
   if (domain !== DOMAIN_IDEABOOK && domain !== DOMAIN_PATTERNS) {
@@ -670,16 +775,15 @@ async function showGalleryResultsImages(domain, category, startIndex) {
   updateGalleryCaption(domain, category);
 } // end showGalleryResultsImages
 
-/* ============================================================
-   showGalleryResultsScripts(index)
-============================================================ */
+
 /* ============================================================
    showGalleryResultsScripts(category, index)
    ------------------------------------------------------------
    Scripts results are now per-category.
 ============================================================ */
 async function showGalleryResultsScripts(category, index) {
-  clearDivs();
+  clearGalleryForResultsView();
+
   await ensureGalleryCacheLoaded();
 
   const domainMap = galleryCache.Scripts;
@@ -991,43 +1095,27 @@ export function updateGalleryCaption(domain, categoryLabel) {
   const onPrev = () => showPrevGalleryItem(domain);
   const onNext = () => showNextGalleryItem(domain);
 
-  const onMenu = async (anchor) => {
+  const onMenu = (anchor) => {
+    const items = [];
 
-    if (!currentCategory) {
-      throw new Error("updateGalleryCaption: currentCategory missing");
+    if (domain === DOMAIN_SCRIPTS) {
+      items.push({
+        label: "Show Script",
+        onClick: () =>
+          showScriptOffcanvas(
+            `/gallery/Scripts/${currentCategory}/${item.filename}`,
+            item.filename
+          )
+      });
+
+      items.push({
+        label: "Edit Manifest Title",
+        onClick: () => editGalleryScriptTitle()
+      });
     }
 
-    // Build a menu-info object for ALL domains (Ideabook/Patterns/Scripts)
-    const isScript = (domain === DOMAIN_SCRIPTS);
-
-    const info = {
-      // Help is optional; include it if you have gallery help files.
-      // Use any scheme you want; this one is consistent and stable.
-      helpKey: `${domain}/${currentCategory}/${item.filename || item.path || "(unknown)"}`,
-
-      // Show Script (enabled only for Scripts)
-      isScript: isScript,
-      scriptPath: isScript
-        ? `/gallery/Scripts/${currentCategory}/${item.filename}`
-        : "",
-
-      // Edit Manifest (per-category manifest model)
-      manifestPath: `/gallery/${domain}/${currentCategory}/manifest.json`,
-      matchField: "filename",
-      matchValue: String(item.filename),
-
-      // Labels / defaults shown in the dialog
-      filename: item.filename,
-      title: item.title || "",
-      status: item.status || ""
-    };
-
-    const menuItems = await getGalleryCaptionMenuItems(info);
-    menuManager.open(menuItems, anchor);
-
-  }; // end onMenu
-
-
+    menuManager.open(items, anchor);
+  };
 
   const captionDiv = document.getElementById("caption");
   if (!captionDiv) throw new Error("updateGalleryCaption: #caption missing");
@@ -1107,22 +1195,6 @@ function formatRebuildReport(report) {
   return lines.join("\n");
 
 } // end formatRebuildReport
-
-export async function refreshGalleryFromManifestEdit() {
-
-  // Force cache drop
-  if (manifest && typeof manifest.clearCache === "function") {
-    manifest.clearCache();
-  }
-  if (manifest.cache) delete manifest.cache.gallery;
-
-  galleryCache = null;
-  await ensureGalleryCacheLoaded();
-
-  await restoreGalleryTab();
-
-} // end refreshGalleryFromManifestEdit
-
 
 async function refreshGalleryAfterRebuild() {
 
@@ -1235,13 +1307,3 @@ export function wireGalleryCommandsButton() {
   });
 
 } // end wireGalleryCommandsButton
-
-function removeResultsSubtab() {
-  const btn = document.querySelector(
-    `.gallery-subtabs [data-tab-id="${SUBTAB_RESULTS}"]`
-  );
-  if (btn) {
-    btn.parentElement.remove();
-  }
-} // end removeResultsSubtab
-

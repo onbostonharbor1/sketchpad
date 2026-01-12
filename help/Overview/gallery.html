@@ -1,0 +1,452 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Gallery Tab (gallery.js) — Architecture and Behavior</title>
+  <style>
+    body {
+      font-family: Arial, Helvetica, sans-serif;
+      line-height: 1.35;
+      margin: 24px;
+      max-width: 980px;
+    }
+    h1, h2, h3 {
+      margin: 18px 0 10px 0;
+    }
+    h1 { font-size: 22px; }
+    h2 { font-size: 18px; }
+    h3 { font-size: 15px; }
+    p { margin: 8px 0; }
+    ul { margin: 8px 0 12px 22px; }
+    li { margin: 4px 0; }
+    code, pre {
+      font-family: Consolas, Menlo, Monaco, "Courier New", monospace;
+      font-size: 13px;
+    }
+    pre {
+      background: #f4f4f4;
+      padding: 10px;
+      border-radius: 6px;
+      overflow: auto;
+    }
+    .callout {
+      border-left: 6px solid #888;
+      background: #f8f8f8;
+      padding: 10px 12px;
+      margin: 12px 0;
+      border-radius: 6px;
+    }
+    .warn {
+      border-left-color: #c55;
+      background: #fff4f4;
+    }
+    .ok {
+      border-left-color: #5a5;
+      background: #f4fff4;
+    }
+    .small { font-size: 13px; color: #333; }
+    .term { font-weight: bold; }
+    table {
+      border-collapse: collapse;
+      width: 100%;
+      margin: 10px 0 16px 0;
+      font-size: 14px;
+    }
+    th, td {
+      border: 1px solid #ddd;
+      padding: 8px;
+      vertical-align: top;
+    }
+    th { background: #f3f3f3; }
+  </style>
+</head>
+
+<body>
+
+<h1>Gallery Tab (gallery.js) — Architecture and Behavior</h1>
+
+<p>
+This help page explains the current architectural shape and behavior of
+<code>ui/gallery.js</code> (the Gallery tab). It describes:
+</p>
+<ul>
+  <li>What Gallery owns (domains, subtabs, Results view)</li>
+  <li>The state model (what is persisted vs what is ephemeral)</li>
+  <li>The directory/manifest model used to build Gallery content</li>
+  <li>The view transitions (cold start, restore, category clicks, Results clicks)</li>
+  <li>Known mismatches and risk points (contract mismatches, state drift risks)</li>
+</ul>
+
+<div class="callout ok">
+  <div class="term">High-level summary</div>
+  <div>
+    Gallery is a 3-domain browser (Ideabook / Patterns / Scripts) with fixed domain subtabs
+    and one shared Results subtab created on demand and reused. Only one results context
+    is remembered in <code>uiState.gallery.saved</code>.
+  </div>
+</div>
+
+<hr />
+
+<h2>A. What Gallery “owns”</h2>
+
+<h3>A1. Domain subtabs (fixed)</h3>
+<p>
+Gallery has three fixed domain subtabs:
+</p>
+<ul>
+  <li><span class="term">Ideabook</span></li>
+  <li><span class="term">Patterns</span></li>
+  <li><span class="term">Scripts</span></li>
+</ul>
+<p>
+These are created by <code>buildGallerySubtabs()</code>. Clicking any of them:
+</p>
+<ul>
+  <li>Sets <code>uiState.gallery.saved.view = "categories"</code></li>
+  <li>Sets <code>uiState.gallery.saved.domain</code> to that domain</li>
+  <li>Clears caption</li>
+  <li>Shows the category frames for that domain</li>
+</ul>
+
+<h3>A2. One shared Results subtab (created on demand)</h3>
+<p>
+Gallery also has one shared Results subtab that is created only when needed:
+</p>
+<ul>
+  <li>Created by <code>ensureResultsSubtab(domain)</code></li>
+  <li>Reused for all domains once created</li>
+  <li>Label changes depending on domain:
+    <ul>
+      <li>Ideabook / Patterns: <span class="term">Images</span></li>
+      <li>Scripts: <span class="term">Drawings</span></li>
+    </ul>
+  </li>
+</ul>
+
+<p>
+Clicking the Results tab does not compute a new selection; it restores the one remembered
+results context stored in <code>uiState.gallery.saved</code>.
+</p>
+
+<h3>A3. Results content</h3>
+
+<table>
+  <thead>
+    <tr>
+      <th>Domain</th>
+      <th>Results renderer</th>
+      <th>What it displays</th>
+      <th>Navigation model</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>Ideabook</td>
+      <td><code>showGalleryResultsImages(domain, category, startIndex)</code></td>
+      <td>
+        An <code>&lt;img&gt;</code> in <code>#text</code> and a thumbnail grid in <code>#action</code>
+      </td>
+      <td>Prev/Next moves within the selected category list</td>
+    </tr>
+    <tr>
+      <td>Patterns</td>
+      <td><code>showGalleryResultsImages(domain, category, startIndex)</code></td>
+      <td>
+        Same as Ideabook: <code>&lt;img&gt;</code> + thumbnails
+      </td>
+      <td>Prev/Next moves within the selected category list</td>
+    </tr>
+    <tr>
+      <td>Scripts</td>
+      <td><code>showGalleryResultsScripts(category, index)</code></td>
+      <td>
+        Executes a script on the shared canvas in <code>#sketchpad</code>
+      </td>
+      <td>Prev/Next moves within the selected script list</td>
+    </tr>
+  </tbody>
+</table>
+
+<h3>A4. Maintenance offcanvas</h3>
+<p>
+Gallery wires the global Commands button to a Gallery Maintenance offcanvas:
+</p>
+<ul>
+  <li>Runs <code>nodeRebuildAndValidateManifests()</code></li>
+  <li>Clears cached gallery manifests</li>
+  <li>Reloads and restores either categories view or results view based on <code>uiState.gallery.saved</code></li>
+</ul>
+
+<hr />
+
+<h2>B. State model</h2>
+
+<h3>B1. Persisted / restorable state: <code>uiState.gallery.saved</code></h3>
+<p>
+Gallery’s restore logic relies on a single “remembered context” object:
+</p>
+
+<pre>
+uiState.gallery.saved = {
+  view:     "categories" | "results",
+  domain:   "Ideabook" | "Patterns" | "Scripts",
+  category: string | null,
+  index:    number | null
+};
+</pre>
+
+<p>
+This object is the source of truth for:
+</p>
+<ul>
+  <li><code>restoreGalleryTab()</code></li>
+  <li>Clicking the Results tab (<code>ensureResultsSubtab()</code> click handler)</li>
+  <li>Post-rebuild restore (<code>refreshGalleryAfterRebuild()</code>)</li>
+</ul>
+
+<div class="callout ok">
+  <div class="term">Key rule</div>
+  <div>
+    Gallery remembers exactly one Results context. Results is always “restore the last selection.”
+  </div>
+</div>
+
+<h3>B2. Ephemeral module state (local variables)</h3>
+<p>
+Gallery also maintains local module variables used for current rendering and navigation:
+</p>
+<ul>
+  <li><code>currentDomain</code></li>
+  <li><code>currentCategory</code></li>
+  <li><code>currentList</code></li>
+  <li><code>currentIndex</code></li>
+  <li><code>galleryCache</code></li>
+</ul>
+
+<p>
+These are used by:
+</p>
+<ul>
+  <li><code>showPrevGalleryItem()</code> / <code>showNextGalleryItem()</code></li>
+  <li>Thumbnail selection handlers</li>
+  <li>Caption construction (title and menu wiring)</li>
+</ul>
+
+<div class="callout warn">
+  <div class="term">Important risk</div>
+  <div>
+    If local module state and <code>uiState.gallery.saved</code> drift out of sync,
+    Gallery can restore correctly but Prev/Next (or caption/menu actions) can act on a different list.
+  </div>
+</div>
+
+<hr />
+
+<h2>C. Directory / manifest model</h2>
+
+<p>
+Gallery expects a “domain registry + per-category manifest” filesystem layout:
+</p>
+
+<pre>
+/gallery/&lt;Domain&gt;/directoryRegistry.json
+/gallery/&lt;Domain&gt;/&lt;Category&gt;/manifest.json
+</pre>
+
+<p>
+Where:
+</p>
+<ul>
+  <li><code>directoryRegistry.json</code> is an array of category names (strings)</li>
+  <li>Each category has a <code>manifest.json</code> which is an array of entries</li>
+</ul>
+
+<p>
+Gallery loads these into a cache:
+</p>
+
+<pre>
+manifest.cache.gallery = {
+  Ideabook: { "CatA": [ ... ], "CatB": [ ... ], ... },
+  Patterns: { "CatA": [ ... ], "CatB": [ ... ], ... },
+  Scripts:  { "CatA": [ ... ], "CatB": [ ... ], ... }
+};
+</pre>
+
+<p>
+The load/validation logic is in <code>ensureGalleryCacheLoaded()</code>.
+</p>
+
+<hr />
+
+<h2>D. View transitions (what happens when)</h2>
+
+<h3>D1. Cold start: <code>initGalleryTab()</code></h3>
+<ul>
+  <li>Resets module state</li>
+  <li>Loads cached manifests</li>
+  <li>Builds fixed domain subtabs</li>
+  <li>Wires Gallery Commands offcanvas</li>
+  <li>Sets defaults to Ideabook Categories view</li>
+  <li>Calls <code>showIdeabookCategories()</code>, activates Ideabook, clears caption</li>
+</ul>
+
+<h3>D2. Restore: <code>restoreGalleryTab()</code></h3>
+<p>
+Restore behavior is determined by <code>uiState.gallery.saved.view</code>:
+</p>
+<ul>
+  <li>If <code>view === "categories"</code>, show category frames for the saved domain.</li>
+  <li>If <code>view === "results"</code>, ensure Results subtab exists, activate it, and restore results content:
+    <ul>
+      <li>Scripts: <code>showGalleryResultsScripts(saved.category, saved.index)</code></li>
+      <li>Images: <code>showGalleryResultsImages(saved.domain, saved.category, saved.index)</code></li>
+    </ul>
+  </li>
+</ul>
+
+<h3>D3. Clicking a category item (Categories view)</h3>
+<ul>
+  <li>Creates/activates Results subtab via <code>ensureResultsSubtab()</code></li>
+  <li>Switches into Results view</li>
+  <li>Calls the appropriate renderer:
+    <ul>
+      <li>Ideabook/Patterns: <code>showGalleryResultsImages()</code></li>
+      <li>Scripts: <code>showGalleryResultsScripts()</code></li>
+    </ul>
+  </li>
+</ul>
+
+<h3>D4. Clicking the Results subtab</h3>
+<p>
+Results tab click restores the single remembered results context:
+</p>
+<ul>
+  <li>Fails fast if there is no saved results context</li>
+  <li>Routes to Scripts or Images renderer based on <code>saved.domain</code></li>
+</ul>
+
+<hr />
+
+<h2>E. Caption rule and navigation</h2>
+
+<h3>E1. Caption title</h3>
+<p>
+Title rule implemented by <code>updateGalleryCaption(domain, categoryLabel)</code>:
+</p>
+<ul>
+  <li>Title is <span class="term">"{category}: {title}"</span></li>
+  <li>For Scripts, <code>categoryLabel</code> is the script category name</li>
+</ul>
+
+<h3>E2. Prev/Next</h3>
+<ul>
+  <li>Prev/Next always moves within <code>currentList</code></li>
+  <li>Prev/Next updates:
+    <ul>
+      <li><code>currentIndex</code></li>
+      <li><code>uiState.gallery.activeItem</code></li>
+      <li><code>uiState.gallery.saved.index</code></li>
+    </ul>
+  </li>
+</ul>
+
+<h3>E3. Menu items</h3>
+<p>
+Current menu behavior is domain-specific:
+</p>
+<ul>
+  <li>Scripts domain menu includes:
+    <ul>
+      <li>Show Script (offcanvas)</li>
+      <li>Edit Manifest Title</li>
+    </ul>
+  </li>
+  <li>Other domains currently have no menu items in the shown snippet</li>
+</ul>
+
+<hr />
+
+<h2>F. Known mismatches and risk points</h2>
+
+<div class="callout warn">
+  <div class="term">These are not “style notes.”</div>
+  <div>
+    Each item below can cause a real bug or forces later contortions if left unaddressed.
+  </div>
+</div>
+
+<h3>F1. uiState import must exist</h3>
+<p class="small">
+The pasted file references <code>uiState</code> extensively but the snippet does not include
+<code>import { uiState } from "./uiState.js";</code>. If that import is absent in the real file,
+Gallery will crash immediately.
+</p>
+
+<h3>F2. TabSpec regions omit "subtabs"</h3>
+<p class="small">
+<code>GalleryTabSpec.regions</code> does not include <code>"subtabs"</code>, even though Gallery builds
+and depends on <code>#subtabs</code>. If your tab framework uses the region list to clear/build UI,
+this is a contract mismatch.
+</p>
+
+<h3>F3. clearDivs() must not destroy subtabs</h3>
+<p class="small">
+Many Gallery functions call <code>clearDivs()</code>. If <code>clearDivs()</code> clears <code>#subtabs</code>,
+then Gallery can erase its own subtab bar after creating it.
+This must be understood and enforced consistently (either “clearDivs never clears subtabs”
+or “Gallery must not call clearDivs in subtab-dependent flows”).
+</p>
+
+<h3>F4. Scripts Results UX differs from Images Results UX</h3>
+<p class="small">
+Images Results builds a thumbnail grid in <code>#action</code>.
+Scripts Results clears <code>#action</code> and runs only the selected script.
+This is a deliberate UX difference; if later parity is desired, it requires explicit work.
+</p>
+
+<h3>F5. Scripts runner is a mixed-format compatibility layer</h3>
+<p class="small">
+<code>showGalleryScript()</code> supports multiple script export shapes:
+</p>
+<ul class="small">
+  <li><code>patternMeta</code> + <code>initPattern()</code> + <code>drawPattern()</code> (custom controls)</li>
+  <li><code>runPattern(ctx)</code> (single entry point)</li>
+</ul>
+<p class="small">
+This conflicts with the newer direction to standardize Gallery scripts (runPattern + scriptInfo + parameterControls).
+If the system is moving toward a single standardized script shape, <code>showGalleryScript()</code> is the convergence point.
+</p>
+
+<h3>F6. Canvas clearing for scripts is not robust</h3>
+<p class="small">
+<code>showGalleryScript()</code> clears by filling white but does not reset transforms/composite state.
+If a previous script left the ctx transformed, subsequent scripts may render “off” or appear layered.
+Home uses a stronger reset approach (reset transform first, then clear).
+</p>
+
+<h3>F7. normalizeGalleryEntryPath() is a compatibility shim</h3>
+<p class="small">
+The manifest rule is “entry.path is relative to the category folder,” but some manifests embed
+<code>Category/filename</code>. The normalizer strips that prefix so URLs resolve.
+This is correct as a transitional shim, but it signals that manifest normalization is not yet enforced.
+</p>
+
+<hr />
+
+<h2>G. One-sentence canonical description</h2>
+
+<div class="callout ok">
+  <div>
+    Gallery is a 3-domain gallery browser (Ideabook / Patterns / Scripts) with fixed domain subtabs and one shared
+    Results subtab created on demand and reused; it loads per-domain category registries and per-category manifests
+    into a cached domain map; Categories view renders frames via <code>renderCategories</code>; selecting any item
+    activates Results and stores one remembered results context in <code>uiState.gallery.saved</code>; Results displays
+    either images (with thumbnails) or executes scripts on the shared canvas with Prev/Next navigation and
+    domain-specific caption menu items.
+  </div>
+</div>
+
+</body>
+</html>

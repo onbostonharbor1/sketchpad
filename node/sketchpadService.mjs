@@ -107,6 +107,8 @@ case "manifestMaintenance":
     case "readLogFile":
       return await readLogFile(payload);
 
+    case "archivePatternItem":
+      return await archivePatternItem(payload);
 
 
     default:
@@ -1822,3 +1824,95 @@ function writeHomeManifest(homeOut) {
   fs.writeFileSync(outPath, JSON.stringify(homeOut, null, 2) + "\n", "utf8");
 
 } // end writeHomeManifest
+
+
+/* ============================================================
+   archivePatternItem(args)
+   ------------------------------------------------------------
+   Args:
+     - category (string)  e.g. "circles"
+     - filename (string)  e.g. "foo"   (NO .js)
+     - manifestPath (string) e.g. "/patterns/circles/manifest.json"
+
+   Behavior:
+     - ensure ./patterns/<category>/archive exists
+     - move ./patterns/<category>/<filename>.js
+       to  ./patterns/<category>/archive/<filename>.js
+     - remove manifest entry whose entry.filename === filename
+=========================================================== */
+async function archivePatternItem(args) {
+
+  if (!args) throw new Error("archivePatternItem: args missing");
+
+  const category = String(args.category || "");
+  const filename = String(args.filename || "");
+  const manifestPathArg = String(args.manifestPath || "");
+
+  if (!category) throw new Error("archivePatternItem: category missing");
+  if (!filename) throw new Error("archivePatternItem: filename missing");
+  if (!manifestPathArg) throw new Error("archivePatternItem: manifestPath missing");
+
+  // Convert "/patterns/..." to disk path "./patterns/..."
+  const manifestDiskPath = path.resolve("." + manifestPathArg);
+
+  const srcScript = path.resolve("./patterns", category, filename + ".js");
+  const dstDir    = path.resolve("./patterns", category, "archive");
+  const dstScript = path.resolve(dstDir, filename + ".js");
+
+  // Ensure source exists
+  if (!fs.existsSync(srcScript)) {
+    throw new Error("archivePatternItem: source script not found: " + srcScript);
+  }
+
+  // Ensure archive dir exists
+  if (!fs.existsSync(dstDir)) {
+    fs.mkdirSync(dstDir, { recursive: true });
+  }
+
+  // Move the script
+  fs.renameSync(srcScript, dstScript);
+
+  // Read + update manifest.json (must be an array)
+  if (!fs.existsSync(manifestDiskPath)) {
+    throw new Error("archivePatternItem: manifest not found: " + manifestDiskPath);
+  }
+
+  const text = fs.readFileSync(manifestDiskPath, "utf8");
+  let list = null;
+
+  try {
+    list = JSON.parse(text);
+  } catch (err) {
+    throw new Error("archivePatternItem: manifest JSON parse failed: " + manifestDiskPath);
+  }
+
+  if (!Array.isArray(list)) {
+    throw new Error("archivePatternItem: manifest must be an array: " + manifestDiskPath);
+  }
+
+  const beforeLen = list.length;
+
+  list = list.filter((entry) => {
+    if (!entry) return true;
+    return String(entry.filename || "") !== filename;
+  });
+
+  const afterLen = list.length;
+
+  if (afterLen === beforeLen) {
+    // Script moved but manifest did not contain it: fail-fast so you notice.
+    throw new Error("archivePatternItem: manifest entry not found for filename: " + filename);
+  }
+
+  fs.writeFileSync(manifestDiskPath, JSON.stringify(list, null, 2) + "\n", "utf8");
+
+  return {
+    status: "ok",
+    movedFrom: srcScript,
+    movedTo: dstScript,
+    manifestPath: manifestDiskPath,
+    removedCount: beforeLen - afterLen
+  };
+
+} // end archivePatternItem
+

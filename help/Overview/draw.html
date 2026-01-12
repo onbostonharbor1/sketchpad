@@ -1,0 +1,363 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Draw Tab (draw.js) — What Must Be Understood</title>
+  <style>
+    body { font-family: Arial, Helvetica, sans-serif; line-height: 1.35; margin: 24px; max-width: 980px; }
+    h1 { font-size: 22px; margin: 0 0 12px 0; }
+    h2 { font-size: 18px; margin: 18px 0 8px 0; }
+    h3 { font-size: 15px; margin: 14px 0 6px 0; }
+    p  { margin: 6px 0; }
+    ul { margin: 6px 0 6px 22px; }
+    li { margin: 4px 0; }
+    code, pre { font-family: Consolas, Menlo, Monaco, monospace; font-size: 13px; }
+    .box { border: 1px solid #bbb; border-radius: 8px; padding: 12px 14px; margin: 10px 0; background: #fafafa; }
+    .warn { border-left: 6px solid #c77; background: #fff7f7; }
+    .ok   { border-left: 6px solid #7c7; background: #f7fff7; }
+    .note { border-left: 6px solid #77c; background: #f7f9ff; }
+    .mini { color: #444; }
+    .k { font-weight: bold; }
+    .mono { font-family: Consolas, Menlo, Monaco, monospace; }
+    hr { border: 0; border-top: 1px solid #ddd; margin: 18px 0; }
+  </style>
+</head>
+
+<body>
+
+<h1>Draw Tab (draw.js) — The One Big Topic: What Must Be Understood</h1>
+
+<p class="mini">
+This page is a conceptual map for <span class="mono">draw.js</span>: the contracts, invariants, and “who owns what”
+that make the Draw tab predictable and debuggable. It is not line-by-line commentary.
+</p>
+
+<div class="box note">
+  <p>
+    <span class="k">Core idea:</span> Draw is not “one view.” It is a small tab system inside a tab system:
+    a persistent Categories subtab plus N object subtabs, each backed by a drawRegistry entry instance and live parameters.
+  </p>
+</div>
+
+<hr />
+
+<h2>1) Contract Boundaries: Draw’s Three Worlds</h2>
+
+<h3>1.1 World A: setUI + TabSpec (top-level orchestration)</h3>
+<ul>
+  <li><span class="mono">setUI.js</span> selects the active top-level tab.</li>
+  <li>For Draw, it calls <span class="mono">DrawTabSpec.init(...)</span> on cold start, or <span class="mono">DrawTabSpec.restore()</span> when saved state exists.</li>
+  <li>Draw must be able to rebuild its visible UI from <span class="mono">uiState.draw</span> deterministically.</li>
+</ul>
+
+<div class="box warn">
+  <p>
+    <span class="k">High-leverage point:</span> In your pasted <span class="mono">setUI.js</span>, there is no visible call that saves the outgoing tab state.
+    That means Draw cannot rely on “save on tab switch.” Instead it must maintain <span class="mono">uiState.draw</span> continuously as the user interacts.
+  </p>
+</div>
+
+<h3>1.2 World B: drawRegistry entries (the drawing engine contract)</h3>
+<p>
+Every object tab wraps a drawRegistry entry. The critical contract is:
+</p>
+<ul>
+  <li><span class="mono">entry.init()</span> creates default persistent elements (geometry + StringThing style).</li>
+  <li><span class="mono">entry.params</span> holds JSON-safe values used by parameterControls.</li>
+  <li><span class="mono">entry.update(params)</span> applies params to the persistent elements.</li>
+  <li><span class="mono">entry.draw()</span> renders deterministically to the shared canvas using those elements.</li>
+</ul>
+
+<h3>1.3 World C: UI plumbing (caption bar + parameterControls + overlays)</h3>
+<ul>
+  <li>The caption bar is the “object header” for the active object tab.</li>
+  <li>parameterControls builds controls into #action (Draw uses #action only for controls).</li>
+  <li>overlayManager canvas layers (especially “interaction”) are synced to the canvas and used for point pickers etc.</li>
+</ul>
+
+<hr />
+
+<h2>2) The Draw Subtab Model: What Draw “Is”</h2>
+
+<p>
+Draw is a subtab system inside the Draw top-level tab.
+</p>
+
+<div class="box ok">
+  <p><span class="k">Subtab types:</span></p>
+  <ul>
+    <li><span class="k">Categories subtab</span>: type = <span class="mono">"categories"</span>, renders category frames into <span class="mono">#text</span>.</li>
+    <li><span class="k">Object subtab</span>: type = <span class="mono">"object"</span>, renders a drawRegistry entry to the shared canvas and builds parameter controls.</li>
+  </ul>
+</div>
+
+<h3>2.1 The primary state containers</h3>
+<ul>
+  <li><span class="mono">uiState.draw.activeSubtab</span> (string tab id)</li>
+  <li><span class="mono">uiState.draw.tabs</span> (map from tabId → tab info)</li>
+</ul>
+
+<p>
+Each tab info object is approximately:
+</p>
+<ul>
+  <li>Categories tab: <span class="mono">{ type: "categories" }</span></li>
+  <li>Object tab: <span class="mono">{ type: "object", drawRegistry: entry, dirty, parameters }</span></li>
+</ul>
+
+<div class="box warn">
+  <p>
+    <span class="k">Important discussion point:</span> In this file, object tabs store the actual drawRegistry entry object reference
+    under <span class="mono">drawRegistry</span>. That is not “pure data.” It is a live object. That may be a deliberate exception,
+    but it has consequences for persistence, reload, and “true restore.”
+  </p>
+</div>
+
+<hr />
+
+<h2>3) Navigation Inside Draw: switchTab(), addDrawSubtab(), deleteTab()</h2>
+
+<h3>3.1 switchTab(tabId)</h3>
+<ul>
+  <li>Updates the UI: active marker on the clicked subtab button.</li>
+  <li>Writes state: <span class="mono">uiState.draw.activeSubtab = tabId</span>.</li>
+  <li>Clears shared regions via <span class="mono">clearDivs()</span>.</li>
+  <li>Dispatches:
+    <ul>
+      <li>Categories → <span class="mono">renderDrawCategories()</span></li>
+      <li>Object → <span class="mono">drawActiveTab()</span></li>
+    </ul>
+  </li>
+</ul>
+
+<div class="box note">
+  <p>
+    <span class="k">What to discuss:</span> This is the Draw equivalent of the “two view model” from Patterns, except Draw has
+    “Categories view” and “Object view,” and Object view is per-subtab.
+  </p>
+</div>
+
+<h3>3.2 addDrawSubtab(item)</h3>
+<p>
+This is the creation point for both kinds of subtabs.
+</p>
+<ul>
+  <li>Builds the subtab DOM button.</li>
+  <li>Creates a tabId: <span class="mono">"tab-" + normalized(item.name)</span>.</li>
+  <li>If Categories: stores <span class="mono">{ type: "categories" }</span> and renders categories.</li>
+  <li>If Object:
+    <ul>
+      <li>Requires a drawRegistry entry.</li>
+      <li>Calls <span class="mono">entry.init()</span> immediately.</li>
+      <li>Stores <span class="mono">{ type: "object", drawRegistry: entry, dirty:false, parameters: entry.params }</span>.</li>
+      <li>Calls <span class="mono">drawActiveTab()</span>.</li>
+    </ul>
+  </li>
+</ul>
+
+<div class="box warn">
+  <p>
+    <span class="k">High-leverage topic:</span> Object tab identity is based on <span class="mono">item.name</span>.
+    That means duplicate names collide (same tabId). Your file comment says “Always open a NEW tab (no dedupe),”
+    but the tabId scheme can still collide. This is a conceptual mismatch worth discussing.
+  </p>
+</div>
+
+<h3>3.3 deleteTab(tabId)</h3>
+<ul>
+  <li>Removes the DOM button.</li>
+  <li>Deletes the tab state from <span class="mono">uiState.draw.tabs</span>.</li>
+  <li>Activates a neighbor tab if possible; otherwise rebuilds subtabs.</li>
+</ul>
+
+<hr />
+
+<h2>4) drawActiveTab(): The Central Execution Pipeline for Draw</h2>
+
+<p>
+This is the main “why things happen” function in Draw.
+</p>
+
+<div class="box ok">
+  <p><span class="k">Sequence (as implemented):</span></p>
+  <ol>
+    <li>Identify <span class="mono">tabId</span> and confirm it is an object tab.</li>
+    <li>Build the caption bar for the entry (help/menu/script path).</li>
+    <li>Prepare <span class="mono">#sketchpad</span> and attach the shared canvas.</li>
+    <li>Clear the canvas context deterministically.</li>
+    <li>Prepare the interaction overlay layer (size/position/pointer-events).</li>
+    <li>Build parameter controls into #action (by calling <span class="mono">buildParameterControls(state,...)</span>).</li>
+    <li>Sync params and call <span class="mono">entry.update(params)</span> then <span class="mono">entry.draw()</span>.</li>
+  </ol>
+</div>
+
+<h3>4.1 ParameterControls coupling points</h3>
+<p>
+Draw wires two behavioral callbacks onto the per-tab state:
+</p>
+<ul>
+  <li><span class="mono">state.redrawHandler = drawActiveTab</span> (the control UI can trigger redraw)</li>
+  <li><span class="mono">state.onParamChange = () => markTabDirty(tabId)</span> (param changes mark “dirty”)</li>
+</ul>
+
+<div class="box note">
+  <p>
+    <span class="k">What to discuss:</span> This is the “bridge” between UI controls and drawing. It is where UI events
+    become “redraw the object.” If something redraw-related is wrong, this is the chokepoint.
+  </p>
+</div>
+
+<h3>4.2 Overlay alignment: why Draw cares</h3>
+<ul>
+  <li>Draw assumes canvas overlays live inside <span class="mono">#sketchpad</span> and coordinate space is local.</li>
+  <li>Draw explicitly sizes and positions the “interaction” layer to match the canvas.</li>
+  <li>Point-picker dots will later re-enable pointer events on specific nodes; the base layer is set to pointerEvents:none.</li>
+</ul>
+
+<div class="box warn">
+  <p>
+    <span class="k">Key topic:</span> Canvas overlay ownership and alignment is a frequent source of “it draws but I cannot interact”
+    bugs. The position/width/height assumptions here must match overlay.js’s actual structure.
+  </p>
+</div>
+
+<hr />
+
+<h2>5) Caption Bar + Menu: setDrawCaption() and buildDrawMenuItems()</h2>
+
+<h3>5.1 setDrawCaption(entry)</h3>
+<ul>
+  <li>Title is entry.name.</li>
+  <li>No Prev/Next.</li>
+  <li>Menu is built dynamically when opened.</li>
+  <li>It finds the registryKey by searching <span class="mono">window.drawRegistry</span> for the entry object reference.</li>
+  <li>Script path is constructed as: <span class="mono">/drawRegistry/&lt;registryKey&gt;.js</span>.</li>
+</ul>
+
+<div class="box warn">
+  <p>
+    <span class="k">High-leverage topic:</span> The “reverse lookup” (entry object → registry key) only works if the object
+    stored in uiState is the exact same object reference that exists in window.drawRegistry. If you ever clone entries or
+    create per-tab instances, this logic breaks and must be redesigned.
+  </p>
+</div>
+
+<h3>5.2 buildDrawMenuItems()</h3>
+<ul>
+  <li>Help item via <span class="mono">menuManager.buildHelpItem(tabName, itemName)</span>.</li>
+  <li>Show Script via <span class="mono">showScriptOffcanvas(scriptPath, itemName)</span>.</li>
+  <li>Duplicate via <span class="mono">copyActiveDrawObject()</span>.</li>
+  <li>Reset via <span class="mono">resetActiveDrawObject()</span>.</li>
+</ul>
+
+<hr />
+
+<h2>6) Categories Rendering: collectRegistryEntries → groupEntriesByCategory → renderCategories</h2>
+
+<p>
+When Categories subtab is active, Draw renders category frames into <span class="mono">#text</span>.
+</p>
+
+<div class="box ok">
+  <p><span class="k">Pipeline:</span></p>
+  <ul>
+    <li><span class="mono">collectRegistryEntries()</span> builds a flat list from <span class="mono">window.drawRegistry</span>.</li>
+    <li><span class="mono">groupEntriesByCategory()</span> builds a sorted map by category.</li>
+    <li><span class="mono">renderDrawCategories()</span> turns that into a categories.js descriptor and calls <span class="mono">renderCategories("text", ...)</span>.</li>
+    <li>Clicking an item opens an object tab via <span class="mono">addDrawSubtab({ name, entry })</span>.</li>
+  </ul>
+</div>
+
+<div class="box note">
+  <p>
+    <span class="k">What to discuss:</span> This is a pure “descriptor → categories.js rendering” flow, consistent with your architectural rule
+    that categories.js should not know anything about manifests or tabs.
+  </p>
+</div>
+
+<hr />
+
+<h2>7) Dirty Tracking: markTabDirty() / markTabClean()</h2>
+
+<ul>
+  <li>Dirty state lives per object tab: <span class="mono">uiState.draw.tabs[tabId].dirty</span>.</li>
+  <li>Dirty is reflected visually by adding “ *” to the tab label.</li>
+  <li>Parameter changes mark dirty via the callback installed in <span class="mono">drawActiveTab()</span>.</li>
+</ul>
+
+<div class="box note">
+  <p>
+    <span class="k">Discussion point:</span> What exactly counts as “dirty”? Only param changes? What about point dragging?
+    What about duplicate/reset? The dirty mechanism should match your intended meaning.
+  </p>
+</div>
+
+<hr />
+
+<h2>8) Launch Intent: Home → Draw (consume-and-clear)</h2>
+
+<p>
+Draw contains a launch-intent consumption mechanism:
+</p>
+
+<ul>
+  <li><span class="mono">uiState.launch.pending</span> signals that a cross-tab intent exists.</li>
+  <li>Draw consumes only if <span class="mono">targetTab === "draw"</span>.</li>
+  <li>It “consume-and-clear” resets launch fields immediately.</li>
+  <li>If <span class="mono">sourceType === "drawRegistry"</span>, it opens a new object tab for the referenced registryKey.</li>
+</ul>
+
+<div class="box warn">
+  <p>
+    <span class="k">Critical to discuss:</span> Your file currently has two launch mechanisms:
+    <span class="mono">consumeLaunchIfForDraw()</span> and <span class="mono">consumePendingLaunchIntoDraw()</span>.
+    The second one calls <span class="mono">resolveDrawRegistryKeyOrId()</span> and then calls <span class="mono">showDrawWorkspaceFromState()</span>,
+    which is not defined in this file and appears to be a leftover from a different shape of Draw state.
+    This is exactly the kind of “stray mechanism” that creates confusion and bugs.
+  </p>
+</div>
+
+<hr />
+
+<h2>9) Save/Restore: What Draw Can Actually Persist</h2>
+
+<p>
+<span class="mono">saveDrawState()</span> tries to serialize a snapshot of open tabs:
+</p>
+
+<ul>
+  <li>It builds <span class="mono">shallowTabs</span> keyed by tabId.</li>
+  <li>For object tabs, it attempts to map the entry object back to a registry key.</li>
+  <li>It stores:
+    <ul>
+      <li><span class="mono">type</span>, <span class="mono">dirty</span></li>
+      <li><span class="mono">parameters</span> via <span class="mono">structuredClone</span></li>
+      <li><span class="mono">drawRegistry</span> as the registry key string</li>
+    </ul>
+  </li>
+</ul>
+
+<div class="box warn">
+  <p>
+    <span class="k">Key discussion point:</span> This “saved state” is not currently used by <span class="mono">restoreDrawTab()</span> to rebuild tabs,
+    because <span class="mono">restoreDrawTab()</span> instead uses the live <span class="mono">uiState.draw.tabs</span> objects.
+    If you want real persistence across full reloads, you will eventually need a restore path that rebuilds object tabs from
+    saved keys + saved params, re-calling <span class="mono">entry.init()</span>, applying params, then drawing.
+  </p>
+</div>
+
+<hr />
+
+<h2>10) The One Sentence That Summarizes draw.js</h2>
+
+<div class="box note">
+  <p>
+    <span class="k">draw.js</span> is an internal subtab system that wraps drawRegistry entries as live object instances,
+    keeps per-tab params + dirty state in <span class="mono">uiState.draw.tabs</span>, and renders the active entry by
+    building caption/menu + parameter controls, syncing overlays, and calling <span class="mono">entry.update()</span> then <span class="mono">entry.draw()</span>
+    against the shared canvas.
+  </p>
+</div>
+
+</body>
+</html>

@@ -1,0 +1,255 @@
+```html
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Help Treatise — ui_utilities.js (mixed utilities / what it controls)</title>
+
+  <link rel="stylesheet" href="help_treatise.css" />
+</head>
+
+<body>
+
+  <h1>This “different” file: what it controls (and why it feels different)</h1>
+
+  <p>
+    Yes — this file is different from the others you posted.
+    Most of your other modules are about ONE subsystem (menus, overlays, script running, tab orchestration).
+    This one is a grab-bag of shared UI utilities that touch multiple subsystems:
+    clearing regions, overlay clearing, offcanvas display, thumbnail grids, category descriptors, help manifest loading,
+    and commands button wiring.
+  </p>
+
+  <p>
+    So the right “doc style” here is not “explain the whole program,”
+    but “summarize the controlled surfaces” (the things this file directly mutates).
+  </p>
+
+
+  <h2>1. Controlled surfaces (the DOM + globals this file directly manipulates)</h2>
+
+  <h3>1.1 Core shared regions (by id)</h3>
+  <p>
+    <span class="mono">clearDivs()</span> directly clears innerHTML of:
+  </p>
+  <ul>
+    <li><span class="mono">#action</span> (left controls area)</li>
+    <li><span class="mono">#caption</span> (caption bar area)</li>
+    <li><span class="mono">#text</span> (text output area)</li>
+    <li><span class="mono">#sketchpad</span> (canvas container area)</li>
+    <li>plus optionally one extra id passed as an argument</li>
+  </ul>
+
+  <h3>1.2 Canvas overlay layers (via overlayManager.canvasLayers)</h3>
+  <p>
+    <span class="mono">clearDivs()</span> also clears the overlay SVG/HTML layers:
+  </p>
+  <ul>
+    <li><span class="mono">overlayManager.canvasLayers["interaction"]</span></li>
+    <li><span class="mono">overlayManager.canvasLayers["bbox"]</span></li>
+    <li><span class="mono">overlayManager.canvasLayers["nodes"]</span></li>
+    <li><span class="mono">overlayManager.canvasLayers["guides"]</span></li>
+  </ul>
+
+  <p>
+    It does this generically by iterating over all keys in <span class="mono">overlayManager.canvasLayers</span>.
+    So any future canvas layer registered there is also cleared.
+  </p>
+
+  <h3>1.3 Overlay container visibility</h3>
+  <p>
+    <span class="mono">clearOverlaysForTabSwitch()</span> directly sets:
+  </p>
+  <ul>
+    <li><span class="mono">#overlayContainer.style.display = "none"</span></li>
+    <li>and then calls <span class="mono">overlayManager.clearAll()</span> (panel overlays)</li>
+  </ul>
+
+  <h3>1.4 The offcanvas shell</h3>
+  <p>
+    Several functions assume a permanent Bootstrap offcanvas panel exists:
+  </p>
+  <ul>
+    <li><span class="mono">#offcanvasPanel</span></li>
+    <li><span class="mono">#offcanvasPanel .offcanvas-title</span></li>
+    <li><span class="mono">#offcanvasPanel .offcanvas-body</span></li>
+  </ul>
+
+  <p>
+    Functions that write into it:
+  </p>
+  <ul>
+    <li><span class="mono">showOffcanvas(title, text)</span> (creates a &lt;pre&gt; node)</li>
+    <li><span class="mono">showSharedOffcanvas(title, text)</span> (writes pre via innerHTML)</li>
+    <li><span class="mono">showScriptOffcanvas(scriptPath, titleText)</span> (fetches source, then writes a &lt;pre&gt;)</li>
+    <li><span class="mono">showCommandsOffcanvas({title, buildBody})</span> (calls buildBody(bodyEl))</li>
+    <li><span class="mono">showOffcanvasPanel({title, bodyHtml})</span> (raw HTML injection)</li>
+  </ul>
+
+  <h3>1.5 Commands button</h3>
+  <p>
+    These functions assume <span class="mono">#commandsButton</span> exists:
+  </p>
+  <ul>
+    <li><span class="mono">setCommandsButtonLabel(label)</span> sets textContent</li>
+    <li><span class="mono">setCommandsButtonHandler(onClick)</span> sets btn.onclick deterministically</li>
+    <li><span class="mono">setCommandsButton(label, onClick)</span> replaces the button node (clone strategy) then wires click</li>
+  </ul>
+
+  <h3>1.6 Thumbnail grids</h3>
+  <p>
+    These functions own a small “thumbnail panel” UI pattern:
+  </p>
+  <ul>
+    <li><span class="mono">renderThumbnailGrid(targetId, items, buildSrc, onClick)</span></li>
+    <li><span class="mono">markSelectedThumbnail(actionDivId, selectedIndex)</span></li>
+  </ul>
+
+  <p>
+    They assume thumbnails are:
+    <span class="mono">&lt;img class="thumb-image"&gt;</span>,
+    and selection is represented by CSS class <span class="mono">thumb-selected</span>.
+  </p>
+
+  <h3>1.7 Help manifest caching</h3>
+  <p>
+    The bottom section is effectively its own module:
+  </p>
+  <ul>
+    <li><span class="mono">helpManifest</span> global cache variable</li>
+    <li><span class="mono">loadHelpManifest()</span> fetches <span class="mono">/help/manifest.json</span> once, validates object shape, caches it</li>
+  </ul>
+
+
+  <h2>2. Why this file feels “wrong” (it contains duplicates and incompatible patterns)</h2>
+
+  <p>
+    Your pasted file is not just “utilities.” It contains multiple overlapping implementations
+    of the same concept, because it looks like it grew by accretion.
+  </p>
+
+  <div class="warn">
+    The biggest source of confusion here is that you have more than one way to do the same job.
+    That makes it hard to know what the “real” API is.
+  </div>
+
+  <h3>2.1 Offcanvas: three overlapping entry points</h3>
+  <ul>
+    <li><span class="mono">showOffcanvas(title, text)</span></li>
+    <li><span class="mono">showSharedOffcanvas(title, text)</span></li>
+    <li><span class="mono">showOffcanvasPanel({title, bodyHtml})</span></li>
+  </ul>
+
+  <p>
+    They differ in:
+  </p>
+  <ul>
+    <li>how content is inserted (DOM nodes vs innerHTML string)</li>
+    <li>how bootstrap is invoked (<span class="mono">new bootstrap.Offcanvas(panel)</span> vs <span class="mono">getOrCreateInstance</span>)</li>
+    <li>whether there is a fallback non-bootstrap “manual show” mode</li>
+  </ul>
+
+  <p>
+    Practical result: if you call “the wrong one,” you may get:
+  </p>
+  <ul>
+    <li>duplicate Offcanvas instances</li>
+    <li>different formatting</li>
+    <li>different failure behavior</li>
+  </ul>
+
+  <h3>2.2 Commands button: two incompatible wiring styles</h3>
+  <ul>
+    <li><span class="mono">setCommandsButtonHandler(onClick)</span> sets <span class="mono">btn.onclick</span></li>
+    <li><span class="mono">setCommandsButton(label, onClick)</span> clones/replaces the node, then adds listener</li>
+  </ul>
+
+  <p>
+    These are not equivalent:
+  </p>
+  <ul>
+    <li>
+      The clone strategy intentionally wipes all previous listeners,
+      but it also invalidates any references to the old DOM node.
+    </li>
+    <li>
+      The onclick strategy overwrites only onclick, but does not wipe listeners added via addEventListener elsewhere.
+    </li>
+  </ul>
+
+  <h3>2.3 Help manifest is duplicated elsewhere</h3>
+  <p>
+    Earlier you posted a separate <span class="mono">menuManager.buildHelpItem()</span> that calls <span class="mono">loadHelpManifest()</span>.
+    In your pasted file, <span class="mono">loadHelpManifest()</span> is defined at the bottom.
+    That means this “utilities” file is also acting as a help-manifest module.
+  </p>
+
+
+  <h2>3. If you want “brief comments for each control”: what counts as a control in this file?</h2>
+
+  <p>
+    This file is not “parameter controls.”
+    The “controls” it manages are UI shells / view helpers:
+  </p>
+
+  <ul>
+    <li><b>Core regions</b>: action/caption/text/sketchpad clearing</li>
+    <li><b>Overlay layers</b>: panel overlays (help/forms/debug) and canvas overlays clearing</li>
+    <li><b>Offcanvas panel</b>: a long-text viewer (script source, commands, etc.)</li>
+    <li><b>Commands button</b>: label + handler (and sometimes full handler reset)</li>
+    <li><b>Thumbnail panel</b>: render a grid + mark selection</li>
+    <li><b>Help manifest cache</b>: load once, share everywhere</li>
+  </ul>
+
+  <p>
+    So “brief comments” here should explain the purpose of each exported helper as a UI surface controller.
+  </p>
+
+
+  <h2>4. Recommended reading order for understanding (not a redesign)</h2>
+
+  <p>
+    If your goal is understanding (not refactoring), read in this order:
+  </p>
+
+  <ol>
+    <li><span class="mono">clearDivs()</span> (what gets cleared on tab/view change)</li>
+    <li><span class="mono">clearOverlaysForTabSwitch()</span> (panel overlays reset)</li>
+    <li><span class="mono">showScriptOffcanvas()</span> (how “Show Script” is implemented)</li>
+    <li><span class="mono">renderThumbnailGrid()</span> + <span class="mono">markSelectedThumbnail()</span> (thumbnail UI pattern)</li>
+    <li><span class="mono">loadHelpManifest()</span> (help enable/disable data source)</li>
+    <li><span class="mono">Commands button helpers</span> (how per-tab menus are invoked)</li>
+  </ol>
+
+
+  <h2>5. One-sentence summaries of each exported function (the “controls” list)</h2>
+
+  <ul>
+    <li><span class="mono">clearDivs(extraId)</span> — clears the core tab regions and wipes all canvas overlay layers.</li>
+    <li><span class="mono">clearOverlaysForTabSwitch()</span> — hides the overlay container and clears panel overlays.</li>
+    <li><span class="mono">initOffcanvasHandler()</span> — ensures the Bootstrap offcanvas panel exists and is initialized once.</li>
+    <li><span class="mono">showOffcanvas(title, text)</span> — shows long text in offcanvas via a created &lt;pre&gt; node.</li>
+    <li><span class="mono">showSharedOffcanvas(title, text)</span> — shows long text in offcanvas via innerHTML (with fallback if bootstrap missing).</li>
+    <li><span class="mono">showScriptOffcanvas(scriptPath, titleText)</span> — fetches a script file and displays the literal source in offcanvas.</li>
+    <li><span class="mono">wrapIndex(i, len)</span> — wraps indices for cyclic prev/next navigation.</li>
+    <li><span class="mono">renderThumbnailGrid(targetId, items, buildSrc, onClick)</span> — renders a thumbnail panel and wires click handlers.</li>
+    <li><span class="mono">markSelectedThumbnail(actionDivId, selectedIndex)</span> — toggles the CSS selection marker on the chosen thumb.</li>
+    <li><span class="mono">buildCategoryDescriptor(groups, itemLabelFn, onClickFn)</span> — converts grouped items into the category descriptor structure consumed by categories.js.</li>
+    <li><span class="mono">loadHelpManifest()</span> — fetches and caches /help/manifest.json once and returns it for all tabs.</li>
+    <li><span class="mono">setCommandsButtonLabel(label)</span> — sets the Commands button label text.</li>
+    <li><span class="mono">setCommandsButtonHandler(onClick)</span> — deterministically replaces the Commands button onclick handler.</li>
+    <li><span class="mono">showCommandsOffcanvas({title, buildBody})</span> — populates the shared offcanvas with a dynamically built DOM body.</li>
+    <li><span class="mono">setCommandsButton(label, onClick)</span> — replaces the Commands button node to wipe prior handlers, then wires a fresh click.</li>
+    <li><span class="mono">showOffcanvasPanel({title, bodyHtml})</span> — opens offcanvas with raw HTML body content.</li>
+    <li><span class="mono">escapeHtml(text)</span> — escapes HTML special characters for safe insertion into innerHTML.</li>
+  </ul>
+
+
+  <div class="hr"></div>
+
+  <p class="small">End of summary doc.</p>
+
+</body>
+</html>
+```

@@ -1,0 +1,124 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>actionsRegistry.js — Caption Menu Actions Registry (Description)</title>
+
+  <link rel="stylesheet" href="help_treatise.css" />
+</head>
+
+<body>
+
+  <p>
+    <strong>actionsRegistry.js</strong> defines a small, declarative registry of caption-menu actions used throughout the Sketchpad UI.
+    It centralizes how menu items are constructed so that individual tabs (Draw, Patterns, Gallery, etc.)
+    do not hard-code menu behavior.
+  </p>
+
+  <p>
+    The file exports a single object, <strong>MENU_ACTIONS</strong>, whose keys are action names
+    (e.g. <code>help</code>, <code>showScript</code>, <code>duplicate</code>).
+    Each action provides a <code>builder(menuContext)</code> function.
+  </p>
+
+  <p>
+    A <code>builder</code> does not execute the action directly.
+    Instead, it returns a fully formed menu-item descriptor that can be passed to
+    <code>menuManager.open()</code>.
+    This keeps menu rendering and menu behavior cleanly separated.
+  </p>
+
+  <p>
+    The <code>menuContext</code> object is supplied by the calling tab and contains
+    only the data that specific action needs.
+    Different actions expect different fields in <code>menuContext</code>.
+  </p>
+
+  <p>
+    In effect, this file acts as a dispatch table:
+    tabs select which actions they want by name,
+    and <code>actionsRegistry.js</code> defines how those actions are built and wired.
+  </p>
+
+  <p><strong>Defined actions</strong></p>
+
+  <ul>
+    <li>
+      <p>
+        <strong>help</strong><br>
+        A shared action used across multiple tabs.
+        The builder delegates to <code>menuManager.buildHelpItem()</code>,
+        which is manifest-driven.
+      </p>
+
+      <p>
+        Expected <code>menuContext</code> fields:
+      </p>
+
+      <ul>
+        <li><code>tabName</code> – the active tab (for example, "draw")</li>
+        <li><code>itemName</code> – the registry key or item identifier</li>
+      </ul>
+
+      <p>
+        The returned menu item opens the appropriate help content for the current
+        tab and item.
+      </p>
+    </li>
+
+    <li>
+      <p>
+        <strong>showScript</strong><br>
+        A shared action that displays the source code for the current item
+        in an off-canvas panel.
+      </p>
+
+      <p>
+        Expected <code>menuContext</code> fields:
+      </p>
+
+      <ul>
+        <li><code>scriptPath</code> – path to the JavaScript file to display</li>
+        <li><code>itemName</code> – used as the title in the off-canvas header</li>
+      </ul>
+
+      <p>
+        The builder returns a menu item labeled “Show Script”.
+        When clicked, it calls <code>showScriptOffcanvas()</code>,
+        which fetches the script, escapes it, and renders it for viewing.
+      </p>
+    </li>
+
+    <li>
+      <p>
+        <strong>duplicate</strong><br>
+        A Draw-specific action.
+        It does not know how duplication works internally.
+      </p>
+
+      <p>
+        Expected <code>menuContext</code> fields:
+      </p>
+
+      <ul>
+        <li><code>duplicateHandler</code> – a function supplied by <code>draw.js</code></li>
+      </ul>
+
+      <p>
+        The builder returns a menu item labeled “Duplicate”.
+        Clicking it simply invokes the provided handler.
+        This keeps draw-specific logic out of the shared menu system.
+      </p>
+    </li>
+  </ul>
+
+  <p>
+    Overall, <strong>actionsRegistry.js</strong> provides a declarative,
+    extensible mechanism for defining caption-menu behavior.
+    New actions can be added in one place,
+    and tabs can opt into them by name without duplicating wiring logic.
+  </p>
+
+</body>
+</html>

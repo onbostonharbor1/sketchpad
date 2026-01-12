@@ -1,0 +1,391 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Help Treatise — fileLayer.js (Unified File + Path Helpers)</title>
+
+  <link rel="stylesheet" href="help_treatise.css" />
+</head>
+
+<body>
+
+  <h1>fileLayer.js — Unified File/URL/Path Abstraction (All Tabs)</h1>
+
+  <p>
+    This page is intentionally “raw help HTML”: it is written as a single self-contained page
+    so you can drop it into your help system as-is, and/or split it later into smaller pages.
+    The discussion is based on one file:
+  </p>
+
+  <ul>
+    <li><span class="mono">ui/fileLayer.js</span></li>
+  </ul>
+
+  <div class="note">
+    <b>Scope of this treatise</b><br/>
+    1) What <span class="mono">fileLayer</span> is for, and what it is NOT for.<br/>
+    2) The “low-level ops” API: <span class="mono">exists</span>, <span class="mono">loadText</span>, <span class="mono">loadJSON</span>, <span class="mono">listDirectory</span>.<br/>
+    3) The “path helpers” API: <span class="mono">fileLayer.path.*</span> (the preferred way to construct paths).<br/>
+    4) The “legacy normalizers” and how to migrate away from them safely.
+  </div>
+
+
+  <h2>1. What fileLayer is in this architecture</h2>
+
+  <p>
+    <span class="mono">fileLayer</span> is a single place to put:
+  </p>
+
+  <ul>
+    <li><b>Minimal fetch-based I/O primitives</b> for the browser runtime (read-only, via HTTP).</li>
+    <li><b>Consistent path construction</b> so every tab builds the same URLs the same way.</li>
+    <li><b>Backward compatibility shims</b> (“normalizers”) so older code keeps working while you migrate.</li>
+  </ul>
+
+  <div class="ok">
+    <b>Strict boundary rule</b><br/>
+    <span class="mono">fileLayer.js</span> contains NO tab logic, NO UI logic, and NO manifest logic.<br/>
+    It does not know what a “Patterns item” is, what a “Gallery view” is, or what your UI state contains.
+  </div>
+
+  <p>
+    If you want a simple mental label:
+  </p>
+
+  <ul>
+    <li><b>fileLayer = mechanics</b> (fetch things, build consistent paths)</li>
+    <li><b>tabs/controllers = meaning</b> (how those paths and loaded data are used)</li>
+  </ul>
+
+
+  <h2>2. Why this file exists</h2>
+
+  <p>
+    Sketchpad spans multiple content roots and multiple “consumers” of files:
+  </p>
+
+  <ul>
+    <li>Manifest loading (<span class="mono">manifest.js</span>)</li>
+    <li>Help-page lookup (<span class="mono">menu/help</span> code)</li>
+    <li>Script/module loading (<span class="mono">scriptRunner</span>, Patterns/Gallery/Home/Utilities controllers)</li>
+    <li>Occasional directory listing hacks during development</li>
+  </ul>
+
+  <p>
+    Without a shared layer, each area tends to re-invent:
+  </p>
+
+  <ul>
+    <li>How to check if a file exists</li>
+    <li>How to fetch text vs JSON</li>
+    <li>How to normalize “item names” (strip or add “.js”)</li>
+    <li>How to build relative paths (the <span class="mono">../</span> vs <span class="mono">/</span> problem)</li>
+  </ul>
+
+  <div class="warn">
+    <b>Common failure mode</b><br/>
+    Different tabs build slightly different paths to the same resource, so one works and another breaks.<br/>
+    <span class="mono">fileLayer.path.*</span> exists to eliminate that drift.
+  </div>
+
+
+  <h2>3. Low-level ops API (fetch primitives)</h2>
+
+  <p>
+    These methods do the smallest useful unit of work and return values that are easy for higher layers to interpret.
+    They all operate on a <span class="mono">path</span> string that is expected to be a valid URL from the browser’s point of view.
+  </p>
+
+
+  <h3>3.1 exists(path)</h3>
+
+  <p>
+    <span class="mono">exists(path)</span> checks whether a resource is reachable by doing an HTTP <span class="mono">HEAD</span> request.
+    If the server responds successfully (<span class="mono">resp.ok</span>), it returns <span class="mono">true</span>, otherwise <span class="mono">false</span>.
+  </p>
+
+  <pre><code>const ok = await fileLayer.exists("../patterns/curve_stitch/manifest.json");</code></pre>
+
+  <div class="note">
+    <b>Design intent</b><br/>
+    <span class="mono">exists</span> is used as a “probe” before doing a heavier load, especially when optional files may or may not exist.
+  </div>
+
+  <div class="warn">
+    <b>Important behavioral detail</b><br/>
+    On network or fetch errors, <span class="mono">exists</span> logs to the console and returns <span class="mono">false</span>.<br/>
+    That means a transport failure is indistinguishable from “does not exist” at the return-value level.
+  </div>
+
+
+  <h3>3.2 loadText(path)</h3>
+
+  <p>
+    <span class="mono">loadText</span> fetches a URL with <span class="mono">GET</span> and returns the response body as a string.
+    If the HTTP response is not OK, or if fetch throws, it returns <span class="mono">null</span>.
+  </p>
+
+  <pre><code>const src = await fileLayer.loadText("../patterns/curve_stitch/parabola.js");</code></pre>
+
+  <div class="note">
+    <b>Who uses it</b><br/>
+    “Show Script” features (offcanvas viewer) and any “read a file as text” logic.
+  </div>
+
+
+  <h3>3.3 loadJSON(path)</h3>
+
+  <p>
+    <span class="mono">loadJSON</span> is the JSON twin of <span class="mono">loadText</span>.
+    It fetches with <span class="mono">GET</span>, and if the response is OK it returns <span class="mono">await resp.json()</span>.
+    On HTTP failure or fetch/parse errors, it returns <span class="mono">null</span>.
+  </p>
+
+  <pre><code>const items = await fileLayer.loadJSON("../patterns/curve_stitch/manifest.json");</code></pre>
+
+  <div class="note">
+    <b>Who uses it</b><br/>
+    Manifest loading code (directly or indirectly via <span class="mono">manifest.js</span>).
+  </div>
+
+
+  <h3>3.4 listDirectory(path)</h3>
+
+  <p>
+    <span class="mono">listDirectory</span> is a browser-only hack: it loads the HTML directory listing page and parses out
+    <span class="mono">href="..."</span> attributes, returning a simple array of filenames.
+  </p>
+
+  <pre><code>const names = await fileLayer.listDirectory("../patterns/curve_stitch/");</code></pre>
+
+  <div class="warn">
+    <b>Critical limitation</b><br/>
+    This only works if your dev server exposes directory listings as HTML.
+    Many servers do NOT, and in production you usually do NOT want this enabled.
+  </div>
+
+  <div class="note">
+    <b>Architecture note</b><br/>
+    This function is intentionally “low credibility” compared to manifests and Node scans.
+    It is useful for development experiments, but manifests remain the authoritative content index.
+  </div>
+
+
+  <h2>4. Help existence convenience: helpExists(tabName, itemName)</h2>
+
+  <p>
+    <span class="mono">helpExists(tabName, itemName)</span> is a small convenience wrapper that constructs:
+  </p>
+
+  <pre><code>/help/&lt;tabName&gt;/&lt;itemName&gt;.html</code></pre>
+
+  <p>
+    Then it calls <span class="mono">exists(path)</span>.
+  </p>
+
+  <pre><code>const hasHelp = await fileLayer.helpExists("patterns", "curve_stitch/parabola");</code></pre>
+
+  <div class="note">
+    <b>Key point</b><br/>
+    This is still “path + existence check”, not UI logic. It does not open overlays or render help.
+  </div>
+
+
+  <h2>5. Path helpers (NEW, preferred API)</h2>
+
+  <p>
+    The most important long-term purpose of <span class="mono">fileLayer</span> is standardizing path construction.
+    This is done by a nested object:
+  </p>
+
+  <pre><code>fileLayer.path.*</code></pre>
+
+  <p>
+    The goal is simple: higher-level modules should never hand-build these strings anymore.
+    Instead they call a helper, so the rules are centralized and consistent.
+  </p>
+
+  <div class="ok">
+    <b>Design rule</b><br/>
+    All higher-level modules (manifest, tabs, help, scripts) should construct paths only via
+    <span class="mono">fileLayer.path.*</span> once migration is complete.
+  </div>
+
+
+  <h3>5.1 Manifest-related path helpers</h3>
+
+  <p>
+    These exist specifically so <span class="mono">manifest.js</span> can implement both directory models without hardcoding strings:
+  </p>
+
+  <ul>
+    <li><span class="mono">path.directoryRegistry(basedir)</span> → <span class="mono">../&lt;basedir&gt;/directoryRegistry.json</span></li>
+    <li><span class="mono">path.categoryManifest(basedir, category)</span> → <span class="mono">../&lt;basedir&gt;/&lt;category&gt;/manifest.json</span></li>
+    <li><span class="mono">path.flatManifest(basedir)</span> → <span class="mono">../&lt;basedir&gt;/manifest.json</span></li>
+  </ul>
+
+  <pre><code>const regPath  = fileLayer.path.directoryRegistry("patterns");
+const manPath  = fileLayer.path.categoryManifest("patterns", "curve_stitch");
+const flatPath = fileLayer.path.flatManifest("home");</code></pre>
+
+  <div class="note">
+    <b>Why the leading "../"?</b><br/>
+    These helpers reflect that the UI code lives under <span class="mono">/ui</span> and must fetch sibling roots like
+    <span class="mono">/patterns</span>, <span class="mono">/gallery</span>, <span class="mono">/utilities</span>.
+  </div>
+
+
+  <h3>5.2 Help path helper</h3>
+
+  <ul>
+    <li><span class="mono">path.helpHtml(tabName, itemName)</span> → <span class="mono">/help/&lt;tabName&gt;/&lt;itemName&gt;.html</span></li>
+  </ul>
+
+  <pre><code>const p = fileLayer.path.helpHtml("patterns", "curve_stitch/parabola");</code></pre>
+
+  <div class="note">
+    <b>Intentional difference</b><br/>
+    Help is rooted at <span class="mono">/help</span> (an absolute path), unlike content roots that are reached with <span class="mono">../</span>.
+  </div>
+
+
+  <h3>5.3 Script path helpers</h3>
+
+  <p>
+    These helpers exist to unify how module paths are built and how “.js” suffixes are handled.
+    Each helper strips a trailing <span class="mono">.js</span> if present, then adds it back in the returned URL.
+  </p>
+
+  <ul>
+    <li><span class="mono">path.script(tabName, itemName)</span> → <span class="mono">../&lt;tabName&gt;/&lt;itemName&gt;.js</span></li>
+    <li><span class="mono">path.patternScript(category, file)</span> → <span class="mono">../patterns/&lt;category&gt;/&lt;file&gt;.js</span></li>
+    <li><span class="mono">path.galleryScript(file)</span> → <span class="mono">../gallery/Scripts/&lt;file&gt;.js</span></li>
+    <li><span class="mono">path.utilityScript(category, file)</span> → <span class="mono">../utilities/&lt;category&gt;/&lt;file&gt;.js</span></li>
+  </ul>
+
+  <pre><code>// Generic "tab-rooted" script:
+const a = fileLayer.path.script("utilities", "reconcileManifestWithFolder");
+
+// Pattern category script:
+const b = fileLayer.path.patternScript("curve_stitch", "parabola");
+
+// Gallery script (Scripts subarea):
+const c = fileLayer.path.galleryScript("spiral");
+
+// Utility script within a category:
+const d = fileLayer.path.utilityScript("maintenance", "validateManifests");</code></pre>
+
+  <div class="warn">
+    <b>Path helper assumption</b><br/>
+    These helpers encode your current on-disk structure (for example: <span class="mono">../gallery/Scripts/</span>).<br/>
+    If the folder layout changes later, you update it in ONE place.
+  </div>
+
+
+  <h2>6. Legacy normalizers (backward compatibility)</h2>
+
+  <p>
+    The bottom of the file contains “legacy normalizers”:
+  </p>
+
+  <ul>
+    <li><span class="mono">normalizeHelpPath</span></li>
+    <li><span class="mono">normalizeScriptPath</span></li>
+    <li><span class="mono">normalizePatternPath</span></li>
+    <li><span class="mono">normalizeGalleryScript</span></li>
+    <li><span class="mono">normalizeUtilityPath</span></li>
+  </ul>
+
+  <p>
+    Each one simply delegates to the corresponding <span class="mono">fileLayer.path.*</span> helper.
+    They exist so older call sites can keep using the old names while new code uses the new API.
+  </p>
+
+  <div class="ok">
+    <b>Migration strategy</b><br/>
+    Step 1: Keep normalizers so nothing breaks.<br/>
+    Step 2: Migrate call sites to <span class="mono">fileLayer.path.*</span> one subsystem at a time.<br/>
+    Step 3: When all call sites are migrated, delete the normalizers.
+  </div>
+
+
+  <h2>7. Dependency boundary: who should import fileLayer</h2>
+
+  <p>
+    Any module that needs to:
+  </p>
+
+  <ul>
+    <li>Construct a path (help, manifest, script)</li>
+    <li>Load text or JSON</li>
+    <li>Probe existence</li>
+  </ul>
+
+  <p>
+    …should import <span class="mono">fileLayer</span> rather than re-implementing these behaviors.
+  </p>
+
+  <p>
+    Typical consumers:
+  </p>
+
+  <ul>
+    <li><span class="mono">manifest.js</span> uses manifest path helpers + <span class="mono">loadJSON</span> + <span class="mono">exists</span></li>
+    <li><span class="mono">menu/help</span> code uses <span class="mono">helpHtml</span> or <span class="mono">helpExists</span></li>
+    <li><span class="mono">scriptRunner</span> uses script path helpers and/or <span class="mono">loadText</span> for “Show Script”</li>
+  </ul>
+
+
+  <h2>8. Practical examples (how higher layers should use fileLayer)</h2>
+
+  <h3>8.1 ManifestManager style (directoryRegistry model)</h3>
+
+  <pre><code>// Pseudocode (illustrative only)
+const regPath = fileLayer.path.directoryRegistry(basedir);
+const hasReg  = await fileLayer.exists(regPath);
+
+if (hasReg) {
+  const registry = await fileLayer.loadJSON(regPath);
+  // ...then per category:
+  const catMan = fileLayer.path.categoryManifest(basedir, category);
+  const hasMan = await fileLayer.exists(catMan);
+  if (hasMan) {
+    const items = await fileLayer.loadJSON(catMan);
+  }
+}</code></pre>
+
+  <h3>8.2 Help menu enable/disable</h3>
+
+  <pre><code>// Pseudocode (illustrative only)
+const helpPath = fileLayer.path.helpHtml(tabName, helpKey);
+const ok = await fileLayer.exists(helpPath);
+// If ok, enable help command. Otherwise disable.</code></pre>
+
+  <h3>8.3 Script “Show Source” viewer</h3>
+
+  <pre><code>// Pseudocode (illustrative only)
+const scriptPath = fileLayer.path.patternScript(category, filename);
+const src = await fileLayer.loadText(scriptPath);
+// Then escape and show in offcanvas or overlay.</code></pre>
+
+
+  <h2>9. Summary checklist</h2>
+
+  <ul>
+    <li><b>fileLayer</b> is the “mechanics” layer: fetch primitives + path construction.</li>
+    <li><b>No UI logic</b>, no tab knowledge, no manifest policy in this file.</li>
+    <li><b>exists</b> is a HEAD probe; it returns false on errors as well as missing files.</li>
+    <li><b>loadText/loadJSON</b> return null on failure; callers must decide what “failure” means.</li>
+    <li><b>path helpers</b> are the preferred API; they centralize all path construction rules.</li>
+    <li><b>legacy normalizers</b> are temporary shims that should disappear after migration.</li>
+  </ul>
+
+  <div class="hr"></div>
+
+  <p class="small">
+    End of treatise.
+  </p>
+
+</body>
+</html>

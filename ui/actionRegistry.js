@@ -6,7 +6,7 @@
    ------------------------------------------------------------ */
 
 import { menuManager } from "./menuManager.js";
-import { showScriptOffcanvas } from "./ui_utilities.js";
+import { showScriptOffcanvas } from "./menuCmds.js";
 
 export const MENU_ACTIONS = {
   // --------------------------------------------------------

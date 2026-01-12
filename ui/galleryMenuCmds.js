@@ -1,187 +1,113 @@
-/* galleryMenuCmds.js
-   ------------------------------------------------------------
-   Gallery Tab — Menu Commands (Scripts only)
-   ------------------------------------------------------------
-   Commands:
-     • editGalleryScriptTitle()
-   ------------------------------------------------------------
-*/
+import { showScriptOffcanvas } from "./menuCmds.js";
+import { openEditManifestDialog } from "./menuCmds.js";
+import { refreshGalleryFromManifestEdit } from "./gallery.js";
+import { menuManager } from "./menuManager.js";
 
-import { nodeDispatch } from "./nodeLayer.js";
-import { overlayManager } from "./overlay.js";
-import { updateGalleryCaption } from "./gallery.js";
-
-/* ============================================================
-   editGalleryScriptTitle()
-=========================================================== */
-export async function editGalleryScriptTitle() {
-
-  const itemInfo = deriveGalleryScriptsContext();
-
-  if (!itemInfo.item) {
-    throw new Error("editGalleryScriptTitle: no active Scripts item");
-  }
-
-  openEditTitleOverlay(itemInfo);
-
-} // end editGalleryScriptTitle
 
 
 /* ============================================================
-   deriveGalleryScriptsContext()
+   getGalleryCaptionMenuItems(info)
+   ------------------------------------------------------------
+   Matches Home + Patterns style:
+     - caller passes an "info" object describing the active item
+     - this returns an array for menuManager.open()
 =========================================================== */
-function deriveGalleryScriptsContext() {
+export async function getGalleryCaptionMenuItems(info) {
 
-  if (!window.uiState) {
-    throw new Error("deriveGalleryScriptsContext: window.uiState missing");
+  if (!info) throw new Error("getGalleryCaptionMenuItems: info missing");
+
+  const items = [];
+
+  /* ----------------------------------------------------------
+     Help (optional)
+     -------------------------------------------------------- */
+  const helpKey = info.helpKey || null;
+  if (helpKey) {
+    const helpItem = await menuManager.buildHelpItem("gallery", helpKey);
+    items.push(helpItem);
+  } else {
+    items.push({
+      label: "Help",
+      disabled: true,
+      onClick: () => {}
+    });
   }
 
-  if (!uiState.gallery || !uiState.gallery.saved) {
-    throw new Error("deriveGalleryScriptsContext: uiState.gallery missing");
-  }
+  /* ----------------------------------------------------------
+     Show Script
+     -------------------------------------------------------- */
+  const isScript = !!info.isScript;
+  const scriptPath = info.scriptPath || "";
 
-  if (uiState.gallery.saved.domain !== "Scripts") {
-    return {
-      index: null,
-      item: null,
-      filename: null,
-      manifestPath: null,
-      currentTitle: ""
-    };
-  }
+  const label =
+    info.filename ||
+    info.title ||
+    info.matchValue ||
+    scriptPath ||
+    "(untitled)";
 
-  const index = uiState.gallery.saved.index;
-  if (typeof index !== "number") {
-    throw new Error("deriveGalleryScriptsContext: saved.index missing/invalid");
-  }
-
-  const item = uiState.gallery.activeItem;
-  if (!item) {
-    throw new Error("deriveGalleryScriptsContext: activeItem missing");
-  }
-
-  const filename = item.filename;
-  if (!filename) {
-    throw new Error("deriveGalleryScriptsContext: item.filename missing");
-  }
-
-  return {
-    index,
-    item,
-    filename,
-    manifestPath: "/gallery/Scripts/manifest.json",
-    currentTitle: item.title || ""
-  };
-
-} // end deriveGalleryScriptsContext
-
-
-/* ============================================================
-   openEditTitleOverlay(itemInfo)
-=========================================================== */
-function openEditTitleOverlay(itemInfo) {
-
-  const container = document.getElementById("overlayContainer");
-  if (!container) throw new Error("openEditTitleOverlay: overlayContainer missing");
-
-  const titleEl = document.getElementById("overlayTitle");
-  if (!titleEl) throw new Error("openEditTitleOverlay: overlayTitle missing");
-
-  container.style.display = "block";
-  titleEl.textContent = "Edit Manifest Title";
-
-  const html =
-    "<div class='overlayForm'>" +
-      "<div class='ctrl-field'>" +
-        "<label class='ctrl-label'>Title:</label>" +
-        "<input id='editTitleInput' class='ctrl-text' type='text' />" +
-      "</div>" +
-      "<div style='margin-top:10px; display:flex; gap:10px;'>" +
-        "<button id='editTitleApply'>OK</button>" +
-        "<button id='editTitleCancel'>Cancel</button>" +
-      "</div>" +
-    "</div>";
-
-  overlayManager.show("forms", html);
-
-  const input = document.getElementById("editTitleInput");
-  if (!input) throw new Error("openEditTitleOverlay: editTitleInput missing");
-
-  input.value = itemInfo.currentTitle || "";
-  input.focus();
-
-  document.getElementById("editTitleApply").onclick = async () => {
-    await applyEditTitle(itemInfo);
-  };
-
-  document.getElementById("editTitleCancel").onclick = () => {
-    closeFormsOverlay();
-  };
-
-  input.addEventListener("keydown", async (ev) => {
-    if (ev.key === "Enter") {
-      await applyEditTitle(itemInfo);
-    }
+  items.push({
+    label: "Show Script",
+    disabled: !isScript,
+    onClick: () => {
+      if (!isScript) return;
+      showScriptOffcanvas(scriptPath, label);
+    } // end onClick
   });
 
-} // end openEditTitleOverlay
-
-
-/* ============================================================
-   applyEditTitle(itemInfo)
-=========================================================== */
-async function applyEditTitle(itemInfo) {
-
-  const input = document.getElementById("editTitleInput");
-  if (!input) throw new Error("applyEditTitle: editTitleInput missing");
-
-  const newTitle = String(input.value);
-  const oldTitle = itemInfo.currentTitle || "";
-
-  if (newTitle === oldTitle) {
-    closeFormsOverlay();
-    return;
-  }
-
-  const result = await nodeDispatch("editPackageScript", {
-    manifestPath: itemInfo.manifestPath,
-    filename: itemInfo.filename,
-    title: newTitle
+  /* ----------------------------------------------------------
+     Edit Manifest
+     -------------------------------------------------------- */
+  items.push({
+    label: "Edit Manifest",
+    disabled: false,
+    onClick: async () => {
+      await editGalleryManifestItem(info);
+    } // end onClick
   });
 
-  if (!result) {
-    throw new Error("applyEditTitle: editPackageScript returned nothing");
-  }
+  return items;
 
-  if (result.status !== "ok") {
-    throw new Error(
-      "applyEditTitle: editPackageScript failed: " + JSON.stringify(result)
-    );
-  }
-
-  // Update in-memory item
-  itemInfo.item.title = newTitle;
-  itemInfo.currentTitle = newTitle;
-
-  closeFormsOverlay();
-
-  // Patterns-style: rebuild caption directly, no navigation hacks
-  updateGalleryCaption("Scripts");
-
-} // end applyEditTitle
+} // end getGalleryCaptionMenuItems
 
 
 /* ============================================================
-   closeFormsOverlay()
+   editGalleryManifestItem(info)
 =========================================================== */
-function closeFormsOverlay() {
+export async function editGalleryManifestItem(info) {
 
-  const container = document.getElementById("overlayContainer");
-  if (!container) throw new Error("closeFormsOverlay: overlayContainer missing");
+  if (!info) throw new Error("editGalleryManifestItem: info missing");
 
-  overlayManager.clearLayer("forms");
-  container.style.display = "none";
+  const manifestPath = info.manifestPath;
+  const matchField   = info.matchField;
+  const matchValue   = info.matchValue;
 
-} // end closeFormsOverlay
+  if (!manifestPath) throw new Error("editGalleryManifestItem: manifestPath missing");
+  if (!matchField)   throw new Error("editGalleryManifestItem: matchField missing");
+  if (!matchValue)   throw new Error("editGalleryManifestItem: matchValue missing");
+
+  const ok = await openEditManifestDialog({
+    dialogTitle:   "Edit Manifest",
+    manifestPath:  String(manifestPath),
+    matchField:    String(matchField),
+    matchValue:    String(matchValue),
+
+    fileLabel:     String(info.filename || info.title || matchValue),
+
+    initialTitle:  String(info.title || ""),
+    initialStatus: String(info.status || ""),
+
+    statusPresets: ["new", "working", "current", "favorite"],
+
+    allowCustomStatus: true,
+    allowClearStatus:  true
+  });
+
+  if (!ok) return;
+
+  await refreshGalleryFromManifestEdit();
+
+} // end editGalleryManifestItem
+
 
 // end galleryMenuCmds.js

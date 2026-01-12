@@ -1,0 +1,375 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Home Tab (home.js) — What Must Be Understood</title>
+  <style>
+    body { font-family: Arial, Helvetica, sans-serif; line-height: 1.35; margin: 24px; max-width: 980px; }
+    h1 { font-size: 22px; margin: 0 0 12px 0; }
+    h2 { font-size: 18px; margin: 18px 0 8px 0; }
+    h3 { font-size: 15px; margin: 14px 0 6px 0; }
+    p  { margin: 6px 0; }
+    ul { margin: 6px 0 6px 22px; }
+    ol { margin: 6px 0 6px 22px; }
+    li { margin: 4px 0; }
+    code, pre { font-family: Consolas, Menlo, Monaco, monospace; font-size: 13px; }
+    .box { border: 1px solid #bbb; border-radius: 8px; padding: 12px 14px; margin: 10px 0; background: #fafafa; }
+    .warn { border-left: 6px solid #c77; background: #fff7f7; }
+    .ok   { border-left: 6px solid #7c7; background: #f7fff7; }
+    .note { border-left: 6px solid #77c; background: #f7f9ff; }
+    .mini { color: #444; }
+    .k { font-weight: bold; }
+    .mono { font-family: Consolas, Menlo, Monaco, monospace; }
+    hr { border: 0; border-top: 1px solid #ddd; margin: 18px 0; }
+  </style>
+</head>
+
+<body>
+
+<h1>Home Tab (home.js) — The One Big Topic: What Must Be Understood</h1>
+
+<p class="mini">
+This page is a conceptual map for <span class="mono">home.js</span>: what it owns, what it reads/writes in <span class="mono">uiState</span>,
+how it moves between “Categories” and “Results,” and how it launches other tabs (especially Draw) using <span class="mono">uiState.launch</span>.
+It is not a line-by-line commentary.
+</p>
+
+<div class="box note">
+  <p>
+    <span class="k">Core idea:</span> Home is a “dispatcher” tab. It reads a single flat manifest (<span class="mono">/home/manifest.json</span>),
+    groups by <span class="mono">status</span>, displays category frames, and for each item either:
+    (a) runs a script or shows an image in Results, or
+    (b) launches Draw for drawRegistry items using a transient launch intent.
+  </p>
+</div>
+
+<hr />
+
+<h2>1) Contract Boundaries: Home’s Worlds</h2>
+
+<h3>1.1 World A: setUI + TabSpec</h3>
+<ul>
+  <li><span class="mono">HomeTabSpec</span> advertises name/theme/regions and the lifecycle hooks: <span class="mono">init</span>, <span class="mono">restore</span>, <span class="mono">save</span>.</li>
+  <li>Home is written to be deterministic based on <span class="mono">uiState.home.saved</span>.</li>
+  <li>Home uses the shared region model: <span class="mono">["subtabs","sketchpad","caption","text","action"]</span>.</li>
+</ul>
+
+<h3>1.2 World B: Home manifest + grouping</h3>
+<ul>
+  <li>Home loads one file: <span class="mono">/home/manifest.json</span>, and requires it be a <span class="k">flat array</span>.</li>
+  <li>Home groups entries by required field <span class="mono">entry.status</span> into <span class="mono">homeManifestGrouped</span>.</li>
+  <li>Categories view renders one frame per status group using <span class="mono">categories.js</span>.</li>
+</ul>
+
+<h3>1.3 World C: “Results” execution/rendering</h3>
+<ul>
+  <li>If <span class="mono">entry.path</span> ends in <span class="mono">.js</span>, Home loads the module and runs it into the shared canvas.</li>
+  <li>If <span class="mono">entry.path</span> is an image extension (png/jpg/jpeg), Home loads an <span class="mono">&lt;img&gt;</span> and displays it in <span class="mono">#sketchpad</span>.</li>
+  <li>Anything else is fail-fast.</li>
+</ul>
+
+<h3>1.4 World D: Cross-tab launch (Home → Draw)</h3>
+<ul>
+  <li>Some Home entries are not runnable in Home. They are “launch-only” drawRegistry items.</li>
+  <li>Home sets <span class="mono">uiState.launch</span> (transient intent) and uses dynamic import to call <span class="mono">setUI("draw")</span>.</li>
+</ul>
+
+<hr />
+
+<h2>2) Home State: What Lives in uiState.home.saved</h2>
+
+<p>
+Home forces a stable saved-state object via <span class="mono">ensureHomeSavedState()</span>.
+This is the state machine “memory” that makes restore deterministic.
+</p>
+
+<div class="box ok">
+  <p><span class="k">Shape:</span></p>
+  <pre>{
+  view: "categories" | "results",
+  activeStatus: string | null,
+  activeIndex: number | null,
+  activeEntry: object | null
+}</pre>
+</div>
+
+<div class="box note">
+  <p>
+    <span class="k">Discussion point:</span> Home currently treats <span class="mono">activeEntry</span> as a raw manifest entry object (not just an id/path).
+    That’s convenient for in-session restore but raises the same “pure data” question as Draw: full reload persistence wants a stable key (usually <span class="mono">entry.path</span>).
+  </p>
+</div>
+
+<hr />
+
+<h2>3) Two-View Model: Categories vs Results</h2>
+
+<h3>3.1 The view keys</h3>
+<ul>
+  <li><span class="mono">HOME_VIEW_CATEGORIES = "categories"</span></li>
+  <li><span class="mono">HOME_VIEW_RESULTS = "results"</span></li>
+</ul>
+
+<h3>3.2 switchHomeView(viewKey): the view state transition function</h3>
+
+<div class="box ok">
+  <p><span class="k">Sequence:</span></p>
+  <ol>
+    <li>Ensure saved state exists.</li>
+    <li>Write <span class="mono">uiState.home.saved.view = viewKey</span>.</li>
+    <li>Rebuild subtabs (Categories always; Results only if activeEntry exists).</li>
+    <li>Activate the selected subtab button.</li>
+    <li>If Categories:
+      <ul>
+        <li>Clear caption (Home Categories has no caption bar).</li>
+        <li>Clear <span class="mono">#sketchpad</span> and <span class="mono">#action</span>.</li>
+        <li>Render categories if grouped data is ready; else show “manifest not loaded yet.”</li>
+      </ul>
+    </li>
+    <li>If Results: call <span class="mono">renderHomeResults()</span>.</li>
+  </ol>
+</div>
+
+<div class="box warn">
+  <p>
+    <span class="k">Key topic:</span> Subtab rebuilding is state-driven. The “Results” subtab only exists if <span class="mono">uiState.home.saved.activeEntry</span> is truthy.
+    That means Results is not a permanent subtab; it’s an earned/conditional one.
+  </p>
+</div>
+
+<hr />
+
+<h2>4) Subtabs: How Home Builds Them</h2>
+
+<h3>4.1 setHomeSubtabs()</h3>
+<ul>
+  <li>Clears <span class="mono">#subtabs</span> and builds <span class="mono">&lt;ul class="nav nav-tabs home-subtabs"&gt;</span>.</li>
+  <li>Adds Categories always.</li>
+  <li>Adds Results only if <span class="mono">uiState.home.saved.activeEntry</span> exists.</li>
+  <li>Activates the current saved view.</li>
+</ul>
+
+<h3>4.2 addHomeSubtabButton()</h3>
+<ul>
+  <li>Creates one button and wires it to <span class="mono">switchHomeView(viewKey)</span>.</li>
+  <li>This is the sole “home-internal navigation” gesture.</li>
+</ul>
+
+<div class="box note">
+  <p>
+    <span class="k">Discussion point:</span> Home subtabs are view selectors; Draw subtabs are “open documents.”
+    The similarity is “both are subtabs,” but their semantics differ: Home tabs are modes; Draw tabs are instances.
+  </p>
+</div>
+
+<hr />
+
+<h2>5) Manifest Load + Grouping: Why Home Has Its Own Cache</h2>
+
+<h3>5.1 Home-only module cache</h3>
+<ul>
+  <li><span class="mono">homeManifestLogged</span> prevents repeated console logging / re-load in normal flow.</li>
+  <li><span class="mono">homeManifestData</span> and <span class="mono">homeManifestGrouped</span> hold the in-memory snapshot.</li>
+</ul>
+
+<h3>5.2 loadHomeManifestAndLog() + loadHomeManifestAndLog_async()</h3>
+<ul>
+  <li>The “front” function is a one-shot kick that calls the async loader.</li>
+  <li>The async loader:
+    <ul>
+      <li>Fetches <span class="mono">/home/manifest.json</span> using <span class="mono">fileLayer.loadJSON()</span>.</li>
+      <li>Requires an array.</li>
+      <li>Calls <span class="mono">groupHomeEntriesByStatus()</span> which requires each entry to be an object and to have a <span class="mono">status</span>.</li>
+      <li>Optionally triggers a categories render if Home is currently in Categories view.</li>
+    </ul>
+  </li>
+</ul>
+
+<div class="box warn">
+  <p>
+    <span class="k">Key topic:</span> Home is intentionally decoupled from <span class="mono">manifest.cache</span> (the shared manifest system).
+    Home uses <span class="mono">fileLayer.loadJSON("/home/manifest.json")</span> and its own grouping cache instead.
+    That’s not “wrong,” but it is a deliberate architectural line that should be understood.
+  </p>
+</div>
+
+<h3>5.3 refreshHomeCategoriesFromManifestEdit()</h3>
+<ul>
+  <li>Explicit refresh path: clears Home’s in-memory cache and reloads with cache-busting query <span class="mono">?v=Date.now()</span>.</li>
+  <li>Used after “Edit Manifest” to rebuild category frames from updated statuses.</li>
+</ul>
+
+<hr />
+
+<h2>6) Categories Descriptor: The Click Decision Point</h2>
+
+<p>
+Home categories are built by <span class="mono">buildHomeCategoryDescriptor(grouped)</span>.
+This is where Home decides whether an item is:
+</p>
+<ul>
+  <li><span class="k">Launch-only</span> (drawRegistry → launch Draw and stay in Home Categories), or</li>
+  <li><span class="k">Results</span> (store activeEntry and enter Results view).</li>
+</ul>
+
+<div class="box ok">
+  <p><span class="k">Decision rules used on click:</span></p>
+  <ul>
+    <li>If <span class="mono">entry.sourceType === "drawRegistry"</span>:
+      <ul>
+        <li>Fail-fast if <span class="mono">entry.registryKey</span> is missing.</li>
+        <li>Reset Home’s saved view back to Categories and clear active selection fields.</li>
+        <li>Set <span class="mono">uiState.launch</span> intent: pending=true, sourceTab="home", targetTab="draw", sourceType="drawRegistry", registryKey=...</li>
+        <li>Call <span class="mono">launchTabViaSetUI("draw")</span> (dynamic import) and return.</li>
+      </ul>
+    </li>
+    <li>Otherwise:
+      <ul>
+        <li>Write Home selection into <span class="mono">uiState.home.saved</span> (status + activeEntry).</li>
+        <li>Enter Results view via <span class="mono">switchHomeView("results")</span>.</li>
+        <li>Build a Results caption via <span class="mono">setHomeCaptionForResult(entry)</span>.</li>
+      </ul>
+    </li>
+  </ul>
+</div>
+
+<div class="box warn">
+  <p>
+    <span class="k">Key topic:</span> Home intentionally prevents drawRegistry items from becoming Results.
+    That is a hard boundary: drawRegistry entries are “built-in Draw objects,” not “runnable Home scripts.”
+  </p>
+</div>
+
+<hr />
+
+<h2>7) Results View: Rendering Scripts vs Images (and Preventing Stale Async)</h2>
+
+<h3>7.1 The render token mechanism</h3>
+<ul>
+  <li><span class="mono">homeResultsRenderToken</span> increments each time Results begins rendering.</li>
+  <li>Async paths (module load, image load) check the token before updating the DOM.</li>
+  <li>This prevents “old click finishes late and overwrites new click” bugs.</li>
+</ul>
+
+<div class="box note">
+  <p>
+    <span class="k">This is worth discussing in depth.</span> It’s a concrete, simple concurrency control that keeps the UI deterministic under async imports.
+  </p>
+</div>
+
+<h3>7.2 renderHomeResults(): the Results dispatcher</h3>
+<ul>
+  <li>Fail-fast if <span class="mono">activeEntry</span> is missing.</li>
+  <li>Fail-fast if <span class="mono">sourceType === "drawRegistry"</span> (launch-only guard).</li>
+  <li>Clears #text and #action so categories are not visible.</li>
+  <li>Sets caption for result (<span class="mono">setHomeCaptionForResult</span>).</li>
+  <li>Dispatches:
+    <ul>
+      <li>JS path → <span class="mono">renderHomeJsEntryToCanvas</span></li>
+      <li>Image path → <span class="mono">renderHomeImageEntryToSketchpad</span></li>
+      <li>Else → visible “Unsupported result type” + throw</li>
+    </ul>
+  </li>
+</ul>
+
+<h3>7.3 Scripts: clearHomeCanvasAndOverlays() is not optional</h3>
+<p>
+Home’s script execution path explicitly resets ctx state:
+</p>
+<ul>
+  <li><span class="mono">ctx.setTransform(1,0,0,1,0,0)</span></li>
+  <li><span class="mono">ctx.globalAlpha = 1</span></li>
+  <li><span class="mono">ctx.globalCompositeOperation = "source-over"</span></li>
+  <li>Clears and fills white background</li>
+  <li>Clears overlay layer container if present</li>
+</ul>
+
+<div class="box warn">
+  <p>
+    <span class="k">Key topic:</span> This is the antidote to “two drawings on the canvas” and “clearRect didn’t clear” failures.
+    It encodes the important rule: prior scripts may leave ctx transformed, so clearing must reset the transform first.
+  </p>
+</div>
+
+<h3>7.4 Images: renderHomeImageEntryToSketchpad()</h3>
+<ul>
+  <li>Uses an <span class="mono">Image()</span> object and awaits load.</li>
+  <li>Checks the render token for staleness.</li>
+  <li>Displays the image with contain-style fit.</li>
+</ul>
+
+<hr />
+
+<h2>8) Caption for Results: setHomeCaptionForResult(entry)</h2>
+
+<p>
+Home Results captions are more complex than Home Categories captions.
+</p>
+
+<div class="box ok">
+  <p><span class="k">What it does:</span></p>
+  <ul>
+    <li>Builds a context bundle (tabName, manifestPath, entryPath, title/file/status, isScript/scriptPath).</li>
+    <li>Uses <span class="mono">getHomeCaptionMenuItems(ctxBundle)</span> to build menu items.</li>
+    <li>Injects the full rooted path text into <span class="mono">#caption .caption-buttons</span> immediately before the menu button.</li>
+  </ul>
+</div>
+
+<div class="box note">
+  <p>
+    <span class="k">Discussion point:</span> This “path injection” is a UI pattern (a custom augmentation of caption.js output).
+    It must track caption.js markup assumptions: existence of <span class="mono">.caption-buttons</span> and that the menu button is the last button.
+  </p>
+</div>
+
+<hr />
+
+<h2>9) Commands Offcanvas: Home Maintenance</h2>
+
+<ul>
+  <li>Home wires the global Commands button to a Home Maintenance offcanvas.</li>
+  <li>It runs <span class="mono">nodeRebuildAndValidateManifests()</span>, then clears caches.</li>
+  <li>It forces Home manifest reload with cache-busting and writes the text report.</li>
+</ul>
+
+<div class="box warn">
+  <p>
+    <span class="k">Key topic:</span> Notice Home clears <span class="mono">manifest.clearCache()</span> (the shared cache) and also resets Home’s own
+    <span class="mono">homeManifestLogged/homeManifestData/homeManifestGrouped</span>. This is a “two cache world” situation and should be kept explicit.
+  </p>
+</div>
+
+<hr />
+
+<h2>10) Cross-Tab Launch Helper: Dynamic Import of setUI.js</h2>
+
+<p>
+Home cannot statically import <span class="mono">setUI.js</span> because <span class="mono">setUI.js</span> imports <span class="mono">home.js</span>.
+So Home uses dynamic import:
+</p>
+
+<ul>
+  <li><span class="mono">launchTab(tabKey)</span> awaits import and then calls <span class="mono">mod.setUI(tabKey)</span>.</li>
+  <li><span class="mono">launchTabViaSetUI(tabKey)</span> returns a promise chain that calls <span class="mono">mod.setUI(tabKey)</span>.</li>
+</ul>
+
+<div class="box ok">
+  <p>
+    <span class="k">This is a key design pattern:</span> dynamic import as a deliberate, explicit solution to circular dependency, while staying fail-fast.
+  </p>
+</div>
+
+<hr />
+
+<h2>11) The One Sentence That Summarizes home.js</h2>
+
+<div class="box note">
+  <p>
+    <span class="k">home.js</span> is a two-view dispatcher tab: it loads a flat Home manifest and renders status-grouped categories,
+    and on item click it either enters Results (rendering scripts into the shared canvas or images into #sketchpad using a stale-token guard),
+    or it launches Draw for drawRegistry items by writing a transient <span class="mono">uiState.launch</span> intent and calling <span class="mono">setUI("draw")</span> via dynamic import.
+  </p>
+</div>
+
+</body>
+</html>

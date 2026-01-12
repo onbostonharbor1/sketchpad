@@ -1,26 +1,29 @@
-/* ui/homeMenuCmds.js
+/* ui/utilitiesMenuCmds.js
    ------------------------------------------------------------
-   Home Tab — Caption Menu Commands
+   Utilities Tab — Caption Menu Commands
+   ------------------------------------------------------------
+   Commands:
+     • getUtilitiesCaptionMenuItems(info)
+     • editUtilitiesManifestItem(info)
    ------------------------------------------------------------
 */
 
 import { showScriptOffcanvas } from "./menuCmds.js";
 import { openEditManifestDialog } from "./menuCmds.js";
-import { refreshHomeCategoriesFromManifestEdit } from "./home.js";
+import { refreshUtilitiesFromManifestEdit } from "./utilities.js";
 
 /* ============================================================
-   getHomeCaptionMenuItems(info)
+   getUtilitiesCaptionMenuItems(info)
 =========================================================== */
-export async function getHomeCaptionMenuItems(info) {
+export async function getUtilitiesCaptionMenuItems(info) {
 
-  if (!info) throw new Error("getHomeCaptionMenuItems: info missing");
+  if (!info) throw new Error("getUtilitiesCaptionMenuItems: info missing");
 
   const items = [];
 
   /* ----------------------------------------------------------
      Show Script
      -------------------------------------------------------- */
-  const isScript = !!info.isScript;
   const scriptPath = info.scriptPath || "";
 
   const label =
@@ -32,9 +35,9 @@ export async function getHomeCaptionMenuItems(info) {
 
   items.push({
     label: "Show Script",
-    disabled: !isScript,
+    disabled: !scriptPath,
     onClick: () => {
-      if (!isScript) return;
+      if (!scriptPath) return;
       showScriptOffcanvas(scriptPath, label);
     } // end onClick
   });
@@ -46,27 +49,27 @@ export async function getHomeCaptionMenuItems(info) {
     label: "Edit Manifest",
     disabled: false,
     onClick: async () => {
-      await editHomeManifestItem(info);
+      await editUtilitiesManifestItem(info);
     } // end onClick
   });
 
   return items;
 
-} // end getHomeCaptionMenuItems
+} // end getUtilitiesCaptionMenuItems
 
 
 /* ============================================================
-   editHomeManifestItem(homeItem)
+   editUtilitiesManifestItem(info)
 =========================================================== */
-export async function editHomeManifestItem(homeItem) {
+export async function editUtilitiesManifestItem(info) {
 
-  if (!homeItem) throw new Error("editHomeManifestItem: homeItem missing");
+  if (!info) throw new Error("editUtilitiesManifestItem: info missing");
 
-  const manifestPath = homeItem.manifestPath;
-  const entryPath    = homeItem.entryPath;
+  const manifestPath = info.manifestPath;
+  const entryPath    = info.entryPath;
 
-  if (!manifestPath) throw new Error("editHomeManifestItem: homeItem.manifestPath missing");
-  if (!entryPath)    throw new Error("editHomeManifestItem: homeItem.entryPath missing");
+  if (!manifestPath) throw new Error("editUtilitiesManifestItem: info.manifestPath missing");
+  if (!entryPath)    throw new Error("editUtilitiesManifestItem: info.entryPath missing");
 
   const ok = await openEditManifestDialog({
     dialogTitle:   "Edit Manifest",
@@ -74,10 +77,10 @@ export async function editHomeManifestItem(homeItem) {
     matchField:    "path",
     matchValue:    String(entryPath),
 
-    fileLabel:     String(homeItem.file || homeItem.title || entryPath),
+    fileLabel:     String(info.file || info.title || entryPath),
 
-    initialTitle:  String(homeItem.title || ""),
-    initialStatus: String(homeItem.status || ""),
+    initialTitle:  String(info.title || ""),
+    initialStatus: String(info.status || ""),
 
     statusPresets: ["new", "working", "current", "favorite"],
 
@@ -86,10 +89,10 @@ export async function editHomeManifestItem(homeItem) {
   });
 
   if (ok) {
-    await refreshHomeCategoriesFromManifestEdit();
+    await refreshUtilitiesFromManifestEdit();
   }
 
-} // end editHomeManifestItem
+} // end editUtilitiesManifestItem
 
 
-// end ui/homeMenuCmds.js
+// end ui/utilitiesMenuCmds.js

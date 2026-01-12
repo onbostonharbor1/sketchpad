@@ -1,15 +1,15 @@
 [
   {
+    "file": "parabolasWithinCircles",
+    "path": "/patterns/builds/parabolasWithinCircles.js",
+    "title": "Circular Parabola & Inner Star",
+    "status": "bestfriend"
+  },
+  {
     "file": "validateDrawRegistry",
     "path": "/utilities/Tools/Registry/validateDrawRegistry.js",
     "title": "Validate Draw Registry",
     "status": "current"
-  },
-  {
-    "file": "pursuitDynamic5",
-    "path": "/gallery/Scripts/Pursuit/pursuitDynamic5.js",
-    "title": "Pursuit Dynamic 5",
-    "status": "favorite"
   },
   {
     "file": "IMG_9649",
@@ -18,10 +18,52 @@
     "status": "favorite"
   },
   {
-    "file": "IMG_9650",
-    "path": "/gallery/Ideabook/3D/IMG_9650.PNG",
-    "title": "IMG_9650.PNG",
-    "status": "working"
+    "file": "pursuitDynamic5",
+    "path": "/gallery/Scripts/Pursuit/pursuitDynamic5.js",
+    "title": "Pursuit Dynamic 5",
+    "status": "favorite"
+  },
+  {
+    "file": "copy 2 armsInCircles - Copy (2)",
+    "path": "/patterns/circles/copy 2 armsInCircles - Copy (2).js",
+    "title": "copy 2 armsInCircles - Copy (2).js",
+    "status": "new"
+  },
+  {
+    "file": "copy 296 - Copy",
+    "path": "/gallery/Patterns/PursuitPatterns/copy 296 - Copy.jpg",
+    "title": "copy 296 - Copy.jpg",
+    "status": "new"
+  },
+  {
+    "file": "copy 297 - Copy",
+    "path": "/gallery/Patterns/PursuitPatterns/copy 297 - Copy.jpg",
+    "title": "copy 297 - Copy.jpg",
+    "status": "new"
+  },
+  {
+    "file": "copy 298 - Copy",
+    "path": "/gallery/Patterns/PursuitPatterns/copy 298 - Copy.jpeg",
+    "title": "copy 298 - Copy.jpeg",
+    "status": "new"
+  },
+  {
+    "file": "copy ellipseCurveStitching - Copy",
+    "path": "/gallery/Scripts/Elliptical/copy ellipseCurveStitching - Copy.js",
+    "title": "copy ellipseCurveStitching - Copy.js",
+    "status": "new"
+  },
+  {
+    "file": "copy1 armsInCircles - Copy (3)",
+    "path": "/patterns/circles/copy1 armsInCircles - Copy (3).js",
+    "title": "copy1 armsInCircles - Copy (3).js",
+    "status": "new"
+  },
+  {
+    "file": "IMG_8363 - Copy",
+    "path": "/gallery/Patterns/PursuitPatterns/IMG_8363 - Copy.jpg",
+    "title": "IMG_8363 - Copy.jpg",
+    "status": "new"
   },
   {
     "file": "IMG_9651",
@@ -111,10 +153,10 @@
     "status": "useless"
   },
   {
-    "file": "parabolasWithinCircles",
-    "path": "/patterns/builds/parabolasWithinCircles.js",
-    "title": "Circular Parabola & Inner Star",
-    "status": "bestfriend"
+    "file": "IMG_9650",
+    "path": "/gallery/Ideabook/3D/IMG_9650.PNG",
+    "title": "IMG_9650.PNG",
+    "status": "working"
   },
   {
     "file": "joiningPoints",

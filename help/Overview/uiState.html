@@ -1,0 +1,398 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>uiState Overview and Tab Swapping</title>
+  <style>
+    body {
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
+      line-height: 1.35;
+      margin: 24px;
+      color: #111;
+      background: #fff;
+      max-width: 980px;
+    }
+    h1, h2, h3 {
+      line-height: 1.15;
+      margin: 1.2em 0 0.5em 0;
+    }
+    h1 { font-size: 1.8rem; margin-top: 0; }
+    h2 { font-size: 1.35rem; border-top: 1px solid #ddd; padding-top: 0.9em; }
+    h3 { font-size: 1.1rem; }
+    p { margin: 0.6em 0; }
+    ul, ol { margin: 0.4em 0 0.8em 1.4em; }
+    li { margin: 0.25em 0; }
+    code, pre {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      font-size: 0.95em;
+    }
+    pre {
+      background: #f6f8fa;
+      border: 1px solid #e5e7eb;
+      padding: 12px;
+      border-radius: 8px;
+      overflow: auto;
+    }
+    .note {
+      background: #fff7ed;
+      border: 1px solid #fed7aa;
+      padding: 12px;
+      border-radius: 10px;
+      margin: 12px 0;
+    }
+    .key {
+      background: #f0f9ff;
+      border: 1px solid #bae6fd;
+      padding: 12px;
+      border-radius: 10px;
+      margin: 12px 0;
+    }
+    .divider {
+      margin: 18px 0;
+      border-top: 1px dashed #ccc;
+    }
+    .small {
+      color: #444;
+      font-size: 0.95rem;
+    }
+  </style>
+</head>
+
+<body>
+
+  <h1>uiState Overview and How Tab Swapping Works</h1>
+
+  <p class="small">
+    This document explains what <code>uiState</code> is, how it is structured, and how it is used during tab switching
+    in the TabSpec architecture (cold init vs restore). It is written to be used as help-system reference material.
+  </p>
+
+  <div class="divider"></div>
+
+  <h2>1. What uiState is (and what it is NOT)</h2>
+
+  <p>
+    <code>uiState</code> is one object that holds the entire “remembered UI situation” of the app.
+    It is deliberately “pure data only.”
+  </p>
+
+  <h3>1.1 What it stores</h3>
+  <ul>
+    <li>Which tab is active.</li>
+    <li>What a tab was showing the last time you were there (view modes, selection, index).</li>
+    <li>Which category/item/domain/subtab is active within a tab.</li>
+    <li>Cached manifest pointers and manifest storage locations.</li>
+    <li>Overlay flags describing whether an overlay is active and what it is.</li>
+  </ul>
+
+  <h3>1.2 What it does NOT store</h3>
+  <ul>
+    <li>No functions.</li>
+    <li>No DOM nodes.</li>
+    <li>No “builders” or layout logic.</li>
+    <li>No behavior.</li>
+  </ul>
+
+  <div class="key">
+    <p>
+      In other words: <code>uiState</code> is not “the program.” It is the program’s memory of where the UI is.
+    </p>
+    <p>
+      If you restart the app, <code>uiState</code> resets to defaults. If you switch tabs, <code>uiState</code> is
+      rewritten so each tab can restore its own view later.
+    </p>
+  </div>
+
+  <h2>2. The main partitions inside uiState</h2>
+
+  <p>
+    <code>uiState</code> contains five main “domains” of data:
+  </p>
+
+  <h3>2.1 Transient intent (launch)</h3>
+  <p>
+    <code>uiState.launch</code> is a one-shot instruction:
+    “after you land on some tab, immediately jump to another tab with context.”
+  </p>
+  <ul>
+    <li><code>pending</code> is true when the intent must be consumed.</li>
+    <li>After consumption, <code>pending</code> must be set back to false.</li>
+    <li>This is transient state. It is not a tab’s saved restore contract.</li>
+  </ul>
+
+  <h3>2.2 Global configuration</h3>
+  <ul>
+    <li><code>canvasWidth</code>, <code>canvasHeight</code></li>
+    <li><code>activeTab</code></li>
+  </ul>
+
+  <h3>2.3 Per-tab state containers</h3>
+  <p>
+    Each tab has its own state bucket (home, draw, patterns, gallery, figures, utilities).
+    Each bucket holds the tab’s current selections and (importantly) the tab’s saved restore contract.
+  </p>
+
+  <h3>2.4 Manifest cache storage</h3>
+  <p>
+    <code>uiState.manifests</code> provides places to store loaded manifest data (typically loaded once, cached, immutable).
+  </p>
+
+  <h3>2.5 Overlay state</h3>
+  <p>
+    <code>uiState.overlay</code> tracks whether an overlay is active and what kind it is. This is global, not per-tab.
+  </p>
+
+  <h2>3. The key concept: “saved” vs “active”</h2>
+
+  <p>
+    This is what usually makes <code>uiState</code> feel hard at first.
+    Per-tab state has two categories of fields:
+  </p>
+
+  <h3>3.1 Active members (what is happening right now)</h3>
+  <p>
+    These represent current selections. Examples:
+  </p>
+  <ul>
+    <li><code>uiState.gallery.activeDomain</code></li>
+    <li><code>uiState.gallery.activeCategory</code></li>
+    <li><code>uiState.gallery.activeItem</code></li>
+    <li><code>uiState.patterns.activeCategory</code></li>
+    <li><code>uiState.activeTab</code> (global)</li>
+  </ul>
+
+  <h3>3.2 Saved restore contract (how to rebuild after leaving and returning)</h3>
+  <p>
+    Each tab’s <code>saved</code> field controls cold init vs restore.
+  </p>
+
+  <pre>
+saved == null   → “cold start required”
+saved != null   → “restore required”</pre>
+
+  <p>
+    This is the central rule enforced by <code>setUI.js</code>:
+  </p>
+
+  <pre>
+if uiState[tab].saved exists:
+  call TabSpec.restore()
+else:
+  clearDivs()
+  call TabSpec.init(false)</pre>
+
+  <div class="note">
+    <p>
+      Practical meaning: <code>saved</code> is not “selection.” It is “the restore recipe.”
+      If a tab forgets to update its <code>saved</code> contract during navigation, restore becomes wrong.
+    </p>
+  </div>
+
+  <h2>4. Tab swapping walkthrough (extended)</h2>
+
+  <p>
+    This section describes the end-to-end path used by your TabSpec orchestrator (<code>ui/setUI.js</code>).
+  </p>
+
+  <h3>4.1 What triggers a tab swap</h3>
+  <ul>
+    <li>User clicks a button under <code>#mainTabs</code>.</li>
+    <li><code>DOMContentLoaded</code> wires each button to call <code>handleTabChange(btn.id)</code>.</li>
+    <li><code>handleTabChange</code> maps the HTML id to a tab key using <code>mapTabIdToKey</code>.</li>
+    <li>It calls <code>setUI(tabKey)</code>.</li>
+  </ul>
+
+  <p>
+    The important architectural point: the only public entry for switching tabs is <code>setUI(tab)</code>.
+  </p>
+
+  <h3>4.2 What setUI does first: theme</h3>
+  <p>
+    <code>setUI</code> applies theme before init/restore:
+  </p>
+
+  <pre>
+applyTheme(tabName)
+activateTab(tabName)</pre>
+
+  <p>
+    Theme-first matters because init/restore may build DOM that depends on the wrapper theme class.
+  </p>
+
+  <h3>4.3 What setUI does second: activateTab (restore vs cold init)</h3>
+  <p>
+    <code>activateTab</code> decides whether to restore or cold-init by checking <code>uiState[tabKey].saved</code>.
+  </p>
+
+  <h4>Case A: START</h4>
+  <ul>
+    <li>START always lands on Home.</li>
+    <li>It uses cold init: <code>clearDivs()</code> then <code>HomeTabSpec.init(false)</code>.</li>
+  </ul>
+
+  <h4>Case B: normal tab</h4>
+  <pre>
+const saved = uiState[tabKey] && uiState[tabKey].saved;
+
+if (saved) {
+  restoreTab(tabKey);   // NO clearing
+} else {
+  initTab(tabKey);      // clearDivs() + init(false)
+}</pre>
+
+  <p>
+    Then common fall-through:
+  </p>
+
+  <pre>
+uiState.activeTab = tabKey;
+setActiveTab(tabKey);   // cosmetic highlight</pre>
+
+  <h3>4.4 Who writes what in uiState during tab swaps</h3>
+
+  <p><strong>A) Orchestrator responsibility</strong></p>
+  <ul>
+    <li>Writes <code>uiState.activeTab</code>.</li>
+    <li>Consumes <code>uiState.launch</code> if pending.</li>
+    <li>Does not invent per-tab restore data.</li>
+  </ul>
+
+  <p><strong>B) Tab subsystem responsibility</strong></p>
+  <ul>
+    <li>Writes its own <code>uiState.&lt;tab&gt;.saved</code> restore contract.</li>
+    <li>Writes its own active fields (category/item/view/index/domain/subtab).</li>
+    <li>Decides what minimal fields are required to restore deterministically.</li>
+  </ul>
+
+  <div class="note">
+    <p>
+      The orchestrator does not decide what a tab must remember.
+      The tab decides what it needs to restore itself, and stores that in <code>saved</code>.
+    </p>
+  </div>
+
+  <h3>4.5 What “saved” must contain (the practical rule)</h3>
+  <p>
+    The restore contract must contain exactly enough information for <code>TabSpec.restore()</code> to rebuild the view
+    deterministically. No more, no less.
+  </p>
+
+  <p>
+    Example: Gallery default restore template (conceptually):
+  </p>
+
+  <pre>
+view: "categories" | "results"
+domain: "Ideabook" | "Patterns" | "Scripts"
+category: string | null
+index: number | null</pre>
+
+  <p>
+    That is enough for restore to re-enter either:
+  </p>
+  <ul>
+    <li>categories view for a domain, or</li>
+    <li>results view at a particular index</li>
+  </ul>
+
+  <h2>5. How launch intent fits into tab swapping</h2>
+
+  <p>
+    <code>uiState.launch</code> is your controlled “second jump.”
+    After a tab activates (init/restore), <code>setUI</code> checks for pending launch intent.
+  </p>
+
+  <pre>
+if (!uiState.launch) return;
+if (uiState.launch.pending !== true) return;
+
+const targetTab = uiState.launch.targetTab;
+if (!targetTab) throw ...
+
+uiState.launch.pending = false;      // cleared FIRST
+if (uiState.activeTab === targetTab) return;
+
+setUI(targetTab);                    // jump</pre>
+
+  <div class="note">
+    <p>
+      Subtle implication: the “first” tab still runs its init/restore normally before the jump occurs,
+      because the launch check happens after activation. This is usually fine, but it’s good to be aware of it.
+    </p>
+  </div>
+
+  <h2>6. A clean mental model: the “three layers”</h2>
+
+  <p>
+    When reading <code>uiState</code>, it helps to treat it as three layers:
+  </p>
+
+  <h3>Layer 1: Orchestrator-global</h3>
+  <ul>
+    <li><code>activeTab</code></li>
+    <li><code>launch</code></li>
+  </ul>
+
+  <h3>Layer 2: Per-tab UI position (current selections)</h3>
+  <ul>
+    <li><code>activeCategory</code>, <code>activeItem</code>, <code>activeDomain</code>, <code>activeSubtab</code>, etc.</li>
+  </ul>
+
+  <h3>Layer 3: Per-tab restore contract</h3>
+  <ul>
+    <li><code>saved</code> (null vs object)</li>
+  </ul>
+
+  <p>
+    Then separately:
+  </p>
+  <ul>
+    <li>manifest caches (<code>uiState.manifests</code>)</li>
+    <li>overlay state (<code>uiState.overlay</code>)</li>
+  </ul>
+
+  <div class="key">
+    <p>
+      If you keep these layers separate, <code>uiState</code> stops feeling “random” and becomes predictable.
+    </p>
+  </div>
+
+  <h2>7. Suggested discussion workflow (activities that use uiState)</h2>
+
+  <p>
+    You asked for “overview first, then discussions of the kinds of activities that use it.”
+    Here is a clean order, because each activity exercises different parts of <code>uiState</code>:
+  </p>
+
+  <h3>A) Tab swapping (this document)</h3>
+  <ul>
+    <li>Focus: <code>activeTab</code> + the <code>saved</code> null/exists rule.</li>
+  </ul>
+
+  <h3>B) In-tab navigation (one tab at a time)</h3>
+  <ul>
+    <li>Focus: which active fields change on each navigation action.</li>
+    <li>Focus: how and when each tab rewrites its <code>saved</code> contract.</li>
+    <li>Example (Gallery): categories → results sets domain/category/index; prev/next updates index.</li>
+  </ul>
+
+  <h3>C) Cross-tab jump (launch intent)</h3>
+  <ul>
+    <li>Focus: who sets launch, who consumes it, and what fields are required (<code>targetTab</code>, <code>registryKey</code>, etc.).</li>
+  </ul>
+
+  <h3>D) Overlay usage</h3>
+  <ul>
+    <li>Focus: overlays are global; they should be cleared on tab change.</li>
+    <li>Focus: tab subsystems should not store overlay DOM; only state flags.</li>
+  </ul>
+
+  <div class="divider"></div>
+
+  <p class="small">
+    End of help document.
+  </p>
+
+</body>
+</html>

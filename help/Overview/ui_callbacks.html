@@ -1,0 +1,346 @@
+```html
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Help Treatise — ui_callbacks.js (Central UI Callback Layer)</title>
+
+  <link rel="stylesheet" href="help_treatise.css" />
+</head>
+
+<body>
+
+  <h1>ui_callbacks.js — Central UI Callback Layer (Third / Correct Version)</h1>
+
+  <p>
+    This file is (or was) a deliberate “routing hub” for UI events:
+    it receives generic events (tab activated, category selected, item selected, etc.)
+    and forwards them to the correct tab subsystem (draw/patterns/gallery/figures/utilities).
+  </p>
+
+  <div class="warn">
+    <b>Important historical note</b><br/>
+    This file represents an earlier architecture than your current TabSpec-based setUI.js model.
+    In this version, tab activation triggers direct calls like <span class="mono">draw.initDrawTab()</span>.
+    In your current architecture, setUI.js delegates to TabSpec.init/restore.
+    So: treat this as “explanatory legacy,” unless you are intentionally still using it.
+  </div>
+
+  <h2>1. What this file claims to be</h2>
+
+  <p>
+    The header comment says it is the “Third / Correct Version” and that:
+  </p>
+
+  <ul>
+    <li>No orchestrators</li>
+    <li>No generic tab APIs</li>
+    <li>Each tab uses its own functions</li>
+    <li>Only event routing lives here</li>
+  </ul>
+
+  <p>
+    That means the callbacks here should be “thin”:
+    they should not contain domain logic, only dispatch logic.
+  </p>
+
+
+  <h2>2. Imports: who is involved</h2>
+
+  <h3>2.1 Shared state and overlays</h3>
+
+  <ul>
+    <li><span class="mono">uiState</span> — global UI state</li>
+    <li><span class="mono">overlayManager</span> — overlay system</li>
+  </ul>
+
+  <h3>2.2 Tab subsystems</h3>
+
+  <p>
+    Each tab subsystem is imported as a namespace:
+  </p>
+
+  <ul>
+    <li><span class="mono">import * as draw from "./draw.js"</span></li>
+    <li><span class="mono">import * as patterns from "./patterns.js"</span></li>
+    <li><span class="mono">import * as gallery from "./gallery.js"</span></li>
+    <li><span class="mono">import * as figures from "./figures.js"</span></li>
+    <li><span class="mono">import * as utility from "./utilities.js"</span></li>
+  </ul>
+
+  <div class="note">
+    In this architecture, the callback layer assumes each tab module exposes specific
+    entry points (init/load/save/show/prev/next/etc.). If those functions don’t exist,
+    the system breaks immediately.
+  </div>
+
+
+  <h2>3. Callback: onTabActivated(tabName)</h2>
+
+  <p>
+    This function is the tab “activation router.”
+    It does two shared actions first:
+  </p>
+
+  <ol>
+    <li><span class="mono">uiState.activeTab = tabName</span></li>
+    <li><span class="mono">overlayManager.clearAll()</span> (clear panel overlays)</li>
+  </ol>
+
+  <p>
+    Then it dispatches to the tab-specific init:
+  </p>
+
+  <ul>
+    <li>draw → <span class="mono">draw.initDrawTab()</span></li>
+    <li>patterns → <span class="mono">patterns.initPatternsTab()</span></li>
+    <li>gallery → <span class="mono">gallery.initGalleryTab()</span></li>
+    <li>figures → <span class="mono">figures.initFiguresTab()</span></li>
+    <li>utilities → <span class="mono">utility.initUtilityTab()</span></li>
+  </ul>
+
+  <p>
+    Any unknown tab throws:
+    <span class="mono">onTabActivated: unknown tab ...</span>
+  </p>
+
+  <div class="warn">
+    <b>Design implication</b><br/>
+    This callback layer is performing orchestration (init calls) even though the header says
+    “no orchestrators.” It’s “thin orchestration,” but it is orchestration.
+  </div>
+
+
+  <h2>4. Callback: onCategorySelected(tabName, categoryName)</h2>
+
+  <p>
+    Common step:
+  </p>
+
+  <pre><code>uiState[tabName].activeCategory = categoryName;</code></pre>
+
+  <p>
+    Then per-tab dispatch:
+  </p>
+
+  <ul>
+    <li>draw → <span class="mono">draw.setDrawCategories()</span></li>
+    <li>patterns → <span class="mono">patterns.loadCategory(categoryName)</span></li>
+    <li>gallery → <span class="mono">gallery.loadCategory(categoryName)</span></li>
+    <li>utilities → <span class="mono">utility.loadCategory(categoryName)</span></li>
+  </ul>
+
+  <div class="note">
+    Draw is different: it ignores categoryName and calls a function that presumably reads uiState to decide what to show.
+    Patterns/Gallery/Utilities directly load the selected category by name.
+  </div>
+
+
+  <h2>5. Callback: onItemSelected(tabName, itemName)</h2>
+
+  <p>
+    Common step:
+  </p>
+
+  <pre><code>uiState[tabName].activeItem = itemName;</code></pre>
+
+  <p>
+    Then per-tab dispatch:
+  </p>
+
+  <h3>5.1 Draw</h3>
+
+  <p>
+    Draw does something special: it tries to locate a drawRegistry entry by matching <span class="mono">e.name</span>.
+  </p>
+
+  <pre><code>const reg = window.drawRegistry || {};
+const entry = Object.values(reg).find((e) =&gt; e.name === itemName);
+if (!entry) throw new Error("draw item not found: " + itemName);
+
+draw.addDrawSubtab({ name: entry.name, entry: entry });</code></pre>
+
+  <div class="warn">
+    <b>This is a strong coupling point</b><br/>
+    The callback layer assumes drawRegistry is globally available on window,
+    and that entries have a <span class="mono">name</span> property.
+  </div>
+
+  <h3>5.2 Patterns</h3>
+
+  <ul>
+    <li><span class="mono">patterns.loadItem(itemName)</span></li>
+  </ul>
+
+  <h3>5.3 Gallery</h3>
+
+  <ul>
+    <li><span class="mono">gallery.showImage(itemName)</span></li>
+  </ul>
+
+  <h3>5.4 Utilities</h3>
+
+  <ul>
+    <li><span class="mono">utility.runUtilityItem(itemName)</span></li>
+  </ul>
+
+
+  <h2>6. Callback: onParamChanged(paramName, newValue) — Draw only</h2>
+
+  <p>
+    This callback updates parameters inside the active draw subtab and redraws:
+  </p>
+
+  <pre><code>const tabId = uiState.activeDrawTab;
+const tab = uiState.drawTabs[tabId];
+if (!tab) return;
+
+tab.parameters[paramName] = newValue;
+draw.drawActiveTab();</code></pre>
+
+  <div class="warn">
+    This uses silent returns instead of fail-fast errors:
+    <span class="mono">if (!tab) return;</span>
+    That is inconsistent with your later “crash immediately” style.
+  </div>
+
+
+  <h2>7. Help</h2>
+
+  <p>
+    This callback is very simple:
+  </p>
+
+  <pre><code>overlayManager.show("help", html);</code></pre>
+
+  <p>
+    It assumes the “help” overlay layer exists and is registered.
+  </p>
+
+
+  <h2>8. Overlay operations (interaction layer)</h2>
+
+  <p>
+    These two functions call overlayManager against the “interaction” layer:
+  </p>
+
+  <ul>
+    <li><span class="mono">onOpenOverlay(html)</span> → <span class="mono">overlayManager.show("interaction", html)</span></li>
+    <li><span class="mono">onCloseOverlay()</span> → <span class="mono">overlayManager.hide("interaction")</span></li>
+  </ul>
+
+  <div class="warn">
+    <b>Potential mismatch with your current overlay system</b><br/>
+    In your later overlay.js, “interaction” is a canvas overlay registered via
+    <span class="mono">registerCanvas</span>, not a panel overlay in <span class="mono">layers</span>.
+    overlayManager.show/hide currently operates on panel layers only.
+    So if you run this against the newer overlayManager implementation, it will likely throw.
+  </div>
+
+
+  <h2>9. Navigation: prev/next (Gallery only)</h2>
+
+  <p>
+    Prev/Next are implemented only for Gallery here:
+  </p>
+
+  <ul>
+    <li>prev → <span class="mono">gallery.showPrevImage()</span></li>
+    <li>next → <span class="mono">gallery.showNextImage()</span></li>
+  </ul>
+
+  <p>
+    Other tabs emit <span class="mono">console.warn</span>.
+  </p>
+
+
+  <h2>10. Save routing</h2>
+
+  <p>
+    Save is routed per tab:
+  </p>
+
+  <ul>
+    <li>draw → <span class="mono">draw.saveDrawState()</span></li>
+    <li>patterns → <span class="mono">patterns.savePatternsState()</span></li>
+    <li>gallery → <span class="mono">gallery.saveGalleryState()</span></li>
+    <li>utilities → <span class="mono">utility.saveUtilityState()</span></li>
+  </ul>
+
+  <p>
+    Unknown tabs warn.
+  </p>
+
+
+  <h2>11. Reset parameters (Draw only)</h2>
+
+  <p>
+    Reset is implemented by re-running the registry init and replacing parameters:
+  </p>
+
+  <pre><code>const tabId = uiState.activeDrawTab;
+const info = uiState.drawTabs[tabId];
+if (!info || info.type !== "object") return;
+
+info.drawRegistry.init();
+info.parameters = info.drawRegistry.params;
+draw.drawActiveTab();</code></pre>
+
+  <div class="note">
+    This assumes:
+    1) drawRegistry.init() is idempotent and safe to call at reset time
+    2) drawRegistry.params is the authoritative default parameters object
+  </div>
+
+
+  <h2>12. Export surface</h2>
+
+  <p>
+    At the end, all callbacks are exported as one object:
+  </p>
+
+  <pre><code>export const callbacks = {
+  onTabActivated,
+  onCategorySelected,
+  onItemSelected,
+  onParamChanged,
+  onHelpRequested,
+  onOpenOverlay,
+  onCloseOverlay,
+  onPrev,
+  onNext,
+  onSave,
+  onResetParameters,
+};</code></pre>
+
+  <p>
+    This suggests other code calls callbacks.* rather than importing each function.
+  </p>
+
+
+  <h2>13. The real “meaning” of this file</h2>
+
+  <p>
+    Conceptually, ui_callbacks.js tries to be a single place where “UI events become tab actions.”
+    The advantage is: you can find routing in one file.
+    The disadvantage is: it becomes a second orchestrator layer that can drift out of sync
+    with the tab modules and with your overlay system.
+  </p>
+
+  <div class="warn">
+    <b>Compatibility warning with TabSpec architecture</b><br/>
+    If you are now using setUI.js and TabSpec.init/restore, then:
+    - onTabActivated() duplicates orchestration logic
+    - draw.initDrawTab() etc. will not match your current module entry points
+    - overlay routing for “interaction” likely conflicts with the newer overlay.js
+    In short: this file should either be retired, or rewritten to route into TabSpec.activate paths.
+  </div>
+
+  <div class="hr"></div>
+
+  <p class="small">End of treatise.</p>
+
+</body>
+</html>
+```

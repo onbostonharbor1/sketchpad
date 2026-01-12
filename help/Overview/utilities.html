@@ -1,0 +1,227 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Utilities Tab — How utilities.js Works</title>
+
+  <link rel="stylesheet" href="help_treatise.css" />
+</head>
+
+<body>
+
+  <h1>utilities.js — Utilities Tab Controller</h1>
+
+  <p>
+    This page describes the role of <span class="mono">ui/utilities.js</span> in Sketchpad.
+    It is written as “raw help HTML” so it can be dropped into the help system as-is.
+  </p>
+
+  <h2>Purpose</h2>
+
+  <p>
+    <span class="mono">utilities.js</span> implements the Utilities tab as an independent subsystem.
+    It follows the same high-level model as the converted Patterns/Gallery tabs:
+  </p>
+
+  <ul>
+    <li>Loads manifest data once and caches it locally in this module</li>
+    <li>Builds a fixed subtab bar (Tools / Lab / Result)</li>
+    <li>Renders category frames using <span class="mono">categories.js</span></li>
+    <li>Runs a selected utility script via dynamic ES-module import</li>
+    <li>Displays output deterministically in the shared regions (<span class="mono">#text</span>, <span class="mono">#sketchpad</span>, <span class="mono">#caption</span>, <span class="mono">#action</span>)</li>
+    <li>Saves just enough UI state into <span class="mono">uiState.utilities</span> so Result can be restored</li>
+  </ul>
+
+  <h2>Key Responsibilities</h2>
+
+  <h3>1) Load and cache Utilities manifests</h3>
+
+  <p>
+    On initialization, the file loads the two manifest groups:
+    <span class="mono">utilities/Tools</span> and <span class="mono">utilities/Lab</span>.
+    It also loads each group’s directory registry via <span class="mono">manifest.getRegistry()</span>.
+    These are combined into a local cache:
+  </p>
+
+  <ul>
+    <li><span class="mono">utilitiesCache.Tools[category] = [entries...]</span></li>
+    <li><span class="mono">utilitiesCache.Lab[category] = [entries...]</span></li>
+  </ul>
+
+  <p>
+    This cache is module-local and is treated as the “read model” for rendering category frames.
+    The Utilities tab does not add new manifest structures; it consumes the manifest output exactly as provided.
+  </p>
+
+  <h3>2) Provide a fixed subtab bar</h3>
+
+  <p>
+    <span class="mono">setUtilitySubtabs()</span> builds the three subtabs:
+  </p>
+
+  <ul>
+    <li><b>Tools</b> — runs scripts that typically produce HTML/text output in <span class="mono">#text</span></li>
+    <li><b>Lab</b> — runs scripts that draw into the canvas (<span class="mono">#sketchpad</span>)</li>
+    <li><b>Result</b> — a “replay” tab that reruns the last selected script deterministically</li>
+  </ul>
+
+  <p>
+    Subtab activation is enforced by <span class="mono">activateUtilitySubtab(tabId)</span>, which is fail-fast:
+    if the expected DOM structure is missing, it throws.
+  </p>
+
+  <h3>3) Render categories using categories.js</h3>
+
+  <p>
+    <span class="mono">setUtilityCategories(which)</span> creates a <i>frames array</i> that
+    <span class="mono">renderCategories("text", frames)</span> can display. Each frame corresponds to one category
+    directory under Tools or Lab, and each item’s <span class="mono">onClick</span> delegates to
+    <span class="mono">onUtilityItemClick(...)</span>.
+  </p>
+
+  <p>
+    The Utilities tab does not implement its own category UI. It only produces the descriptor array.
+  </p>
+
+  <h3>4) Run scripts via dynamic import</h3>
+
+  <p>
+    <span class="mono">runUtilityEntry(subtab, category, entry)</span> is the execution engine.
+    It constructs the import path as:
+  </p>
+
+  <p class="mono">
+    /utilities/&lt;Tools|Lab&gt;/&lt;Category&gt;/&lt;entry.path&gt;
+  </p>
+
+  <p>
+    It then imports the module with a cache-buster query string (<span class="mono">?t=Date.now()</span>)
+    so edits are visible immediately during development.
+  </p>
+
+  <p>
+    Contract: the module must export a function named <span class="mono">runPattern()</span>.
+    If it does not, Utilities throws an error. This is intentional fail-fast behavior.
+  </p>
+
+  <h3>5) Handle Lab vs Tools output regions</h3>
+
+  <p>
+    Utilities treats “Lab” scripts differently:
+  </p>
+
+  <ul>
+    <li>It moves <span class="mono">window.drawCanvas</span> into <span class="mono">#sketchpad</span></li>
+    <li>It clears the canvas to white before running the script</li>
+    <li>It does not assume HTML output in <span class="mono">#text</span></li>
+  </ul>
+
+  <p>
+    For non-Lab scripts (Tools), the returned value from <span class="mono">runPattern()</span> is treated as HTML
+    and displayed via <span class="mono">displayUtilityResult(html)</span>.
+  </p>
+
+  <h3>6) Caption and “Show Script” menu</h3>
+
+  <p>
+    <span class="mono">setUtilityCaption(...)</span> applies a consistent caption rule:
+  </p>
+
+  <ul>
+    <li>Tools/Lab: <span class="mono">"{category}: {title}"</span></li>
+    <li>Result (no category): <span class="mono">"{title}"</span></li>
+  </ul>
+
+  <p>
+    The caption menu contains a “Show Script” item that opens the current script file path in a new browser tab.
+    This is implemented via <span class="mono">menuManager</span>.
+  </p>
+
+  <h2>State Model</h2>
+
+  <p>
+    Utilities uses <span class="mono">uiState.utilities</span> to remember enough information to restore the last run item.
+    The important fields are:
+  </p>
+
+  <ul>
+    <li><span class="mono">activeUtilityTabId</span> — which subtab is active (Tools/Lab/Result)</li>
+    <li><span class="mono">lastUtilitySubtab</span> — which group the last item came from (Tools or Lab)</li>
+    <li><span class="mono">activeUtilityCategory</span> — the category folder needed to reconstruct the import path</li>
+    <li><span class="mono">activeUtilityItem</span> — the manifest entry object</li>
+    <li><span class="mono">lastResult</span> — cached HTML result for redisplay (used when returning to Result)</li>
+    <li><span class="mono">saved</span> — a snapshot used by <span class="mono">restoreUtilityTab()</span></li>
+  </ul>
+
+  <p>
+    The key design point: Result is deterministic because it reruns the same module import path derived from
+    <span class="mono">(lastUtilitySubtab, activeUtilityCategory, activeUtilityItem.path)</span>.
+  </p>
+
+  <h2>Lifecycle</h2>
+
+  <h3>init</h3>
+  <ul>
+    <li>Clears shared regions via <span class="mono">clearDivs()</span></li>
+    <li>Wires the Commands button</li>
+    <li>Ensures <span class="mono">uiState.utilities</span> exists (initial default state)</li>
+    <li>Loads manifests and builds <span class="mono">utilitiesCache</span></li>
+    <li>Builds subtabs and switches to the chosen subtab via <span class="mono">switchUtilityTab(tabId)</span></li>
+  </ul>
+
+  <h3>restore</h3>
+  <ul>
+    <li>Ensures subtabs exist</li>
+    <li>Restores the active subtab and reruns/redisplays the last script when possible</li>
+    <li>If saved state is missing, falls back to a cold init</li>
+  </ul>
+
+  <h3>save</h3>
+  <ul>
+    <li>Copies the minimal restoration snapshot into <span class="mono">uiState.utilities.saved</span></li>
+    <li>Returns the same object as informational output for the TabSpec contract</li>
+  </ul>
+
+  <h2>Commands Button (Offcanvas)</h2>
+
+  <p>
+    Utilities includes a maintenance offcanvas invoked by the Commands button:
+  </p>
+
+  <ul>
+    <li>“Rebuild &amp; Validate” calls <span class="mono">nodeRebuildAndValidateManifests()</span></li>
+    <li>Then it forces a manifest cache drop and reloads the Utilities cache</li>
+    <li>Finally it re-renders the current view deterministically and prints a report</li>
+  </ul>
+
+  <p>
+    This file does not implement the Node logic; it only triggers it and renders the returned report.
+  </p>
+
+  <h2>What utilities.js Does NOT Do</h2>
+
+  <ul>
+    <li>It does not define drawing primitives or geometry</li>
+    <li>It does not edit manifests directly (it consumes manifest output)</li>
+    <li>It does not implement category rendering (delegates to <span class="mono">categories.js</span>)</li>
+    <li>It does not provide a custom parameter-controls system for Utilities scripts</li>
+  </ul>
+
+  <h2>Files It Depends On</h2>
+
+  <ul>
+    <li><span class="mono">uiState</span> (global) — persistent UI state for Utilities</li>
+    <li><span class="mono">manifest.js</span> — reads manifest data and registries</li>
+    <li><span class="mono">categories.js</span> — renders category frames from descriptor arrays</li>
+    <li><span class="mono">caption.js</span> and <span class="mono">menuManager.js</span> — caption bar and menu</li>
+    <li><span class="mono">ui_utilities.js</span> — shared UI helpers (clearDivs, commands offcanvas)</li>
+    <li><span class="mono">nodeLayer.js</span> — dispatches rebuild/validate to the Node service</li>
+  </ul>
+
+  <h2>Suggested Help File Name</h2>
+
+  <p class="mono">help/utilities/utilities.js.html</p>
+
+</body>
+</html>

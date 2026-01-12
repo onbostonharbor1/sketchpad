@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Patterns Tab (patterns.js) — What Must Be Understood</title>
+  <style>
+    body { font-family: Arial, Helvetica, sans-serif; line-height: 1.35; margin: 24px; max-width: 980px; }
+    h1 { font-size: 22px; margin: 0 0 12px 0; }
+    h2 { font-size: 18px; margin: 18px 0 8px 0; }
+    h3 { font-size: 15px; margin: 14px 0 6px 0; }
+    p  { margin: 6px 0; }
+    ul { margin: 6px 0 6px 22px; }
+    li { margin: 4px 0; }
+    code, pre { font-family: Consolas, Menlo, Monaco, monospace; font-size: 13px; }
+    .box { border: 1px solid #bbb; border-radius: 8px; padding: 12px 14px; margin: 10px 0; background: #fafafa; }
+    .warn { border-left: 6px solid #c77; background: #fff7f7; }
+    .ok   { border-left: 6px solid #7c7; background: #f7fff7; }
+    .note { border-left: 6px solid #77c; background: #f7f9ff; }
+    .mini { color: #444; }
+    .k { font-weight: bold; }
+    .mono { font-family: Consolas, Menlo, Monaco, monospace; }
+    hr { border: 0; border-top: 1px solid #ddd; margin: 18px 0; }
+  </style>
+</head>
+
+<body>
+
+<h1>Patterns Tab (patterns.js) — The One Big Topic: What Must Be Understood</h1>
+
+<p class="mini">
+This page is not a line-by-line commentary. It is the conceptual map: the contracts, invariants, and “who owns what”
+that make <span class="mono">patterns.js</span> understandable and debuggable.
+</p>
+
+<div class="box note">
+  <p><span class="k">Focus:</span> The “hard parts” are not DOM mechanics. The hard parts are the architectural contracts:
+  <span class="mono">TabSpec</span>, <span class="mono">uiState</span>, manifest caching, and the script execution pipeline.</p>
+</div>
+
+<hr />
+
+<h2>1) Contract Boundaries: Who Is Allowed To Do What</h2>
+
+<h3>1.1 PatternsTabSpec vs “Controller”</h3>
+<ul>
+  <li><span class="mono">PatternsTabSpec</span> is what <span class="mono">setUI.js</span> calls:
+    <span class="mono">init(restoredFlag)</span>, <span class="mono">restore()</span>, <span class="mono">save()</span>.</li>
+  <li><span class="mono">PatternsController</span> is described as “pure action functions,” but in practice the actions in
+    <span class="mono">patterns.js</span> do all three things: write state, touch DOM, and run async work.</li>
+</ul>
+
+<div class="box">
+  <p><span class="k">What to keep in mind:</span> In the current file, “controller” mostly means “the externally callable actions.”
+  It does not currently mean a strict separation layer.</p>
+</div>
+
+<h3>1.2 Tab Orchestration Contract (setUI.js)</h3>
+<ul>
+  <li><span class="mono">init()</span> must be cold-start only (build the tab’s static shell + show default view).</li>
+  <li><span class="mono">restore()</span> must reconstruct the last view deterministically from <span class="mono">uiState</span>.</li>
+  <li><span class="mono">save()</span> should return plain data only (no functions, no DOM nodes).</li>
+</ul>
+
+<div class="box warn">
+  <p><span class="k">Important discussion point:</span> Your pasted <span class="mono">setUI.js</span> does not call any tab’s
+  <span class="mono">save()</span> before switching tabs. That means <span class="mono">patterns.js</span> is effectively relying on
+  <span class="mono">uiState.patterns.saved</span> being continuously maintained during navigation. That can be correct, but it must be
+  recognized as the actual design.</p>
+</div>
+
+<hr />
+
+<h2>2) The Restore Contract Object: uiState.patterns.saved</h2>
+
+<p>
+The heart of the new architecture is that <span class="mono">Patterns</span> is always restorable from a minimal,
+explicit object: <span class="mono">uiState.patterns.saved</span>.
+</p>
+
+<div class="box ok">
+  <p><span class="k">Minimal restore contract fields:</span></p>
+  <ul>
+    <li><span class="mono">saved.view</span> = <span class="mono">"categories"</span> or <span class="mono">"pattern"</span></li>
+    <li><span class="mono">saved.activeCategory</span> = category string or null</li>
+    <li><span class="mono">saved.activeItem</span> = index number or null</li>
+  </ul>
+</div>
+
+<h3>2.1 Invariants (the rules that must always be true)</h3>
+<ul>
+  <li>If <span class="mono">view === "categories"</span>, then <span class="mono">activeCategory == null</span> and
+      <span class="mono">activeItem == null</span>.</li>
+  <li>If <span class="mono">view === "pattern"</span>, then <span class="mono">activeCategory</span> is a non-empty string and
+      <span class="mono">activeItem</span> is a number.</li>
+</ul>
+
+<h3>2.2 The key behavioral rule</h3>
+<div class="box">
+  <p><span class="k">Rule:</span> Any action that changes what the user is “looking at” should write
+  <span class="mono">uiState.patterns.saved</span> <span class="k">before</span> calling a renderer.</p>
+  <p class="mini">This is what makes restore deterministic and makes debugging possible (“state first, then draw”).</p>
+</div>
+
+<hr />
+
+<h2>3) The Fixed Subtabs Model</h2>
+
+<p>
+Patterns has fixed subtab IDs:
+<span class="mono">patterns-categories</span> and <span class="mono">patterns-pattern</span>.
+</p>
+
+<ul>
+  <li>Cold init builds the subtab bar and installs the Categories tab.</li>
+  <li>Selecting a pattern creates (if needed) the Pattern tab and activates it.</li>
+  <li>Restore rebuilds the subtab bar again and then reconstructs view.</li>
+</ul>
+
+<div class="box note">
+  <p><span class="k">Discussion point:</span> Is <span class="mono">#subtabs</span> part of “static UI that init owns,” or is it a shared region
+  that may need rebuilding on every activation? In practice, you are rebuilding it in restore. That may be correct, but it should be treated
+  as a deliberate rule, not an accident.</p>
+</div>
+
+<hr />
+
+<h2>4) The Script Execution Pipeline: loadScriptModule + executeScriptToCanvas</h2>
+
+<p>
+Patterns does not “draw directly.” It loads a module by path and runs it.
+That pipeline has its own contract and failure modes.
+</p>
+
+<h3>4.1 The path format rule matters</h3>
+<div class="box warn">
+  <p><span class="k">High-leverage topic:</span> Decide what the canonical script path form is.</p>
+  <ul>
+    <li>Rooted: <span class="mono">"/patterns/Star/foo.js"</span></li>
+    <li>Relative: <span class="mono">"../patterns/Star/foo.js"</span> (currently used in your file)</li>
+  </ul>
+  <p class="mini">
+    Your <span class="mono">loadScriptModule()</span> tries to normalize, but a relative path like <span class="mono">"../patterns/..."</span>
+    becomes <span class="mono">"/../patterns/..."</span>, which browsers may normalize but can also interact badly with dev-server routing.
+    This is worth standardizing early because it affects probing, “Show Script”, help keys, and error messages.
+  </p>
+</div>
+
+<h3>4.2 Canvas attachment ownership</h3>
+<div class="box warn">
+  <p><span class="k">Concrete issue to understand:</span> Who attaches the shared canvas?</p>
+  <ul>
+    <li><span class="mono">showSelectedPattern()</span> appends <span class="mono">window.drawCanvas</span> into <span class="mono">#sketchpad</span>.</li>
+    <li><span class="mono">executeScriptToCanvas()</span> clears <span class="mono">#sketchpad</span> and appends <span class="mono">window.drawCanvas</span> again.</li>
+  </ul>
+  <p class="mini">
+    This duplication may “work” but it is fragile. It also interacts with “state leak” style bugs.
+    A clean design usually picks exactly one owner for canvas attachment.
+  </p>
+</div>
+
+<hr />
+
+<h2>5) Manifest Caching: What Patterns Owns and What It Assumes</h2>
+
+<p>
+Patterns uses the manifest system as a read-mostly cache:
+<span class="mono">manifest.cache.patterns</span> is built once and then read for all UI rendering.
+</p>
+
+<div class="box">
+  <p><span class="k">Key function:</span> <span class="mono">ensurePatternsManifestLoaded()</span></p>
+  <ul>
+    <li>Loads raw manifest data via <span class="mono">manifest.get("patterns")</span>.</li>
+    <li>Gets category registry via <span class="mono">manifest.getRegistry("patterns")</span>.</li>
+    <li>Builds <span class="mono">manifest.cache.patterns</span> as a map: <span class="mono">{ categoryName: [entries...] }</span>.</li>
+  </ul>
+</div>
+
+<h3>5.1 The sanctioned exception: cache invalidation</h3>
+<p>
+The Commands-offcanvas “Rebuild &amp; Validate” action invalidates the cache and reloads it.
+This is one of the best examples of a controlled “exception” to the immutability idea:
+</p>
+
+<ul>
+  <li>Run node maintenance</li>
+  <li>Clear manifest cache</li>
+  <li>Reload</li>
+  <li>Re-render from <span class="mono">uiState.patterns.saved</span></li>
+</ul>
+
+<hr />
+
+<h2>6) The Two-View Model: What Patterns Actually “Is”</h2>
+
+<p>
+From a user-facing standpoint, Patterns is basically two views. This is the simplest mental model.
+</p>
+
+<div class="box ok">
+  <h3>A) Categories View</h3>
+  <ul>
+    <li><span class="mono">#text</span>: category frames (cards)</li>
+    <li><span class="mono">#action</span>: empty</li>
+    <li><span class="mono">#sketchpad</span>: empty</li>
+    <li>Subtab bar: Categories active</li>
+  </ul>
+</div>
+
+<div class="box ok">
+  <h3>B) Pattern View</h3>
+  <ul>
+    <li><span class="mono">#sketchpad</span>: shared canvas attached + one pattern drawn</li>
+    <li><span class="mono">#action</span>: thumbnail grid, selected thumb highlighted</li>
+    <li><span class="mono">#caption</span>: title + Prev/Next + Menu</li>
+    <li>Subtab bar: Pattern active</li>
+  </ul>
+</div>
+
+<div class="box">
+  <p><span class="k">Why this matters:</span> Most functions in the file are just “switch to one of these views deterministically,”
+  and each view has clear region ownership.</p>
+</div>
+
+<hr />
+
+<h2>7) The Commands Button Path (Offcanvas) Is a Parallel Subsystem</h2>
+
+<p>
+The Commands button (Patterns Maintenance) is not navigation. It is a maintenance action that forces
+a re-render of the current view.
+</p>
+
+<ul>
+  <li>Open offcanvas</li>
+  <li>Run node rebuild/validate</li>
+  <li>Invalidate cache</li>
+  <li>Reload manifest</li>
+  <li>Re-render the exact view indicated by <span class="mono">uiState.patterns.saved.view</span></li>
+</ul>
+
+<div class="box note">
+  <p><span class="k">Reason it is important:</span> It demonstrates the architecture working correctly:
+  “treat uiState as the source of truth; rebuild UI from it.”</p>
+</div>
+
+<hr />
+
+<h2>8) Places Where Understanding Requires Noticing Contradictions</h2>
+
+<h3>8.1 Optional chaining and silent fallbacks (vs fail-fast)</h3>
+<div class="box warn">
+  <p>
+    There are places where missing data becomes “empty list” or “no-op return” rather than a crash.
+    If your rule is truly fail-fast, these should be discussed and decided deliberately.
+  </p>
+  <ul>
+    <li><span class="mono">manifest.cache.patterns?.[category] || []</span></li>
+    <li><span class="mono">if (!list.length) return;</span> in prev/next</li>
+  </ul>
+</div>
+
+<h3>8.2 Comments that mis-state the real ownership</h3>
+<div class="box warn">
+  <p>
+    The comment in <span class="mono">restorePatternsTab()</span> says “NO clearing — setUI/initTab already handled that.”
+    But restore is called specifically instead of initTab. So the comment is misleading and should be corrected (or the orchestrator
+    behavior should change).
+  </p>
+</div>
+
+<h3>8.3 Canvas attachment duplication</h3>
+<div class="box warn">
+  <p>
+    <span class="mono">showSelectedPattern()</span> attaches canvas, then <span class="mono">executeScriptToCanvas()</span> clears and reattaches.
+    Decide one owner. Otherwise small future changes can reintroduce “state leak” type bugs.
+  </p>
+</div>
+
+<hr />
+
+<h2>9) Minimum Tests That Prove patterns.js Works</h2>
+
+<div class="box ok">
+  <p><span class="k">Cold start:</span> switch to Patterns tab</p>
+  <ul>
+    <li>Categories list renders</li>
+    <li>Only Categories subtab exists and is active</li>
+    <li>#action and #sketchpad are empty</li>
+  </ul>
+</div>
+
+<div class="box ok">
+  <p><span class="k">Select a pattern:</span></p>
+  <ul>
+    <li>Pattern subtab appears and becomes active</li>
+    <li>Thumbnails appear in #action</li>
+    <li>Selected thumbnail highlight matches active index</li>
+    <li>Caption shows “{category}: {title}” with Prev/Next/Menu</li>
+    <li>Canvas shows exactly one pattern (no remnants)</li>
+  </ul>
+</div>
+
+<div class="box ok">
+  <p><span class="k">Prev/Next:</span></p>
+  <ul>
+    <li>Index wraps correctly</li>
+    <li>Caption updates</li>
+    <li>Selected thumb highlight updates</li>
+    <li>Canvas redraws deterministically</li>
+  </ul>
+</div>
+
+<div class="box ok">
+  <p><span class="k">Tab swapping restore:</span></p>
+  <ul>
+    <li>Leave Patterns, return to Patterns</li>
+    <li>Restores exactly to last saved view (categories or pattern)</li>
+  </ul>
+</div>
+
+<div class="box ok">
+  <p><span class="k">Commands → Rebuild &amp; Validate:</span></p>
+  <ul>
+    <li>Report is displayed</li>
+    <li>Manifest cache invalidated and reloaded</li>
+    <li>Current view is reconstructed from uiState.patterns.saved</li>
+  </ul>
+</div>
+
+<hr />
+
+<h2>10) The One Sentence That Summarizes patterns.js</h2>
+
+<div class="box note">
+  <p>
+    <span class="k">patterns.js</span> is a two-view UI whose correctness depends on maintaining
+    <span class="mono">uiState.patterns.saved</span> as the single source of truth, reading patterns from
+    <span class="mono">manifest.cache.patterns</span>, and executing scripts through the shared
+    <span class="mono">scriptRunner</span> pipeline.
+  </p>
+</div>
+
+</body>
+</html>

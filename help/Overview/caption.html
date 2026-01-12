@@ -1,0 +1,200 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>caption.js — Unified Caption Bar Builder (Description)</title>
+
+  <link rel="stylesheet" href="help_treatise.css" />
+</head>
+
+<body>
+
+  <p>
+    <strong>caption.js</strong> defines a unified, permanent caption-bar system used across all Sketchpad tabs.
+    It is responsible for building, updating, and normalizing the caption area that appears above
+    main content (drawings, patterns, gallery items, etc.).
+  </p>
+
+  <p>
+    The caption bar has a fixed layout and behavioral contract that all tabs must follow.
+    This file enforces that contract so individual tabs do not reimplement caption logic
+    or manipulate caption DOM elements directly.
+  </p>
+
+  <p><strong>Permanent caption layout</strong></p>
+
+  <ul>
+    <li>
+      <p>
+        <strong>Left side:</strong> Title<br>
+        The title is always left-aligned and takes flexible width.
+      </p>
+    </li>
+
+    <li>
+      <p>
+        <strong>Right side:</strong> Button cluster<br>
+        Buttons appear in the following fixed order:
+      </p>
+
+      <ul>
+        <li>Prev (optional)</li>
+        <li>Next (optional)</li>
+        <li>v (menu button — always present)</li>
+      </ul>
+    </li>
+  </ul>
+
+  <p>
+    The caption bar always includes a menu button ("v").
+    If no menu handler is supplied, the button is disabled and visually dimmed.
+  </p>
+
+  <div class="hr"></div>
+
+  <p><strong>setCaptionBar(config)</strong></p>
+
+  <p>
+    This is the core builder function.
+    It clears and rebuilds the caption bar from scratch on every call.
+  </p>
+
+  <p>
+    Arguments:
+  </p>
+
+  <ul>
+    <li><code>targetId</code> – DOM element ID of the caption container</li>
+    <li><code>title</code> – text displayed on the left</li>
+    <li><code>onPrev</code> – optional callback for the Prev button</li>
+    <li><code>onNext</code> – optional callback for the Next button</li>
+    <li><code>onMenu</code> – optional callback for the menu button</li>
+  </ul>
+
+  <p>
+    Behavior:
+  </p>
+
+  <ul>
+    <li>Fails fast if the target element does not exist</li>
+    <li>Clears any existing content</li>
+    <li>Applies a flex layout with space-between alignment</li>
+    <li>Creates the title span on the left</li>
+    <li>Creates a button row on the right</li>
+    <li>Conditionally adds Prev and Next buttons only if callbacks are provided</li>
+    <li>Always creates the menu button ("v")</li>
+    <li>If no <code>onMenu</code> handler is provided, the menu button is disabled</li>
+  </ul>
+
+  <p>
+    The caption bar itself does not manage menu behavior.
+    It only provides a button and delegates all menu logic to the caller.
+  </p>
+
+  <div class="hr"></div>
+
+  <p><strong>normalizeCaptionEntry(raw)</strong></p>
+
+  <p>
+    This helper function produces a predictable caption-entry object regardless of how
+    different tabs represent their metadata.
+  </p>
+
+  <p>
+    It allows tabs to pass in loosely structured data without duplicating normalization logic.
+  </p>
+
+  <p>
+    Input:
+  </p>
+
+  <ul>
+    <li>
+      <code>raw</code> – an object containing tab-specific metadata
+      (for example a drawRegistry entry, pattern entry, or gallery item)
+    </li>
+  </ul>
+
+  <p>
+    Output:
+  </p>
+
+  <ul>
+    <li><code>title</code> – resolved from <code>raw.title</code>, <code>raw.name</code>, or a default</li>
+    <li><code>filename</code> – copied if present, otherwise null</li>
+    <li><code>category</code> – copied if present, otherwise null</li>
+  </ul>
+
+  <p>
+    This function contains no tab-specific logic and is safe for use across all tabs.
+  </p>
+
+  <div class="hr"></div>
+
+  <p><strong>buildMenuHandler(tabName, context)</strong></p>
+
+  <p>
+    This function constructs a safe, standardized menu-button handler for the caption bar.
+  </p>
+
+  <p>
+    It returns a function that, when invoked, calls:
+  </p>
+
+  <p>
+    <code>menuManager.open(tabName, context)</code>
+  </p>
+
+  <p>
+    This allows each tab to keep its menu wiring extremely small and consistent.
+    Tabs do not need to know how menus are built or displayed — they only provide context.
+  </p>
+
+  <p>
+    The caption bar remains ignorant of menu content and behavior.
+  </p>
+
+  <div class="hr"></div>
+
+  <p><strong>rebuildCaption(config)</strong></p>
+
+  <p>
+    This is a convenience wrapper that clears the caption container and rebuilds it
+    in a single call.
+  </p>
+
+  <p>
+    Behavior:
+  </p>
+
+  <ul>
+    <li>Fails fast if the target caption element does not exist</li>
+    <li>Clears existing DOM content</li>
+    <li>Delegates all construction to <code>setCaptionBar()</code></li>
+  </ul>
+
+  <p>
+    This function exists to prevent tabs from directly manipulating caption DOM elements,
+    ensuring consistent behavior and layout across the application.
+  </p>
+
+  <div class="hr"></div>
+
+  <p>
+    Overall, <strong>caption.js</strong> enforces a single, shared caption-bar contract for Sketchpad.
+    It cleanly separates:
+  </p>
+
+  <ul>
+    <li>layout (handled here)</li>
+    <li>menu logic (handled by <code>menuManager</code>)</li>
+    <li>tab-specific behavior (provided via callbacks)</li>
+  </ul>
+
+  <p>
+    This keeps caption behavior predictable, minimal, and consistent across all tabs.
+  </p>
+
+</body>
+</html>

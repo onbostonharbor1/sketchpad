@@ -3,81 +3,62 @@
    Patterns Tab — Menu Commands
    ------------------------------------------------------------
    Commands:
-     • editPatternItemTitle()
      • addPatternThumbnail()
    ------------------------------------------------------------
 */
 
+
 import { nodeDispatch } from "./nodeLayer.js";
 import { manifest } from "./manifest.js";
-import { overlayManager } from "./overlay.js";
 import { renderPatternThumbGrid } from "./patterns.js";
 import { menuManager } from "./menuManager.js";
-import { showScriptOffcanvas } from "./ui_utilities.js";
+import { showScriptOffcanvas } from "./menuCmds.js";
+import { archiveItem } from "./menuCmds.js";
+import { openEditManifestDialog } from "./menuCmds.js";
 
-/* ============================================================
-   editPatternItemTitle()
-=========================================================== */
-export async function editPatternItemTitle() {
+export async function archivePatternItem() {
 
-  const itemInfo = derivePatternsContext();
+  const info = derivePatternsContext();
 
-  if (!itemInfo.item) {
-    throw new Error("editPatternItemTitle: no active pattern item");
+  if (!info.item) {
+    throw new Error("archivePatternItem: no active pattern item");
   }
 
-  openEditTitleOverlay(itemInfo);
+  const cat = info.category;
+  const filename = info.filename;
 
-} // end editPatternItemTitle
+  await archiveItem({
+    nodeCommand: "archivePatternItem",
+    payload: {
+      manifestPath: `/patterns/${cat}/manifest.json`,
+      category: cat,
+      filename: filename
+    },
+    onSuccess: async function () {
 
+      manifest.clearCache();
+      if (manifest.cache && manifest.cache.patterns) {
+        delete manifest.cache.patterns;
+      }
 
-/* ============================================================
-   addPatternThumbnail()
-   ------------------------------------------------------------
-   Captures the CURRENT displayed canvas image, scales to 50x50,
-   and asks the Node service to write:
+      uiState.patterns.activeCategory = null;
+      uiState.patterns.activeItem     = null;
+      uiState.patterns.saved = {
+        view: "categories",
+        activeCategory: null,
+        activeItem: null
+      };
 
-     ./patterns/<category>/images/thumb_<filename>.png
-=========================================================== */
-export async function addPatternThumbnail() {
+      const patternsMod = await import("./patterns.js");
+      await patternsMod.PatternsController.showCategoryList();
 
-  const itemInfo = derivePatternsContext();
+      alert(`Archived: ${cat}/${filename}.js`);
 
-  if (!itemInfo.item) {
-    throw new Error("addPatternThumbnail: no active pattern item");
-  }
-
-  if (!window.drawCanvas) {
-    throw new Error("addPatternThumbnail: window.drawCanvas missing");
-  }
-
-  const pngBase64 = buildCanvasThumbnailBase64(window.drawCanvas, 50, 50);
-
-  const result = await nodeDispatch("writePatternThumbnail", {
-    category: itemInfo.category,
-    filename: itemInfo.filename,
-    pngBase64
+    } // end onSuccess
   });
 
-  if (!result) {
-    throw new Error("addPatternThumbnail: writePatternThumbnail returned nothing");
-  }
+} // end archivePatternItem
 
-  if (result.status !== "ok") {
-    throw new Error(
-      "addPatternThumbnail: writePatternThumbnail failed: " + JSON.stringify(result)
-    );
-  }
-
-    const patternsMod = await import("./patterns.js");
-  await patternsMod.PatternsController.showSelectedPattern(
-    itemInfo.category,
-    itemInfo.index
-  );
-
-  renderPatternThumbGrid(itemInfo.category);
-
-} // end addPatternThumbnail
 
 /* ============================================================
    buildCanvasThumbnailBase64(sourceCanvas, w, h)
@@ -277,118 +258,6 @@ function derivePatternsContext() {
 } // end derivePatternsContext
 
 
-/* ============================================================
-   openEditTitleOverlay(itemInfo)
-=========================================================== */
-function openEditTitleOverlay(itemInfo) {
-
-  const container = document.getElementById("overlayContainer");
-  if (!container) throw new Error("openEditTitleOverlay: overlayContainer missing");
-
-  const titleEl = document.getElementById("overlayTitle");
-  if (!titleEl) throw new Error("openEditTitleOverlay: overlayTitle missing");
-
-  container.style.display = "block";
-  titleEl.textContent = "Edit Manifest Title";
-
-  const html =
-    "<div class='overlayForm'>" +
-      "<div class='ctrl-field'>" +
-        "<label class='ctrl-label'>Title:</label>" +
-        "<input id='editTitleInput' class='ctrl-text' type='text' />" +
-      "</div>" +
-      "<div style='margin-top:10px; display:flex; gap:10px;'>" +
-        "<button id='editTitleApply'>OK</button>" +
-        "<button id='editTitleCancel'>Cancel</button>" +
-      "</div>" +
-    "</div>";
-
-  overlayManager.show("forms", html);
-
-  const input = document.getElementById("editTitleInput");
-  input.value = itemInfo.currentTitle || "";
-  input.focus();
-
-  document.getElementById("editTitleApply").onclick = async () => {
-    await applyEditTitle(itemInfo);
-  };
-
-  document.getElementById("editTitleCancel").onclick = () => {
-    closeFormsOverlay();
-  };
-
-  input.addEventListener("keydown", async (ev) => {
-    if (ev.key === "Enter") {
-      await applyEditTitle(itemInfo);
-    }
-  });
-
-} // end openEditTitleOverlay
-
-
-/* ============================================================
-   applyEditTitle(itemInfo)
-=========================================================== */
-async function applyEditTitle(itemInfo) {
-
-  const input = document.getElementById("editTitleInput");
-  const newTitle = String(input.value);
-  const oldTitle = itemInfo.currentTitle || "";
-
-  if (newTitle === oldTitle) {
-    closeFormsOverlay();
-    return;
-  }
-
-  const result = await nodeDispatch("editPackageScript", {
-    manifestPath: itemInfo.manifestPath,
-    filename: itemInfo.filename,
-    title: newTitle
-  });
-
-  if (!result) {
-    throw new Error("applyEditTitle: editPackageScript returned nothing");
-  }
-
-  if (result.status !== "ok") {
-    throw new Error(
-      "applyEditTitle: editPackageScript failed: " + JSON.stringify(result)
-    );
-  }
-
-  /* ---------------------------------------------------------
-     Update the live in-memory item (the one Patterns is using)
-     and redraw. Do NOT clear/reload manifest caches here yet.
-  --------------------------------------------------------- */
-  itemInfo.item.title = newTitle;
-  itemInfo.currentTitle = newTitle;
-
-  closeFormsOverlay();
-
-  uiState.patterns.activeCategory = itemInfo.category;
-  uiState.patterns.activeItem     = itemInfo.index;
-
-  const patternsMod = await import("./patterns.js");
-  await patternsMod.PatternsController.showSelectedPattern(
-    itemInfo.category,
-    itemInfo.index
-  );
-
-} // end applyEditTitle
-
-
-/* ============================================================
-   closeFormsOverlay()
-=========================================================== */
-function closeFormsOverlay() {
-
-  const container = document.getElementById("overlayContainer");
-  if (!container) throw new Error("closeFormsOverlay: overlayContainer missing");
-
-  overlayManager.clearLayer("forms");
-  container.style.display = "none";
-
-} // end closeFormsOverlay
 
 
 /* ============================================================
@@ -419,39 +288,136 @@ export async function showPatternScript() {
    ------------------------------------------------------------
    Centralizes ALL caption menu command wiring for Patterns.
 =========================================================== */
-export async function getPatternsCaptionMenuItems(tabName, helpKey, scriptPath) {
+/* ============================================================
+   getPatternsCaptionMenuItems(info)
+   ------------------------------------------------------------
+   Centralizes ALL caption menu command wiring for Patterns.
+=========================================================== */
+export async function getPatternsCaptionMenuItems(info) {
+
+  if (!info) throw new Error("getPatternsCaptionMenuItems: info missing");
 
   const items = [];
 
-  // Help item is still built by menuManager (same behavior as before)
-  const helpItem = await menuManager.buildHelpItem(tabName, helpKey);
-  items.push(helpItem);
+  // ----------------------------------------------------------
+  // Help
+  // ----------------------------------------------------------
+  const helpKey = info.helpKey || null;
+  if (helpKey) {
+    const helpItem = await menuManager.buildHelpItem("patterns", helpKey);
+    items.push(helpItem);
+  } else {
+    items.push({ label: "Help", disabled: true, onClick: () => {} });
+  }
 
+  // ----------------------------------------------------------
   // Show Script
+  // ----------------------------------------------------------
+  const isScript = !!info.isScript;
+  const scriptPath = info.scriptPath || "";
+
+  const label =
+    info.filename ||
+    info.title ||
+    info.matchValue ||
+    scriptPath ||
+    "(untitled)";
+
   items.push({
     label: "Show Script",
-    onClick: () => showPatternScript()
+    disabled: !isScript,
+    onClick: () => {
+      if (!isScript) return;
+      showScriptOffcanvas(scriptPath, label);
+    } // end onClick
   });
 
+  // ----------------------------------------------------------
   // Add Thumbnail
+  // ----------------------------------------------------------
   items.push({
     label: "Add Thumbnail",
+    disabled: false,
     onClick: async () => {
       await addPatternThumbnail();
-    }
+    } // end onClick
   });
 
-  // Edit Manifest Title
+  // ----------------------------------------------------------
+  // Edit Manifest
+  // ----------------------------------------------------------
   items.push({
-    label: "Edit Manifest Title",
-    onClick: () => {
-      editPatternItemTitle();
-    }
+    label: "Edit Manifest",
+    disabled: false,
+    onClick: async () => {
+      await editPatternsManifestItem(info);
+    } // end onClick
+  });
+
+  // ----------------------------------------------------------
+  // Archive
+  // ----------------------------------------------------------
+  items.push({
+    label: "Archive",
+    disabled: false,
+    onClick: async () => {
+      await archivePatternItem();
+    } // end onClick
   });
 
   return items;
 
 } // end getPatternsCaptionMenuItems
+
+
+export async function editPatternsManifestItem(info) {
+
+  if (!info) throw new Error("editPatternsManifestItem: info missing");
+
+  const manifestPath = info.manifestPath;
+  const matchField   = info.matchField;
+  const matchValue   = info.matchValue;
+
+  if (!manifestPath) throw new Error("editPatternsManifestItem: manifestPath missing");
+  if (!matchField)   throw new Error("editPatternsManifestItem: matchField missing");
+  if (!matchValue)   throw new Error("editPatternsManifestItem: matchValue missing");
+
+  const ok = await openEditManifestDialog({
+    dialogTitle:   "Edit Manifest",
+    manifestPath:  String(manifestPath),
+    matchField:    String(matchField),
+    matchValue:    String(matchValue),
+
+    fileLabel:     String(info.filename || info.title || matchValue),
+
+    initialTitle:  String(info.title || ""),
+    initialStatus: String(info.status || ""),
+
+    statusPresets: ["new", "working", "current", "favorite"],
+
+    allowCustomStatus: true,
+    allowClearStatus:  true
+  });
+
+  if (!ok) return;
+
+  if (manifest && typeof manifest.clearCache === "function") {
+    manifest.clearCache();
+  }
+  if (manifest.cache) delete manifest.cache.patterns;
+
+  const patternsMod = await import("./patterns.js");
+
+  const category = info.category;
+  const index = window.uiState.patterns.activeItem;
+
+  if (!category) throw new Error("editPatternsManifestItem: info.category missing");
+  if (typeof index !== "number") throw new Error("editPatternsManifestItem: uiState.patterns.activeItem invalid");
+
+  await patternsMod.PatternsController.showSelectedPattern(category, index);
+
+} // end editPatternsManifestItem
+
 
 
 // end patternsMenuCmds.js

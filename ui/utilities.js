@@ -7,6 +7,8 @@
 // ADD to imports at top of utilities.js
 
 import { nodeRebuildAndValidateManifests } from "./nodeLayer.js";
+import { showScriptOffcanvas } from "./menuCmds.js";
+import { getUtilitiesCaptionMenuItems } from "./utilitiesMenuCmds.js";
 
 import { setCaptionBar }    from "./caption.js";
 import { renderCategories } from "./categories.js";
@@ -122,7 +124,7 @@ export async function initUtilityTab(restored = false) {
 /* ============================================================
    Caption + Result
 ============================================================ */
-function setUtilityCaption({ title, path, subtab, category }) {
+function setUtilityCaption({ title, path, subtab, category, manifestPath, entryPath, status }) {
 
   // Title rule:
   //   Tools/Lab:  "{category}: {title}"
@@ -132,26 +134,40 @@ function setUtilityCaption({ title, path, subtab, category }) {
       ? (category + ": " + (title || "(untitled)"))
       : (title || "(untitled)");
 
+  const scriptPath = (subtab && category && entryPath)
+    ? `/utilities/${subtab}/${category}/${entryPath}`
+    : "";
+
   setCaptionBar({
     targetId: "caption",
     title: finalTitle,
     onPrev: null,
     onNext: null,
-    onMenu: (anchor) => {
-      const items = [
-        {
-          label: "Show Script",
-          onClick: () => {
-            menuManager.close();
-            window.open(`/utilities/${subtab}/${path}`, "_blank");
-          }
-        }
-      ];
+    onMenu: async (anchor) => {
+
+      const info = {
+        // Show Script
+        isScript: true,
+        scriptPath: scriptPath,
+
+        // Edit Manifest
+        manifestPath: manifestPath || "",
+        entryPath: entryPath || "",
+
+        // Dialog labels / defaults
+        file: path || entryPath || "(untitled)",
+        title: title || "",
+        status: status || ""
+      };
+
+      const items = await getUtilitiesCaptionMenuItems(info);
       menuManager.open(items, anchor);
-    }
+
+    } // end onMenu
   });
 
 } // end setUtilityCaption
+
 
 
 function displayUtilityResult(html) {
@@ -311,8 +327,13 @@ async function runUtilityEntry(subtab, category, entry) {
       title: entry.title || entry.filename || "(untitled)",
       path: category + "/" + entry.path,
       subtab,
-      category
+      category,
+
+      manifestPath: `/utilities/${subtab}/${category}/manifest.json`,
+      entryPath: entry.path,
+      status: entry.status || ""
     });
+
 
     if (subtab !== "Lab") {
       displayUtilityResult(result);
@@ -568,6 +589,32 @@ export function wireUtilitiesCommandsButton() {
 
 } // end wireUtilitiesCommandsButton
 
+export async function refreshUtilitiesFromManifestEdit() {
+
+  // Force cache drop
+  if (manifest && typeof manifest.clearCache === "function") {
+    manifest.clearCache();
+  }
+  if (manifest.cache) delete manifest.cache.utilities;
+
+  // Reload local cache (same logic as initUtilityTab)
+  const toolsRaw = await manifest.get("utilities/Tools");
+  const labRaw   = await manifest.get("utilities/Lab");
+
+  const toolsRegistry = manifest.getRegistry("utilities/Tools");
+  const labRegistry   = manifest.getRegistry("utilities/Lab");
+
+  utilitiesCache = { Tools: {}, Lab: {} };
+
+  toolsRegistry.forEach((cat, i) => utilitiesCache.Tools[cat] = toolsRaw[i] || []);
+  labRegistry.forEach((cat, i) => utilitiesCache.Lab[cat] = labRaw[i] || []);
+
+  // Re-render current view deterministically
+  const tabId = uiState.utilities.activeUtilityTabId || "tab-tools";
+  await setUtilitySubtabs();
+  await switchUtilityTab(tabId);
+
+} // end refreshUtilitiesFromManifestEdit
 
 
 

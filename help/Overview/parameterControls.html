@@ -1,0 +1,415 @@
+```html
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Help Treatise — parameterControls.js (Normalized Control Data + Action-Panel Renderer)</title>
+
+  <link rel="stylesheet" href="help_treatise.css" />
+</head>
+
+<body>
+
+  <h1>parameterControls.js — Normalized Parameter Controls (Data First, DOM Second)</h1>
+
+  <p>
+    This page is intentionally “raw help HTML”: it is written as a single self-contained page
+    so you can drop it into your help system as-is, and/or split it later into smaller pages.
+    The discussion is based on one file:
+  </p>
+
+  <ul>
+    <li><span class="mono">ui/parameterControls.js</span></li>
+  </ul>
+
+  <div class="note">
+    <b>Scope of this treatise</b><br/>
+    1) The core concept: controls are built as normalized data, then rendered into a tab’s Action area.<br/>
+    2) What “sourceInfo” must contain for Draw vs Scripts environments.<br/>
+    3) The rendering contract: writes only into <span class="mono">#action</span> and is a destructive rebuild.<br/>
+    4) A brief, practical description of each control widget (range, checkbox, select, color, point pickers, radio, button, staticText, hidden).
+  </div>
+
+
+  <h2>1. What this file is in the Sketchpad architecture</h2>
+
+  <p>
+    Sketchpad has a single, recurring requirement across multiple tabs:
+    “Given a parameter schema and current values, show controls in the left Action panel,
+    and when a control changes, update parameters and redraw.”
+  </p>
+
+  <p>
+    <span class="mono">parameterControls.js</span> is the shared implementation of that idea.
+    It deliberately splits the problem into two phases:
+  </p>
+
+  <ol>
+    <li><b>Build phase (data-only)</b>:
+      Create a normalized <i>control-data array</i> describing controls in a uniform shape.</li>
+    <li><b>Render phase (DOM)</b>:
+      Use that normalized array to build DOM controls inside the current tab’s <span class="mono">#action</span> region.</li>
+  </ol>
+
+  <div class="ok">
+    <b>Key architectural value</b><br/>
+    Tabs can share one renderer because the input is normalized:
+    the renderer does not need to know whether the schema came from Draw registry entries or from scriptInfo objects.
+  </div>
+
+
+  <h2>2. The high-level entry point: buildParameterControls()</h2>
+
+  <p>
+    The public entry point is:
+  </p>
+
+  <pre><code>buildParameterControls(sourceInfo, targetTabId = "tab-generic", render = true)</code></pre>
+
+  <p>
+    It selects an “environment” by inspecting <span class="mono">targetTabId</span> prefixes:
+  </p>
+
+  <ul>
+    <li><span class="mono">targetTabId</span> starts with <span class="mono">tab-scripts</span>:
+      controls are extracted from a script descriptor object (Scripts/Tools environment).</li>
+    <li><span class="mono">targetTabId</span> starts with <span class="mono">tab-draw</span>:
+      controls are extracted from Draw tab state (Draw environment).</li>
+  </ul>
+
+  <p>
+    It always returns the normalized control-data array, and optionally renders it immediately.
+  </p>
+
+  <div class="note">
+    <b>Why render is optional</b><br/>
+    Rendering can be skipped so callers can inspect the normalized array,
+    test schemas, or reuse the same control definitions in another context.
+  </div>
+
+
+  <h2>3. Normalization: “control data” schema (the unified control descriptor)</h2>
+
+  <p>
+    Both builders (<span class="mono">buildDrawParameterData</span> and <span class="mono">buildScriptParameterData</span>)
+    produce the same kind of array:
+  </p>
+
+  <pre><code>[
+  {
+    key: "radius",
+    label: "Radius",
+    widget: "range",
+    min: 0,
+    max: 200,
+    step: 1,
+    options: null,
+    value: 120,
+    default: 100
+  },
+  ...
+]</code></pre>
+
+  <p>
+    This is the normalized shape the renderer depends on. The meaning of the key fields is:
+  </p>
+
+  <ul>
+    <li><span class="mono">key</span>: parameter identifier (the index into <span class="mono">info.parameters[key]</span>).</li>
+    <li><span class="mono">label</span>: UI label text.</li>
+    <li><span class="mono">widget</span>: which control renderer is used (range/checkbox/select/etc.).</li>
+    <li><span class="mono">min/max/step</span>: numeric constraints (where relevant).</li>
+    <li><span class="mono">options</span>: select/radio option list (where relevant).</li>
+    <li><span class="mono">value</span>: the current value to display in the UI.</li>
+    <li><span class="mono">default</span>: a reset baseline for future use (not always used directly).</li>
+  </ul>
+
+  <div class="warn">
+    <b>Button control special case</b><br/>
+    Buttons do not have a normal “value”. They need in-memory action metadata.
+    The normalization preserves <span class="mono">action</span> and optional <span class="mono">redraw</span> flags
+    so the renderer can build a working button.
+  </div>
+
+
+  <h2>4. Draw environment: buildDrawParameterData(tabState)</h2>
+
+  <p>
+    The Draw builder expects a “tabState-like” object. In your comments, this is the Draw tab’s uiState slice.
+    It uses:
+  </p>
+
+  <ul>
+    <li><span class="mono">tabState.drawRegistry</span> as the schema source</li>
+    <li><span class="mono">tabState.parameters</span> as the current value source</li>
+  </ul>
+
+  <p>
+    Schema selection rule:
+  </p>
+
+  <ul>
+    <li>Preferred: <span class="mono">drawRegistry.controls</span></li>
+    <li>Fallback: <span class="mono">drawRegistry.params</span></li>
+  </ul>
+
+  <p>
+    Value resolution rule:
+  </p>
+
+  <ol>
+    <li><span class="mono">tabState.parameters[key]</span> (current uiState value)</li>
+    <li><span class="mono">def.default</span> (schema default)</li>
+    <li>empty string</li>
+  </ol>
+
+  <div class="note">
+    <b>Meaning</b><br/>
+    The Draw builder is the bridge from “registry entry schema + uiState current values”
+    into the unified normalized control descriptor list.
+  </div>
+
+
+  <h2>5. Scripts environment: buildScriptParameterData(sourceInfo)</h2>
+
+  <p>
+    The Scripts builder expects a “script descriptor-like” object:
+  </p>
+
+  <ul>
+    <li><span class="mono">sourceInfo.controls</span> (schema)</li>
+    <li><span class="mono">sourceInfo.parameters</span> (current values)</li>
+  </ul>
+
+  <p>
+    It normalizes into the same control descriptor list, plus:
+  </p>
+
+  <ul>
+    <li>For <span class="mono">widget === "button"</span>, it preserves:
+      <span class="mono">item.action</span> and <span class="mono">item.redraw</span>.</li>
+  </ul>
+
+  <div class="ok">
+    <b>Key architectural value</b><br/>
+    This makes a script “feel” like a drawRegistry entry from the control system’s point of view.
+    Same widget vocabulary, same rendering pipeline, same handler shape.
+  </div>
+
+
+  <h2>6. Rendering contract: renderParameterControls()</h2>
+
+  <p>
+    The DOM renderer is:
+  </p>
+
+  <pre><code>renderParameterControls(sourceInfo, controlData, targetTabId = "tab-generic")</code></pre>
+
+  <p>
+    It has one hard DOM dependency:
+  </p>
+
+  <ul>
+    <li><span class="mono">#action</span> must exist (fail-fast if not).</li>
+  </ul>
+
+  <p>
+    It then performs a deterministic, destructive rebuild:
+  </p>
+
+  <ol>
+    <li>Clear <span class="mono">#action</span> completely.</li>
+    <li>Create <span class="mono">#drawControls</span> (historical id; means “parameter controls container”).</li>
+    <li>If there are no controls, write <span class="mono">(no parameters)</span>.</li>
+    <li>For each normalized item, call <span class="mono">buildSingleControl(...)</span> to create a field.</li>
+    <li>Skip null fields (hidden/suppressed controls).</li>
+  </ol>
+
+  <div class="warn">
+    <b>Important boundary</b><br/>
+    This renderer does not create tab structure. It assumes the tab already built its shell.
+    It only fills the Action panel for the active environment.
+  </div>
+
+
+  <h2>7. Event model: what a control does when it changes</h2>
+
+  <p>
+    Almost every interactive control follows the same runtime pattern:
+  </p>
+
+  <ol>
+    <li>Update the parameter model: <span class="mono">info.parameters[key] = newValue</span> (or update x/y for points).</li>
+    <li>If present, call <span class="mono">info.onParamChange()</span>.</li>
+    <li>Call <span class="mono">info.redrawHandler()</span>.</li>
+    <li>If <span class="mono">def.rebuildControls</span> is true, rebuild the Action panel controls from schema again.</li>
+  </ol>
+
+  <div class="note">
+    <b>Important nuance in your current code</b><br/>
+    Some control builders treat <span class="mono">onParamChange</span> as optional (scripts may omit it),
+    while others are strict (some builders enforce it). This reflects mixed “fail-fast vs compatibility”
+    decisions inside the file.
+  </div>
+
+
+  <h2>8. buildSingleControl(): widget dispatch table</h2>
+
+  <p>
+    <span class="mono">buildSingleControl(info, key, def, value, tabId)</span> is the widget switchboard.
+    It does three key things:
+  </p>
+
+  <ol>
+    <li>Suppress hidden controls (<span class="mono">widget === "hidden"</span>) by returning null.</li>
+    <li>Conditionally suppress <span class="mono">staticText</span> using <span class="mono">def.showKey</span>.</li>
+    <li>Dispatch to the correct setXControl() builder based on <span class="mono">def.widget</span>.</li>
+  </ol>
+
+  <div class="ok">
+    <b>Design intent</b><br/>
+    This is the single place where widget vocabulary is interpreted.
+    Adding a new control type is primarily “add a new switch case + implement setNewControl()”.
+  </div>
+
+
+  <h2>9. Brief per-control descriptions (what each widget means)</h2>
+
+  <p>
+    These are the control types shown in the pasted file, with a brief “what it is / what it does” description.
+  </p>
+
+  <h3>9.1 hidden</h3>
+  <ul>
+    <li>Renders nothing (returns null so it does not consume space).</li>
+    <li>Used to keep a key conceptually in the schema without showing it in the Action panel.</li>
+    <li>In your current implementation, it does not mutate <span class="mono">info.parameters</span>; the caller/registry owns that.</li>
+  </ul>
+
+  <h3>9.2 range</h3>
+  <ul>
+    <li>Standard slider with a min/readout/max row.</li>
+    <li>On input: updates numeric value, updates readout, triggers redraw, optionally rebuilds controls.</li>
+    <li>Compatible with scripts that may not implement <span class="mono">onParamChange</span>.</li>
+  </ul>
+
+  <h3>9.3 rangeHeader</h3>
+  <ul>
+    <li>Alternate slider layout: header line “Label: value” with slider below; no min/max/readout row.</li>
+    <li>Designed to match a specific “reference UI” style.</li>
+    <li>More strict about required fields (explicit fail-fast checks in the function).</li>
+  </ul>
+
+  <h3>9.4 checkbox</h3>
+  <ul>
+    <li>Boolean toggle.</li>
+    <li>On change: stores true/false, triggers redraw, optional <span class="mono">onParamChange</span>.</li>
+  </ul>
+
+  <h3>9.5 select</h3>
+  <ul>
+    <li>Dropdown list driven by <span class="mono">def.options</span>.</li>
+    <li>Supports options as strings or objects { value, label }.</li>
+    <li>On change: stores the selected value; attempts to convert numeric strings back to numbers.</li>
+  </ul>
+
+  <h3>9.6 color / colorPicker</h3>
+  <ul>
+    <li>HTML color input (<span class="mono">&lt;input type="color"&gt;</span>).</li>
+    <li>On input: stores hex string and triggers redraw.</li>
+  </ul>
+
+  <h3>9.7 text (default control)</h3>
+  <ul>
+    <li>Fallback input control when widget is unknown or explicitly “text”.</li>
+    <li>Uses <span class="mono">def.type</span> to choose input type (text/number/etc.).</li>
+    <li>On input: stores the new value; numbers are parsed as floats.</li>
+  </ul>
+
+  <h3>9.8 staticText</h3>
+  <ul>
+    <li>Display-only block of text; does not update parameters and does not redraw.</li>
+    <li>Text source: either <span class="mono">def.text</span> string or <span class="mono">def.getText(info, key, def)</span>.</li>
+    <li>Can be conditionally hidden using <span class="mono">def.showKey</span> (suppressed by returning null).</li>
+  </ul>
+
+  <h3>9.9 button</h3>
+  <ul>
+    <li>Invokes an action rather than storing a value.</li>
+    <li>Action resolution supports:
+      (A) <span class="mono">def.action</span> is a function, or
+      (B) <span class="mono">def.action</span> is a string resolved via <span class="mono">info.actions[def.action]</span>.</li>
+    <li>Optional <span class="mono">def.redraw === true</span> triggers redraw after the action.</li>
+    <li>Layout supports column-2 placement or full-row centering via <span class="mono">def.fullRow</span>.</li>
+  </ul>
+
+  <h3>9.10 radio</h3>
+  <ul>
+    <li>Mutually exclusive option group (exactly one selection).</li>
+    <li>Driven by <span class="mono">def.options</span> (strings or { value, label }).</li>
+    <li>On change: updates <span class="mono">info.parameters[key]</span>, triggers redraw, optional control rebuild.</li>
+  </ul>
+
+  <h3>9.11 pointPicker</h3>
+  <ul>
+    <li>Controls a single point object {x, y} by dragging a dot on the interaction overlay layer.</li>
+    <li>Shows a read-only text readout (“x, y”) in the Action panel.</li>
+    <li>Dot is created under the canvas interaction overlay so it sits above the drawing.</li>
+    <li>On drag: updates x/y, calls <span class="mono">onParamChange</span> if present, triggers redraw.</li>
+    <li>Includes explicit dot cleanup logic to prevent duplicates on panel rebuild.</li>
+  </ul>
+
+  <h3>9.12 pointPickerArray</h3>
+  <ul>
+    <li>Controls an array of points by drawing N draggable dots on the interaction overlay layer.</li>
+    <li>Optionally suppresses readouts (dots-only mode) via <span class="mono">def.noReadout</span>.</li>
+    <li>Includes cleanup using a dot id prefix so dots do not accumulate across rebuilds for this key.</li>
+    <li>Uses a drag model similar to the single picker, but the pasted version installs some window listeners per dot.</li>
+  </ul>
+
+
+  <h2>10. How overlayManager participates</h2>
+
+  <p>
+    This file imports:
+  </p>
+
+  <pre><code>import { overlayManager } from "./overlay.js";</code></pre>
+
+  <p>
+    The point pickers use the interaction overlay layer as the dot container:
+  </p>
+
+  <ul>
+    <li><span class="mono">overlayManager.canvasLayers["interaction"]</span> is where dots are appended.</li>
+    <li>The dots are positioned absolutely, using pixel coordinates in the canvas coordinate system.</li>
+  </ul>
+
+  <div class="ok">
+    <b>Conceptual fit</b><br/>
+    The Action panel shows control UI. The canvas overlay shows interactive handles.
+    The two are connected by a shared parameters model and redraw handler.
+  </div>
+
+
+  <h2>11. Summary checklist</h2>
+
+  <ul>
+    <li><b>Two-phase design</b>: build normalized control data first; render into DOM second.</li>
+    <li><b>Environment selection</b>: Draw vs Scripts is selected by <span class="mono">targetTabId</span> prefix.</li>
+    <li><b>One rendering target</b>: writes only into <span class="mono">#action</span>; destructive rebuild.</li>
+    <li><b>Unified widget vocabulary</b>: range, checkbox, select, color, radio, button, staticText, hidden, point pickers.</li>
+    <li><b>Event loop</b>: update parameters → optional onParamChange → redrawHandler → optional rebuildControls.</li>
+    <li><b>Overlay integration</b>: point pickers draw draggable dots on the interaction overlay layer.</li>
+  </ul>
+
+  <div class="hr"></div>
+
+  <p class="small">
+    End of treatise.
+  </p>
+
+</body>
+</html>
+```

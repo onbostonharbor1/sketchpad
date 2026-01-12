@@ -14,12 +14,10 @@ import { getPatternsCaptionMenuItems } from "./patternsMenuCmds.js";
 import { renderCategories }     from "./categories.js";
 import { setCaptionBar }        from "./caption.js";
 import { menuManager }          from "./menuManager.js";
-import { editPatternItemTitle, addPatternThumbnail }
-                                from "./patternsMenuCmds.js";
+
 import { loadScriptModule, executeScriptToCanvas }
                                 from "./scriptRunner.js";
 import {
-  showScriptOffcanvas,
   renderThumbnailGrid,
   buildCategoryDescriptor,
   markSelectedThumbnail,
@@ -27,7 +25,7 @@ import {
   setCommandsButton,
   showCommandsOffcanvas
 } from "./ui_utilities.js";
-
+import { showScriptOffcanvas } from "./menuCmds.js";
 import { manifest }            from "./manifest.js";
 
 /* ============================================================
@@ -67,9 +65,9 @@ export const PatternsController = {
   showCategoryList,
   showSelectedPattern,
   onPrev,
-  onNext,
-  buildPatternsMenuItems
+  onNext
 }; // end PatternsController
+
 
 /* ============================================================
    ensurePatternsManifestLoaded()
@@ -268,11 +266,7 @@ async function restorePatternsTab() {
   );
 } // end restorePatternsTab
 
-/* ============================================================
-   updatePatternsCaption(category, item, filename, helpKey, scriptPath)
-   ------------------------------------------------------------
-   Title rule: "{category}: {title}"
-=========================================================== */
+
 /* ============================================================
    updatePatternsCaption(category, item, filename, helpKey, scriptPath)
    ------------------------------------------------------------
@@ -297,16 +291,34 @@ function updatePatternsCaption(category, item, filename, helpKey, scriptPath) {
     onPrev: () => onPrev(),
     onNext: () => onNext(),
     onMenu: async (anchor) => {
-      const menuItems = await getPatternsCaptionMenuItems(
-        "patterns",
-        helpKey,
-        scriptPath
-      );
+
+      // Home-style single context bundle
+      const info = {
+        tabName: "patterns",
+
+        manifestPath: "/patterns/" + category + "/manifest.json",
+
+        matchField: "filename",
+        matchValue: String(filename),
+
+        category: category,
+        filename: String(filename),
+        title: String(item.title || ""),
+        file: String(filename),
+
+        isScript: true,
+        scriptPath: String(scriptPath),
+        helpKey: String(helpKey)
+      };
+
+      const menuItems = await getPatternsCaptionMenuItems(info);
       menuManager.open(menuItems, anchor);
+
     }
   });
 
 } // end updatePatternsCaption
+
 
 
 /* ============================================================
@@ -582,50 +594,6 @@ function onNext() {
   showSelectedPattern(category, newIndex);
 } // end onNext
 
-/* ============================================================
-   buildPatternsMenuItems()
-   ------------------------------------------------------------
-   Delegates to menuManager for Help.
-=========================================================== */
-async function buildPatternsMenuItems(tabName, helpKey, scriptPath) {
-  const items = [];
-
-  // HELP
-  const helpItem = await menuManager.buildHelpItem(tabName, helpKey);
-  items.push(helpItem);
-
-  // SHOW SCRIPT
-  if (scriptPath) {
-    items.push({
-      label: "Show Script",
-      onClick: () => showScriptOffcanvas(scriptPath, helpKey)
-    });
-  } else {
-    items.push({
-      label: "Show Script",
-      disabled: true,
-      onClick: () => {}
-    });
-  }
-
-  // ADD THUMBNAIL
-  items.push({
-    label: "Add Thumbnail",
-    onClick: async () => {
-      await addPatternThumbnail();
-    }
-  });
-
-  // EDIT MANIFEST TITLE
-  items.push({
-    label: "Edit Manifest Title",
-    onClick: () => {
-      editPatternItemTitle();
-    }
-  });
-
-  return items;
-} // end buildPatternsMenuItems
 
 
 /* ============================================================
