@@ -17,6 +17,8 @@ import { initOverlay }      from "./overlay.js";
 import { uiState }          from "./uiState.js";
 
 const START = "START_APP";
+const LAST_TAB_KEY = "sketchpad.lastActiveTab"; // end LAST_TAB_KEY
+
 /* ============================================================
    Tab Registry
    All TabSpec objects must be registered here.
@@ -164,10 +166,12 @@ function activateTab(tab) {
 } // end activateTab
 
 
+
+
 /* ============================================================
    setUI(tabName)
    PUBLIC ENTRY: All tab switches call this.
-=========================================================== */
+============================================================ */
 export function setUI(tab) {
 
   let tabName;
@@ -201,6 +205,13 @@ export function setUI(tab) {
   }
 
   // ----------------------------------------------------------
+  // Persist last active tab so a Vite full reload returns here.
+  // ----------------------------------------------------------
+  if (uiState.activeTab) {
+    localStorage.setItem(LAST_TAB_KEY, uiState.activeTab);
+  }
+
+  // ----------------------------------------------------------
   // Consume launch intent (Home → Draw, etc.)
   // ----------------------------------------------------------
   if (!uiState.launch) return;
@@ -221,6 +232,7 @@ export function setUI(tab) {
   setUI(targetTab);
 
 } // end setUI
+
 
 
 
@@ -253,8 +265,16 @@ function onDomContentLoaded() {
       handleTabChange(btn.id);
     });
   });
+  // If Vite forced a full reload (because a manifest was edited),
+  // resume the last active tab instead of always starting at Home.
+  const lastTab = localStorage.getItem(LAST_TAB_KEY);
 
-  setUI(START); // Initial activation
+  if (lastTab && TabRegistry[lastTab]) {
+    setUI(lastTab);
+  } else {
+    setUI(START);
+  }
+
 } // end onDomContentLoaded
 
 

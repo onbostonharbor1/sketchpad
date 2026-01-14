@@ -107,8 +107,8 @@ case "manifestMaintenance":
     case "readLogFile":
       return await readLogFile(payload);
 
-    case "archivePatternItem":
-      return await archivePatternItem(payload);
+    case "archiveItem":
+      return await archiveItem(payload);
 
 
     default:
@@ -1825,94 +1825,122 @@ function writeHomeManifest(homeOut) {
 
 } // end writeHomeManifest
 
-
 /* ============================================================
-   archivePatternItem(args)
-   ------------------------------------------------------------
-   Args:
-     - category (string)  e.g. "circles"
-     - filename (string)  e.g. "foo"   (NO .js)
-     - manifestPath (string) e.g. "/patterns/circles/manifest.json"
+   TASK: archiveItem  (GENERIC)
+
+   Payload:
+     {
+       manifestPath : "/patterns/<cat>/manifest.json"
+                  OR "/gallery/<Domain>/<cat>/manifest.json"
+                  OR "/gallery/Scripts/<cat>/manifest.json"
+                  OR "/utilities/<domain>/<cat>/manifest.json",
+       filename     : "<full filename including extension>"
+                    // examples: "foo.js", "IMG_9649.PNG", "316 - Copy.js"
+     }
 
    Behavior:
-     - ensure ./patterns/<category>/archive exists
-     - move ./patterns/<category>/<filename>.js
-       to  ./patterns/<category>/archive/<filename>.js
-     - remove manifest entry whose entry.filename === filename
+     - resolve manifestPath safely inside allowed roots
+     - baseDir = directory containing manifest.json
+     - move baseDir/<filename>  ->  baseDir/archive/<filename>
+     - remove manifest entry matching either:
+         entry.path basename === filename
+         OR entry.filename      === baseName(filename)
 =========================================================== */
-async function archivePatternItem(args) {
+async function archiveItem(payload) {
 
-  if (!args) throw new Error("archivePatternItem: args missing");
+  if (!payload) throw new Error("archiveItem: payload missing");
 
-  const category = String(args.category || "");
-  const filename = String(args.filename || "");
-  const manifestPathArg = String(args.manifestPath || "");
+  const manifestPathInput = payload.manifestPath;
+  const filename          = payload.filename;
 
-  if (!category) throw new Error("archivePatternItem: category missing");
-  if (!filename) throw new Error("archivePatternItem: filename missing");
-  if (!manifestPathArg) throw new Error("archivePatternItem: manifestPath missing");
-
-  // Convert "/patterns/..." to disk path "./patterns/..."
-  const manifestDiskPath = path.resolve("." + manifestPathArg);
-
-  const srcScript = path.resolve("./patterns", category, filename + ".js");
-  const dstDir    = path.resolve("./patterns", category, "archive");
-  const dstScript = path.resolve(dstDir, filename + ".js");
-
-  // Ensure source exists
-  if (!fs.existsSync(srcScript)) {
-    throw new Error("archivePatternItem: source script not found: " + srcScript);
+  if (typeof manifestPathInput !== "string" || manifestPathInput.trim() === "") {
+    throw new Error("archiveItem: manifestPath missing");
   }
 
-  // Ensure archive dir exists
-  if (!fs.existsSync(dstDir)) {
-    fs.mkdirSync(dstDir, { recursive: true });
+  if (typeof filename !== "string" || filename.trim() === "") {
+    throw new Error("archiveItem: filename missing");
   }
 
-  // Move the script
-  fs.renameSync(srcScript, dstScript);
+  const patternsRoot  = path.resolve("./patterns");
+  const galleryRoot   = path.resolve("./gallery");
+  const utilitiesRoot = path.resolve("./utilities");
 
-  // Read + update manifest.json (must be an array)
-  if (!fs.existsSync(manifestDiskPath)) {
-    throw new Error("archivePatternItem: manifest not found: " + manifestDiskPath);
+  const manifestAbs = resolveManifestPathAllowed(
+    [patternsRoot, galleryRoot, utilitiesRoot],
+    manifestPathInput,
+    "archiveItem"
+  );
+
+  const manifestDir = path.dirname(manifestAbs);
+
+  // Source file is EXACTLY what the caller sent (full filename + ext).
+  const srcAbs = path.join(manifestDir, filename);
+
+  if (!fs.existsSync(srcAbs)) {
+    throw new Error("archiveItem: source file not found: " + srcAbs);
   }
 
-  const text = fs.readFileSync(manifestDiskPath, "utf8");
-  let list = null;
-
-  try {
-    list = JSON.parse(text);
-  } catch (err) {
-    throw new Error("archivePatternItem: manifest JSON parse failed: " + manifestDiskPath);
+  const archiveDirAbs = path.join(manifestDir, "archive");
+  if (!fs.existsSync(archiveDirAbs)) {
+    fs.mkdirSync(archiveDirAbs, { recursive: true });
   }
+
+  const destAbs = path.join(archiveDirAbs, filename);
+
+  fs.renameSync(srcAbs, destAbs);
+
+  // Update manifest: remove matching entry.
+  const raw  = fs.readFileSync(manifestAbs, "utf8");
+  const list = JSON.parse(raw);
 
   if (!Array.isArray(list)) {
-    throw new Error("archivePatternItem: manifest must be an array: " + manifestDiskPath);
+    throw new Error("archiveItem: manifest is not an array: " + manifestAbs);
   }
 
-  const beforeLen = list.length;
+  const wantBase = path.parse(filename).name;
 
-  list = list.filter((entry) => {
-    if (!entry) return true;
-    return String(entry.filename || "") !== filename;
+  const before = list.length;
+
+  const afterList = list.filter((e) => {
+    if (!e || typeof e !== "object") return true;
+
+    const entryPath = (typeof e.path === "string") ? e.path : "";
+    const entryFile = (typeof e.filename === "string") ? e.filename : "";
+
+    // Match either:
+    //   - entry.path basename equals the full filename (incl ext)
+    //   - entry.filename equals the base name (no ext)
+    const pathBase = entryPath ? path.posix.basename(entryPath.replace(/\\/g, "/")) : "";
+
+    if (pathBase && pathBase === filename) return false;
+    if (entryFile && entryFile === wantBase) return false;
+
+    return true;
   });
 
-  const afterLen = list.length;
-
-  if (afterLen === beforeLen) {
-    // Script moved but manifest did not contain it: fail-fast so you notice.
-    throw new Error("archivePatternItem: manifest entry not found for filename: " + filename);
+  if (afterList.length === before) {
+    throw new Error("archiveItem: no manifest entry matched filename: " + filename);
   }
 
-  fs.writeFileSync(manifestDiskPath, JSON.stringify(list, null, 2) + "\n", "utf8");
+  fs.writeFileSync(
+    manifestAbs,
+    JSON.stringify(afterList, null, 2) + "\n",
+    "utf8"
+  );
 
   return {
+    request: "archiveItem",
     status: "ok",
-    movedFrom: srcScript,
-    movedTo: dstScript,
-    manifestPath: manifestDiskPath,
-    removedCount: beforeLen - afterLen
+    manifestPath: manifestPathInput,
+    filename
   };
 
-} // end archivePatternItem
+} // end archiveItem
+
+
+
+
+
+
+
 

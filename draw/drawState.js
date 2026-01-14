@@ -28,7 +28,6 @@ export function resetCanvas() {
 
 
 (function setupCanvas() {
-  console.count("setupCanvas"); // TEMP
 
   const CANVAS_ID = "sharedCanvas";
   const canvasHostId = "sketchpad";

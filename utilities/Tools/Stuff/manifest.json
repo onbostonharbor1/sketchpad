@@ -1,5 +1,17 @@
 [
-    { "filename": "getLineEquation", "path": "getLineEquation.js", "title": "Get Equation of Line" },
-    { "filename": "ShowLogs",        "path": "showLogs.js",        "title": "Show Logs" },
-    { "filename": "inchesToPixels",  "path": "inchesToPixels.js",  "title": "Inches To Pixels" }
+  {
+    "filename": "getLineEquation",
+    "path": "getLineEquation.js",
+    "title": "Get Equation of Line"
+  },
+  {
+    "filename": "inchesToPixels",
+    "path": "inchesToPixels.js",
+    "title": "Inches To Pixels"
+  },
+  {
+    "filename": "ShowLogs",
+    "path": "showLogs.js",
+    "title": "Show Logs"
+  }
 ]

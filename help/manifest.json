@@ -1,4 +1,25 @@
 {
+  "Overview": [
+    "actionRegistry",
+    "caption",
+    "categories",
+    "draw",
+    "fileLayer",
+    "gallery",
+    "home",
+    "manifest",
+    "menuManager",
+    "nodeLayer",
+    "overlay",
+    "parameterControls",
+    "patterns",
+    "scriptRunner",
+    "setUI",
+    "uiState",
+    "ui_callbacks",
+    "ui_utilities",
+    "utilities"
+  ],
   "draw": [
     "inEllipse",
     "inverseStar"

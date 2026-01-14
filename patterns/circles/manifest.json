@@ -1,18 +1,28 @@
 [
   {
+    "filename": "armsInCircles",
+    "path": "armsInCircles.js",
+    "title": "Arms In Circles"
+  },
+  {
     "filename": "circle",
     "path": "circle.js",
     "title": "Circle: FULL"
   },
   {
-    "filename": "ellipseFull",
-    "path": "ellipseFull.js",
-    "title": "Ellipse: FULL"
+    "filename": "cycloid",
+    "path": "cycloid.js",
+    "title": "Cycloid (one node)"
   },
   {
     "filename": "ellipseEndTaper",
     "path": "ellipseEndTaper.js",
     "title": "Ellipse: END_TAPER"
+  },
+  {
+    "filename": "ellipseFull",
+    "path": "ellipseFull.js",
+    "title": "Ellipse: FULL"
   },
   {
     "filename": "ellipseStartEnd",
@@ -30,31 +40,6 @@
     "title": "Ellipse: TAPER"
   },
   {
-    "filename": "skippingPositive",
-    "path": "skippingPositive.js",
-    "title": "Skipping Positive"
-  },
-  {
-    "filename": "skippingNegative",
-    "path": "skippingNegative.js",
-    "title": "Skipping Negative"
-  },
-  {
-    "filename": "cycloid",
-    "path": "cycloid.js",
-    "title": "Cycloid (one node)"
-  },
-  {
-    "filename": "twoEllipses",
-    "path": "twoEllipses.js",
-    "title": "Two Ellipses"
-  },
-  {
-    "filename": "armsInCircles",
-    "path": "armsInCircles.js",
-    "title": "Arms In Circles"
-  },
-  {
     "filename": "gradientCircularParabola",
     "path": "gradientCircularParabola.js",
     "title": "Gradient Circular Parabola"
@@ -65,19 +50,28 @@
     "title": "Lines In Three Circles"
   },
   {
+    "filename": "skippingNegative",
+    "path": "skippingNegative.js",
+    "title": "Skipping Negative"
+  },
+  {
+    "filename": "skippingPositive",
+    "path": "skippingPositive.js",
+    "title": "Skipping Positive"
+  },
+  {
     "filename": "threeEllipses",
     "path": "threeEllipses.js",
     "title": "Three Within Ellipse"
   },
   {
+    "filename": "twoEllipses",
+    "path": "twoEllipses.js",
+    "title": "Two Ellipses"
+  },
+  {
     "filename": "whirlsInCircle",
     "path": "whirlsInCircle.js",
     "title": "Whirls In Circle"
-  },
-  {
-    "filename": "copy1 armsInCircles - Copy (3)",
-    "path": "copy1 armsInCircles - Copy (3).js",
-    "title": "copy1 armsInCircles - Copy (3).js",
-    "status": "new"
   }
 ]

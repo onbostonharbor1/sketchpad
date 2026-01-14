@@ -1,16 +1,8 @@
 /* gallery.js
    ------------------------------------------------------------
-   Gallery Tab — Architectural Change 1
+   Gallery Tab
    ------------------------------------------------------------
-   New rules:
-     1) Fixed subtabs: Ideabook, Patterns, Scripts
-     2) One shared Results tab (spawned once and reused)
-     3) Only ONE remembered results context in uiState.gallery.saved
-     4) Caption title is "{category}: {title}" (Scripts uses "Scripts: {title}")
-     5) Category frames still built exactly the same way (renderCategories)
-   ------------------------------------------------------------ */
-
-   // ADD to imports at top of gallery.js
+*/
 
 import { nodeRebuildAndValidateManifests } from "./nodeLayer.js";
 import { renderCategories }       from "./categories.js";
@@ -970,22 +962,26 @@ async function showNextGalleryItem(domain) {
 
 
 
+
 /* ============================================================
    updateGalleryCaption(domain, categoryLabel)
-   ------------------------------------------------------------
-   Title rule (your Change 1): "{category}: {title}"
-   For Scripts too, categoryLabel is the Scripts category name.
+
 ============================================================ */
 export function updateGalleryCaption(domain, categoryLabel) {
 
   const item = uiState.gallery.activeItem;
-  if (!item) throw new Error("updateGalleryCaption: uiState.gallery.activeItem missing");
+  if (!item) {
+    throw new Error("updateGalleryCaption: uiState.gallery.activeItem missing");
+  }
 
   if (typeof categoryLabel !== "string" || categoryLabel.trim() === "") {
     throw new Error("updateGalleryCaption: categoryLabel missing");
   }
 
-  const rawTitle = item.title || item.filename || "(untitled)";
+  const isScript = (domain === DOMAIN_SCRIPTS);
+
+  // Title shown in caption bar
+  const rawTitle = item.title || item.filename || item.path || "(untitled)";
   const title = categoryLabel + ": " + rawTitle;
 
   const onPrev = () => showPrevGalleryItem(domain);
@@ -997,41 +993,40 @@ export function updateGalleryCaption(domain, categoryLabel) {
       throw new Error("updateGalleryCaption: currentCategory missing");
     }
 
-    // Build a menu-info object for ALL domains (Ideabook/Patterns/Scripts)
-    const isScript = (domain === DOMAIN_SCRIPTS);
+    // 🔑 FIX: always use canonical manifest identity
+    // Scripts → entry.path
+    // Images  → normalized entry.path
+    const fileId = isScript
+      ? String(item.path)
+      : String(normalizeGalleryEntryPath(currentCategory, item));
+
+    if (!fileId || !fileId.includes(".")) {
+      throw new Error("updateGalleryCaption: invalid fileId: " + fileId);
+    }
 
     const info = {
-      // Help is optional; include it if you have gallery help files.
-      // Use any scheme you want; this one is consistent and stable.
-      helpKey: `${domain}/${currentCategory}/${item.filename || item.path || "(unknown)"}`,
+      domain: domain,
+      category: currentCategory,
 
-      // Show Script (enabled only for Scripts)
+      manifestPath: `/gallery/${domain}/${currentCategory}/manifest.json`,
+      matchField: "path",
+      matchValue: fileId,
+
+      filename: fileId,   // passed through verbatim
+      title: item.title || "",
+      status: item.status || "",
+
       isScript: isScript,
       scriptPath: isScript
-        ? `/gallery/Scripts/${currentCategory}/${item.filename}`
+        ? `/gallery/Scripts/${currentCategory}/${fileId}`
         : "",
 
-      // Edit Manifest (per-category manifest model)
-      manifestPath: `/gallery/${domain}/${currentCategory}/manifest.json`,
-      matchField: "filename",
-      matchValue: String(item.filename),
-
-      // Labels / defaults shown in the dialog
-      filename: item.filename,
-      title: item.title || "",
-      status: item.status || ""
+      helpKey: `${domain}/${currentCategory}/${fileId}`
     };
 
     const menuItems = await getGalleryCaptionMenuItems(info);
     menuManager.open(menuItems, anchor);
-
-  }; // end onMenu
-
-
-
-  const captionDiv = document.getElementById("caption");
-  if (!captionDiv) throw new Error("updateGalleryCaption: #caption missing");
-  captionDiv.innerHTML = "";
+  };
 
   setCaptionBar({
     targetId: "caption",
@@ -1042,6 +1037,10 @@ export function updateGalleryCaption(domain, categoryLabel) {
   });
 
 } // end updateGalleryCaption
+
+
+
+
 
 function buildGalleryOffcanvasHtml() {
 

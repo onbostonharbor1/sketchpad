@@ -321,9 +321,59 @@ input.ctrl-text[type="text"] {
   margin-bottom: 12px;
 } /* end .cmdButtonRow */
 
+/* ===========================================================
+   Accordion list styling (parameterControls accordion widget)
+   -----------------------------------------------------------
+   Goals:
+     1) tighten spacing before/after each item
+     2) use a dark brown theme color for the accordion header
+     3) header title in bold white
+=========================================================== */
 
+/* Tighten the overall accordion body padding */
+.ctrl-accordion-wrap .accordion-body {
+  padding: 6px 10px;
+}
 
+/* Dark brown header + bold white title */
+.ctrl-accordion-wrap .accordion-button {
+  background-color: var(--utilities-dark, var(--theme-base));
+  color: #fff;
+  font-weight: 700;
+  padding: 10px 14px;
+}
 
+/* Keep header dark even when collapsed (Bootstrap sometimes changes it) */
+.ctrl-accordion-wrap .accordion-button.collapsed {
+  background-color: var(--utilities-dark, var(--theme-base));
+  color: #fff;
+}
 
+/* Remove the default focus ring glow (optional) */
+.ctrl-accordion-wrap .accordion-button:focus {
+  box-shadow: none;
+}
 
+/* Tight list layout */
+.ctrl-accordion-list {
+  margin: 0;
+  padding: 0;
+}
 
+/* Tighten item vertical spacing */
+.ctrl-accordion-item {
+  padding: 6px 0;
+  margin: 0;
+  line-height: 1.1;
+}
+
+/* Tight separators */
+.ctrl-accordion-sep {
+  margin: 4px 0;
+  opacity: 0.35;
+}
+
+/* Optional hover affordance (subtle) */
+.ctrl-accordion-item:hover {
+  text-decoration: underline;
+}

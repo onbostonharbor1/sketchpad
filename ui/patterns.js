@@ -1,6 +1,6 @@
 /* patterns.js
    ------------------------------------------------------------
-   Patterns Tab — New Architecture (Cold Init + Restore Model)
+   Patterns Tab
    ------------------------------------------------------------
    New structure:
      • initPatternsTab(restoredFlag)  → cold-start only
@@ -272,7 +272,7 @@ async function restorePatternsTab() {
    ------------------------------------------------------------
    Title rule: "{category}: {title}"
 =========================================================== */
-function updatePatternsCaption(category, item, filename, helpKey, scriptPath) {
+function updatePatternsCaption(category, item, helpKey) {
 
   if (typeof category !== "string" || category.trim() === "") {
     throw new Error("updatePatternsCaption: category missing");
@@ -282,42 +282,52 @@ function updatePatternsCaption(category, item, filename, helpKey, scriptPath) {
     throw new Error("updatePatternsCaption: item missing");
   }
 
-  const rawTitle = item.title || filename || "(untitled)";
+  if (typeof item.path !== "string" || item.path.trim() === "") {
+    throw new Error("updatePatternsCaption: item.path missing");
+  }
+
+  // item.path is authoritative and INCLUDES extension
+  const fullFilename = item.path.split("/").pop();
+
+  const rawTitle = item.title || fullFilename || "(untitled)";
   const title = category + ": " + rawTitle;
 
   setCaptionBar({
     targetId: "caption",
-    title: title,
+    title,
+
     onPrev: () => onPrev(),
     onNext: () => onNext(),
+
     onMenu: async (anchor) => {
 
-      // Home-style single context bundle
       const info = {
-        tabName: "patterns",
-
-        manifestPath: "/patterns/" + category + "/manifest.json",
-
-        matchField: "filename",
-        matchValue: String(filename),
-
+        // REQUIRED
+        manifestPath: `/patterns/${category}/manifest.json`,
+        filename: fullFilename,
         category: category,
-        filename: String(filename),
-        title: String(item.title || ""),
-        file: String(filename),
 
-        isScript: true,
-        scriptPath: String(scriptPath),
-        helpKey: String(helpKey)
+        // Manifest editing
+        matchField: "path",
+        matchValue: item.path,
+
+        title: String(item.title || ""),
+        status: String(item.status || ""),
+
+        // Script-related (only used if applicable)
+        isScript: fullFilename.toLowerCase().endsWith(".js"),
+        scriptPath: `/patterns/${category}/${fullFilename}`,
+        helpKey: helpKey
       };
 
       const menuItems = await getPatternsCaptionMenuItems(info);
       menuManager.open(menuItems, anchor);
-
     }
   });
 
 } // end updatePatternsCaption
+
+
 
 
 
@@ -508,7 +518,7 @@ async function showSelectedPattern(category, index) {
   }
 
   const filename   = item.filename;
-  const scriptPath = `../patterns/${category}/${filename}.js`;
+  const scriptPath = `/patterns/${category}/${filename}.js`;
   const helpKey    = `${category}/${filename}`;
 
   // Load and execute pattern script

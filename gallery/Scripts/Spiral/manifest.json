@@ -1,12 +1,12 @@
 [
   {
-    "filename": "nautilus2",
-    "path":     "nautilus2.js",
-      "title":    "Nautilus (interactive) detailed"
-  },
-  {
     "filename": "nautilusInteractive",
     "path": "nautilusInteractive.js",
     "title": "Nautilus (interactive)"
+  },
+  {
+    "filename": "nautilus2",
+    "path": "nautilus2.js",
+    "title": "Nautilus (interactive) detailed"
   }
 ]

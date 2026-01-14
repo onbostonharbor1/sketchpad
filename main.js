@@ -29,6 +29,7 @@ import "./drawRegistry/linkedCircles.js";
 import "./drawRegistry/mysticRose.js";
 import "./drawRegistry/mysticRoseEllipse.js";
 import "./drawRegistry/parabola.js";
+import "./drawRegistry/parametrics.js";
 import "./drawRegistry/radiate.js";
 import "./drawRegistry/regularPolygon.js";
 import "./drawRegistry/bird.js";

@@ -5,8 +5,28 @@
     "title": "10 Circles"
   },
   {
+    "filename": "polar7",
+    "path": "polar7.js",
+    "title": "10 Circles"
+  },
+  {
+    "filename": "polar8",
+    "path": "polar8.js",
+    "title": "12 Circles"
+  },
+  {
+    "filename": "polar9",
+    "path": "polar9.js",
+    "title": "14 Circles"
+  },
+  {
     "filename": "polar10",
     "path": "polar10.js",
+    "title": "16 Circles"
+  },
+  {
+    "filename": "polar6",
+    "path": "polar6.js",
     "title": "16 Circles"
   },
   {
@@ -20,29 +40,19 @@
     "title": "24 Circles"
   },
   {
-    "filename": "polar13",
-    "path": "polar13.js",
-    "title": "Few big circles, 4 inner loops"
-  },
-  {
-    "filename": "polar14",
-    "path": "polar14.js",
-    "title": "Heart-like (simple)"
-  },
-  {
-    "filename": "polar15",
-    "path": "polar15.js",
-    "title": "Many Circles"
-  },
-  {
-    "filename": "polar16",
-    "path": "polar16.js",
-    "title": "Inner Heart, big circles (ugly)"
+    "filename": "polar5",
+    "path": "polar5.js",
+    "title": "Big circles: 4 inner loops"
   },
   {
     "filename": "polar17",
     "path": "polar17.js",
     "title": "Double loop (problem)"
+  },
+  {
+    "filename": "polar13",
+    "path": "polar13.js",
+    "title": "Few big circles, 4 inner loops"
   },
   {
     "filename": "polar2",
@@ -60,28 +70,18 @@
     "title": "Fewest big circles, single inner"
   },
   {
-    "filename": "polar5",
-    "path": "polar5.js",
-    "title": "Big circles: 4 inner loops"
+    "filename": "polar14",
+    "path": "polar14.js",
+    "title": "Heart-like (simple)"
   },
   {
-    "filename": "polar6",
-    "path": "polar6.js",
-    "title": "16 Circles"
+    "filename": "polar16",
+    "path": "polar16.js",
+    "title": "Inner Heart, big circles (ugly)"
   },
   {
-    "filename": "polar7",
-    "path": "polar7.js",
-    "title": "10 Circles"
-  },
-  {
-    "filename": "polar8",
-    "path": "polar8.js",
-    "title": "12 Circles"
-  },
-  {
-    "filename": "polar9",
-    "path": "polar9.js",
-    "title": "14 Circles"
+    "filename": "polar15",
+    "path": "polar15.js",
+    "title": "Many Circles"
   }
 ]

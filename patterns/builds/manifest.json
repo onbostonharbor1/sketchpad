@@ -1,5 +1,11 @@
 [
   {
+    "filename": "parabolasWithinCircles",
+    "path": "parabolasWithinCircles.js",
+    "status": "bestfriend",
+    "title": "Circular Parabola and Inner Star"
+  },
+  {
     "filename": "firstBuild",
     "path": "firstBuild.js",
     "title": "First Build"
@@ -8,11 +14,5 @@
     "filename": "OverlappingStars",
     "path": "OverlappingStars.js",
     "title": "Overlapping Stars"
-  },
-  {
-    "filename": "parabolasWithinCircles",
-    "path": "parabolasWithinCircles.js",
-    "status": "bestfriend",
-    "title": "Circular Parabola & Inner Star"
   }
 ]

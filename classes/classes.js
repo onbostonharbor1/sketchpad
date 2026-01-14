@@ -183,10 +183,10 @@ class Line {
 	return new Point(this.end.x, this.end.y);
     } // end endPt
 
-    setStart(pt) {
-	this.start.x = pt.x;
-	this.start.y = pt.y;
-    } // end setStart
+	setStart(pt) {
+		this.start.x = pt.x;
+		this.start.y = pt.y;
+	} // end setStart
 
     setEnd(pt) {
 	this.end.x = pt.x;
@@ -207,6 +207,15 @@ class Line {
 	    (this.start.y + this.end.y) / 2
 	);
     }
+
+    translate(dx, dy) {
+        this.start.x += dx;
+        this.start.y += dy;
+        this.end.x   += dx;
+        this.end.y   += dy;
+        return this;
+    } // end translate
+
 
     moveMidpointTo(newMidpoint) {
 	const currentMid = this.midpoint();
@@ -249,16 +258,16 @@ class Line {
 	return this.rotateAround(pivot, angle);
     }
 
-    rotateAround(pivot, angle) {
-	const rotatePoint = (pt) => {
-	    const dx = pt.x - pivot.x;
-	    const dy = pt.y - pivot.y;
-	    const cos = Math.cos(angle);
-	    const sin = Math.sin(angle);
-	    return new Point(
-		pivot.x + dx * cos - dy * sin,
-		pivot.y + dx * sin + dy * cos
-	    );
+	rotateAround(pivot, angle) {
+		const rotatePoint = (pt) => {
+			const dx = pt.x - pivot.x;
+			const dy = pt.y - pivot.y;
+			const cos = Math.cos(angle);
+			const sin = Math.sin(angle);
+			return new Point(
+				pivot.x + dx * cos - dy * sin,
+				pivot.y + dx * sin + dy * cos
+			);
 	}
 
 	this.start = rotatePoint(this.start);
@@ -317,6 +326,17 @@ class Line {
 	return new Line(p1, p2);
     }
 
+	    isPerpendicularTo(otherLine) {
+        const dx1 = this.end.x - this.start.x;
+        const dy1 = this.end.y - this.start.y;
+        const dx2 = otherLine.end.x - otherLine.start.x;
+        const dy2 = otherLine.end.y - otherLine.start.y;
+
+        // Lines are perpendicular if their direction vectors have zero dot product
+        return (dx1 * dx2 + dy1 * dy2) === 0;
+    } // end isPerpendicularTo
+
+
     perpendicularAtMidpoint(length = 100) {
 	const mid = this.midpoint();
 	const perp = this.perpendicular(); // unit-length perpendicular from start
@@ -328,21 +348,54 @@ class Line {
 	return new Line(p1, p2);
     }
 
-    intersects(otherLine) {
-	const { start: A, end: B } = this;
-	const { start: C, end: D } = otherLine;
+    length() {
+        const dx = this.end.x - this.start.x;
+        const dy = this.end.y - this.start.y;
+        return Math.hypot(dx, dy);
+    } // end length
 
-	const denom = (A.x - B.x) * (C.y - D.y) -
-	      (A.y - B.y) * (C.x - D.x);
-	if (denom === 0) return null; // Parallel or coincident
+	angle() {
+		const dx = this.end.x - this.start.x;
+		const dy = this.end.y - this.start.y;
+		return Math.atan2(dy, dx);
+	} // end angle
 
-	const x = ((A.x * B.y - A.y * B.x) * (C.x - D.x) -
-		   (A.x - B.x) * (C.x * D.y - C.y * D.x)) / denom;
-	const y = ((A.x * B.y - A.y * B.x) * (C.y - D.y) -
-		   (A.y - B.y) * (C.x * D.y - C.y * D.x)) / denom;
+    slope() {
+        const dx = this.end.x - this.start.x;
+        if (dx === 0)
+            throw new Error("Line.slope(): vertical line has undefined slope");
 
-	return new Point(x, y);
-    }
+        const dy = this.end.y - this.start.y;
+        return dy / dx;
+    } // end slope
+
+    isParallelTo(otherLine) {
+        const dx1 = this.end.x - this.start.x;
+        const dy1 = this.end.y - this.start.y;
+        const dx2 = otherLine.end.x - otherLine.start.x;
+        const dy2 = otherLine.end.y - otherLine.start.y;
+
+        // Lines are parallel if their direction vectors are scalar multiples
+        // i.e., cross product magnitude is zero
+        return (dx1 * dy2 - dy1 * dx2) === 0;
+    } // end isParallelTo
+
+
+	intersects(otherLine) {
+		const { start: A, end: B } = this;
+		const { start: C, end: D } = otherLine;
+
+		const denom = (A.x - B.x) * (C.y - D.y) -
+			(A.y - B.y) * (C.x - D.x);
+		if (denom === 0) return null; // Parallel or coincident
+
+		const x = ((A.x * B.y - A.y * B.x) * (C.x - D.x) -
+			(A.x - B.x) * (C.x * D.y - C.y * D.x)) / denom;
+		const y = ((A.x * B.y - A.y * B.x) * (C.y - D.y) -
+			(A.y - B.y) * (C.x * D.y - C.y * D.x)) / denom;
+
+		return new Point(x, y);
+	}
 
 }
 export { Point, Line, StringThing };

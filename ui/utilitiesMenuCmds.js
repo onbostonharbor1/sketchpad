@@ -1,16 +1,87 @@
 /* ui/utilitiesMenuCmds.js
    ------------------------------------------------------------
-   Utilities Tab — Caption Menu Commands
+   Utilities Tab — Menu Commands (Adapter Layer)
    ------------------------------------------------------------
-   Commands:
-     • getUtilitiesCaptionMenuItems(info)
-     • editUtilitiesManifestItem(info)
+   Rules:
+     • Consumes ONLY the `info` object passed from utilities.js
+     • Does NOT derive context from uiState
+     • Delegates generic work to menuCmds.js
    ------------------------------------------------------------
 */
 
+import { menuManager } from "./menuManager.js";
+import { manifest } from "./manifest.js";
+import { archiveItem } from "./menuCmds.js";
 import { showScriptOffcanvas } from "./menuCmds.js";
 import { openEditManifestDialog } from "./menuCmds.js";
+
 import { refreshUtilitiesFromManifestEdit } from "./utilities.js";
+
+/* ============================================================
+   showUtilitiesScript(info)
+=========================================================== */
+function showUtilitiesScript(info) {
+
+  if (!info) throw new Error("showUtilitiesScript: info missing");
+  if (!info.isScript) return;
+
+  const scriptPath = info.scriptPath;
+  if (!scriptPath) {
+    throw new Error("showUtilitiesScript: scriptPath missing");
+  }
+
+  const label = info.filename || info.title || "(untitled)";
+  showScriptOffcanvas(String(scriptPath), String(label));
+
+} // end showUtilitiesScript
+
+
+/* ============================================================
+   editUtilitiesManifestItem(info)
+=========================================================== */
+async function editUtilitiesManifestItem(info) {
+
+  if (!info) throw new Error("editUtilitiesManifestItem: info missing");
+
+  if (!info.manifestPath) {
+    throw new Error("editUtilitiesManifestItem: manifestPath missing");
+  }
+
+  if (!info.matchField) {
+    throw new Error("editUtilitiesManifestItem: matchField missing");
+  }
+
+  if (!info.matchValue) {
+    throw new Error("editUtilitiesManifestItem: matchValue missing");
+  }
+
+  const ok = await openEditManifestDialog({
+    dialogTitle:   "Edit Manifest",
+    manifestPath:  String(info.manifestPath),
+    matchField:    String(info.matchField),
+    matchValue:    String(info.matchValue),
+
+    fileLabel:     String(info.filename || info.title || info.matchValue),
+
+    initialTitle:  String(info.title  || ""),
+    initialStatus: String(info.status || ""),
+
+    statusPresets: ["new", "working", "current", "favorite"],
+    allowCustomStatus: true,
+    allowClearStatus:  true
+  });
+
+  if (!ok) return;
+
+  if (manifest && typeof manifest.clearCache === "function") {
+    manifest.clearCache();
+  }
+  if (manifest.cache) delete manifest.cache.utilities;
+
+  await refreshUtilitiesFromManifestEdit();
+
+} // end editUtilitiesManifestItem
+
 
 /* ============================================================
    getUtilitiesCaptionMenuItems(info)
@@ -27,7 +98,7 @@ export async function getUtilitiesCaptionMenuItems(info) {
   const scriptPath = info.scriptPath || "";
 
   const label =
-    info.file ||
+    info.filename ||
     info.title ||
     info.entryPath ||
     scriptPath ||
@@ -53,46 +124,62 @@ export async function getUtilitiesCaptionMenuItems(info) {
     } // end onClick
   });
 
+  /* ----------------------------------------------------------
+     Archive
+     -------------------------------------------------------- */
+  items.push({
+    label: "Archive",
+    disabled: false,
+    onClick: async () => {
+      await archiveUtilitiesItem(info);
+    } // end onClick
+  });
+
   return items;
 
 } // end getUtilitiesCaptionMenuItems
 
 
+
 /* ============================================================
-   editUtilitiesManifestItem(info)
+   archiveUtilitiesItem(info)
+   ------------------------------------------------------------
+   Mirrors Gallery:
+   - build payload { manifestPath, filename }
+   - call archiveItem()
+   - refresh Utilities deterministically on success
 =========================================================== */
-export async function editUtilitiesManifestItem(info) {
+async function archiveUtilitiesItem(info) {
 
-  if (!info) throw new Error("editUtilitiesManifestItem: info missing");
+  if (!info) throw new Error("archiveUtilitiesItem: info missing");
+  if (!info.manifestPath) throw new Error("archiveUtilitiesItem: manifestPath missing");
+  if (!info.filename) throw new Error("archiveUtilitiesItem: filename missing");
 
-  const manifestPath = info.manifestPath;
-  const entryPath    = info.entryPath;
+  const payload = {
+    manifestPath: info.manifestPath,
+    filename: info.filename   // Utilities canonical identifier is entry.path
+  };
 
-  if (!manifestPath) throw new Error("editUtilitiesManifestItem: info.manifestPath missing");
-  if (!entryPath)    throw new Error("editUtilitiesManifestItem: info.entryPath missing");
+  console.log("archiveUtilitiesItem → archiveItem payload:", payload);
 
-  const ok = await openEditManifestDialog({
-    dialogTitle:   "Edit Manifest",
-    manifestPath:  String(manifestPath),
-    matchField:    "path",
-    matchValue:    String(entryPath),
+  await archiveItem({
+    payload,
+    showAlert: true,
 
-    fileLabel:     String(info.file || info.title || entryPath),
+    onSuccess: async () => {
 
-    initialTitle:  String(info.title || ""),
-    initialStatus: String(info.status || ""),
+      if (manifest && typeof manifest.clearCache === "function") {
+        manifest.clearCache();
+      }
+      if (manifest.cache) delete manifest.cache.utilities;
 
-    statusPresets: ["new", "working", "current", "favorite"],
+      await refreshUtilitiesFromManifestEdit();
 
-    allowCustomStatus: true,
-    allowClearStatus:  true
+    } // end onSuccess
   });
 
-  if (ok) {
-    await refreshUtilitiesFromManifestEdit();
-  }
+} // end archiveUtilitiesItem
 
-} // end editUtilitiesManifestItem
 
 
 // end ui/utilitiesMenuCmds.js

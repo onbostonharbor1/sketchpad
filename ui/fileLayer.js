@@ -10,11 +10,26 @@ export const fileLayer = {
   // ----------------------------------------------------------
   // exists(path)
   // Returns true/false based on HTTP 200
+  //
+  // NOTE:
+  //   - Paths MUST be absolute ("/..."), not "../..."
+  //   - Uses GET (HEAD is unreliable under Vite)
   // ----------------------------------------------------------
   async exists(path) {
     try {
-      const resp = await fetch(path, { method: "HEAD" });
+      if (!path) throw new Error("fileLayer.exists: path missing");
+
+      let p = String(path).trim();
+      if (!p) throw new Error("fileLayer.exists: path empty");
+
+      // Enforce absolute paths only
+      if (!p.startsWith("/")) {
+        throw new Error("fileLayer.exists: relative path not allowed: " + p);
+      }
+
+      const resp = await fetch(p, { method: "GET", cache: "no-store" });
       return resp.ok;
+
     } catch (err) {
       console.error("fileLayer.exists error:", path, err);
       return false;
@@ -42,16 +57,24 @@ export const fileLayer = {
   // loadJSON(path)
   // Returns parsed JSON, or null
   // ----------------------------------------------------------
-  async loadJSON(path) {
-    try {
-      const resp = await fetch(path);
-      if (!resp.ok) return null;
-      return await resp.json();
-    } catch (err) {
-      console.error("fileLayer.loadJSON:", path, err);
+async loadJSON(path) {
+  try {
+
+    const resp = await fetch(path, { cache: "no-store" });
+
+    if (!resp.ok) {
       return null;
     }
-  }, // end loadJSON
+
+    const txt = await resp.text();
+    return JSON.parse(txt);
+
+  } catch (err) {
+    console.error("fileLayer.loadJSON ERROR:", path, err);
+    return null;
+  }
+}, // end loadJSON
+
 
 
   // ----------------------------------------------------------
@@ -73,49 +96,37 @@ export const fileLayer = {
   }, // end listDirectory
 
 
-/* ----------------------------------------------------------
-   helpExists(tabName, itemName)
-   /help/<tabName>/<itemName>.html
----------------------------------------------------------- */
-helpExists(tabName, itemName) {
-  const path = `/help/${tabName}/${itemName}.html`;
-  return this.exists(path);
-}, // end helpExists
+  /* ----------------------------------------------------------
+     helpExists(tabName, itemName)
+     /help/<tabName>/<itemName>.html
+  ---------------------------------------------------------- */
+  helpExists(tabName, itemName) {
+    const path = `/help/${tabName}/${itemName}.html`;
+    return this.exists(path);
+  }, // end helpExists
 
 
   /* ==========================================================
-     PATH HELPERS (NEW, PREFERRED API)
+     PATH HELPERS (PREFERRED API)
      ----------------------------------------------------------
-     All higher-level modules (manifest, tabs, help, scripts)
-     should use these helpers to construct paths.
-
-     NOTE:
-       - manifest.js will use:
-           path.directoryRegistry(basedir)
-           path.categoryManifest(basedir, category)
-           path.flatManifest(basedir)
-       - help/menu code will use:
-           path.helpHtml(tabName, itemName)
-       - script loaders may use:
-           path.patternScript(category, file)
-           path.galleryScript(file)
-           path.utilityScript(category, file)
+     ALL helpers return absolute paths.
+     NO "../" is ever produced.
   ========================================================== */
   path: {
 
-    // ../<basedir>/directoryRegistry.json
+    // /<basedir>/directoryRegistry.json
     directoryRegistry(basedir) {
-      return `../${basedir}/directoryRegistry.json`;
+      return `/${basedir}/directoryRegistry.json`;
     }, // end directoryRegistry
 
-    // ../<basedir>/<category>/manifest.json
+    // /<basedir>/<category>/manifest.json
     categoryManifest(basedir, category) {
-      return `../${basedir}/${category}/manifest.json`;
+      return `/${basedir}/${category}/manifest.json`;
     }, // end categoryManifest
 
-    // ../<basedir>/manifest.json
+    // /<basedir>/manifest.json
     flatManifest(basedir) {
-      return `../${basedir}/manifest.json`;
+      return `/${basedir}/manifest.json`;
     }, // end flatManifest
 
     // /help/<tabName>/<itemName>.html
@@ -123,79 +134,56 @@ helpExists(tabName, itemName) {
       return `/help/${tabName}/${itemName}.html`;
     }, // end helpHtml
 
-    // Generic script path: ../<tabName>/<itemName>.js
+    // Generic script path: /<tabName>/<itemName>.js
     script(tabName, itemName) {
       const clean = itemName.replace(/\.js$/i, "");
-      return `../${tabName}/${clean}.js`;
+      return `/${tabName}/${clean}.js`;
     }, // end script
 
-    // ../patterns/<category>/<file>.js
+    // /patterns/<category>/<file>.js
     patternScript(category, file) {
       const clean = file.replace(/\.js$/i, "");
-      return `../patterns/${category}/${clean}.js`;
+      return `/patterns/${category}/${clean}.js`;
     }, // end patternScript
 
-    // ../gallery/Scripts/<file>.js
+    // /gallery/Scripts/<file>.js
     galleryScript(file) {
       const clean = file.replace(/\.js$/i, "");
-      return `../gallery/Scripts/${clean}.js`;
+      return `/gallery/Scripts/${clean}.js`;
     }, // end galleryScript
 
-    // ../utilities/<category>/<file>.js
+    // /utilities/<category>/<file>.js
     utilityScript(category, file) {
       const clean = file.replace(/\.js$/i, "");
-      return `../utilities/${category}/${clean}.js`;
+      return `/utilities/${category}/${clean}.js`;
     } // end utilityScript
 
   }, // end path
 
 
-
   /* ==========================================================
      LEGACY NORMALIZERS
      ----------------------------------------------------------
-     These are kept for backward compatibility. New code should
-     prefer fileLayer.path.* helpers instead.
+     Kept for backward compatibility.
+     These now delegate to absolute path helpers.
   ========================================================== */
 
-  // ----------------------------------------------------------
-  // normalizeHelpPath(tabName, itemName)
-  // ----------------------------------------------------------
   normalizeHelpPath(tabName, itemName) {
     return this.path.helpHtml(tabName, itemName);
   }, // end normalizeHelpPath
 
-
-  // ----------------------------------------------------------
-  // normalizeScriptPath(tabName, itemName)
-  // ----------------------------------------------------------
   normalizeScriptPath(tabName, itemName) {
     return this.path.script(tabName, itemName);
   }, // end normalizeScriptPath
 
-
-  // ----------------------------------------------------------
-  // normalizePatternPath(category, file)
-  // ../patterns/<category>/<file>.js
-  // ----------------------------------------------------------
   normalizePatternPath(category, file) {
     return this.path.patternScript(category, file);
   }, // end normalizePatternPath
 
-
-  // ----------------------------------------------------------
-  // normalizeGalleryScript(file)
-  // ../gallery/Scripts/<file>.js
-  // ----------------------------------------------------------
   normalizeGalleryScript(file) {
     return this.path.galleryScript(file);
   }, // end normalizeGalleryScript
 
-
-  // ----------------------------------------------------------
-  // normalizeUtilityPath(category, file)
-  // ../utilities/<category>/<file>.js
-  // ----------------------------------------------------------
   normalizeUtilityPath(category, file) {
     return this.path.utilityScript(category, file);
   } // end normalizeUtilityPath

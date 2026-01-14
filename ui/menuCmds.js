@@ -20,33 +20,69 @@ import { overlayManager } from "./overlay.js";
 
 
 /* ============================================================
-   archiveItem(spec)
+   archiveItem(specOrPayload)
    ------------------------------------------------------------
-   Shared archive command wrapper.
+   Canonical call:
+     await archiveItem({
+       payload: { manifestPath, filename },
+       onSuccess: async (result) => { ... },
+       showAlert: true   // default true
+     });
 
-   spec:
-     nodeCommand (string)   e.g. "archivePatternItem"
-     payload     (object)   exactly what nodeCommand expects
-     onSuccess   (async function(result))
+   Compatibility:
+     await archiveItem({ manifestPath, filename });
+
+   Default behavior:
+     - after successful archive, show alert "Archived: <filename>"
+     - caller may suppress via showAlert: false
 =========================================================== */
+export async function archiveItem(specOrPayload) {
 
-export async function archiveItem(spec) {
+  if (!specOrPayload)
+    throw new Error("archiveItem: spec missing");
 
-  if (!spec) throw new Error("archiveItem: spec missing");
-  if (!spec.nodeCommand) throw new Error("archiveItem: nodeCommand missing");
-  if (!spec.payload) throw new Error("archiveItem: payload missing");
-  if (!spec.onSuccess) throw new Error("archiveItem: onSuccess missing");
-
-  const result = await nodeDispatch(spec.nodeCommand, spec.payload);
-
-  if (!result) throw new Error("archiveItem: nodeDispatch returned nothing");
-  if (result.status !== "ok") {
-    throw new Error("archiveItem: failed: " + JSON.stringify(result));
+  // Canonical: { payload: {...}, onSuccess?: fn, showAlert?: bool }
+  // Compat:    { manifestPath, filename }
+  let spec = specOrPayload;
+  if (!specOrPayload.payload) {
+    spec = { payload: specOrPayload };
   }
 
-  await spec.onSuccess(result);
+  if (!spec.payload)
+    throw new Error("archiveItem: payload missing");
+
+  const manifestPath = spec.payload.manifestPath;
+  const filename     = spec.payload.filename;
+
+  if (!manifestPath)
+    throw new Error("archiveItem: manifestPath missing");
+
+  if (!filename)
+    throw new Error("archiveItem: filename missing");
+
+  const result = await nodeDispatch(
+    "archiveItem",
+    { manifestPath, filename }
+  );
+
+  // Default success alert (restores yesterday’s behavior)
+  const showAlert = (spec.showAlert !== false);
+  if (showAlert) {
+    alert("Archived: " + filename);
+  }
+
+  if (spec.onSuccess) {
+    await spec.onSuccess(result);
+  }
+
+  return result;
 
 } // end archiveItem
+
+
+
+
+
 
 
 

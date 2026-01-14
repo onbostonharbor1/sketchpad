@@ -1,7 +1,7 @@
 /**
  * generateHelpManifest.mjs
  * ------------------------------------------------------------
- * Node script that scans the /help/<TabName>/ directories and
+ * Node script that scans the /help/<helpDir>/ directories and
  * builds manifest.json listing which help files actually exist.
  *
  * This runs BEFORE dev server startup:
@@ -22,34 +22,35 @@ import { fileURLToPath } from "url";
 // Resolve __dirname equivalent for ESM
 const __filename = fileURLToPath(import.meta.url);
 const __dirname  = path.dirname(__filename);
+const PROJECT_ROOT = path.resolve(__dirname, "..");
+const HELP_ROOT    = path.join(PROJECT_ROOT, "help");
 
-// Location of the help directory (relative to project root)
 const HELP_MANIFEST = "manifest.json";
-const HELP_ROOT     = path.resolve(__dirname, "..");
 const OUTPUT_FILE   = path.join(HELP_ROOT, HELP_MANIFEST);
+console.log(`>>> HELP MANIFEST FILE: ${OUTPUT_FILE} `);
 
 // Top-level help subdirectories you plan to support
-const TAB_NAMES = ["draw", "patterns", "gallery", "utilities", "figures"];
+const HELP_DIRS = ["Overview", "draw", "patterns", "gallery", "utilities", "figures" ];
 
 // Output structure
 const manifest = {};
 
 // ------------------------------------------------------------
-// For each tab:
-//   1. Look for /help/<TabName>/
+// For each helpDir:
+//   1. Look for /help/<helpDir>/
 //   2. If it exists, list *.html files
 //   3. Store names WITHOUT extension in manifest
 // ------------------------------------------------------------
-TAB_NAMES.forEach((tab) => {
-  const tabDir = path.join(HELP_ROOT, tab);
+HELP_DIRS.forEach((helpDir) => {
+  const helpDirectory = path.join(HELP_ROOT, helpDir);
 
-  if (!fs.existsSync(tabDir)) {
+  if (!fs.existsSync(helpDirectory)) {
     // No such directory → leave empty list
-    manifest[tab] = [];
+    manifest[helpDir] = [];
     return;
   }
 
-  const files = fs.readdirSync(tabDir);
+  const files = fs.readdirSync(helpDirectory);
   const htmlFiles = files.filter((f) => f.endsWith(".html"));
 
   // Strip .html to get itemName
@@ -57,7 +58,7 @@ TAB_NAMES.forEach((tab) => {
     path.basename(file, ".html")
   );
 
-  manifest[tab] = itemNames;
+  manifest[helpDir] = itemNames;
 });
 
 // ------------------------------------------------------------

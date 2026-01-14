@@ -15,6 +15,7 @@ window.drawRegistry = Object.assign(
     mysticRoseEllipse:  window.drawRegistry_mysticRoseEllipse,
     nautilus:           window.drawRegistry_nautilus,
     parabola:           window.drawRegistry_parabola,
+    parametrics:        window.drawRegistry_parametrics,
     radiate:            window.drawRegistry_radiate,
     regularPolygon:     window.drawRegistry_regularPolygon,
     regularPursuit:     window.drawRegistry_regularPursuit,

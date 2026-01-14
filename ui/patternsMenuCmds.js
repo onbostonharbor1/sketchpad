@@ -1,297 +1,133 @@
 /* patternsMenuCmds.js
    ------------------------------------------------------------
-   Patterns Tab — Menu Commands
+   Patterns Tab — Menu Commands (Adapter Only)
    ------------------------------------------------------------
-   Commands:
-     • addPatternThumbnail()
-   ------------------------------------------------------------
-*/
+   Rules:
+     • NO uiState-derived context
+     • ALL commands consume explicit `info`
+     • menuCmds.js remains generic
+------------------------------------------------------------ */
 
-
-import { nodeDispatch } from "./nodeLayer.js";
 import { manifest } from "./manifest.js";
-import { renderPatternThumbGrid } from "./patterns.js";
 import { menuManager } from "./menuManager.js";
 import { showScriptOffcanvas } from "./menuCmds.js";
 import { archiveItem } from "./menuCmds.js";
 import { openEditManifestDialog } from "./menuCmds.js";
+import { PatternsController } from "./patterns.js";
 
-export async function archivePatternItem() {
 
-  const info = derivePatternsContext();
+/* ============================================================
+   archivePatternItem(info)
+   ------------------------------------------------------------
+   Archive current item, then deterministically return to
+   Patterns Category view (NOT Home).
+=========================================================== */
+export async function archivePatternItem(info) {
 
-  if (!info.item) {
-    throw new Error("archivePatternItem: no active pattern item");
-  }
+  if (!info) throw new Error("archivePatternItem: info missing");
+  if (!info.manifestPath) throw new Error("archivePatternItem: manifestPath missing");
+  if (!info.filename) throw new Error("archivePatternItem: filename missing");
+  if (!info.category) throw new Error("archivePatternItem: category missing");
 
-  const cat = info.category;
-  const filename = info.filename;
+  const payload = {
+    manifestPath: info.manifestPath,
+    filename: info.filename
+  };
+
+  console.log("archivePatternItem → archiveItem payload:", payload);
 
   await archiveItem({
-    nodeCommand: "archivePatternItem",
-    payload: {
-      manifestPath: `/patterns/${cat}/manifest.json`,
-      category: cat,
-      filename: filename
-    },
-    onSuccess: async function () {
+    payload,
+    showAlert: true,
 
-      manifest.clearCache();
-      if (manifest.cache && manifest.cache.patterns) {
-        delete manifest.cache.patterns;
-      }
+    onSuccess: async () => {
 
-      uiState.patterns.activeCategory = null;
-      uiState.patterns.activeItem     = null;
-      uiState.patterns.saved = {
-        view: "categories",
-        activeCategory: null,
-        activeItem: null
-      };
+      // Ensure we are on the correct top-level tab.
+      // (Use your real tab switch function name if different.)
+      setUI("patterns");
 
-      const patternsMod = await import("./patterns.js");
-      await patternsMod.PatternsController.showCategoryList();
+      // Force Patterns to show its Category view (your agreed behavior).
+      // Use the controller method that does "category frame" display.
+      await PatternsController.showCategoryFrame();
 
-      alert(`Archived: ${cat}/${filename}.js`);
-
-    } // end onSuccess
+    }
   });
 
 } // end archivePatternItem
 
 
-/* ============================================================
-   buildCanvasThumbnailBase64(sourceCanvas, w, h)
-   ------------------------------------------------------------
-   Crops excess whitespace by finding the bounding box of
-   non-transparent pixels, then scales the cropped region to
-   w x h.
-
-   Returns BASE64 ONLY (no data: prefix).
-
-   Notes:
-     - Uses alpha > 0 as "drawn".
-     - If canvas is blank, falls back to scaling full canvas.
-     - Adds small padding so strokes don't touch the edge.
-
-   This version treats “background” as near-white pixels and
-   crops to pixels that are NOT near-white.
-
-   Returns BASE64 ONLY (no data: prefix).
-=========================================================== */
-function buildCanvasThumbnailBase64(sourceCanvas, w, h) {
-
-  // ---- validate inputs ----
-  if (!sourceCanvas) throw new Error("buildCanvasThumbnailBase64: sourceCanvas missing");
-  if (typeof w !== "number" || w <= 0) throw new Error("buildCanvasThumbnailBase64: invalid w");
-  if (typeof h !== "number" || h <= 0) throw new Error("buildCanvasThumbnailBase64: invalid h");
-
-  const sw = sourceCanvas.width;
-  const sh = sourceCanvas.height;
-
-  if (typeof sw !== "number" || typeof sh !== "number") {
-    throw new Error("buildCanvasThumbnailBase64: sourceCanvas has no width/height");
-  }
-
-  // ---- read pixels from source ----
-  const scanCanvas = document.createElement("canvas");
-  scanCanvas.width = sw;
-  scanCanvas.height = sh;
-
-  const scanCtx = scanCanvas.getContext("2d");
-  if (!scanCtx) throw new Error("buildCanvasThumbnailBase64: scanCtx null");
-
-  scanCtx.clearRect(0, 0, sw, sh);
-  scanCtx.drawImage(sourceCanvas, 0, 0);
-
-  const img = scanCtx.getImageData(0, 0, sw, sh);
-  const data = img.data;
-
-  // ---- find bounding box of NON-WHITE-ish pixels ----
-  // Treat pixels as background if they are very close to white.
-  // If you ever change the background color, adjust these numbers.
-  const WHITE_CUTOFF = 245; // 245..255 are "near white"
-
-  let minX = sw, minY = sh, maxX = -1, maxY = -1;
-
-  for (let y = 0; y < sh; y++) {
-    const row = y * sw * 4;
-
-    for (let x = 0; x < sw; x++) {
-      const i = row + x * 4;
-
-      const r = data[i + 0];
-      const g = data[i + 1];
-      const b = data[i + 2];
-      const a = data[i + 3];
-
-      // If truly transparent, ignore it (rare in your current setup)
-      if (a === 0) continue;
-
-      // Background test: "near white"
-      const isNearWhite = (r >= WHITE_CUTOFF && g >= WHITE_CUTOFF && b >= WHITE_CUTOFF);
-
-      if (!isNearWhite) {
-        if (x < minX) minX = x;
-        if (y < minY) minY = y;
-        if (x > maxX) maxX = x;
-        if (y > maxY) maxY = y;
-      }
-    }
-  }
-
-  // ---- if nothing found (blank or all-white), fall back to full canvas ----
-  let cropX = 0;
-  let cropY = 0;
-  let cropW = sw;
-  let cropH = sh;
-
-  if (maxX >= 0 && maxY >= 0) {
-    cropX = minX;
-    cropY = minY;
-    cropW = (maxX - minX + 1);
-    cropH = (maxY - minY + 1);
-  }
-
-  // ---- add padding (source pixels), clamp to canvas ----
-  const pad = 4;
-  cropX = cropX - pad;
-  cropY = cropY - pad;
-  cropW = cropW + pad * 2;
-  cropH = cropH + pad * 2;
-
-  if (cropX < 0) { cropW += cropX; cropX = 0; }
-  if (cropY < 0) { cropH += cropY; cropY = 0; }
-  if (cropX + cropW > sw) cropW = sw - cropX;
-  if (cropY + cropH > sh) cropH = sh - cropY;
-
-  if (cropW <= 0 || cropH <= 0) {
-    throw new Error("buildCanvasThumbnailBase64: computed invalid crop region");
-  }
-
-  // ---- draw cropped region into crop canvas ----
-  const cropCanvas = document.createElement("canvas");
-  cropCanvas.width = cropW;
-  cropCanvas.height = cropH;
-
-  const cropCtx = cropCanvas.getContext("2d");
-  if (!cropCtx) throw new Error("buildCanvasThumbnailBase64: cropCtx null");
-
-  cropCtx.clearRect(0, 0, cropW, cropH);
-  cropCtx.drawImage(sourceCanvas, cropX, cropY, cropW, cropH, 0, 0, cropW, cropH);
-
-  // ---- scale to final thumb canvas ----
-  const tmp = document.createElement("canvas");
-  tmp.width = w;
-  tmp.height = h;
-
-  const tctx = tmp.getContext("2d");
-  if (!tctx) throw new Error("buildCanvasThumbnailBase64: tmp.getContext returned null");
-
-  tctx.clearRect(0, 0, w, h);
-  tctx.drawImage(cropCanvas, 0, 0, cropW, cropH, 0, 0, w, h);
-
-  const dataUrl = tmp.toDataURL("image/png");
-
-  const prefix = "data:image/png;base64,";
-  if (!dataUrl.startsWith(prefix)) {
-    throw new Error("buildCanvasThumbnailBase64: unexpected data URL prefix");
-  }
-
-  return dataUrl.slice(prefix.length);
-
-} // end buildCanvasThumbnailBase64
-
-
-/* ============================================================
-   derivePatternsContext()
-=========================================================== */
-function derivePatternsContext() {
-
-  if (!window.uiState) {
-    throw new Error("derivePatternsContext: window.uiState missing");
-  }
-
-  const category = uiState.patterns.activeCategory;
-  const index    = uiState.patterns.activeItem;
-
-  if (!category || typeof index !== "number") {
-    return {
-      category: null,
-      index: null,
-      item: null,
-      filename: null,
-      manifestPath: null,
-      currentTitle: ""
-    };
-  }
-
-  const cache = manifest.cache.patterns;
-  if (!cache) {
-    throw new Error("derivePatternsContext: manifest.cache.patterns missing");
-  }
-
-  const list = cache[category];
-  if (!Array.isArray(list)) {
-    throw new Error("derivePatternsContext: category not found: " + category);
-  }
-
-  const item = list[index];
-  if (!item) {
-    throw new Error("derivePatternsContext: item not found");
-  }
-
-  const filename = item.filename;
-  if (!filename) {
-    throw new Error("derivePatternsContext: filename missing");
-  }
-
-  return {
-    category,
-    index,
-    item,
-    filename,
-    manifestPath: "/patterns/" + category + "/manifest.json",
-    currentTitle: item.title || ""
-  };
-
-} // end derivePatternsContext
 
 
 
 
 /* ============================================================
-   showPatternScript()
-   ------------------------------------------------------------
-   Caption menu command: show the current pattern script in the
-   offcanvas viewer.
+   showPatternScript(info)
 =========================================================== */
-export async function showPatternScript() {
+export async function showPatternScript(info) {
 
-  const info = derivePatternsContext();
+  if (!info) throw new Error("showPatternScript: info missing");
+  if (!info.isScript) return;
 
-  if (!info.item) {
-    throw new Error("showPatternScript: no active pattern item");
+  const scriptPath = info.scriptPath;
+  const label =
+    info.filename ||
+    info.title ||
+    "(untitled)";
+
+  if (!scriptPath) {
+    throw new Error("showPatternScript: scriptPath missing");
   }
 
-  // This is the same helpKey + scriptPath pattern you already use in patterns.js
-  const scriptPath = `../patterns/${info.category}/${info.filename}.js`;
-  const helpKey    = `${info.category}/${info.filename}`;
-
-  showScriptOffcanvas(scriptPath, helpKey);
+  showScriptOffcanvas(String(scriptPath), String(label));
 
 } // end showPatternScript
 
+/* ============================================================
+   editPatternsManifestItem(info)
+=========================================================== */
+export async function editPatternsManifestItem(info) {
+
+  if (!info) throw new Error("editPatternsManifestItem: info missing");
+  if (!info.manifestPath) throw new Error("editPatternsManifestItem: manifestPath missing");
+  if (!info.matchField) throw new Error("editPatternsManifestItem: matchField missing");
+  if (!info.matchValue) throw new Error("editPatternsManifestItem: matchValue missing");
+  if (!info.category) throw new Error("editPatternsManifestItem: category missing");
+
+  const ok = await openEditManifestDialog({
+    dialogTitle:   "Edit Manifest",
+    manifestPath:  info.manifestPath,
+    matchField:    info.matchField,
+    matchValue:    info.matchValue,
+
+    fileLabel:     info.filename || info.matchValue,
+    initialTitle:  info.title || "",
+    initialStatus: info.status || "",
+
+    statusPresets: ["new", "working", "current", "favorite"],
+    allowCustomStatus: true,
+    allowClearStatus:  true
+  });
+
+  if (!ok) return;
+
+  // Match Gallery behavior exactly:
+  // 1) drop cache
+  // 2) rebuild from saved uiState via tab restore
+
+  if (manifest && typeof manifest.clearCache === "function") {
+    manifest.clearCache();
+  }
+  if (manifest.cache) delete manifest.cache.patterns;
+
+  // Force Patterns tab restore (same role as refreshGalleryFromManifestEdit)
+  setUI("patterns");
+
+} // end editPatternsManifestItem
+
+
 
 /* ============================================================
-   getPatternsCaptionMenuItems(tabName, helpKey, scriptPath)
-   ------------------------------------------------------------
-   Centralizes ALL caption menu command wiring for Patterns.
-=========================================================== */
-/* ============================================================
    getPatternsCaptionMenuItems(info)
-   ------------------------------------------------------------
-   Centralizes ALL caption menu command wiring for Patterns.
 =========================================================== */
 export async function getPatternsCaptionMenuItems(info) {
 
@@ -299,125 +135,36 @@ export async function getPatternsCaptionMenuItems(info) {
 
   const items = [];
 
-  // ----------------------------------------------------------
   // Help
-  // ----------------------------------------------------------
-  const helpKey = info.helpKey || null;
-  if (helpKey) {
-    const helpItem = await menuManager.buildHelpItem("patterns", helpKey);
-    items.push(helpItem);
+  if (info.helpKey) {
+    items.push(await menuManager.buildHelpItem("patterns", info.helpKey));
   } else {
     items.push({ label: "Help", disabled: true, onClick: () => {} });
   }
 
-  // ----------------------------------------------------------
   // Show Script
-  // ----------------------------------------------------------
-  const isScript = !!info.isScript;
-  const scriptPath = info.scriptPath || "";
-
-  const label =
-    info.filename ||
-    info.title ||
-    info.matchValue ||
-    scriptPath ||
-    "(untitled)";
-
   items.push({
     label: "Show Script",
-    disabled: !isScript,
-    onClick: () => {
-      if (!isScript) return;
-      showScriptOffcanvas(scriptPath, label);
-    } // end onClick
+    disabled: !info.isScript,
+    onClick: () => showPatternScript(info)
   });
 
-  // ----------------------------------------------------------
-  // Add Thumbnail
-  // ----------------------------------------------------------
-  items.push({
-    label: "Add Thumbnail",
-    disabled: false,
-    onClick: async () => {
-      await addPatternThumbnail();
-    } // end onClick
-  });
-
-  // ----------------------------------------------------------
   // Edit Manifest
-  // ----------------------------------------------------------
   items.push({
     label: "Edit Manifest",
     disabled: false,
-    onClick: async () => {
-      await editPatternsManifestItem(info);
-    } // end onClick
+    onClick: () => editPatternsManifestItem(info)
   });
 
-  // ----------------------------------------------------------
   // Archive
-  // ----------------------------------------------------------
   items.push({
     label: "Archive",
     disabled: false,
-    onClick: async () => {
-      await archivePatternItem();
-    } // end onClick
+    onClick: () => archivePatternItem(info)
   });
 
   return items;
 
 } // end getPatternsCaptionMenuItems
-
-
-export async function editPatternsManifestItem(info) {
-
-  if (!info) throw new Error("editPatternsManifestItem: info missing");
-
-  const manifestPath = info.manifestPath;
-  const matchField   = info.matchField;
-  const matchValue   = info.matchValue;
-
-  if (!manifestPath) throw new Error("editPatternsManifestItem: manifestPath missing");
-  if (!matchField)   throw new Error("editPatternsManifestItem: matchField missing");
-  if (!matchValue)   throw new Error("editPatternsManifestItem: matchValue missing");
-
-  const ok = await openEditManifestDialog({
-    dialogTitle:   "Edit Manifest",
-    manifestPath:  String(manifestPath),
-    matchField:    String(matchField),
-    matchValue:    String(matchValue),
-
-    fileLabel:     String(info.filename || info.title || matchValue),
-
-    initialTitle:  String(info.title || ""),
-    initialStatus: String(info.status || ""),
-
-    statusPresets: ["new", "working", "current", "favorite"],
-
-    allowCustomStatus: true,
-    allowClearStatus:  true
-  });
-
-  if (!ok) return;
-
-  if (manifest && typeof manifest.clearCache === "function") {
-    manifest.clearCache();
-  }
-  if (manifest.cache) delete manifest.cache.patterns;
-
-  const patternsMod = await import("./patterns.js");
-
-  const category = info.category;
-  const index = window.uiState.patterns.activeItem;
-
-  if (!category) throw new Error("editPatternsManifestItem: info.category missing");
-  if (typeof index !== "number") throw new Error("editPatternsManifestItem: uiState.patterns.activeItem invalid");
-
-  await patternsMod.PatternsController.showSelectedPattern(category, index);
-
-} // end editPatternsManifestItem
-
-
 
 // end patternsMenuCmds.js

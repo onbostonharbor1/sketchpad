@@ -38,14 +38,14 @@ window.drawRegistry_parabola = {
 
   // --- UI metadata (controls) ---
   controls: {
-    line1_pt1:  { widget: "pointPicker", label: "Line 1 Start:" },
-    line1_pt2:  { widget: "pointPicker", label: "Line 1 End:" },
-    line1_midpoint: { widget: "pointPicker", label: "Line 1 Midpoint:" },
-    line2_pt1:  { widget: "pointPicker", label: "Line 2 Start:" },
-    line2_pt2:  { widget: "pointPicker", label: "Line 2 End:" },
-    line2_midpoint: { widget: "pointPicker", label: "Line 2 Midpoint:" },
-    color:      { widget: "colorPicker", label: "Color:" },
-    lineWidth:  { widget: "range", min: 0.5, max: 4, step: 0.5, label: "Width:" }
+    line1_pt1:      { widget: "pointPicker", noReadout: true},
+    line1_pt2:      { widget: "pointPicker", noReadout: true },
+    line1_midpoint: { widget: "pointPicker", noReadout: true},
+    line2_pt1:      { widget: "pointPicker", noReadout: true},
+    line2_pt2:      { widget: "pointPicker", noReadout: true},
+    line2_midpoint: { widget: "pointPicker", noReadout: true},
+    color:          { widget: "colorPicker", label: "Color:" },
+    lineWidth:      { widget: "range", min: 0.5, max: 4, step: 0.5, label: "Width:" }
   },
 
   // ==========================================================

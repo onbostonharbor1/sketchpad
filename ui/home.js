@@ -230,7 +230,7 @@ export function initHomeTab(restored = false) {
   // Ensure saved state exists (fail-fast contract for future work)
   ensureHomeSavedState();
   switchHomeView(uiState.home.saved.view);
-  loadHomeManifestAndLog();
+  loadHomeManifest();
 } // end initHomeTab
 
 
@@ -257,7 +257,7 @@ function restoreHomeTab() {
   // Kick manifest load once (cached by homeManifestLogged)
   // If we are restoring into Categories, the manifest loader will
   // render categories when grouped data becomes available.
-  loadHomeManifestAndLog();
+  loadHomeManifest();
 
   // Re-enter the saved view deterministically.
   // NOTE: switchHomeView is async because Results rendering can be async.
@@ -719,7 +719,7 @@ async function renderHomeImageEntryToSketchpad(entry, myToken) {
 ============================================================ */
 
 /* ------------------------------------------------------------
-   loadHomeManifestAndLog()
+   loadHomeManifest()
    Arguments:
      - None
    ------------------------------------------------------------
@@ -727,21 +727,21 @@ async function renderHomeImageEntryToSketchpad(entry, myToken) {
      - One-shot kick of async manifest load + console logging.
      - Uses homeManifestLogged to prevent repeated loads.
 ------------------------------------------------------------ */
-function loadHomeManifestAndLog() {
+function loadHomeManifest() {
   if (homeManifestLogged) return;
 
   homeManifestLogged = true;
 
   // Kick async work; if it fails, let it fail loudly.
-  loadHomeManifestAndLog_async().catch((err) => {
+  loadHomeManifest_async().catch((err) => {
     console.error("Home manifest load FAILED", err);
     throw err;
   });
-} // end loadHomeManifestAndLog
+} // end loadHomeManifest
 
 
 /* ------------------------------------------------------------
-   loadHomeManifestAndLog_async(forceReload)
+   loadHomeManifest_async(forceReload)
    Arguments:
      - forceReload (boolean|undefined): if true, busts cache with ?v=Date.now()
    ------------------------------------------------------------
@@ -751,7 +751,7 @@ function loadHomeManifestAndLog() {
      - Logs summary to console.
      - If currently in Categories view, renders categories immediately.
 ------------------------------------------------------------ */
-async function loadHomeManifestAndLog_async(forceReload) {
+async function loadHomeManifest_async(forceReload) {
 
   const basePath = "/home/manifest.json";
   const manifestUrl = forceReload ? (basePath + "?v=" + Date.now()) : basePath;
@@ -765,10 +765,10 @@ async function loadHomeManifestAndLog_async(forceReload) {
   homeManifestData = data;
   homeManifestGrouped = groupHomeEntriesByStatus(data);
 
-  console.group("HOME MANIFEST");
-  console.log("url:", manifestUrl);
-  console.log("raw data:", data);
-  console.log("count:", data.length);
+  // console.group("HOME MANIFEST");
+  // console.log("url:", manifestUrl);
+  // console.log("raw data:", data);
+  // console.log("count:", data.length);
 
   const grouped = homeManifestGrouped;
 
@@ -776,21 +776,21 @@ async function loadHomeManifestAndLog_async(forceReload) {
     a.toLowerCase().localeCompare(b.toLowerCase())
   );
 
-  console.log("distinct statuses:", statuses);
+  // console.log("distinct statuses:", statuses);
 
   const counts = {};
   statuses.forEach((s) => {
     counts[s] = grouped[s].length;
   });
-  console.log("counts by status:", counts);
+  // console.log("counts by status:", counts);
 
-  console.groupEnd();
+  // console.groupEnd();
 
   if (uiState.home.saved && uiState.home.saved.view === HOME_VIEW_CATEGORIES) {
     renderHomeCategories(homeManifestGrouped);
   }
 
-} // end loadHomeManifestAndLog_async
+} // end loadHomeManifest_async
 
 
 export async function refreshHomeCategoriesFromManifestEdit() {
@@ -801,7 +801,7 @@ export async function refreshHomeCategoriesFromManifestEdit() {
   homeManifestGrouped = null;
 
   // Bust browser cache and rebuild homeManifestGrouped.
-  await loadHomeManifestAndLog_async(true);
+  await loadHomeManifest_async(true);
 
 } // end refreshHomeCategoriesFromManifestEdit
 
@@ -1280,7 +1280,7 @@ export function wireHomeCommandsButton() {
           homeManifestGrouped = null;
 
           homeManifestLogged = true;
-          loadHomeManifestAndLog_async(true).catch((err) => {
+          loadHomeManifest_async(true).catch((err) => {
             console.error("Home manifest reload FAILED", err);
             throw err;
           });

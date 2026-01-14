@@ -463,12 +463,25 @@ function printCircNum(pt, num = 9999) {
   ctx.restore();
 }
 
-function printText(text,pt) {
- 	ctx.save();
-	ctx.fillStyle = "blue";
-  ctx.fillText(text,pt.x,pt.y);
-	ctx.restore();
-}
+function printText(text, pt) {
+
+  if (!ctx) throw new Error("printText: ctx is null (canvas not initialized / ctx getter failing)");
+
+  if (!pt) throw new Error("printText: pt missing");
+  if (pt.x === undefined || pt.y === undefined) throw new Error("printText: pt missing x/y");
+
+  ctx.save();
+
+  // Make text visible and deterministic
+  ctx.font = "16px sans-serif";
+  ctx.textBaseline = "top";
+  ctx.fillStyle = "blue";
+
+  ctx.fillText(String(text), pt.x, pt.y);
+
+  ctx.restore();
+
+} // end printText
 
 
 function printTitle(text = "No Title") {
@@ -683,17 +696,19 @@ function comparePoints(pt1,pt2) {
   return false;
 }
 
- function getLineEquation(pt1,pt2) {
-    if (pt2.x - pt1.x === 0) {  // handle vertical line
-	    return {slope:0, b: 0} ;
-//	    return `x = ${pt1.x}`; // Equation for a vertical line
-    }
+function getLineEquation(pt1, pt2) {
 
-    const m = (pt2.y - pt1.y) / (pt2.x - pt1.x);
-    const b = pt1.y - m * pt1.x; // Calculate the y-intercept
+  if (pt2.x - pt1.x === 0) {  // vertical line
+    return "x = " + pt1.x;
+  }
 
-    return `y = ${m}x + ${b}`;
-}
+  const m = (pt2.y - pt1.y) / (pt2.x - pt1.x);
+  const b = pt1.y - m * pt1.x;
+
+  return "y = " + m + "x + " + b;
+
+} // end getLineEquation
+
 
 function setPt(pt,draw=true) {
     drawState.pts.push(pt);

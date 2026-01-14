@@ -1,23 +1,8 @@
 [
   {
-    "filename": "mysticRose",
-    "path": "mysticRose.js",
-    "title": "Mystic Rose (circle)"
-  },
-  {
     "filename": "crossHair",
     "path": "crossHair.js",
     "title": "Crosshair"
-  },
-  {
-    "filename": "mysticRoseEllipse",
-    "path": "mysticRoseEllipse.js",
-    "title": "Mystic Rose (ellipse)"
-  },
-  {
-    "filename": "linkedCircles",
-    "path": "linkedCircles.js",
-    "title": "Linked Circles"
   },
   {
     "filename": "drawInSquare",
@@ -25,8 +10,23 @@
     "title": "Draw In Square"
   },
   {
+    "filename": "linkedCircles",
+    "path": "linkedCircles.js",
+    "title": "Linked Circles"
+  },
+  {
     "filename": "multipleCycloids",
     "path": "multipleCycloids.js",
     "title": "Multiple Cycloids"
+  },
+  {
+    "filename": "mysticRose",
+    "path": "mysticRose.js",
+    "title": "Mystic Rose (circle)"
+  },
+  {
+    "filename": "mysticRoseEllipse",
+    "path": "mysticRoseEllipse.js",
+    "title": "Mystic Rose (ellipse)"
   }
 ]

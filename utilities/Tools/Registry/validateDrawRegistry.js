@@ -1,13 +1,12 @@
 /* ===========================================================
    validateDrawRegistry.js  – Tools script (runPattern version)
    -----------------------------------------------------------
-   Displays a dropdown listing all drawRegistry entries.
-   Selecting an entry validates it and prints the results into #text.
+   One CLOSED accordion.
 
-   UPDATED:
-   --------
-   Uses parameterControls.js for the dropdown UI (select widget).
+   Open it to see a simple list of drawRegistry names.
+   Click a name to validate it and print results into #text.
 
+   Uses parameterControls.js widget: "accordion" with section.items.
 =========================================================== */
 
 import { buildParameterControls } from "/ui/parameterControls.js";
@@ -24,70 +23,89 @@ export function runPattern() {
   if (!actionDiv) throw new Error("validateDrawRegistry: missing #action");
   if (!textDiv)   throw new Error("validateDrawRegistry: missing #text");
 
-  // Clear output panels (deterministic)
   actionDiv.innerHTML = "";
   textDiv.innerHTML   = "";
 
-  // ---------------------------------------------------------
-  // Build dropdown using parameterControls
-  // ---------------------------------------------------------
   const keys = Object.keys(window.drawRegistry);
   if (!keys || keys.length === 0) throw new Error("validateDrawRegistry: window.drawRegistry is empty");
+
+  // Build clickable list items for the accordion section
+  const items = [];
+
+  for (let i = 0; i < keys.length; i++) {
+    const k = keys[i];
+
+    items.push({
+      label: k,
+      action() {
+        validate(k, textDiv);
+      } // end action
+    });
+  }
 
   const scriptInfo = {
 
     title: "Validate drawRegistry",
 
     controls: {
-      target: {
-        label: "Validate:",
-        widget: "select",
-        options: keys,
-        default: keys[0]
-      } // end target
+      registryAccordion: {
+        widget: "accordion",
+        startOpen: false,          // CLOSED by default
+        sections: [
+          {
+            title: "Draw Registry",
+            items: items,
+          } // end section
+        ]
+      } // end registryAccordion
     }, // end controls
 
-    params: {
-      target: keys[0]
-    }, // end params
+    params: {},
 
     parameters: null,
 
     onParamChange() {
-      // ParameterControls calls this in some flows; keep it.
-      // We do our work in redrawHandler so it always runs after changes.
+      // Keep for compatibility
     }, // end onParamChange
 
     redrawHandler() {
-      // Validate selected target into #text
-      validate(this.params.target, textDiv);
+      // No-op: validation runs on click.
     } // end redrawHandler
 
   }; // end scriptInfo
 
-
-  // ParameterControls compatibility alias
   scriptInfo.parameters = scriptInfo.params;
 
-  // Build controls into #action
   buildParameterControls(
     scriptInfo,
     "tab-scripts",
     true
   );
 
-  // Initial validation
-  scriptInfo.redrawHandler();
+  textDiv.textContent = "Open the accordion, then click a drawRegistry item to validate it.";
 
   return null;
 
 } // end runPattern
 
 
-
 /* ===========================================================
    validate(key, textDiv)
-   Core validation logic moved into its own helper function.
+   -----------------------------------------------------------
+   Updated validation output:
+
+     - Prints drawRegistry entry name at top
+     - Shows four sections (h3):
+         Required: Found
+         Required: Missing
+         Optional: Found
+         Optional: Missing
+     - init/update/draw are treated as REQUIRED and validated
+       as functions.
+
+   NOTE:
+   - "Required" list is explicit (based on your framework).
+   - Everything else present in the object is treated as Optional.
 =========================================================== */
 function validate(key, textDiv) {
 
@@ -101,48 +119,123 @@ function validate(key, textDiv) {
     return;
   }
 
-  const resultsDiv = document.createElement("div");
-  resultsDiv.id = "validationResults";
-  textDiv.appendChild(resultsDiv);
+  // ---------------------------------------------------------
+  // Title
+  // ---------------------------------------------------------
+  const title = document.createElement("h1");
+  title.textContent = reg.name ? reg.name : key;
+  textDiv.appendChild(title);
 
-  const expected = [
-    "name","version","category","firstOrder","source","background",
-    "overlays","params","controls","create","draw"
+  // ---------------------------------------------------------
+  // Required vs Optional keys
+  // (Required list reflects your framework + lifecycle functions)
+  // ---------------------------------------------------------
+  const requiredKeys = [
+    "name",
+    "id",
+    "category",
+    "firstOrder",
+    "elements",
+    "params",
+    "controls",
+    "init",
+    "update",
+    "draw"
   ];
 
-  const lines = [];
+  // ---------------------------------------------------------
+  // Buckets
+  // ---------------------------------------------------------
+  const requiredFound   = [];
+  const requiredMissing = [];
+  const optionalFound   = [];
+  const optionalMissing = []; // only meaningful if we define optional expectations (we don't)
 
-  expected.forEach((prop) => {
-    if (Object.prototype.hasOwnProperty.call(reg, prop)) {
-      lines.push({ msg: "✔ " + prop + ": present", ok: true });
-    } else {
-      lines.push({ msg: "❌ missing " + prop, ok: false });
+  // ---------------------------------------------------------
+  // Required checks (including function checks)
+  // ---------------------------------------------------------
+  for (let i = 0; i < requiredKeys.length; i++) {
+
+    const prop = requiredKeys[i];
+
+    if (!Object.prototype.hasOwnProperty.call(reg, prop)) {
+      requiredMissing.push(prop);
+      continue;
     }
-  });
 
-  Object.keys(reg).forEach((k) => {
-    if (expected.indexOf(k) === -1) {
-      lines.push({ msg: "⚠ extra member: " + k, ok: false });
+    // Special handling: lifecycle functions must be functions
+    if (prop === "init" || prop === "update" || prop === "draw") {
+      if (typeof reg[prop] === "function") {
+        requiredFound.push(prop + " (function)");
+      } else {
+        requiredMissing.push(prop + " (missing function)");
+      }
+      continue;
     }
-  });
 
-  if (typeof reg.create !== "function") lines.push({ msg: "❌ create is not a function", ok: false });
-  if (typeof reg.draw   !== "function") lines.push({ msg: "❌ draw is not a function", ok: false });
+    requiredFound.push(prop);
+  }
 
-  // Append results
-  lines.forEach((l) => {
-    const p = document.createElement("div");
-    p.textContent = l.msg;
-    p.style.color = l.ok ? "green" : "red";
-    resultsDiv.appendChild(p);
-  });
+  // ---------------------------------------------------------
+  // Optional checks:
+  // Everything present but not required is "Optional: Found".
+  // For "Optional: Missing" we have no declared optional schema,
+  // so this list will normally be empty.
+  // ---------------------------------------------------------
+  const allKeys = Object.keys(reg);
 
-  resultsDiv.appendChild(document.createElement("hr"));
+  for (let i = 0; i < allKeys.length; i++) {
+    const prop = allKeys[i];
+    if (requiredKeys.indexOf(prop) !== -1) continue;
+    optionalFound.push(prop);
+  }
 
-  // Pretty-print registry object
+  // ---------------------------------------------------------
+  // Render helpers
+  // ---------------------------------------------------------
+  function addSection(headerText, items) {
+
+    const h = document.createElement("h3");
+    h.textContent = headerText;
+    h.style.fontWeight = "300";     // enforce bold even if CSS resets headings
+    textDiv.appendChild(h);
+
+    if (!items || items.length === 0) {
+      const p = document.createElement("div");
+      p.textContent = "(none)";
+      textDiv.appendChild(p);
+      return;
+    }
+
+    for (let i = 0; i < items.length; i++) {
+      const line = document.createElement("div");
+      line.textContent = items[i];
+
+      // Color cue (optional, but useful)
+      if (headerText.indexOf("Missing") !== -1) line.style.color = "red";
+      if (headerText.indexOf("Found")   !== -1) line.style.color = "green";
+
+      textDiv.appendChild(line);
+    }
+  } // end addSection
+
+  // ---------------------------------------------------------
+  // Sections (blank lines are handled by heading block layout)
+  // ---------------------------------------------------------
+  addSection("Required: Found", requiredFound);
+  addSection("Required: Missing", requiredMissing);
+  addSection("Optional: Found", optionalFound);
+  addSection("Optional: Missing", optionalMissing);
+
+  // ---------------------------------------------------------
+  // Divider + pretty print (keep, because it’s still useful)
+  // ---------------------------------------------------------
+  textDiv.appendChild(document.createElement("hr"));
+
   const pre = document.createElement("pre");
   pre.textContent = JSON.stringify(reg, null, 2);
   pre.style.whiteSpace = "pre-wrap";
   textDiv.appendChild(pre);
 
 } // end validate
+

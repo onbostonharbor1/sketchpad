@@ -362,3 +362,4 @@ export function escapeHtml(text) {
     .replaceAll('"', "&quot;")
     .replaceAll("'", "&#39;");
 } // end escapeHtml
+

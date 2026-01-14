@@ -2,44 +2,8 @@
   {
     "file": "parabolasWithinCircles",
     "path": "/patterns/builds/parabolasWithinCircles.js",
-    "title": "Circular Parabola & Inner Star",
+    "title": "Circular Parabola and Inner Star",
     "status": "bestfriend"
-  },
-  {
-    "file": "validateDrawRegistry",
-    "path": "/utilities/Tools/Registry/validateDrawRegistry.js",
-    "title": "Validate Draw Registry",
-    "status": "current"
-  },
-  {
-    "file": "IMG_9649",
-    "path": "/gallery/Ideabook/3D/IMG_9649.PNG",
-    "title": "IMG_9649.PNG",
-    "status": "favorite"
-  },
-  {
-    "file": "pursuitDynamic5",
-    "path": "/gallery/Scripts/Pursuit/pursuitDynamic5.js",
-    "title": "Pursuit Dynamic 5",
-    "status": "favorite"
-  },
-  {
-    "file": "copy 2 armsInCircles - Copy (2)",
-    "path": "/patterns/circles/copy 2 armsInCircles - Copy (2).js",
-    "title": "copy 2 armsInCircles - Copy (2).js",
-    "status": "new"
-  },
-  {
-    "file": "copy 296 - Copy",
-    "path": "/gallery/Patterns/PursuitPatterns/copy 296 - Copy.jpg",
-    "title": "copy 296 - Copy.jpg",
-    "status": "new"
-  },
-  {
-    "file": "copy 297 - Copy",
-    "path": "/gallery/Patterns/PursuitPatterns/copy 297 - Copy.jpg",
-    "title": "copy 297 - Copy.jpg",
-    "status": "new"
   },
   {
     "file": "copy 298 - Copy",
@@ -54,16 +18,40 @@
     "status": "new"
   },
   {
-    "file": "copy1 armsInCircles - Copy (3)",
-    "path": "/patterns/circles/copy1 armsInCircles - Copy (3).js",
-    "title": "copy1 armsInCircles - Copy (3).js",
-    "status": "new"
-  },
-  {
     "file": "IMG_8363 - Copy",
     "path": "/gallery/Patterns/PursuitPatterns/IMG_8363 - Copy.jpg",
     "title": "IMG_8363 - Copy.jpg",
     "status": "new"
+  },
+  {
+    "file": "IMG_8504 - Copy",
+    "path": "/gallery/Patterns/PursuitPatterns/IMG_8504 - Copy.JPG",
+    "title": "IMG_8504 - Copy.JPG",
+    "status": "new"
+  },
+  {
+    "file": "IMG_8507 - Copy",
+    "path": "/gallery/Patterns/PursuitPatterns/IMG_8507 - Copy.JPG",
+    "title": "IMG_8507 - Copy.JPG",
+    "status": "new"
+  },
+  {
+    "file": "IMG_8508 - Copy",
+    "path": "/gallery/Patterns/PursuitPatterns/IMG_8508 - Copy.JPG",
+    "title": "IMG_8508 - Copy.JPG",
+    "status": "new"
+  },
+  {
+    "file": "IMG_9649",
+    "path": "/gallery/Ideabook/3D/IMG_9649.PNG",
+    "title": "IMG_9649.PNG",
+    "status": "favorite"
+  },
+  {
+    "file": "IMG_9650",
+    "path": "/gallery/Ideabook/3D/IMG_9650.PNG",
+    "title": "IMG_9650.PNG",
+    "status": "working"
   },
   {
     "file": "IMG_9651",
@@ -100,16 +88,20 @@
     "path": "/drawRegistry/inverseStar.js",
     "title": "Inverse Star",
     "status": "new",
-    "category": "curve_stitch",
     "sourceType": "drawRegistry",
     "registryKey": "inverseStar"
+  },
+  {
+    "file": "joiningPoints",
+    "path": "/patterns/stuff/joiningPoints.js",
+    "title": "Joining Points",
+    "status": "working"
   },
   {
     "file": "linkedCircles.js",
     "path": "/drawRegistry/linkedCircles.js",
     "title": "Linked Circles",
     "status": "new",
-    "category": "unicorns",
     "sourceType": "drawRegistry",
     "registryKey": "linkedCircles"
   },
@@ -118,7 +110,6 @@
     "path": "/drawRegistry/mysticRoseEllipse.js",
     "title": "Mystic Rose (ellipse)",
     "status": "new",
-    "category": "unicorns",
     "sourceType": "drawRegistry",
     "registryKey": "mysticRoseEllipse"
   },
@@ -133,6 +124,12 @@
     "path": "/patterns/spirals/pureSpiralA.js",
     "title": "Pure Spiral A Filled",
     "status": "new"
+  },
+  {
+    "file": "pursuitDynamic5",
+    "path": "/gallery/Scripts/Pursuit/pursuitDynamic5.js",
+    "title": "Pursuit Dynamic 5",
+    "status": "favorite"
   },
   {
     "file": "pursuit2",
@@ -153,15 +150,33 @@
     "status": "useless"
   },
   {
-    "file": "IMG_9650",
-    "path": "/gallery/Ideabook/3D/IMG_9650.PNG",
-    "title": "IMG_9650.PNG",
-    "status": "working"
+    "file": "validateDrawRegistry",
+    "path": "/utilities/Tools/Registry/validateDrawRegistry.js",
+    "title": "Validate Draw Registry",
+    "status": "current"
   },
   {
-    "file": "joiningPoints",
-    "path": "/patterns/stuff/joiningPoints.js",
-    "title": "Joining Points",
-    "status": "working"
+    "file": "validateDrawRegistry - Copy (2)",
+    "path": "/utilities/Tools/Registry/validateDrawRegistry - Copy (2).js",
+    "title": "validateDrawRegistry - Copy (2).js",
+    "status": "new"
+  },
+  {
+    "file": "validateDrawRegistry - Copy (3)",
+    "path": "/utilities/Tools/Registry/validateDrawRegistry - Copy (3).js",
+    "title": "validateDrawRegistry - Copy (3).js",
+    "status": "new"
+  },
+  {
+    "file": "validateDrawRegistry - Copy (4)",
+    "path": "/utilities/Tools/Registry/validateDrawRegistry - Copy (4).js",
+    "title": "validateDrawRegistry - Copy (4).js",
+    "status": "new"
+  },
+  {
+    "file": "validateDrawRegistry - Copy",
+    "path": "/utilities/Tools/Registry/validateDrawRegistry - Copy.js",
+    "title": "validateDrawRegistry - Copy.js",
+    "status": "new"
   }
 ]

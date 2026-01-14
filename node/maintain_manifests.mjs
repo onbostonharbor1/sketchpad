@@ -1,1082 +1,308 @@
-/* node/maintain_manifests.mjs
-   ============================================================
-   SINGLE PASS Maintenance:
-     1) Discover new files and append to manifests with:
-          status: "new"
-          title:  "<filename.ext>"   (exact filename)
-     2) Validate manifest entries against disk:
-          missing or invalid paths -> "broken" virtual items (Home only)
-          no fix-mode; no manifest rewrite for broken
-     3) Rebuild /home/manifest.json from ALL status-bearing entries
-        plus "broken" virtual items.
-
-   DrawRegistry (Home integration):
-     4) Do NOT import drawRegistry.js in Node (browser-only imports).
-        Instead scan ./drawRegistry/*.js as TEXT and extract:
-          id, name, category, status
-        Include ONLY status-bearing registry entries in Home as launchers:
-          sourceType: "drawRegistry"
-          registryKey: <id>
-          path: "/drawRegistry/<fileName>"
-
-   ALSO:
-     - Patterns: when a new .js is added, write a DUMMY thumb:
-         /patterns/thumb.png  -> /patterns/<cat>/images/thumb_<base>.png
-     - Gallery Images: thumbnails written via sharp (36x36) only for NEW items
-     - Write manifest.json ONLY if changed
-     - Always write a logfile; return a structured report
-   ============================================================
-*/
+console.log(">>> Script Loaded");
 
 import fs from "node:fs";
 import path from "node:path";
-import sharp from "sharp";
+import { fileURLToPath } from "node:url";
 
-const PROJECT_ROOT = path.dirname(new URL(import.meta.url).pathname);
-const LOG_DIR      = path.resolve("./utilities/logfiles");
-const HOME_DIR     = path.resolve("./home");
-const HOME_FILE    = path.join(HOME_DIR, "manifest.json");
+// --- PATH SETUP ---
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const PROJECT_ROOT = path.resolve(__dirname, "..");
 
-const THUMB_SIZE = 36;
+const LOG_DIR   = path.join(PROJECT_ROOT, "utilities", "logfiles");
+const HOME_DIR  = path.join(PROJECT_ROOT, "home");
+const HOME_FILE = path.join(HOME_DIR, "manifest.json");
 
-/* ============================================================
-   Public entry point
-============================================================ */
+const GALLERY_DIR   = path.join(PROJECT_ROOT, "gallery");
+const UTILITIES_DIR = path.join(PROJECT_ROOT, "utilities");
+const PATTERNS_DIR  = path.join(PROJECT_ROOT, "patterns");
+const DRAW_REGISTRY = path.join(PROJECT_ROOT, "drawRegistry");
+
+/**
+ * Main entry point for the maintenance script.
+ * Coordinates scanning of all project domains, builds reports, and writes logs.
+ */
 export async function runManifestMaintenance() {
-
-  ensureDir(LOG_DIR, "log dir missing: " + LOG_DIR);
+  if (!fs.existsSync(LOG_DIR)) fs.mkdirSync(LOG_DIR, { recursive: true });
 
   const timestamp = new Date().toISOString().replace(/[:]/g, "-").replace(/\..+/, "");
   const logName   = "manifestMaintenance_" + timestamp + ".txt";
   const logPath   = path.join(LOG_DIR, logName);
 
-  const log = [];
-  log.push("Manifest Maintenance Log - " + new Date().toString());
-  log.push("");
-
+  const log = ["Manifest Maintenance Log - " + new Date().toString(), ""];
   const report = {
-    request: "manifestMaintenance",
-    status: "ok",
-    logName,
-    logPath,
-    manifestsWritten: [],
-    homeWritten: false,
-
-    added: {},           // grouped by "domain/subdir"
-    broken: {},          // grouped by "domain/subdir"
-
-    drawRegistry: {
-      scanned: 0,
-      statusItems: 0
-    },
-
-    homeCounts: {
-      statusItems: 0,
-      brokenItems: 0,
-      drawRegistryItems: 0,
-      total: 0
-    }
+    request: "manifestMaintenance", status: "ok", logName, logPath,
+    manifestsWritten: [], homeWritten: false,
+    added: {}, broken: {},
+    drawRegistry: { scanned: 0, statusItems: 0 },
+    drawRegistryStatus: [],
+    homeCounts: { statusItems: 0, total: 0 }
   };
 
   try {
-
     await processPatterns(report, log);
     await processGalleryScripts(report, log);
     await processGalleryImages(report, log);
     await processUtilities(report, log);
-
-    // DrawRegistry scan as TEXT (no Node import)
     await processDrawRegistry(report, log);
 
-    // Build Home from:
-    //   - all status entries in manifest.json files
-    //   - all drawRegistry status entries (from report.drawRegistryStatus)
-    //   - plus broken virtual items collected during validation
     const homeList = buildHomeListFromReport(report);
 
-    report.homeCounts.statusItems       = countStatusItems(homeList);
-    report.homeCounts.brokenItems       = countBrokenItems(homeList);
-    report.homeCounts.drawRegistryItems = countDrawRegistryItems(homeList);
-    report.homeCounts.total             = homeList.length;
+    report.homeCounts.statusItems = countStatusItems(homeList);
+    report.homeCounts.total = homeList.length;
 
-    ensureDir(HOME_DIR, "home dir missing: " + HOME_DIR);
-
-    const wroteHome = writeJsonIfChanged(HOME_FILE, homeList);
-    report.homeWritten = wroteHome;
-
-    log.push("");
-    log.push("HOME MANIFEST:");
-    log.push("  items: " + homeList.length);
-    log.push("  wrote: " + (wroteHome ? "YES" : "NO (no diff)"));
-    log.push("");
+    if (!fs.existsSync(HOME_DIR)) fs.mkdirSync(HOME_DIR, { recursive: true });
+    report.homeWritten = writeJsonIfChanged(HOME_FILE, homeList);
 
     fs.writeFileSync(logPath, log.join("\n"), "utf8");
-
     return report;
-
   } catch (err) {
-
     report.status = "error";
-    report.error  = String(err && err.stack ? err.stack : err);
-
-    log.push("");
-    log.push("FATAL ERROR:");
-    log.push(String(err && err.stack ? err.stack : err));
+    log.push("\nFATAL ERROR:\n" + String(err.stack || err));
     fs.writeFileSync(logPath, log.join("\n"), "utf8");
-
     throw err;
   }
-
 } // end runManifestMaintenance
 
-
-/* ============================================================
-   Patterns
-============================================================ */
+/**
+ * Scans the patterns directory and updates local manifest.json files.
+ * Generates dummy thumbnails for new patterns if a master thumb exists.
+ */
 async function processPatterns(report, log) {
-
-  const patternsRoot = path.resolve("./patterns");
-  ensureDir(patternsRoot, "patterns root missing: " + patternsRoot);
-
-  const registryPath = path.join(patternsRoot, "directoryRegistry.json");
-  ensureFile(registryPath, "patterns directoryRegistry.json missing: " + registryPath);
-
-  const categories = readJson(registryPath);
-  if (!Array.isArray(categories)) throw new Error("patterns directoryRegistry.json must be array");
-
-  log.push("=== PATTERNS ===");
-
-  const dummyThumb = path.join(patternsRoot, "thumb.png");
-  ensureFile(dummyThumb, "patterns dummy thumb missing: " + dummyThumb);
+  if (!fs.existsSync(PATTERNS_DIR)) return;
+  const categories = readJson(path.join(PATTERNS_DIR, "directoryRegistry.json"));
+  const dummyThumb = path.join(PATTERNS_DIR, "thumb.png");
 
   for (const category of categories) {
-
-    const catDir = path.join(patternsRoot, category);
-    ensureDir(catDir, "patterns category dir missing: " + catDir);
-
-    const manifestPath = path.join(catDir, "manifest.json");
-    if (!fs.existsSync(manifestPath)) {
-      log.push("  [SKIP] no manifest: " + category);
-      continue;
-    }
-
-    const manifest = readJson(manifestPath);
-    if (!Array.isArray(manifest)) throw new Error("patterns manifest must be array: " + manifestPath);
-
-    const byPath     = indexByPath(manifest);
-    const byFilename = indexByFilename(manifest);
-
-    const jsFiles = listFilesByExt(catDir, ".js", { exclude: ["manifest.json", "directoryRegistry.json"] });
-
-    let changed = false;
-
-    // DISCOVERY
-    for (const fileName of jsFiles) {
-
-      const baseName = stripExt(fileName, ".js");
-      const relPath  = normalizePath(fileName);
-
-      if (byPath.has(relPath) || byFilename.has(baseName)) continue;
-
-      const entry = {
-        filename: baseName,
-        path: relPath,
-        title: fileName,
-        status: "new"
-      };
-
-      manifest.push(entry);
-      byPath.add(relPath);
-      byFilename.add(baseName);
-
-      addGrouped(report.added, "patterns/" + category, fileName);
-      log.push("  [ADDED] " + category + "/" + fileName);
-
-      ensurePatternDummyThumb(catDir, baseName, dummyThumb);
-
-      changed = true;
-    }
-
-    // VALIDATION
-    for (const entry of manifest) {
-
-      const rel = inferEntryRelPath(entry, ".js");
-      const abs = path.join(catDir, rel);
-
-      if (!fs.existsSync(abs)) {
-        const rooted = "/patterns/" + category + "/" + normalizePath(rel);
-
-        addBrokenVirtual(report, "patterns/" + category, {
-          file: path.posix.basename(rooted),
-          path: rooted,
-          title: String(entry.title || rel),
-          status: "broken"
-        });
-
-        log.push("  [BROKEN] " + category + "/" + rel);
-      }
-    }
-
-    if (changed) {
-      const wrote = writeJsonIfChanged(manifestPath, manifest);
-      if (wrote) report.manifestsWritten.push(manifestPath);
-      else log.push("  [NOTE] no-op write avoided: " + manifestPath);
-    }
-
-  } // end categories loop
-
-  log.push("");
-
-} // end processPatterns
-
-
-function ensurePatternDummyThumb(catDir, baseName, dummyThumbAbs) {
-
-  const imagesDir = path.join(catDir, "images");
-  if (!fs.existsSync(imagesDir)) fs.mkdirSync(imagesDir, { recursive: true });
-  ensureDir(imagesDir, "patterns images dir invalid: " + imagesDir);
-
-  const out = path.join(imagesDir, "thumb_" + baseName + ".png");
-
-  if (fs.existsSync(out)) return;
-
-  fs.copyFileSync(dummyThumbAbs, out);
-  ensureFile(out, "dummy thumb copy failed: " + out);
-
-} // end ensurePatternDummyThumb
-
-
-/* ============================================================
-   Gallery Scripts
-============================================================ */
-async function processGalleryScripts(report, log) {
-
-  const scriptsRoot = path.resolve("./gallery/Scripts");
-  if (!fs.existsSync(scriptsRoot)) return;
-
-  ensureDir(scriptsRoot, "gallery scripts root invalid: " + scriptsRoot);
-
-  const registryPath = path.join(scriptsRoot, "directoryRegistry.json");
-  ensureFile(registryPath, "gallery Scripts directoryRegistry.json missing: " + registryPath);
-
-  const categories = readJson(registryPath);
-  if (!Array.isArray(categories)) throw new Error("gallery Scripts directoryRegistry.json must be array");
-
-  log.push("=== GALLERY / SCRIPTS ===");
-
-  for (const category of categories) {
-
-    const catDir = path.join(scriptsRoot, category);
-    ensureDir(catDir, "gallery Scripts category dir missing: " + catDir);
-
-    const manifestPath = path.join(catDir, "manifest.json");
-    ensureFile(manifestPath, "gallery Scripts category manifest missing: " + manifestPath);
-
-    const manifest = readJson(manifestPath);
-    if (!Array.isArray(manifest)) throw new Error("gallery Scripts manifest must be array: " + manifestPath);
-
-    const byPath     = indexByPath(manifest);
-    const byFilename = indexByFilename(manifest);
-
-    const jsFiles = listFilesByExt(catDir, ".js", { exclude: ["manifest.json", "directoryRegistry.json"] });
-
-    let changed = false;
-
-    // DISCOVERY
-    for (const fileName of jsFiles) {
-
-      const baseName = stripExt(fileName, ".js");
-      const relPath  = normalizePath(fileName); // category-local
-
-      if (byPath.has(relPath) || byFilename.has(baseName)) continue;
-
-      const entry = {
-        filename: baseName,
-        path: relPath,
-        title: fileName,
-        status: "new"
-      };
-
-      manifest.push(entry);
-      byPath.add(relPath);
-      byFilename.add(baseName);
-
-      addGrouped(report.added, "gallery/Scripts/" + category, fileName);
-      log.push("  [ADDED] Scripts/" + category + "/" + fileName);
-
-      changed = true;
-    }
-
-    // VALIDATION
-    for (const entry of manifest) {
-
-      const rel = inferEntryRelPath(entry, ".js");
-      const abs = path.join(catDir, rel);
-
-      if (!fs.existsSync(abs)) {
-
-        const rooted = "/gallery/Scripts/" + category + "/" + normalizePath(rel);
-
-        addBrokenVirtual(report, "gallery/Scripts/" + category, {
-          file: path.posix.basename(rooted),
-          path: rooted,
-          title: String(entry.title || rel),
-          status: "broken"
-        });
-
-        log.push("  [BROKEN] Scripts/" + category + "/" + rel);
-      }
-    }
-
-    if (changed) {
-      const wrote = writeJsonIfChanged(manifestPath, manifest);
-      if (wrote) report.manifestsWritten.push(manifestPath);
-      else log.push("  [NOTE] no-op write avoided: " + manifestPath);
-    }
-
-  } // end categories loop
-
-  log.push("");
-
-} // end processGalleryScripts
-
-
-/* ============================================================
-   Gallery Images
-============================================================ */
-async function processGalleryImages(report, log) {
-
-  const galleryRoot = path.resolve("./gallery");
-  if (!fs.existsSync(galleryRoot)) return;
-
-  ensureDir(galleryRoot, "gallery root invalid: " + galleryRoot);
-
-  const domains = ["Ideabook", "Patterns"];
-
-  log.push("=== GALLERY / IMAGES ===");
-
-  for (const domain of domains) {
-
-    const domainDir = path.join(galleryRoot, domain);
-    if (!fs.existsSync(domainDir)) continue;
-
-    ensureDir(domainDir, "gallery domain dir invalid: " + domainDir);
-
-    const registryPath = path.join(domainDir, "directoryRegistry.json");
-    if (!fs.existsSync(registryPath)) throw new Error("gallery " + domain + " directoryRegistry.json missing: " + registryPath);
-
-    const categories = readJson(registryPath);
-    if (!Array.isArray(categories)) throw new Error("gallery " + domain + " directoryRegistry.json must be array");
-
-    for (const category of categories) {
-
-      const catDir = path.join(domainDir, category);
-      ensureDir(catDir, "gallery category dir missing: " + catDir);
-
-      const manifestPath = path.join(catDir, "manifest.json");
-      if (!fs.existsSync(manifestPath)) continue;
-
-      const manifest = readJson(manifestPath);
-      if (!Array.isArray(manifest)) throw new Error("gallery manifest must be array: " + manifestPath);
-
-      const byPath = indexByPath(manifest);
-
-      const imagesDir = path.join(catDir, "images");
-      if (!fs.existsSync(imagesDir)) fs.mkdirSync(imagesDir, { recursive: true });
-      ensureDir(imagesDir, "gallery images dir invalid: " + imagesDir);
-
-      const diskImages = listImageFiles(catDir);
-
-      let changed = false;
-
-      for (const fileName of diskImages) {
-
-        const relKey = normalizePath(fileName); // category-local only
-
-        if (byPath.has(relKey)) continue;
-
-        const base = path.parse(fileName).name;
-
-        const entry = {
-          filename: base,
-          path: relKey,
-          title: fileName,
-          status: "new"
-        };
-
-        manifest.push(entry);
-        byPath.add(relKey);
-
-        const src = path.join(catDir, fileName);
-        const dst = path.join(imagesDir, "thumb_" + base + ".png");
-
-        await makeThumbOrFail(src, dst);
-
-        addGrouped(report.added, "gallery/" + domain + "/" + category, fileName);
-        log.push("  [ADDED] " + domain + "/" + category + "/" + fileName);
-
-        changed = true;
-      }
-
-      // VALIDATION
-      for (const entry of manifest) {
-
-        if (!entry || typeof entry !== "object") continue;
-
-        if (typeof entry.path !== "string" || entry.path.trim() === "") {
-          const rootedBad = "/gallery/" + domain + "/" + category + "/(missing-path)";
-          addBrokenVirtual(report, "gallery/" + domain + "/" + category, {
-            file: "(missing)",
-            path: rootedBad,
-            title: "(missing path)",
-            status: "broken"
-          });
-          log.push("  [BROKEN] " + domain + "/" + category + " (missing path)");
-          continue;
-        }
-
-        const p = normalizePath(entry.path);
-
-        if (p.indexOf("/") >= 0) {
-          const rooted = "/gallery/" + domain + "/" + category + "/" + p;
-
-          addBrokenVirtual(report, "gallery/" + domain + "/" + category, {
-            file: path.posix.basename(rooted),
-            path: rooted,
-            title: String(entry.title || entry.path),
-            status: "broken"
-          });
-
-          log.push("  [BROKEN] " + domain + "/" + category + " INVALID PATH: " + p);
-          continue;
-        }
-
-        const abs = path.join(catDir, p);
-        if (!fs.existsSync(abs)) {
-          const rooted = "/gallery/" + domain + "/" + category + "/" + p;
-
-          addBrokenVirtual(report, "gallery/" + domain + "/" + category, {
-            file: path.posix.basename(rooted),
-            path: rooted,
-            title: String(entry.title || entry.path),
-            status: "broken"
-          });
-
-          log.push("  [BROKEN] " + domain + "/" + category + "/" + p);
-        }
-      }
-
-      if (changed) {
-        const wrote = writeJsonIfChanged(manifestPath, manifest);
-        if (wrote) report.manifestsWritten.push(manifestPath);
-      }
-    }
-  }
-
-  log.push("");
-
-} // end processGalleryImages
-
-
-async function makeThumbOrFail(srcAbs, dstAbs) {
-
-  if (fs.existsSync(dstAbs)) return;
-
-  try {
-    await sharp(srcAbs)
-      .resize(THUMB_SIZE, THUMB_SIZE, { fit: "cover" })
-      .png()
-      .toFile(dstAbs);
-  } catch (err) {
-    throw new Error("thumbnail failed: " + srcAbs + " => " + String(err && err.message ? err.message : err));
-  }
-
-  ensureFile(dstAbs, "thumb write failed: " + dstAbs);
-
-} // end makeThumbOrFail
-
-
-/* ============================================================
-   Utilities (Tools + Lab)
-============================================================ */
-async function processUtilities(report, log) {
-
-  const utilitiesRoot = path.resolve("./utilities");
-  if (!fs.existsSync(utilitiesRoot)) return;
-
-  ensureDir(utilitiesRoot, "utilities root invalid: " + utilitiesRoot);
-
-  log.push("=== UTILITIES ===");
-
-  await processUtilitiesDomain(report, log, "Tools");
-  await processUtilitiesDomain(report, log, "Lab");
-
-  log.push("");
-
-} // end processUtilities
-
-
-async function processUtilitiesDomain(report, log, domainName) {
-
-  const root = path.resolve("./utilities/" + domainName);
-  if (!fs.existsSync(root)) return;
-
-  ensureDir(root, "utilities domain dir invalid: " + root);
-
-  const registryPath = path.join(root, "directoryRegistry.json");
-  ensureFile(registryPath, "utilities " + domainName + " directoryRegistry.json missing: " + registryPath);
-
-  const categories = readJson(registryPath);
-  if (!Array.isArray(categories)) throw new Error("utilities " + domainName + " directoryRegistry.json must be array");
-
-  for (const category of categories) {
-
-    const catDir = path.join(root, category);
-    ensureDir(catDir, "utilities category dir missing: " + catDir);
-
+    const catDir = path.join(PATTERNS_DIR, category);
     const manifestPath = path.join(catDir, "manifest.json");
     if (!fs.existsSync(manifestPath)) continue;
 
     const manifest = readJson(manifestPath);
-    if (!Array.isArray(manifest)) throw new Error("utilities manifest must be array: " + manifestPath);
+    const byPath = new Set(manifest.map(e => e.path));
+    const jsFiles = listFilesByExt(catDir, ".js", { exclude: ["manifest.json"] });
 
-    const byPath     = indexByPath(manifest);
-    const byFilename = indexByFilename(manifest);
-
-    const jsFiles = listFilesByExt(catDir, ".js", { exclude: ["manifest.json", "directoryRegistry.json"] });
-
-    let changed = false;
-
-    // DISCOVERY
     for (const fileName of jsFiles) {
-
+      if (byPath.has(fileName)) continue;
       const baseName = stripExt(fileName, ".js");
-      const relPath  = normalizePath(fileName);
-
-      if (byPath.has(relPath) || byFilename.has(baseName)) continue;
-
-      const entry = {
-        filename: baseName,
-        path: relPath,
-        title: fileName,
-        status: "new"
-      };
-
-      manifest.push(entry);
-      byPath.add(relPath);
-      byFilename.add(baseName);
-
-      addGrouped(report.added, "utilities/" + domainName + "/" + category, fileName);
-      log.push("  [ADDED] " + domainName + "/" + category + "/" + fileName);
-
-      changed = true;
+      manifest.push({ filename: baseName, path: fileName, title: fileName, status: "new" });
+      if (fs.existsSync(dummyThumb)) ensurePatternDummyThumb(catDir, baseName, dummyThumb);
     }
+    if (writeJsonIfChanged(manifestPath, manifest)) report.manifestsWritten.push(manifestPath);
+  }
+} // end processPatterns
 
-    // VALIDATION
-    for (const entry of manifest) {
+/**
+ * Scans the gallery/Scripts directory and updates local manifests.
+ */
+async function processGalleryScripts(report, log) {
+  const scriptsRoot = path.join(GALLERY_DIR, "Scripts");
+  if (!fs.existsSync(scriptsRoot)) return;
+  const categories = readJson(path.join(scriptsRoot, "directoryRegistry.json"));
 
-      const rel = inferEntryRelPath(entry, ".js");
-      const abs = path.join(catDir, rel);
+  for (const category of categories) {
+    const catDir = path.join(scriptsRoot, category);
+    const manifestPath = path.join(catDir, "manifest.json");
+    if (!fs.existsSync(manifestPath)) continue;
 
-      if (!fs.existsSync(abs)) {
-        const rooted = "/utilities/" + domainName + "/" + category + "/" + normalizePath(rel);
+    const manifest = readJson(manifestPath);
+    const byPath = new Set(manifest.map(e => e.path));
+    const jsFiles = listFilesByExt(catDir, ".js");
 
-        addBrokenVirtual(report, "utilities/" + domainName + "/" + category, {
-          file: path.posix.basename(rooted),
-          path: rooted,
-          title: String(entry.title || rel),
-          status: "broken"
-        });
+    for (const fileName of jsFiles) {
+      if (byPath.has(fileName)) continue;
+      manifest.push({ filename: stripExt(fileName, ".js"), path: fileName, title: fileName, status: "new" });
+    }
+    if (writeJsonIfChanged(manifestPath, manifest)) report.manifestsWritten.push(manifestPath);
+  }
+} // end processGalleryScripts
 
-        log.push("  [BROKEN] " + domainName + "/" + category + "/" + rel);
+/**
+ * Scans Ideabook and Patterns domains in the gallery for image files.
+ */
+async function processGalleryImages(report, log) {
+  if (!fs.existsSync(GALLERY_DIR)) return;
+  for (const domain of ["Ideabook", "Patterns"]) {
+    const domainDir = path.join(GALLERY_DIR, domain);
+    if (!fs.existsSync(domainDir)) continue;
+    const categories = readJson(path.join(domainDir, "directoryRegistry.json"));
+
+    for (const category of categories) {
+      const catDir = path.join(domainDir, category);
+      const manifestPath = path.join(catDir, "manifest.json");
+      if (!fs.existsSync(manifestPath)) continue;
+
+      const manifest = readJson(manifestPath);
+      const byPath = new Set(manifest.map(e => e.path));
+      const diskImages = listImageFiles(catDir);
+
+      for (const fileName of diskImages) {
+        if (byPath.has(fileName)) continue;
+        manifest.push({ filename: path.parse(fileName).name, path: fileName, title: fileName, status: "new" });
       }
-    }
-
-    if (changed) {
-      const wrote = writeJsonIfChanged(manifestPath, manifest);
-      if (wrote) report.manifestsWritten.push(manifestPath);
+      if (writeJsonIfChanged(manifestPath, manifest)) report.manifestsWritten.push(manifestPath);
     }
   }
+} // end processGalleryImages
 
-} // end processUtilitiesDomain
+/**
+ * Scans Utilities/Tools and Utilities/Lab directories for script files.
+ */
+async function processUtilities(report, log) {
+  for (const domain of ["Tools", "Lab"]) {
+    const domainDir = path.join(UTILITIES_DIR, domain);
+    if (!fs.existsSync(domainDir)) continue;
+    const categories = readJson(path.join(domainDir, "directoryRegistry.json"));
 
+    for (const category of categories) {
+      const catDir = path.join(domainDir, category);
+      const manifestPath = path.join(catDir, "manifest.json");
+      if (!fs.existsSync(manifestPath)) continue;
 
-/* ============================================================
-   Draw Registry (Home integration)
-   - Scan ./drawRegistry/*.js as text.
-============================================================ */
+      const manifest = readJson(manifestPath);
+      const byPath = new Set(manifest.map(e => e.path));
+      const jsFiles = listFilesByExt(catDir, ".js");
+
+      for (const fileName of jsFiles) {
+        if (byPath.has(fileName)) continue;
+        manifest.push({ filename: stripExt(fileName, ".js"), path: fileName, title: fileName, status: "new" });
+      }
+      if (writeJsonIfChanged(manifestPath, manifest)) report.manifestsWritten.push(manifestPath);
+    }
+  }
+} // end processUtilities
+
+/**
+ * Performs text analysis on DrawRegistry files to extract metadata (id, status, name).
+ */
 async function processDrawRegistry(report, log) {
-
-  const drRoot = path.resolve("./drawRegistry");
-  if (!fs.existsSync(drRoot)) return;
-
-  ensureDir(drRoot, "drawRegistry root invalid: " + drRoot);
-
-  log.push("=== DRAW REGISTRY ===");
-
-  const files = listFilesByExt(drRoot, ".js", { exclude: ["drawRegistry.js"] });
-
+  if (!fs.existsSync(DRAW_REGISTRY)) return;
+  const files = listFilesByExt(DRAW_REGISTRY, ".js", { exclude: ["drawRegistry.js"] });
   report.drawRegistry.scanned = files.length;
 
-  for (const fileName of files) {
+  for (const file of files) {
+    const src = fs.readFileSync(path.join(DRAW_REGISTRY, file), "utf8");
+    const idM = src.match(/id\s*:\s*["']([^"']+)["']/);
+    const stM = src.match(/status\s*:\s*["']([^"']+)["']/);
+    const nmM = src.match(/name\s*:\s*["']([^"']+)["']/);
 
-    const abs = path.join(drRoot, fileName);
-    ensureFile(abs, "drawRegistry file missing: " + abs);
-
-    const src = fs.readFileSync(abs, "utf8");
-
-    const meta = extractDrawRegistryMetaOrNull(src, fileName);
-    if (!meta) continue;
-
-    if (!meta.status) continue; // only status-bearing entries for Home
-
-    addDrawRegistryStatusItem(report, meta);
-    report.drawRegistry.statusItems += 1;
-
-    log.push("  [STATUS] " + fileName + "  status=" + meta.status);
+    if (idM && stM) {
+      report.drawRegistryStatus.push({
+        file, path: `/drawRegistry/${file}`,
+        title: nmM ? nmM[1] : file, status: stM[1],
+        sourceType: "drawRegistry", registryKey: idM[1]
+      });
+      report.drawRegistry.statusItems++;
+    }
   }
-
-  log.push("");
-
 } // end processDrawRegistry
 
-
-function extractDrawRegistryMetaOrNull(srcText, fileName) {
-
-  // Fail-soft inside this extractor ONLY:
-  // If we cannot find an id, we return null and skip the file.
-
-  const id = matchQuotedStringProp(srcText, "id");
-  if (!id) return null;
-
-  const name     = matchQuotedStringProp(srcText, "name") || fileName;
-  const category = matchQuotedStringProp(srcText, "category") || "";
-  const status   = matchQuotedStringProp(srcText, "status") || "";
-
-  return {
-    file: fileName,
-    path: "/drawRegistry/" + fileName,
-    title: name,
-    status: status,
-    category: category,
-    sourceType: "drawRegistry",
-    registryKey: id
-  };
-
-} // end extractDrawRegistryMetaOrNull
-
-
-function matchQuotedStringProp(srcText, propName) {
-
-  // Matches: propName: "value"  OR  propName: 'value'
-  const re = new RegExp(propName + "\\s*:\\s*([\"'])([^\"']+)\\1");
-  const m = srcText.match(re);
-  if (!m) return null;
-
-  const value = String(m[2]).trim();
-  return value ? value : null;
-
-} // end matchQuotedStringProp
-
-
-function addDrawRegistryStatusItem(report, entry) {
-
-  if (!report.drawRegistryStatus) report.drawRegistryStatus = [];
-  report.drawRegistryStatus.push(entry);
-
-} // end addDrawRegistryStatusItem
-
-
-/* ============================================================
-   Home list builder (derived)
-============================================================ */
+/**
+ * Aggregates all entries with a 'status' from local manifests into a single Home list.
+ */
 function buildHomeListFromReport(report) {
-
   const out = [];
-
-  // 1) Status entries from manifest.json files (strict)
-  const statusEntries = collectAllStatusEntriesStrict();
-  for (const e of statusEntries) out.push(e);
-
-  // 2) DrawRegistry status entries (from scan)
-  const dr = report.drawRegistryStatus || [];
-  for (const e of dr) out.push(e);
-
-  // 3) broken virtual items
-  const brokenGroups = report.broken || {};
-  for (const k of Object.keys(brokenGroups)) {
-    for (const e of brokenGroups[k]) out.push(e);
-  }
-
-  out.sort(compareHomeEntries);
-
-  return out;
-
-} // end buildHomeListFromReport
-
-
-function collectAllStatusEntriesStrict() {
-
-  const scanRoots = [
-    path.resolve("./patterns"),
-    path.resolve("./gallery"),
-    path.resolve("./utilities")
-  ];
-
   const manifestFiles = [];
-
-  for (const root of scanRoots) {
-    if (!fs.existsSync(root)) continue;
-    walkFindManifestJson(root, manifestFiles);
-  }
-
-  const out = [];
+  [PATTERNS_DIR, GALLERY_DIR, UTILITIES_DIR].forEach(r => {
+    if (fs.existsSync(r)) walkFindManifestJson(r, manifestFiles);
+  });
 
   for (const mf of manifestFiles) {
-
     const list = readJson(mf);
-    if (!Array.isArray(list)) throw new Error("manifest.json must contain array: " + mf);
-
-    const mfPosix = mf.split(path.sep).join(path.posix.sep);
-
-    for (const entry of list) {
-
-      if (!entry || typeof entry !== "object") continue;
-      if (!entry.status) continue;
-
-      const status = String(entry.status).trim();
-      if (!status) continue;
-
-      const rooted = makeRootedPathFromManifest(mfPosix, entry);
-      const file   = String(entry.file || entry.filename || path.posix.basename(rooted));
-      const title  = String(entry.title || "");
-
+    if (!Array.isArray(list)) continue;
+    list.filter(e => e.status).forEach(entry => {
       out.push({
-        file,
-        path: rooted,
-        title,
-        status
+        file: entry.filename || entry.file || "unknown",
+        path: makeRootedPathFromManifest(mf.split(path.sep).join("/"), entry),
+        title: entry.title || entry.filename || "Untitled",
+        status: entry.status
       });
-    }
+    });
   }
+  report.drawRegistryStatus.forEach(e => out.push(e));
 
+  out.sort((a, b) => String(a.title).toLowerCase().localeCompare(String(b.title).toLowerCase()));
   return out;
+} // end buildHomeListFromReport
 
-} // end collectAllStatusEntriesStrict
-
-
+/**
+ * Recursively searches a directory for manifest.json files.
+ */
 function walkFindManifestJson(absDir, out) {
-
-  const entries = fs.readdirSync(absDir, { withFileTypes: true });
-
-  for (const ent of entries) {
-
+  fs.readdirSync(absDir, { withFileTypes: true }).forEach(ent => {
     const full = path.join(absDir, ent.name);
-
-    if (ent.isDirectory()) {
-      walkFindManifestJson(full, out);
-      continue;
-    }
-
-    if (ent.isFile() && ent.name === "manifest.json") {
-      out.push(full);
-      continue;
-    }
-  }
-
+    if (ent.isDirectory()) walkFindManifestJson(full, out);
+    else if (ent.name === "manifest.json") out.push(full);
+  });
 } // end walkFindManifestJson
 
-
+/**
+ * Converts a filesystem path from a manifest entry into a browser-rooted web path.
+ */
 function makeRootedPathFromManifest(absManifestPosix, entry) {
-
   const rel = entry.path || entry.filename || entry.file;
-  if (!rel || typeof rel !== "string") {
-    throw new Error("Home builder: entry missing path/filename/file for manifest: " + absManifestPosix);
-  }
-
-  if (rel.startsWith("/")) return rel;
-
-  // Patterns category manifest: /patterns/<cat>/manifest.json
-  if (absManifestPosix.indexOf("/patterns/") >= 0) {
-    const cat = path.posix.basename(path.posix.dirname(absManifestPosix));
-    return "/patterns/" + cat + "/" + normalizePath(rel);
-  }
-
-  // Gallery Scripts category manifest: /gallery/Scripts/<cat>/manifest.json
-  if (absManifestPosix.indexOf("/gallery/Scripts/") >= 0) {
-    const cat = path.posix.basename(path.posix.dirname(absManifestPosix));
-    return "/gallery/Scripts/" + cat + "/" + normalizePath(rel);
-  }
-
-  // Gallery Images: /gallery/<Domain>/<Category>/manifest.json
-  if (absManifestPosix.indexOf("/gallery/Ideabook/") >= 0 || absManifestPosix.indexOf("/gallery/Patterns/") >= 0) {
-
-    const category = path.posix.basename(path.posix.dirname(absManifestPosix));
-    const domain   = path.posix.basename(path.posix.dirname(path.posix.dirname(absManifestPosix)));
-
-    return "/gallery/" + domain + "/" + category + "/" + normalizePath(rel);
-  }
-
-  // Utilities: /utilities/<Tools|Lab>/<cat>/manifest.json
-  if (absManifestPosix.indexOf("/utilities/") >= 0) {
-    const cat    = path.posix.basename(path.posix.dirname(absManifestPosix));
-    const domain = path.posix.basename(path.posix.dirname(path.posix.dirname(absManifestPosix)));
-    return "/utilities/" + domain + "/" + cat + "/" + normalizePath(rel);
-  }
-
-  // fallback: manifest-dir-relative to project root
-  const absManifestFs = absManifestPosix.split(path.posix.sep).join(path.sep);
-  const manifestDir   = path.dirname(absManifestFs);
-  const absItem       = path.resolve(manifestDir, rel);
-  const relToRoot     = path.relative(PROJECT_ROOT, absItem).split(path.sep).join(path.posix.sep);
-
-  return "/" + relToRoot;
-
+  const projectRootPosix = PROJECT_ROOT.split(path.sep).join("/");
+  return "/" + path.posix.relative(projectRootPosix, path.posix.join(path.posix.dirname(absManifestPosix), rel));
 } // end makeRootedPathFromManifest
 
-
-function compareHomeEntries(a, b) {
-
-  const as = String(a.status || "").toLowerCase();
-  const bs = String(b.status || "").toLowerCase();
-
-  if (as < bs) return -1;
-  if (as > bs) return 1;
-
-  const ak = String(a.title || a.file || a.path || "").toLowerCase();
-  const bk = String(b.title || b.file || b.path || "").toLowerCase();
-
-  if (ak < bk) return -1;
-  if (ak > bk) return 1;
-  return 0;
-
-} // end compareHomeEntries
-
-
-function countStatusItems(list) {
-  let n = 0;
-  for (const e of list) {
-    if (e && e.status && String(e.status).trim() !== "") n++;
-  }
-  return n;
-} // end countStatusItems
-
-
-function countBrokenItems(list) {
-  let n = 0;
-  for (const e of list) {
-    if (!e) continue;
-    if (String(e.status || "").toLowerCase() === "broken") n++;
-  }
-  return n;
-} // end countBrokenItems
-
-
-function countDrawRegistryItems(list) {
-  let n = 0;
-  for (const e of list) {
-    if (!e) continue;
-    if (String(e.sourceType || "") === "drawRegistry") n++;
-  }
-  return n;
-} // end countDrawRegistryItems
-
-
-/* ============================================================
-   Broken virtual helper
-============================================================ */
-function addBrokenVirtual(report, groupKey, entry) {
-
-  if (!report.broken) report.broken = {};
-  if (!report.broken[groupKey]) report.broken[groupKey] = [];
-
-  entry.status = "broken";
-
-  report.broken[groupKey].push(entry);
-
-} // end addBrokenVirtual
-
-
-/* ============================================================
-   Grouped add helper
-============================================================ */
-function addGrouped(map, groupKey, itemName) {
-
-  if (!map[groupKey]) map[groupKey] = [];
-  map[groupKey].push(itemName);
-
-} // end addGrouped
-
-
-/* ============================================================
-   Filesystem helpers (fail-fast)
-============================================================ */
-function ensureDir(p, msg) {
-  if (!fs.existsSync(p)) throw new Error(msg);
-  if (!fs.statSync(p).isDirectory()) throw new Error(msg);
-} // end ensureDir
-
-
-function ensureFile(p, msg) {
-  if (!fs.existsSync(p)) throw new Error(msg);
-  if (!fs.statSync(p).isFile()) throw new Error(msg);
-} // end ensureFile
-
-
-function readJson(p) {
-  const txt = fs.readFileSync(p, "utf8");
-  return JSON.parse(txt);
-} // end readJson
-
-
+/**
+ * Alphabetizes and stringifies JSON data. Writes to disk only if the content (or order) has changed.
+ */
 function writeJsonIfChanged(filePath, data) {
-
-  const next = JSON.stringify(data, null, 2) + "\n";
-
-  if (fs.existsSync(filePath)) {
-    const prev = fs.readFileSync(filePath, "utf8");
-    if (prev === next) return false;
+  if (Array.isArray(data)) {
+    data.sort((a, b) => {
+      const tA = String(a.title || a.filename || a.file || "").toLowerCase();
+      const tB = String(b.title || b.filename || b.file || "").toLowerCase();
+      return tA.localeCompare(tB);
+    });
   }
-
+  const next = JSON.stringify(data, null, 2) + "\n";
+  if (fs.existsSync(filePath) && fs.readFileSync(filePath, "utf8") === next) return false;
   fs.writeFileSync(filePath, next, "utf8");
   return true;
-
 } // end writeJsonIfChanged
 
+/**
+ * Ensures a thumbnail image exists for a pattern by copying a dummy file.
+ */
+function ensurePatternDummyThumb(catDir, baseName, dummyThumbAbs) {
+  const imgDir = path.join(catDir, "images");
+  if (!fs.existsSync(imgDir)) fs.mkdirSync(imgDir, { recursive: true });
+  const out = path.join(imgDir, `thumb_${baseName}.png`);
+  if (!fs.existsSync(out)) fs.copyFileSync(dummyThumbAbs, out);
+} // end ensurePatternDummyThumb
 
-function normalizePath(p) {
-  return String(p).replace(/\\/g, "/");
-} // end normalizePath
+/**
+ * Synchronously reads and parses a JSON file.
+ */
+function readJson(p) { return JSON.parse(fs.readFileSync(p, "utf8")); } // end readJson
 
-
-function stripExt(name, ext) {
-  if (!name.toLowerCase().endsWith(ext.toLowerCase())) return name;
-  return name.slice(0, name.length - ext.length);
-} // end stripExt
-
-
-function inferEntryRelPath(entry, ext) {
-
-  if (!entry || typeof entry !== "object") throw new Error("inferEntryRelPath: entry missing/invalid");
-
-  if (typeof entry.path === "string" && entry.path.trim() !== "") return entry.path;
-
-  if (typeof entry.filename === "string" && entry.filename.trim() !== "") {
-    return entry.filename + ext;
-  }
-
-  if (typeof entry.file === "string" && entry.file.trim() !== "") return entry.file;
-
-  throw new Error("inferEntryRelPath: entry missing path/filename/file");
-
-} // end inferEntryRelPath
-
-
-function indexByPath(manifest) {
-
-  const set = new Set();
-
-  for (const e of manifest) {
-    if (!e || typeof e !== "object") continue;
-    if (typeof e.path !== "string") continue;
-    set.add(normalizePath(e.path));
-  }
-
-  return {
-    has(p) { return set.has(normalizePath(p)); }, // end has
-    add(p) { set.add(normalizePath(p)); }         // end add
-  };
-
-} // end indexByPath
-
-
-function indexByFilename(manifest) {
-
-  const set = new Set();
-
-  for (const e of manifest) {
-    if (!e || typeof e !== "object") continue;
-    if (typeof e.filename !== "string") continue;
-    set.add(e.filename);
-  }
-
-  return {
-    has(f) { return set.has(f); }, // end has
-    add(f) { set.add(f); }         // end add
-  };
-
-} // end indexByFilename
-
-
-function listFilesByExt(dir, ext, opts) {
-
-  if (!opts) opts = {};
+/**
+ * Lists files in a directory that match a specific extension, with exclusion support.
+ */
+function listFilesByExt(dir, ext, opts = {}) {
   const exclude = opts.exclude || [];
-
-  const entries = fs.readdirSync(dir, { withFileTypes: true });
-  const out = [];
-
-  for (const ent of entries) {
-    if (!ent.isFile()) continue;
-
-    const name = ent.name;
-
-    if (exclude.indexOf(name) >= 0) continue;
-    if (name.startsWith(".")) continue;
-
-    if (name.toLowerCase().endsWith(ext.toLowerCase())) out.push(name);
-  }
-
-  out.sort((a, b) => a.localeCompare(b));
-  return out;
-
+  return fs.readdirSync(dir).filter(f => f.endsWith(ext) && !exclude.includes(f));
 } // end listFilesByExt
 
-
+/**
+ * Lists image files in a directory based on standard web extensions.
+ */
 function listImageFiles(dir) {
-
-  const allowed = /\.(jpg|jpeg|png|gif|webp|bmp|tiff)$/i;
-
-  const entries = fs.readdirSync(dir, { withFileTypes: true });
-  const out = [];
-
-  for (const ent of entries) {
-
-    if (!ent.isFile()) continue;
-
-    const name = ent.name;
-
-    if (name.startsWith(".")) continue;
-    if (!allowed.test(name)) continue;
-
-    out.push(name);
-  }
-
-  out.sort((a, b) => a.localeCompare(b));
-  return out;
-
+  return fs.readdirSync(dir).filter(f => /\.(jpg|jpeg|png|webp)$/i.test(f));
 } // end listImageFiles
 
+/**
+ * Removes the specified extension from a string.
+ */
+function stripExt(name, ext) { return name.endsWith(ext) ? name.slice(0, -ext.length) : name; } // end stripExt
 
-/* ============================================================
-   CLI runner
-============================================================ */
-async function main() {
+/**
+ * Counts entries in an array that have a defined status property.
+ */
+function countStatusItems(l) { return l.filter(e => e.status).length; } // end countStatusItems
 
-  const rep = await runManifestMaintenance();
-
-  console.log("OK: log =", rep.logName);
-  console.log("manifestsWritten =", rep.manifestsWritten.length);
-  console.log("homeWritten =", rep.homeWritten ? "YES" : "NO");
-  console.log("brokenGroups =", Object.keys(rep.broken || {}).length);
-  console.log("drawRegistryItems =", rep.homeCounts.drawRegistryItems);
-
-} // end main
-
-
-if (import.meta.url === "file://" + process.argv[1]) {
-  main().catch((err) => {
-    console.error(err);
-    process.exit(1);
-  });
-} // end cli gate
+// --- EXECUTION ---
+runManifestMaintenance()
+  .then(report => console.log(`>>> SUCCESS: ${report.homeCounts.total} items sorted.`))
+  .catch(err => { console.error("!!! FAILED", err); process.exit(1); });

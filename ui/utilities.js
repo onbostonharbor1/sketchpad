@@ -121,41 +121,85 @@ export async function initUtilityTab(restored = false) {
   await switchUtilityTab(tabId);
 } // end initUtilityTab
 
-/* ============================================================
-   Caption + Result
-============================================================ */
-function setUtilityCaption({ title, path, subtab, category, manifestPath, entryPath, status }) {
 
-  // Title rule:
-  //   Tools/Lab:  "{category}: {title}"
-  //   Result root (no category): just "{title}"
+/* ============================================================
+   updateUtilitiesCaption()
+   ------------------------------------------------------------
+   ROLE (MULTI-RESPONSIBILITY — BY DESIGN)
+   ------------------------------------------------------------
+   This function does MORE than send data to utilitiesMenuCmds.
+   It performs three distinct jobs:
+
+   1) Caption rendering
+      - Computes and sets the visible caption title.
+      - Wires Prev/Next behavior (currently null for Utilities).
+
+   2) Execution context derivation
+      - Computes scriptPath used to run or display the utility.
+      - This reflects how Utilities actually executes entries.
+
+   3) Menu-context bundling (CRITICAL)
+      - Builds a canonical `info` object for utilitiesMenuCmds.
+      - This MUST mirror the Gallery/Patterns contract:
+        • one canonical identifier
+        • no display-derived fallbacks
+        • no filename/path guessing
+============================================================ */
+function updateUtilitiesCaption({ title, path, subtab, category, manifestPath, entryPath, status }) {
+
+  /* ----------------------------------------------------------
+     1) Caption rendering
+     -------------------------------------------------------- */
   const finalTitle =
     (category && category.trim() !== "")
       ? (category + ": " + (title || "(untitled)"))
       : (title || "(untitled)");
 
-  const scriptPath = (subtab && category && entryPath)
-    ? `/utilities/${subtab}/${category}/${entryPath}`
-    : "";
+  /* ----------------------------------------------------------
+     2) Execution context derivation
+     -------------------------------------------------------- */
+  const scriptPath =
+    (subtab && category && entryPath)
+      ? `/utilities/${subtab}/${category}/${entryPath}`
+      : "";
 
   setCaptionBar({
     targetId: "caption",
     title: finalTitle,
     onPrev: null,
     onNext: null,
+
+    /* --------------------------------------------------------
+       3) Menu-context bundling (Gallery-conformant)
+       ------------------------------------------------------ */
     onMenu: async (anchor) => {
 
+      if (!manifestPath) {
+        throw new Error("updateUtilitiesCaption: manifestPath missing");
+      }
+      if (!entryPath) {
+        throw new Error("updateUtilitiesCaption: entryPath missing");
+      }
+
+      // Canonical identifier:
+      // Utilities use entry.path as the true manifest key
       const info = {
-        // Show Script
+        // Help / identification
+        helpKey: `utilities/${subtab}/${category}/${entryPath}`,
+
+        // Script viewing / execution
         isScript: true,
         scriptPath: scriptPath,
 
-        // Edit Manifest
-        manifestPath: manifestPath || "",
-        entryPath: entryPath || "",
+        // Manifest operations (Edit, future Archive)
+        manifestPath: manifestPath,
+        matchField: "path",
+        matchValue: entryPath,
 
-        // Dialog labels / defaults
-        file: path || entryPath || "(untitled)",
+        // Canonical file identifier (DO NOT DERIVE)
+        filename: entryPath,
+
+        // Display metadata only
         title: title || "",
         status: status || ""
       };
@@ -166,7 +210,8 @@ function setUtilityCaption({ title, path, subtab, category, manifestPath, entryP
     } // end onMenu
   });
 
-} // end setUtilityCaption
+} // end updateUtilitiesCaption
+
 
 
 
@@ -323,7 +368,7 @@ async function runUtilityEntry(subtab, category, entry) {
 
     const result = await mod.runPattern();
 
-    setUtilityCaption({
+    updateUtilitiesCaption({
       title: entry.title || entry.filename || "(untitled)",
       path: category + "/" + entry.path,
       subtab,
@@ -334,12 +379,21 @@ async function runUtilityEntry(subtab, category, entry) {
       status: entry.status || ""
     });
 
-
+    // --------------------------------------------------------
+    // CRITICAL BEHAVIOR:
+    // If the tool returns a string (or any non-null value),
+    // treat it as Result HTML and display it.
+    //
+    // If it returns null/undefined, assume the tool wrote directly
+    // into #text (or managed its own UI) and DO NOT overwrite it.
+    // --------------------------------------------------------
     if (subtab !== "Lab") {
-      displayUtilityResult(result);
+      if (result !== null && result !== undefined) {
+        displayUtilityResult(result);
+        uiState.utilities.lastResult = result;
+      }
     }
 
-    uiState.utilities.lastResult = result;
     return result;
 
   } catch (err) {
@@ -349,6 +403,7 @@ async function runUtilityEntry(subtab, category, entry) {
   }
 
 } // end runUtilityEntry
+
 
 
 /* ============================================================
@@ -589,15 +644,22 @@ export function wireUtilitiesCommandsButton() {
 
 } // end wireUtilitiesCommandsButton
 
+/* ============================================================
+   refreshUtilitiesFromManifestEdit()
+   ------------------------------------------------------------
+   FIX:
+   Make Utilities follow the SAME refresh→restore pattern
+   as Gallery. No ad-hoc rendering. No tab switching.
+=========================================================== */
 export async function refreshUtilitiesFromManifestEdit() {
 
-  // Force cache drop
+  // Drop manifest cache
   if (manifest && typeof manifest.clearCache === "function") {
     manifest.clearCache();
   }
   if (manifest.cache) delete manifest.cache.utilities;
 
-  // Reload local cache (same logic as initUtilityTab)
+  // Reload cache (same as init path)
   const toolsRaw = await manifest.get("utilities/Tools");
   const labRaw   = await manifest.get("utilities/Lab");
 
@@ -609,10 +671,8 @@ export async function refreshUtilitiesFromManifestEdit() {
   toolsRegistry.forEach((cat, i) => utilitiesCache.Tools[cat] = toolsRaw[i] || []);
   labRegistry.forEach((cat, i) => utilitiesCache.Lab[cat] = labRaw[i] || []);
 
-  // Re-render current view deterministically
-  const tabId = uiState.utilities.activeUtilityTabId || "tab-tools";
-  await setUtilitySubtabs();
-  await switchUtilityTab(tabId);
+  // 🔑 CRITICAL: restore Utilities deterministically (Gallery model)
+  await restoreUtilityTab();
 
 } // end refreshUtilitiesFromManifestEdit
 

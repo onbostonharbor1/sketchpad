@@ -483,6 +483,11 @@ function buildSingleControl(info, key, def, value, tabId) {
       setRangeHeaderControl(field, label, def, value, info, key, tabId);
       break;
 
+    case "accordion":
+      setAccordionControl(field, label, def, value, info, key, tabId);
+      break;
+
+
     case "checkbox":
       setCheckboxControl(field, label, def, value, info, key, tabId);
       break;
@@ -879,52 +884,54 @@ function removePointPickerDots(container, tabId, key) {
    - info.parameters[key] already exists and is an object with x/y
    - info.redrawHandler exists
 ------------------------------------------------------------ */
+
+/* ------------------------------------------------------------
+   setPointPickerControl()
+   ------------------------------------------------------------
+   Updated to support def.showCoords: false
+------------------------------------------------------------ */
+/* ------------------------------------------------------------
+   setPointPickerControl()
+   ------------------------------------------------------------
+   PURPOSE
+   -------
+   Render ONE point-picker control (single Point value = {x, y}).
+
+   UPDATED BEHAVIOR
+   ----------------
+   - Supports 'def.noReadout': If true, the x,y text input is hidden.
+   - Preserves draggable dot functionality on the interaction layer.
+------------------------------------------------------------ */
 function setPointPickerControl(field, label, def, value, info, key, tabId) {
 
   // ---------------------------------------------------------
   // READOUT (UI)
   // ---------------------------------------------------------
-  // A read-only text field that displays the current point.
-  // This is NOT the editable source of truth; the dot drag is.
-  // ---------------------------------------------------------
-  const readout = document.createElement("input");
-  readout.type = "text";
-  readout.readOnly = true;
-  readout.className = "ctrl-text";
-  readout.value = Math.round(value.x) + ", " + Math.round(value.y);
-  readout.id = tabId + "-" + key;
+  const noReadout = !!def.noReadout;
+  let readout = null;
+
+  if (!noReadout) {
+    readout = document.createElement("input");
+    readout.type = "text";
+    readout.readOnly = true;
+    readout.className = "ctrl-text";
+    readout.value = Math.round(value.x) + ", " + Math.round(value.y);
+    readout.id = tabId + "-" + key;
+  }
 
   // ---------------------------------------------------------
-  // CANVAS LOOKUP
-  // ---------------------------------------------------------
-  // We convert mouse client coordinates to canvas-local coords
-  // using getBoundingClientRect().
+  // CANVAS & OVERLAY LOOKUP
   // ---------------------------------------------------------
   const canvas = document.getElementById("sharedCanvas");
   if (!canvas) throw new Error("pointPicker: #sharedCanvas not found");
 
-  // ---------------------------------------------------------
-  // OVERLAY LAYER (DOT CONTAINER)
-  // ---------------------------------------------------------
-  // Dots must live in the interaction overlay layer so they:
-  //   - render above the canvas
-  //   - can intercept mouse events
-  // ---------------------------------------------------------
   const container = overlayManager.canvasLayers["interaction"];
   if (!container) throw new Error("pointPicker: interaction-layer missing");
 
-  // Ensure the layer is visible. (Your overlay system may also
-  // manage this elsewhere, but we do it here to be deterministic.)
   container.style.display = "block";
 
   // ---------------------------------------------------------
-  // DOT CLEANUP (NEW BEHAVIOR ADDED)
-  // ---------------------------------------------------------
-  // When the action panel is rebuilt, this control may be rebuilt.
-  // If we do not remove the previous dot, dots accumulate forever.
-  //
-  // We remove any existing dot(s) created for THIS tabId+key.
-  // This matches the prefix strategy you used in the array picker.
+  // DOT CLEANUP
   // ---------------------------------------------------------
   const prefix = "dot-" + tabId + "-" + key;
   const kids = Array.from(container.children);
@@ -939,64 +946,45 @@ function setPointPickerControl(field, label, def, value, info, key, tabId) {
   // ---------------------------------------------------------
   // DOT CREATION
   // ---------------------------------------------------------
-  // Use a tab-aware id so different tabs / different keys do not
-  // overwrite each other. (Your old version used `dot-${key}`,
-  // which can collide across tabs and across rebuilds.)
-  // ---------------------------------------------------------
   const dot = document.createElement("div");
   dot.className = "point-picker-dot";
-  dot.id = prefix;                 // single-point id: "dot-<tabId>-<key>"
+  dot.id = prefix;
   dot.style.position = "absolute";
-  dot.style.left = (value.x - 5) + "px";  // center dot on point
+  dot.style.left = (value.x - 5) + "px";
   dot.style.top  = (value.y - 5) + "px";
   dot.style.cursor = "grab";
   container.appendChild(dot);
 
   // ---------------------------------------------------------
-  // DRAG STATE
-  // ---------------------------------------------------------
-  // We keep drag state entirely inside this function instance.
-  // No global flags. No persistent window listeners.
+  // DRAG STATE & HANDLERS
   // ---------------------------------------------------------
   let isDragging = false;
-
-  // ---------------------------------------------------------
-  // DRAG HANDLERS
-  // ---------------------------------------------------------
-  // - We add window listeners ONLY when dragging begins
-  // - We remove them immediately when dragging ends
-  //
-  // This prevents listener accumulation across rebuilds and avoids
-  // “mystery behavior” where old handlers keep running forever.
-  // ---------------------------------------------------------
 
   function onMouseMove(e) {
     if (!isDragging) return;
 
-    // Prevent text selection / browser drag behaviors while dragging the dot.
     e.preventDefault();
 
-    // Convert mouse position to canvas-local coordinates.
     const rect = canvas.getBoundingClientRect();
     const newX = e.clientX - rect.left;
     const newY = e.clientY - rect.top;
 
-    // Update dot position (visual).
+    // Update dot position (visual)
     dot.style.left = (newX - 5) + "px";
     dot.style.top  = (newY - 5) + "px";
 
-    // Update the underlying model (source of truth).
-    // We assume info.parameters[key] already exists.
+    // Update the underlying model
     info.parameters[key].x = newX;
     info.parameters[key].y = newY;
 
-    // Notify and redraw.
-    // (This matches your existing pattern; we do not invent new callbacks.)
+    // Notify and redraw
     if (typeof info.onParamChange === "function") info.onParamChange();
     info.redrawHandler();
 
-    // Update the readout text.
-    readout.value = Math.round(newX) + ", " + Math.round(newY);
+    // Update the readout text only if it exists
+    if (readout) {
+      readout.value = Math.round(newX) + ", " + Math.round(newY);
+    }
   } // end onMouseMove
 
   function endDrag() {
@@ -1005,18 +993,10 @@ function setPointPickerControl(field, label, def, value, info, key, tabId) {
     isDragging = false;
     dot.style.cursor = "grab";
 
-    // Remove listeners immediately (critical to prevent accumulation).
     window.removeEventListener("mousemove", onMouseMove);
     window.removeEventListener("mouseup", endDrag);
-
-    // Optional: if you later decide the interaction layer should NOT
-    // intercept clicks except during drag, you can toggle pointerEvents
-    // here. For now we leave it alone to match your working baseline.
   } // end endDrag
 
-  // ---------------------------------------------------------
-  // DRAG START (mousedown on dot)
-  // ---------------------------------------------------------
   dot.addEventListener("mousedown", (e) => {
     e.preventDefault();
     e.stopPropagation();
@@ -1024,7 +1004,6 @@ function setPointPickerControl(field, label, def, value, info, key, tabId) {
     isDragging = true;
     dot.style.cursor = "grabbing";
 
-    // Install window listeners ONLY for the duration of this drag.
     window.addEventListener("mousemove", onMouseMove, { passive: false });
     window.addEventListener("mouseup", endDrag);
   });
@@ -1032,16 +1011,20 @@ function setPointPickerControl(field, label, def, value, info, key, tabId) {
   // ---------------------------------------------------------
   // ASSEMBLE CONTROL ROW DOM
   // ---------------------------------------------------------
-  // The control row shows:
-  //   label
-  //   readout
-  // The dot itself is on the overlay layer, not inside the row.
-  // ---------------------------------------------------------
-  field.appendChild(label);
-  field.appendChild(readout);
+// Only append the label if we are NOT suppressing the readout.
+  // This prevents the "orphan label" look in your screenshot.
+  if (!noReadout) {
+    field.appendChild(label);
+    if (readout) {
+      field.appendChild(readout);
+    }
+  } else {
+    // Optional: If noReadout is true, we might want to hide the
+    // entire row container so it doesn't take up vertical space.
+    field.style.display = "none";
+  }
 
 } // end setPointPickerControl
-
 
 function setPointPickerArrayControl(field, label, def, value, info, key, tabId) {
   if (!Array.isArray(value)) {
@@ -1468,6 +1451,321 @@ function setStaticTextControl(field, label, def, value, info, key, tabId) {
   field.appendChild(box);
 
 } // end setStaticTextControl
+
+/* ------------------------------------------------------------
+   setAccordionControl()
+
+   PURPOSE
+   -------
+   Renders a Bootstrap accordion in the Action panel.
+
+   CONTROL SCHEMA (USAGE)
+   ---------------------
+   controls: {
+     uiGroup: {
+       widget: "accordion",
+       label: "Advanced",     // currently unused (accordion has its own headers)
+       sections: [
+         {
+           title: "Geometry",
+           controls: {
+             ellipse_a: { widget:"range", min:50, max:600, step:10, label:"Width:" },
+             ellipse_b: { widget:"range", min:50, max:600, step:10, label:"Height:" }
+           }
+         },
+         {
+           title: "Rendering",
+           controls: {
+             color:     { widget:"colorPicker", label:"Color:" },
+             lineWidth: { widget:"range", min:1, max:5, step:1, label:"Line Width:" }
+           }
+         }
+       ]
+     }
+   }
+
+   NOTES
+   -----
+   - The inner controls are declared exactly like normal controls.
+   - Values are still stored in info.parameters[innerKey].
+   - This is purely a UI grouping mechanism.
+  - BUTTON controls require special handling so action/redraw
+     metadata is preserved (matches existing button path).
+   FAIL-FAST
+   ---------
+   - Requires window.bootstrap to exist (Bootstrap JS loaded).
+   - def.sections must be a non-empty array.
+   - Each section must have a string title and an object controls.
+------------------------------------------------------------ */
+/* ------------------------------------------------------------
+   setAccordionControl()
+
+   PURPOSE
+   -------
+   Renders a Bootstrap accordion in the Action panel.
+
+   UPDATED
+   -------
+   - Default is CLOSED (def.startOpen defaults to false)
+   - Supports a simple clickable list, like a categories frame:
+
+       sections: [
+         {
+           title: "Draw Registry",
+           items: [
+             { label: "Linked Circles", action: fn },
+             { label: "Mystic Rose",    action: fn }
+           ]
+         }
+       ]
+
+   - If section.controls exists, it renders nested parameter controls
+     (original behavior). If section.items exists, it renders a list.
+     If both exist, items render first, then controls.
+
+   FAIL-FAST
+   ---------
+   - Requires window.bootstrap
+   - def.sections must be non-empty array
+   - section.title must be non-empty string
+   - section.items (if present) must be array of {label, action}
+------------------------------------------------------------ */
+/* ------------------------------------------------------------
+   setAccordionControl()
+
+   PURPOSE
+   -------
+   Renders a Bootstrap accordion in the Action panel.
+
+   UPDATED
+   -------
+   - Default is CLOSED (def.startOpen defaults to false)
+   - Supports a simple clickable list, like a categories frame:
+
+       sections: [
+         {
+           title: "Draw Registry",
+           items: [
+             { label: "Linked Circles", action: fn },
+             { label: "Mystic Rose",    action: fn }
+           ]
+         }
+       ]
+
+   - If section.controls exists, it renders nested parameter controls
+     (original behavior). If section.items exists, it renders a list.
+     If both exist, items render first, then controls.
+
+   FAIL-FAST
+   ---------
+   - Requires window.bootstrap
+   - def.sections must be non-empty array
+   - section.title must be non-empty string
+   - section.items (if present) must be array of {label, action}
+------------------------------------------------------------ */
+function setAccordionControl(field, label, def, value, info, key, tabId) {
+
+  if (!field) throw new Error("setAccordionControl: field missing");
+  if (!def) throw new Error("setAccordionControl: def missing for key " + key);
+  if (!info) throw new Error("setAccordionControl: info missing for key " + key);
+  if (!info.parameters) throw new Error("setAccordionControl: info.parameters missing for key " + key);
+  if (typeof info.redrawHandler !== "function") throw new Error("setAccordionControl: info.redrawHandler is not a function");
+  if (!tabId) throw new Error("setAccordionControl: tabId missing");
+  if (!key) throw new Error("setAccordionControl: key missing");
+
+  if (!window.bootstrap) {
+    throw new Error("setAccordionControl: Bootstrap JS (window.bootstrap) not found");
+  }
+
+  const sections = def.sections;
+  if (!sections || !Array.isArray(sections) || sections.length === 0) {
+    throw new Error("setAccordionControl: def.sections missing/invalid for key " + key);
+  }
+
+  // Default CLOSED unless explicitly requested.
+  const startOpen = (def.startOpen === true);
+
+  // Full-width wrapper (accordion manages its own layout)
+  const wrap = document.createElement("div");
+  wrap.className = "ctrl-accordion-wrap";
+  wrap.style.gridColumn = "1 / -1";
+
+  const acc = document.createElement("div");
+  acc.className = "accordion";
+  acc.id = tabId + "-" + key + "-accordion";
+
+  for (let i = 0; i < sections.length; i++) {
+
+    const sec = sections[i];
+    if (!sec) throw new Error("setAccordionControl: missing section at index " + i + " for key " + key);
+
+    if (typeof sec.title !== "string" || sec.title.trim() === "") {
+      throw new Error("setAccordionControl: section.title missing/invalid at index " + i + " for key " + key);
+    }
+
+    const hasItems = (sec.items !== undefined);
+    const hasControls = (sec.controls !== undefined);
+
+    if (hasItems) {
+      if (!Array.isArray(sec.items)) {
+        throw new Error("setAccordionControl: section.items must be an array at index " + i + " for key " + key);
+      }
+    }
+
+    if (hasControls) {
+      if (!sec.controls || typeof sec.controls !== "object") {
+        throw new Error("setAccordionControl: section.controls missing/invalid at index " + i + " for key " + key);
+      }
+    }
+
+    if (!hasItems && !hasControls) {
+      throw new Error("setAccordionControl: section must define items and/or controls at index " + i + " for key " + key);
+    }
+
+    const item = document.createElement("div");
+    item.className = "accordion-item";
+
+    const h2 = document.createElement("h2");
+    h2.className = "accordion-header";
+
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "accordion-button";
+    if (!startOpen) btn.classList.add("collapsed");
+    btn.textContent = sec.title;
+
+    const collapseId = tabId + "-" + key + "-collapse-" + i;
+    btn.setAttribute("data-bs-toggle", "collapse");
+    btn.setAttribute("data-bs-target", "#" + collapseId);
+    btn.setAttribute("aria-expanded", startOpen ? "true" : "false");
+    btn.setAttribute("aria-controls", collapseId);
+
+    h2.appendChild(btn);
+
+    const bodyWrap = document.createElement("div");
+    bodyWrap.id = collapseId;
+    bodyWrap.className = "accordion-collapse collapse" + (startOpen ? " show" : "");
+    bodyWrap.setAttribute("data-bs-parent", "#" + acc.id);
+
+    const body = document.createElement("div");
+    body.className = "accordion-body";
+
+    // --------------------------------------------------------
+    // 1) OPTIONAL: Render a categories-style clickable list
+    // --------------------------------------------------------
+    if (hasItems) {
+
+      const list = document.createElement("div");
+      list.className = (typeof sec.listClass === "string" && sec.listClass.trim() !== "")
+        ? sec.listClass
+        : "ctrl-accordion-list";
+
+      for (let j = 0; j < sec.items.length; j++) {
+
+        const it = sec.items[j];
+        if (!it) throw new Error("setAccordionControl: missing item at section " + i + " index " + j);
+
+        if (typeof it.label !== "string" || it.label.trim() === "") {
+          throw new Error("setAccordionControl: item.label missing/invalid at section " + i + " index " + j);
+        }
+
+        if (typeof it.action !== "function") {
+          throw new Error("setAccordionControl: item.action missing/invalid for '" + it.label + "'");
+        }
+
+        const row = document.createElement("div");
+        row.className = (typeof sec.itemClass === "string" && sec.itemClass.trim() !== "")
+          ? sec.itemClass
+          : "ctrl-accordion-item";
+
+        row.textContent = it.label;
+        row.style.cursor = "pointer";
+
+        row.addEventListener("click", (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          it.action();
+        });
+
+        list.appendChild(row);
+
+        // separator line (matches the screenshot vibe)
+        if (j !== sec.items.length - 1) {
+          const hr = document.createElement("hr");
+          hr.className = "ctrl-accordion-sep";
+          list.appendChild(hr);
+        }
+      }
+
+      body.appendChild(list);
+    }
+
+    // --------------------------------------------------------
+    // 2) OPTIONAL: Render nested parameter controls (original)
+    // --------------------------------------------------------
+    if (hasControls) {
+
+      const innerKeys = Object.keys(sec.controls);
+
+      for (let k = 0; k < innerKeys.length; k++) {
+
+        const innerKey = innerKeys[k];
+        const innerDef = sec.controls[innerKey];
+
+        if (!innerDef) {
+          throw new Error("setAccordionControl: missing innerDef for key " + innerKey);
+        }
+
+        const innerValue =
+          (info.parameters[innerKey] !== undefined) ? info.parameters[innerKey]
+          : (innerDef.default !== undefined) ? innerDef.default
+          : "";
+
+        let passValue = innerValue;
+
+        if (innerDef.widget === "button") {
+          passValue = {
+            widget: "button",
+            action: innerDef.action,
+            redraw: (innerDef.redraw !== undefined) ? innerDef.redraw : false
+          };
+        }
+
+        const innerField = buildSingleControl(
+          info,
+          innerKey,
+          innerDef,
+          passValue,
+          tabId
+        );
+
+        if (innerField) body.appendChild(innerField);
+      }
+    }
+
+    bodyWrap.appendChild(body);
+
+    item.appendChild(h2);
+    item.appendChild(bodyWrap);
+
+    acc.appendChild(item);
+  }
+
+  // Optional redraw on accordion toggle
+  if (def.redrawOnToggle === true) {
+    acc.addEventListener("shown.bs.collapse", () => {
+      info.redrawHandler();
+    });
+    acc.addEventListener("hidden.bs.collapse", () => {
+      info.redrawHandler();
+    });
+  }
+
+  wrap.appendChild(acc);
+  field.appendChild(wrap);
+
+} // end setAccordionControl
+
 
 
 
