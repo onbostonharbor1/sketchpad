@@ -4,10 +4,11 @@
    ------------------------------------------------------------
 */
 
-import { showHelpOverlay } from "./overlay.js";
-import { fileLayer } from "./fileLayer.js";
-import { manifest } from "./manifest.js";
-import { loadHelpManifest } from "./ui_utilities.js";
+// import { showHelpOverlay }  from "./overlay.js";
+// import { fileLayer }        from "./fileLayer.js";
+// import { manifest }         from "./manifest.js";
+// import { loadHelpManifest } from "./help.js";
+import { buildHelpItem }    from "./help.js";
 
 let menuEl = null;
 let outsideHandler = null;
@@ -137,37 +138,7 @@ function clear() {
   close();
 } // end clear
 
-export async function buildHelpItem(tabName, helpKey) {
-  const helpData = await loadHelpManifest();   // cached, deterministic
 
-  // The manifest key MUST exist and MUST be an array
-  const list = helpData[tabName];
-
-  if (!Array.isArray(list)) {
-    return {
-      label: "Help",
-      disabled: true,
-      onClick: () => {}
-    };
-  }
-
-  const exists = list.includes(helpKey);
-
-  if (!exists) {
-    return {
-      label: "Help",
-      disabled: true,
-      onClick: () => {}
-    };
-  }
-
-  const path = `/help/${tabName}/${helpKey}.html`;
-
-  return {
-    label: "Help",
-    onClick: () => showHelpOverlay(path, helpKey)
-  };
-} // end buildHelpItem
 
 
 

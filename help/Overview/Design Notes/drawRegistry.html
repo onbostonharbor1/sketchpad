@@ -1,0 +1,604 @@
+<!doctype html>
+
+<html lang="en">
+
+<head>
+  <meta charset="utf-8" />
+
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+
+  <title>Help Treatise — How Sketchpad drawRegistry Files Are Organized and Used</title>
+
+  <link rel="stylesheet" href="/help/help_treatise.css" />
+</head>
+
+<body>
+
+  <h1>How Sketchpad drawRegistry Files Are Organized and Used</h1>
+
+  <p>
+    This document describes the purpose, structure, and execution flow of a single
+    <span class="mono">drawRegistry</span> entry file in Sketchpad.
+  </p>
+
+  <p>
+    A <span class="mono">drawRegistry</span> file defines one “first-class drawable object”:
+    a reusable, parameter-driven drawing unit that can be selected in the Draw tab,
+    manipulated via controls, and rendered deterministically onto the shared canvas.
+  </p>
+
+  <p>
+    The sample file used throughout this discussion is:
+    <span class="mono">drawRegistry/mysticRose.js</span>
+  </p>
+
+  <hr />
+
+  <h2>1. What a drawRegistry File Is</h2>
+
+  <p>
+    A drawRegistry file is a JavaScript module that registers a single drawing object
+    on the global <span class="mono">window</span> namespace using a stable naming convention:
+  </p>
+
+  <pre><code>window.drawRegistry_mysticRose = { ... };</code></pre>
+
+  <p>
+    The name <span class="mono">drawRegistry_mysticRose</span> is not cosmetic: it is the lookup handle
+    Sketchpad uses when building category lists and when instantiating the object at runtime.
+  </p>
+
+  <p>
+    Each registry entry is an object with:
+  </p>
+
+  <ul>
+    <li>metadata (identity, category, tags, description)</li>
+    <li>JSON-safe defaults (<span class="mono">params</span>)</li>
+    <li>UI control descriptors (<span class="mono">controls</span>)</li>
+    <li>a small lifecycle (<span class="mono">init()</span>, <span class="mono">update()</span>, <span class="mono">draw()</span>)</li>
+    <li>persistent elements (<span class="mono">elements</span>) created once and reused</li>
+  </ul>
+
+  <hr />
+
+  <h2>2. Sample Registry Entry: Mystic Rose</h2>
+
+  <p>
+    The example below is a typical drawRegistry file in Sketchpad:
+  </p>
+
+  <pre><code>/* drawRegistry/mysticRose.js */
+import { Point, StringThing }       from '../classes/classes.js';
+import { drawMysticRose }           from '../draw/drawUnicorns.js';
+
+window.drawRegistry_mysticRose = {
+    name:         "Mystic Rose (circle)",
+    id:           "mysticRose",
+    version:      0.1,
+    category:     "unicorns",
+    firstOrder:   true,
+    source:       "internal",
+    tags:         ["circular"],
+    description:  "Lines drawn to all nodes from each node in a circle",
+    status:      "",
+    hover:        "",
+
+    // -- visual styling ---
+    background: null,
+    overlays:   [],
+    transforms: [],
+
+    // Placeholder for all elements drawn
+    elements:   null,
+
+    // --- Core defaults for drawing (JSON-safe) ---
+    params: {
+      midpoint: { x: 300, y: 200 },   // converted to Point in init()
+      radius:   250,
+      numNodes: 20,
+      xScale:   1,
+      yScale:   1,
+      color:    "blue",
+      lineWidth: 1
+    },
+
+    // --- UI metadata (controls) ---
+    controls: {
+      radius:    { widget: "range", min: 80,  max: 500, step: 5,   label: "Radius:" },
+      numNodes:  { widget: "range", min: 12,  max: 30,  step: 1,   label: "Nodes:" },
+      xScale:    { widget: "range", min: 0.5, max: 2,   step: 0.1, label: "X Scale:" },
+      yScale:    { widget: "range", min: 0.5, max: 2,   step: 0.1, label: "Y Scale:" },
+      color:     { widget: "colorPicker",                          label: "Color:" },
+      lineWidth: { widget: "range", min: .5,  max: 3.5, step: .5,  label: "Width:" },
+      midpoint:  { widget: "pointPicker",                          label: "Midpoint:" }
+    },
+
+    init() { ... },
+    update(params) { ... },
+    draw() { ... }
+};</code></pre>
+
+  <p>
+    The remainder of this treatise explains how Sketchpad expects each section to behave.
+  </p>
+
+  <hr />
+
+  <h2>3. Identity and Metadata Fields</h2>
+
+  <p>
+    A drawRegistry entry begins with identity and descriptive metadata. These fields are
+    used by the Draw tab UI and by future persistence and search features.
+  </p>
+
+  <h3>3.1 Display and Identity</h3>
+
+  <ul>
+    <li>
+      <span class="mono">name</span><br />
+      Human-readable display name used in category lists and captions.
+    </li>
+
+    <li>
+      <span class="mono">id</span><br />
+      A stable internal identifier for the object type. This is intended to remain
+      constant even if the display name changes.
+    </li>
+
+    <li>
+      <span class="mono">version</span><br />
+      A numeric version for the registry entry definition. This can be used later
+      for migration of saved objects.
+    </li>
+
+    <li>
+      <span class="mono">category</span><br />
+      The Draw tab category the entry belongs to. This is the primary grouping key.
+    </li>
+  </ul>
+
+  <h3>3.2 Classification / System Fields</h3>
+
+  <ul>
+    <li>
+      <span class="mono">firstOrder</span><br />
+      A flag indicating that this is a first-class object intended for direct use
+      in Draw and later Figures. (This is conceptual and UI-driven.)
+    </li>
+
+    <li>
+      <span class="mono">source</span><br />
+      Indicates where the object definition comes from (example: internal).
+    </li>
+
+    <li>
+      <span class="mono">tags</span><br />
+      A small array of search keywords. Example: <span class="mono">["circular"]</span>.
+    </li>
+
+    <li>
+      <span class="mono">description</span><br />
+      A one-sentence description of what the object draws.
+    </li>
+  </ul>
+
+  <h3>3.3 Status and Hover (Optional Display Fields)</h3>
+
+  <ul>
+    <li>
+      <span class="mono">status</span><br />
+      A short status string (often blank). This can be used later for
+      filtering, “new/working/finished” marking, etc.
+    </li>
+
+    <li>
+      <span class="mono">hover</span><br />
+      A short hover hint string. This can be used later in UI overlays.
+    </li>
+  </ul>
+
+  <hr />
+
+  <h2>4. Styling / Rendering Policy Fields</h2>
+
+  <p>
+    Many drawRegistry entries include placeholders for rendering policy:
+  </p>
+
+  <ul>
+    <li>
+      <span class="mono">background</span> — optional background fill or configuration
+    </li>
+
+    <li>
+      <span class="mono">overlays</span> — optional overlay layers to draw or enable
+    </li>
+
+    <li>
+      <span class="mono">transforms</span> — optional transforms applied to the drawing
+    </li>
+  </ul>
+
+  <p>
+    In the example:
+  </p>
+
+  <pre><code>background: null,
+overlays:   [],
+transforms: [],</code></pre>
+
+  <p>
+    These are present so the registry entry can eventually become a fully self-contained
+    “drawing recipe,” not just a geometry generator. In early versions they often remain inert.
+  </p>
+
+  <hr />
+
+  <h2>5. The Two Kinds of State: params vs elements</h2>
+
+  <p>
+    The most important conceptual split in a drawRegistry entry is:
+  </p>
+
+  <ul>
+    <li>
+      <span class="mono">params</span> = JSON-safe values that represent the editable “inputs”
+      to the drawing.
+    </li>
+
+    <li>
+      <span class="mono">elements</span> = persistent runtime objects created once, stored on the entry,
+      and mutated as the drawing changes.
+    </li>
+  </ul>
+
+  <p>
+    This split is deliberate and supports:
+  </p>
+
+  <ul>
+    <li>persistence (save/load params as JSON)</li>
+    <li>interactive editing (controls modify params)</li>
+    <li>stable objects (avoid recreating geometry every redraw)</li>
+    <li>deterministic rendering (draw reads from a known element graph)</li>
+  </ul>
+
+  <h3>5.1 params: JSON-safe defaults</h3>
+
+  <p>
+    <span class="mono">params</span> must be safe to serialize as JSON.
+    This means: no class instances, no functions, no DOM nodes.
+  </p>
+
+  <p>
+    Example:
+  </p>
+
+  <pre><code>params: {
+  midpoint: { x: 300, y: 200 },
+  radius:   250,
+  numNodes: 20,
+  xScale:   1,
+  yScale:   1,
+  color:    "blue",
+  lineWidth: 1
+},</code></pre>
+
+  <p>
+    Note that <span class="mono">midpoint</span> is stored as a plain object with <span class="mono">x/y</span>
+    rather than a <span class="mono">Point</span> instance.
+  </p>
+
+  <h3>5.2 elements: persistent objects created in init()</h3>
+
+  <p>
+    <span class="mono">elements</span> is the container for persistent runtime objects.
+    In the example, init() creates one element:
+  </p>
+
+  <pre><code>this.elements = { element: new StringThing(this.params) };</code></pre>
+
+  <p>
+    This is the “live object” that draw() will render.
+  </p>
+
+  <hr />
+
+  <h2>6. controls: UI Metadata for parameterControls</h2>
+
+  <p>
+    The <span class="mono">controls</span> object describes how each parameter should be edited.
+    It is a declarative map keyed by parameter name:
+  </p>
+
+  <pre><code>controls: {
+  radius:    { widget: "range", min: 80,  max: 500, step: 5,   label: "Radius:" },
+  numNodes:  { widget: "range", min: 12,  max: 30,  step: 1,   label: "Nodes:" },
+  xScale:    { widget: "range", min: 0.5, max: 2,   step: 0.1, label: "X Scale:" },
+  yScale:    { widget: "range", min: 0.5, max: 2,   step: 0.1, label: "Y Scale:" },
+  color:     { widget: "colorPicker",                          label: "Color:" },
+  lineWidth: { widget: "range", min: .5,  max: 3.5, step: .5,  label: "Width:" },
+  midpoint:  { widget: "pointPicker",                          label: "Midpoint:" }
+},</code></pre>
+
+  <p>
+    The Draw tab reads this metadata and builds the control panel dynamically.
+  </p>
+
+  <h3>6.1 Widget types in the example</h3>
+
+  <ul>
+    <li>
+      <span class="mono">range</span><br />
+      Numeric slider with min/max/step.
+    </li>
+
+    <li>
+      <span class="mono">colorPicker</span><br />
+      A color selector that returns a string (example: "blue" or "#0000ff").
+    </li>
+
+    <li>
+      <span class="mono">pointPicker</span><br />
+      A specialized control that allows selecting a point on the canvas
+      (or entering coordinates) and returns either a Point-like object
+      or a <span class="mono">Point</span> instance depending on implementation.
+    </li>
+  </ul>
+
+  <p>
+    The key principle is that <span class="mono">controls</span> describes UI behavior, while
+    <span class="mono">params</span> contains the current editable values.
+  </p>
+
+  <hr />
+
+  <h2>7. The Lifecycle: init() → update() → draw()</h2>
+
+  <p>
+    Every drawRegistry entry implements three core functions:
+  </p>
+
+  <ul>
+    <li><span class="mono">init()</span> — cold-start construction of persistent elements</li>
+    <li><span class="mono">update(params)</span> — apply new values to the persistent elements</li>
+    <li><span class="mono">draw()</span> — render the current element state onto the canvas</li>
+  </ul>
+
+  <p>
+    This lifecycle makes the object deterministic and repeatable:
+    the same params produce the same drawing, and update() does not depend
+    on hidden external state.
+  </p>
+
+  <h3>7.1 init(): build persistent geometry and style</h3>
+
+  <p>
+    init() runs once when the entry becomes active for the first time.
+    Its job is to convert JSON-safe params into concrete objects.
+  </p>
+
+  <pre><code>init() {
+  // Ensure midpoint is a Point object
+  const p = this.params.midpoint;
+  if (!(p instanceof Point)) this.params.midpoint = new Point(p.x, p.y);
+
+  this.elements = { element: new StringThing(this.params) };
+}, // end init</code></pre>
+
+  <p>
+    Two important things happen here:
+  </p>
+
+  <ul>
+    <li>
+      The midpoint is converted from a plain <span class="mono">{x,y}</span> into a real <span class="mono">Point</span>.
+    </li>
+
+    <li>
+      The registry entry creates a persistent <span class="mono">StringThing</span> that will be reused.
+    </li>
+  </ul>
+
+  <h3>7.2 update(params): apply changes from UI controls</h3>
+
+  <p>
+    update(params) receives a new parameter object from the UI system.
+    It must update the persistent element graph without rebuilding it.
+  </p>
+
+  <pre><code>update(params) {
+  const e = this.elements.element;
+  for (const key in this.params) {
+    const value = params[key];
+    if (value === undefined) continue;
+
+    if (key === "midpoint") {
+      if (value instanceof Point)
+        e.midpoint = value;
+      else
+        e.midpoint = new Point(value.x, value.y);
+    } else if (key == "radius") {
+      e.ellipse.a = value;
+      e.ellipse.b = value;
+    } else {
+      e[key] = value;
+    }
+  }
+}, // end update</code></pre>
+
+  <p>
+    This update() illustrates a common pattern:
+  </p>
+
+  <ul>
+    <li>
+      loop over known params (not over user input keys)
+    </li>
+
+    <li>
+      apply only defined values
+    </li>
+
+    <li>
+      handle special cases explicitly (midpoint conversion, radius mapping)
+    </li>
+
+    <li>
+      otherwise assign directly
+    </li>
+  </ul>
+
+  <p>
+    The radius logic shows that the underlying geometry may not map 1:1 to params:
+  </p>
+
+  <pre><code>} else if (key == "radius") {
+  e.ellipse.a = value;
+  e.ellipse.b = value;
+}</code></pre>
+
+  <p>
+    This indicates that <span class="mono">StringThing</span> internally uses an ellipse model
+    even when the UI is conceptually “radius”.
+  </p>
+
+  <h3>7.3 draw(): render deterministically</h3>
+
+  <p>
+    draw() is the simplest function: it renders the current element state.
+  </p>
+
+  <pre><code>draw() {
+  const thing = this.elements.element;
+  drawMysticRose(thing);
+} // end draw</code></pre>
+
+  <p>
+    draw() does not rebuild geometry, does not read from UI controls, and does not
+    attempt to “fix” missing state. It assumes init() and update() have produced
+    a valid object graph.
+  </p>
+
+  <hr />
+
+  <h2>8. How Sketchpad Uses a drawRegistry Entry at Runtime</h2>
+
+  <p>
+    The typical execution flow when the user selects an entry in the Draw tab is:
+  </p>
+
+  <ol>
+    <li>Draw tab selects the registry entry object (by category + id)</li>
+    <li>Draw tab calls <span class="mono">entry.init()</span> once (cold-start)</li>
+    <li>Draw tab builds parameter controls from <span class="mono">entry.controls</span></li>
+    <li>When a control changes, Draw tab calls <span class="mono">entry.update(newParams)</span></li>
+    <li>Draw tab calls <span class="mono">entry.draw()</span> after update</li>
+  </ol>
+
+  <p>
+    This yields a consistent model:
+  </p>
+
+  <ul>
+    <li>controls drive params</li>
+    <li>params drive elements</li>
+    <li>elements drive drawing</li>
+  </ul>
+
+  <hr />
+
+  <h2>9. Naming Conventions and File Organization</h2>
+
+  <p>
+    In Sketchpad, drawRegistry entries typically live under:
+  </p>
+
+  <pre><code>./drawRegistry/</code></pre>
+
+  <p>
+    A file name generally corresponds to the registry name suffix:
+  </p>
+
+  <pre><code>drawRegistry/mysticRose.js
+window.drawRegistry_mysticRose</code></pre>
+
+  <p>
+    This convention keeps the system predictable and easy to debug:
+    when something fails, you can locate the registry entry by name immediately.
+  </p>
+
+  <hr />
+
+  <h2>10. Practical Debugging Notes</h2>
+
+  <h3>10.1 Fail-fast behavior</h3>
+
+  <p>
+    The drawRegistry model works best when errors are allowed to surface immediately.
+    If a required element is missing, it should throw rather than silently degrade.
+  </p>
+
+  <h3>10.2 Common failure points</h3>
+
+  <ul>
+    <li>
+      <b>Missing import</b> for a geometry class or draw function
+    </li>
+
+    <li>
+      <b>params not JSON-safe</b> (class instances embedded in defaults)
+    </li>
+
+    <li>
+      <b>init() not called</b> before update/draw
+    </li>
+
+    <li>
+      <b>update() mismatched keys</b> (UI provides keys that are not handled)
+    </li>
+
+    <li>
+      <b>draw() assumes elements exist</b> but init() never created them
+    </li>
+  </ul>
+
+  <hr />
+
+  <h2>11. Summary: The drawRegistry Contract</h2>
+
+  <p>
+    A drawRegistry file defines a single drawing object with:
+  </p>
+
+  <ul>
+    <li>
+      stable identity: <span class="mono">id</span>, <span class="mono">category</span>, <span class="mono">name</span>
+    </li>
+
+    <li>
+      JSON-safe defaults: <span class="mono">params</span>
+    </li>
+
+    <li>
+      UI metadata: <span class="mono">controls</span>
+    </li>
+
+    <li>
+      persistent runtime elements: <span class="mono">elements</span>
+    </li>
+
+    <li>
+      deterministic lifecycle: <span class="mono">init()</span> → <span class="mono">update()</span> → <span class="mono">draw()</span>
+    </li>
+  </ul>
+
+  <p>
+    This structure supports incremental development: you can begin with one line,
+    then add more geometry and more parameters, while keeping the same lifecycle and mental model.
+  </p>
+
+</body>
+
+</html>

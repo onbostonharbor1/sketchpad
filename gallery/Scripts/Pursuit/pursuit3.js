@@ -17,9 +17,27 @@
  * Each vertex chases the next, leaving a trail.
  */
 
-
 import { printTitle } from "/draw/draw_utilities.js";
 import { buildParameterControls } from "/ui/parameterControls.js";
+
+let ctx = null;
+
+
+/* ------------------------------------------------------------
+   clearCanvasFull()
+------------------------------------------------------------ */
+function clearCanvasFull() {
+
+  const w = ctx.canvas.width;
+  const h = ctx.canvas.height;
+
+  ctx.save();
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
+  ctx.clearRect(0, 0, w, h);
+  ctx.restore();
+
+} // end clearCanvasFull
+
 
 /* ------------------------------------------------------------
    drawPursuit(thing)
@@ -43,10 +61,7 @@ function drawPursuit(thing) {
     });
   }
 
-  ctx.save();
-  ctx.setTransform(1, 0, 0, 1, 0, 0);
-  ctx.clearRect(0, 0, w, h);
-  ctx.restore();
+  clearCanvasFull();
 
   ctx.lineWidth   = thing.lineWidth;
   ctx.strokeStyle = `rgba(0,0,255,${thing.trailAlpha})`;
@@ -78,6 +93,7 @@ function drawPursuit(thing) {
    init()
 ------------------------------------------------------------ */
 function init() {
+
   const p = scriptInfo.params;
 
   scriptInfo.elements = {
@@ -89,6 +105,7 @@ function init() {
       lineWidth:  p.lineWidth
     }
   };
+
 } // end init
 
 
@@ -96,13 +113,19 @@ function init() {
    update(params)
 ------------------------------------------------------------ */
 function update(params) {
+
   const e = scriptInfo.elements.element;
 
-  for (const key in scriptInfo.params) {
-    const value = params[key];
-    if (value === undefined) continue;
-    e[key] = value;
-  }
+  e.numPoints  = parseInt(params.numPoints, 10);
+  e.stepSize   = parseFloat(params.stepSize);
+  e.steps      = parseInt(params.steps, 10);
+  e.trailAlpha = parseFloat(params.trailAlpha);
+  e.lineWidth  = parseFloat(params.lineWidth);
+
+  if (e.numPoints < 3) e.numPoints = 3;
+  if (e.steps < 1) e.steps = 1;
+  if (e.stepSize < 0) e.stepSize = 0;
+
 } // end update
 
 
@@ -118,15 +141,16 @@ function draw() {
    scriptInfo
 ------------------------------------------------------------ */
 export const scriptInfo = {
+
   title: "Pursuit Curves (N-gon)",
 
   controls: {
-    numPoints:  { label: "Points",      widget: "range", min: 3,    max: 12,   step: 1,    default: 4 },
-    stepSize:   { label: "Step Size",   widget: "range", min: 0.001,max: 0.2,  step: 0.001,default: 0.06 },
-    steps:      { label: "Steps",       widget: "range", min: 10,   max: 5000, step: 10,   default: 55 },
-    trailAlpha: { label: "Trail Alpha", widget: "range", min: 0.01, max: 1,    step: 0.01, default: 0.6 },
-    lineWidth:  { label: "Line Width",  widget: "range", min: 0.5,  max: 3,    step: 0.1,  default: 1 }
-  },
+    numPoints:  { label: "Points",      widget: "range", min: 3,     max: 12,   step: 1,     default: 4 },
+    stepSize:   { label: "Step Size",   widget: "range", min: 0.001, max: 0.2,  step: 0.001, default: 0.06 },
+    steps:      { label: "Steps",       widget: "range", min: 10,    max: 5000, step: 10,    default: 55 },
+    trailAlpha: { label: "Trail Alpha", widget: "range", min: 0.01,  max: 1,    step: 0.01,  default: 0.6 },
+    lineWidth:  { label: "Line Width",  widget: "range", min: 0.5,   max: 3,    step: 0.1,   default: 1 }
+  }, // end controls
 
   params: {
     numPoints:  4,
@@ -134,7 +158,7 @@ export const scriptInfo = {
     steps:      55,
     trailAlpha: 0.6,
     lineWidth:  1
-  },
+  }, // end params
 
   elements: null,
 
@@ -144,6 +168,7 @@ export const scriptInfo = {
 
   // parameterControls compatibility
   parameters: null,
+
   redrawHandler() {
     this.update(this.params);
     this.draw();
@@ -151,6 +176,7 @@ export const scriptInfo = {
 
   onParamChange() {
   } // end onParamChange
+
 }; // end scriptInfo
 
 
@@ -158,6 +184,10 @@ export const scriptInfo = {
    runPattern()
 ------------------------------------------------------------ */
 export function runPattern(_ctx) {
+
+  ctx = _ctx || window.ctx;
+  if (!ctx) throw new Error("pursuitCurvesNgon.runPattern: no ctx provided and window.ctx is null");
+
   printTitle(scriptInfo.title);
 
   scriptInfo.parameters = scriptInfo.params;
@@ -170,4 +200,5 @@ export function runPattern(_ctx) {
   );
 
   scriptInfo.redrawHandler();
+
 } // end runPattern

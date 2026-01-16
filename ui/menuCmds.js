@@ -17,6 +17,8 @@
 
 import { nodeDispatch } from "./nodeLayer.js";
 import { overlayManager } from "./overlay.js";
+import { showHelpOverlay } from "./overlay.js";
+import { escapeHtml } from "./ui_utilities.js";
 
 
 /* ============================================================
@@ -499,19 +501,6 @@ function closeFormsOverlay() {
 } // end closeFormsOverlay
 
 
-/* ============================================================
-   escapeHtml(s)
-=========================================================== */
-function escapeHtml(s) {
-  const str = String(s);
-  return str
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;")
-    .replaceAll('"', "&quot;")
-    .replaceAll("'", "&#039;");
-} // end escapeHtml
-
 
 /* ------------------------------------------------------------
    showScriptOffcanvas(scriptPath, titleText)
@@ -566,5 +555,6 @@ export function showScriptOffcanvas(scriptPath, titleText) {
 function escapeAttr(s) {
   return escapeHtml(s);
 } // end escapeAttr
+
 
 // end menuCmds.js

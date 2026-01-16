@@ -48,13 +48,16 @@ import "./ui/actionRegistry.js";
 import "./ui/caption.js";
 import "./ui/categories.js";
 import "./ui/fileLayer.js";
+import "./ui/help.js";
 import "./ui/manifest.js";
 import "./ui/menuCmds.js";
 import "./ui/menuManager.js";
+import "./ui/nextPrevOverlay.js";
 import './ui/nodeLayer.js'
 import "./ui/overlay.js";
 import "./ui/parameterControls.js";
 import "./ui/scriptRunner.js";
+import "./ui/tinyMceConfig.js";
 
 import "./ui/draw.js";
 import "./ui/drawMenuCmds.js";
@@ -66,7 +69,7 @@ import "./ui/homeMenuCmds.js";
 import "./ui/patterns.js";
 import "./ui/patternsMenuCmds.js";
 import "./ui/utilities.js";
-
+import "./ui/utilitiesMenuCmds.js";
 // UI infrastructure
 import "./ui/ui_utilities.js";
 import "./ui/setUI.js";

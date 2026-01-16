@@ -1,0 +1,302 @@
+<!doctype html>
+
+<html lang="en">
+
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+
+  <title>Help Treatise — runPattern() in Sketchpad</title>
+
+  <link rel="stylesheet" href="/help/help_treatise.css" />
+</head>
+
+<body>
+
+  <h1>runPattern() in Sketchpad</h1>
+
+  <p>
+    This document explains the role, contract, and expected behavior of <span class="mono">runPattern()</span>
+    as used throughout Sketchpad.
+  </p>
+
+  <p>
+    In Sketchpad, <span class="mono">runPattern()</span> is the canonical entry point for running a drawing script.
+    It is not a general-purpose “draw function.” It is an orchestrator that:
+  </p>
+
+  <ul>
+    <li>initializes persistent runtime state (elements)</li>
+    <li>connects UI controls (parameterControls) to that state</li>
+    <li>triggers a deterministic first render</li>
+  </ul>
+
+  <h2>Where runPattern() is used</h2>
+
+  <p>
+    Sketchpad executes scripts from multiple places (Patterns, Gallery Scripts, Utilities Lab, and Home).
+    Regardless of where the script originates, the execution flow is the same:
+    the loader imports the module, then calls <span class="mono">runPattern()</span>.
+  </p>
+
+  <p>
+    The loader (for example, <span class="mono">scriptRunner.js</span> or a tab controller) is responsible for:
+  </p>
+
+  <ul>
+    <li>attaching the shared canvas to the correct region (<span class="mono">#sketchpad</span>)</li>
+    <li>clearing the canvas to a known background (typically white)</li>
+    <li>calling <span class="mono">runPattern()</span> with the expected signature for that subsystem</li>
+  </ul>
+
+  <p>
+    The script itself is responsible for everything else.
+  </p>
+
+  <h2>runPattern() is the orchestrator</h2>
+
+  <p>
+    <span class="mono">runPattern()</span> exists to enforce a single predictable lifecycle:
+  </p>
+
+  <ol>
+    <li>present title (human context)</li>
+    <li>create runtime elements (persistent objects)</li>
+    <li>build UI controls (parameterControls)</li>
+    <li>perform first draw (explicit)</li>
+  </ol>
+
+  <p>
+    The key design principle is separation of responsibilities:
+  </p>
+
+  <ul>
+    <li><span class="mono">init()</span> creates objects</li>
+    <li><span class="mono">update(params)</span> applies new values</li>
+    <li><span class="mono">draw()</span> renders deterministically</li>
+    <li><span class="mono">runPattern()</span> ties them together in the correct order</li>
+  </ul>
+
+  <h2>Canonical script model used by runPattern()</h2>
+
+  <p>
+    Sketchpad prefers scripts that follow the same vocabulary as drawRegistry entries,
+    even when they are not actually drawRegistry items.
+  </p>
+
+  <p>
+    A compatible module typically contains:
+  </p>
+
+  <ul>
+    <li><span class="mono">scriptInfo</span> (metadata + UI contract)</li>
+    <li><span class="mono">params</span> (JSON-safe defaults + current UI values)</li>
+    <li><span class="mono">controls</span> (parameterControls schema)</li>
+    <li><span class="mono">elements</span> (persistent runtime state)</li>
+    <li><span class="mono">init()</span> (cold-start only)</li>
+    <li><span class="mono">update(newParams)</span> (apply new values, do not draw)</li>
+    <li><span class="mono">draw()</span> (render only, do not read params)</li>
+    <li><span class="mono">runPattern()</span> (orchestrator)</li>
+  </ul>
+
+  <h2>runPattern() required sequence</h2>
+
+  <p>
+    A canonical <span class="mono">runPattern()</span> must perform these steps in order:
+  </p>
+
+  <ol>
+    <li>
+      <span class="mono">printTitle(scriptInfo.title)</span>
+      <p>
+        The script title is printed to the UI (or overlay) so the user knows what is running.
+      </p>
+    </li>
+
+    <li>
+      Compatibility alias setup
+      <p>
+        parameterControls currently expects <span class="mono">scriptInfo.parameters</span>.
+        If the script uses <span class="mono">scriptInfo.params</span>, it must alias:
+      </p>
+      <pre><code>scriptInfo.parameters = scriptInfo.params</code></pre>
+    </li>
+
+    <li>
+      <span class="mono">init()</span>
+      <p>
+        Called exactly once per script load.
+        This creates <span class="mono">elements</span> and seeds <span class="mono">elements.element</span>
+        from <span class="mono">params</span>.
+      </p>
+    </li>
+
+    <li>
+      <span class="mono">buildParameterControls(scriptInfo, targetId, true)</span>
+      <p>
+        This builds the controls UI from <span class="mono">scriptInfo.controls</span> and
+        binds user changes to the script’s redraw behavior.
+      </p>
+      <p>
+        The targetId is owned by the Sketchpad UI layout and must not be changed by the script.
+      </p>
+    </li>
+
+    <li>
+      First draw (explicit)
+      <p>
+        A correct script must always do an explicit first render.
+        The typical pattern is:
+      </p>
+      <pre><code>scriptInfo.redrawHandler();</code></pre>
+    </li>
+  </ol>
+
+  <h2>ParameterControls compatibility bridge</h2>
+
+  <p>
+    Sketchpad’s parameterControls expects a specific interface on <span class="mono">scriptInfo</span>.
+    To keep conversions mechanical and low-risk, scripts provide a bridge.
+  </p>
+
+  <p>
+    The required bridge fields are:
+  </p>
+
+  <ul>
+    <li><span class="mono">scriptInfo.title</span></li>
+    <li><span class="mono">scriptInfo.controls</span></li>
+    <li><span class="mono">scriptInfo.parameters</span> (alias to params)</li>
+    <li><span class="mono">scriptInfo.redrawHandler</span></li>
+    <li><span class="mono">scriptInfo.onParamChange</span> (may be no-op)</li>
+  </ul>
+
+  <p>
+    The canonical redraw handler is:
+  </p>
+
+  <pre><code>scriptInfo.redrawHandler = function () {
+  update(this.params);
+  draw();
+};</code></pre>
+
+  <p>
+    This preserves the required separation:
+  </p>
+
+  <ul>
+    <li>controls mutate params</li>
+    <li>update copies params into elements.element</li>
+    <li>draw reads elements.element and renders</li>
+  </ul>
+
+  <h2>What runPattern() must NOT do</h2>
+
+  <p>
+    A correct <span class="mono">runPattern()</span> must never:
+  </p>
+
+  <ul>
+    <li>create or resolve <span class="mono">ctx</span> (ctx is global and must already exist)</li>
+    <li>accept a <span class="mono">ctx</span> parameter</li>
+    <li>cache or alias <span class="mono">ctx</span></li>
+    <li>do drawing logic itself (drawing belongs in <span class="mono">draw()</span>)</li>
+    <li>mutate <span class="mono">controls</span></li>
+  </ul>
+
+  <h2>Common failure modes</h2>
+
+  <h3>Controls move but nothing redraws</h3>
+
+  <p>
+    Cause: missing or broken <span class="mono">scriptInfo.redrawHandler</span>.
+  </p>
+
+  <h3>Drawing ignores control values</h3>
+
+  <p>
+    Cause: <span class="mono">draw()</span> is reading from <span class="mono">params</span> or stale locals
+    instead of reading from <span class="mono">elements.element</span>.
+  </p>
+
+  <h3>Blank initial render</h3>
+
+  <p>
+    Cause: <span class="mono">runPattern()</span> did not do an explicit first draw.
+  </p>
+
+  <h3>Wrong numeric behavior</h3>
+
+  <p>
+    Cause: type normalization missing in <span class="mono">update()</span>
+    (range controls deliver strings unless converted).
+  </p>
+
+  <h2>Minimal canonical runPattern() example</h2>
+
+  <p>
+    This is a minimal structural example. It shows the required ordering and the compatibility bridge.
+    The math/drawing inside <span class="mono">draw()</span> is intentionally omitted.
+  </p>
+
+  <pre><code>export const scriptInfo = {
+  title: "Example Script",
+  params: {
+    radius: 100
+  },
+  controls: {
+    radius: { widget: "range", min: 10, max: 300, step: 1, label: "Radius:" }
+  }
+};
+
+export let elements = null;
+
+export function init() {
+  elements = { element: { radius: scriptInfo.params.radius } };
+}
+
+export function update(newParams) {
+  elements.element.radius = Number(newParams.radius);
+}
+
+export function draw() {
+  // draw using ctx and elements.element only
+}
+
+export async function runPattern() {
+  printTitle(scriptInfo.title);
+
+  // Compatibility alias for parameterControls
+  scriptInfo.parameters = scriptInfo.params;
+
+  scriptInfo.redrawHandler = function () {
+    update(this.params);
+    draw();
+  };
+
+  scriptInfo.onParamChange = function () {
+    // optional no-op; may be required by parameterControls
+  };
+
+  init();
+
+  buildParameterControls(scriptInfo, "action", true);
+
+  scriptInfo.redrawHandler();
+}</code></pre>
+
+  <h2>Summary</h2>
+
+  <p>
+    In Sketchpad, <span class="mono">runPattern()</span> is the single canonical entry point for running a script.
+    It exists to enforce a deterministic lifecycle and keep drawing scripts structurally consistent with drawRegistry.
+  </p>
+
+  <p>
+    If a script follows the init/update/draw model and provides the parameterControls compatibility bridge,
+    it will run predictably in Patterns, Gallery Scripts, Utilities Lab, and Home.
+  </p>
+
+</body>
+
+</html>

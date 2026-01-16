@@ -110,6 +110,9 @@ case "manifestMaintenance":
     case "archiveItem":
       return await archiveItem(payload);
 
+    case "writeHelpFile":
+      return await writeHelpFile(payload);
+
 
     default:
       throw new Error(`dispatchService: unknown requestName: ${requestName}`);
@@ -1938,9 +1941,66 @@ async function archiveItem(payload) {
 } // end archiveItem
 
 
+/* ===========================================================
+   TASK: writeHelpFile  (CREATE OR OVERWRITE)
 
+   DESCRIPTION
+   -----------
+   Writes Help HTML back to disk. Creates the file if missing.
 
+   Payload:
+     {
+       helpPath : "/help/<tab>/<name>.html"   // rooted path from UI
+       html     : "<full html text>"         // full file contents to write
+     }
 
+   Rules:
+     - Path is restricted to ./help (fail-fast)
+     - Parent directory must exist (fail-fast)
+     - File is written with overwrite semantics (create or replace)
+=========================================================== */
+async function writeHelpFile(payload = {}) {
 
+  if (!payload) throw new Error("writeHelpFile: payload missing");
 
+  const helpPathInput = payload.helpPath;
+  const html          = payload.html;
+
+  if (typeof helpPathInput !== "string" || helpPathInput.trim() === "") {
+    throw new Error("writeHelpFile: helpPath missing/invalid");
+  }
+
+  if (typeof html !== "string") {
+    throw new Error("writeHelpFile: html missing/invalid");
+  }
+
+  const helpRoot = path.resolve("./help");
+
+  // Resolve rooted UI path safely inside ./help
+  let rel = String(helpPathInput);
+  if (rel.startsWith("/")) rel = rel.slice(1);
+
+  const abs = path.resolve(rel);
+
+  if (!abs.startsWith(helpRoot)) {
+    throw new Error("writeHelpFile: path escapes ./help: " + abs);
+  }
+
+  // Parent directory MUST exist (fail-fast, no silent mkdirs)
+  const parentDir = path.dirname(abs);
+  assertDirectoryExists(parentDir, "writeHelpFile: parent dir missing: " + parentDir);
+
+  // Write file (create or overwrite)
+  fs.writeFileSync(abs, html, "utf8");
+
+  // Verify write succeeded
+  assertFileExists(abs, "writeHelpFile: write failed: " + abs);
+
+  return {
+    request: "writeHelpFile",
+    status: "ok",
+    helpPath: helpPathInput
+  };
+
+} // end writeHelpFile
 

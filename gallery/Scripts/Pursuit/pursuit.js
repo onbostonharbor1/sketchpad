@@ -25,11 +25,58 @@
 import { printTitle } from "/draw/draw_utilities.js";
 import { buildParameterControls } from "/ui/parameterControls.js";
 
+let ctx = null;
+
+
+/* ------------------------------------------------------------
+   clearCanvasFull()
+------------------------------------------------------------ */
+function clearCanvasFull() {
+
+  const w = ctx.canvas.width;
+  const h = ctx.canvas.height;
+
+  ctx.save();
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
+  ctx.clearRect(0, 0, w, h);
+  ctx.restore();
+
+} // end clearCanvasFull
+
+
+/* ------------------------------------------------------------
+   validateElement(e)
+   - fail-fast validation (no silent clamping)
+------------------------------------------------------------ */
+function validateElement(e) {
+
+  if (!Number.isInteger(e.sides) || e.sides < 3)
+    throw new Error("pursuitPolygon: sides must be integer >= 3");
+
+  if (!Number.isInteger(e.iterations) || e.iterations < 1)
+    throw new Error("pursuitPolygon: iterations must be integer >= 1");
+
+  if (!Number.isFinite(e.step) || e.step <= 0 || e.step >= 1)
+    throw new Error("pursuitPolygon: step must be in (0, 1)");
+
+  if (e.direction !== "cw" && e.direction !== "ccw")
+    throw new Error("pursuitPolygon: direction must be cw|ccw");
+
+  if (!Number.isFinite(e.lineWidth) || e.lineWidth <= 0)
+    throw new Error("pursuitPolygon: lineWidth must be > 0");
+
+  if (typeof e.color !== "string" || e.color.length === 0)
+    throw new Error("pursuitPolygon: color must be a non-empty string");
+
+} // end validateElement
+
+
 /* ------------------------------------------------------------
    pursuitPolygon()
    - Draws iterations worth of polygon paths in a single stroke
 ------------------------------------------------------------ */
 function pursuitPolygon(thing) {
+
   const sides      = thing.sides;
   const iterations = thing.iterations;
   const step       = thing.step;
@@ -39,6 +86,8 @@ function pursuitPolygon(thing) {
   const h = ctx.canvas.height;
 
   const R  = Math.min(w, h) * 0.4;
+
+  // NOTE: preserved from your source (not centered)
   // const cx = w / 2;
   // const cy = h / 2;
   const cx = 100;
@@ -51,11 +100,7 @@ function pursuitPolygon(thing) {
     pts.push([cx + R * Math.cos(ang), cy + R * Math.sin(ang)]);
   }
 
-  // Clear canvas (identity transform)
-  ctx.save();
-  ctx.setTransform(1, 0, 0, 1, 0, 0);
-  ctx.clearRect(0, 0, w, h);
-  ctx.restore();
+  clearCanvasFull();
 
   ctx.strokeStyle = thing.color;
   ctx.lineWidth = thing.lineWidth;
@@ -74,6 +119,7 @@ function pursuitPolygon(thing) {
     // compute next positions
     let next = [];
     for (let i = 0; i < sides; i++) {
+
       let j;
       if (direction === "cw") j = (i + 1) % sides;
       else j = (i - 1 + sides) % sides;
@@ -93,6 +139,7 @@ function pursuitPolygon(thing) {
   }
 
   ctx.stroke();
+
 } // end pursuitPolygon
 
 
@@ -100,6 +147,7 @@ function pursuitPolygon(thing) {
    init()
 ------------------------------------------------------------ */
 function init() {
+
   const p = scriptInfo.params;
 
   scriptInfo.elements = {
@@ -112,6 +160,9 @@ function init() {
       lineWidth:  p.lineWidth
     }
   };
+
+  validateElement(scriptInfo.elements.element);
+
 } // end init
 
 
@@ -119,13 +170,19 @@ function init() {
    update(params)
 ------------------------------------------------------------ */
 function update(params) {
+
   const e = scriptInfo.elements.element;
 
-  for (const key in scriptInfo.params) {
-    const value = params[key];
-    if (value === undefined) continue;
-    e[key] = value;
-  }
+  e.sides      = parseInt(params.sides, 10);
+  e.iterations = parseInt(params.iterations, 10);
+  e.step       = parseFloat(params.step);
+  e.direction  = params.direction;
+
+  e.lineWidth  = parseFloat(params.lineWidth);
+  e.color      = params.color;
+
+  validateElement(e);
+
 } // end update
 
 
@@ -148,6 +205,7 @@ function draw() {
      - redrawHandler() drives update + draw
 ------------------------------------------------------------ */
 export const scriptInfo = {
+
   title: "Pursuit Curves in Polygon",
 
   controls: {
@@ -157,7 +215,7 @@ export const scriptInfo = {
     direction:  { label: "Direction",  widget: "select", options: ["cw", "ccw"],            default: "cw" },
     lineWidth:  { label: "Line Width", widget: "range",  min: 0.2,  max: 4,    step: 0.1,  default: 1 },
     color:      { label: "Color",      widget: "colorPicker",                              default: "#00ff00" }
-  },
+  }, // end controls
 
   params: {
     sides:      5,
@@ -166,7 +224,7 @@ export const scriptInfo = {
     direction:  "cw",
     lineWidth:  1,
     color:      "#00ff00"
-  },
+  }, // end params
 
   elements: null,
 
@@ -176,6 +234,7 @@ export const scriptInfo = {
 
   // parameterControls compatibility
   parameters: null,    // assigned in runPattern()
+
   redrawHandler() {
     this.update(this.params);
     this.draw();
@@ -184,6 +243,7 @@ export const scriptInfo = {
   onParamChange() {
     // required by some parameterControls flows
   } // end onParamChange
+
 }; // end scriptInfo
 
 
@@ -191,6 +251,10 @@ export const scriptInfo = {
    runPattern() — Gallery entry point
 ------------------------------------------------------------ */
 export function runPattern(_ctx) {
+
+  ctx = _ctx || window.ctx;
+  if (!ctx) throw new Error("pursuitPolygon.runPattern: no ctx provided and window.ctx is null");
+
   printTitle(scriptInfo.title);
 
   // Alias for parameterControls (if it still expects .parameters)
@@ -208,4 +272,5 @@ export function runPattern(_ctx) {
 
   // First draw
   scriptInfo.redrawHandler();
+
 } // end runPattern

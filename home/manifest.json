@@ -1,87 +1,21 @@
 [
   {
+    "file": "changeColorRamp",
+    "path": "/utilities/Lab/Color/changeColorRamp.js",
+    "title": "changeColorRamp.js",
+    "status": "new"
+  },
+  {
+    "file": "changeColorRampHslRgb",
+    "path": "/utilities/Lab/Color/changeColorRampHslRgb.js",
+    "title": "changeColorRampHslRgb.js",
+    "status": "new"
+  },
+  {
     "file": "parabolasWithinCircles",
     "path": "/patterns/builds/parabolasWithinCircles.js",
     "title": "Circular Parabola and Inner Star",
     "status": "bestfriend"
-  },
-  {
-    "file": "copy 298 - Copy",
-    "path": "/gallery/Patterns/PursuitPatterns/copy 298 - Copy.jpeg",
-    "title": "copy 298 - Copy.jpeg",
-    "status": "new"
-  },
-  {
-    "file": "copy ellipseCurveStitching - Copy",
-    "path": "/gallery/Scripts/Elliptical/copy ellipseCurveStitching - Copy.js",
-    "title": "copy ellipseCurveStitching - Copy.js",
-    "status": "new"
-  },
-  {
-    "file": "IMG_8363 - Copy",
-    "path": "/gallery/Patterns/PursuitPatterns/IMG_8363 - Copy.jpg",
-    "title": "IMG_8363 - Copy.jpg",
-    "status": "new"
-  },
-  {
-    "file": "IMG_8504 - Copy",
-    "path": "/gallery/Patterns/PursuitPatterns/IMG_8504 - Copy.JPG",
-    "title": "IMG_8504 - Copy.JPG",
-    "status": "new"
-  },
-  {
-    "file": "IMG_8507 - Copy",
-    "path": "/gallery/Patterns/PursuitPatterns/IMG_8507 - Copy.JPG",
-    "title": "IMG_8507 - Copy.JPG",
-    "status": "new"
-  },
-  {
-    "file": "IMG_8508 - Copy",
-    "path": "/gallery/Patterns/PursuitPatterns/IMG_8508 - Copy.JPG",
-    "title": "IMG_8508 - Copy.JPG",
-    "status": "new"
-  },
-  {
-    "file": "IMG_9649",
-    "path": "/gallery/Ideabook/3D/IMG_9649.PNG",
-    "title": "IMG_9649.PNG",
-    "status": "favorite"
-  },
-  {
-    "file": "IMG_9650",
-    "path": "/gallery/Ideabook/3D/IMG_9650.PNG",
-    "title": "IMG_9650.PNG",
-    "status": "working"
-  },
-  {
-    "file": "IMG_9651",
-    "path": "/gallery/Ideabook/3D/IMG_9651.PNG",
-    "title": "IMG_9651.PNG",
-    "status": "new"
-  },
-  {
-    "file": "IMG_9652",
-    "path": "/gallery/Ideabook/3D/IMG_9652.PNG",
-    "title": "IMG_9652.PNG",
-    "status": "new"
-  },
-  {
-    "file": "IMG_9654",
-    "path": "/gallery/Ideabook/3D/IMG_9654.PNG",
-    "title": "IMG_9654.PNG",
-    "status": "new"
-  },
-  {
-    "file": "IMG_9656",
-    "path": "/gallery/Ideabook/3D/IMG_9656.PNG",
-    "title": "IMG_9656.PNG",
-    "status": "new"
-  },
-  {
-    "file": "IMG_9657",
-    "path": "/gallery/Ideabook/3D/IMG_9657.PNG",
-    "title": "IMG_9657.PNG",
-    "status": "new"
   },
   {
     "file": "inverseStar.js",
@@ -138,45 +72,15 @@
     "status": "new"
   },
   {
-    "file": "sineWave",
-    "path": "/patterns/stuff/sineWave.js",
-    "title": "Sine Wave",
-    "status": "useless"
-  },
-  {
-    "file": "sineWavePoints",
-    "path": "/patterns/stuff/sineWavePoints.js",
-    "title": "Sine Wave Points",
-    "status": "useless"
+    "file": "radialLinePetals",
+    "path": "/gallery/Scripts/Experimental/radialLinePetals.js",
+    "title": "radialLinePetals.js",
+    "status": "new"
   },
   {
     "file": "validateDrawRegistry",
     "path": "/utilities/Tools/Registry/validateDrawRegistry.js",
     "title": "Validate Draw Registry",
     "status": "current"
-  },
-  {
-    "file": "validateDrawRegistry - Copy (2)",
-    "path": "/utilities/Tools/Registry/validateDrawRegistry - Copy (2).js",
-    "title": "validateDrawRegistry - Copy (2).js",
-    "status": "new"
-  },
-  {
-    "file": "validateDrawRegistry - Copy (3)",
-    "path": "/utilities/Tools/Registry/validateDrawRegistry - Copy (3).js",
-    "title": "validateDrawRegistry - Copy (3).js",
-    "status": "new"
-  },
-  {
-    "file": "validateDrawRegistry - Copy (4)",
-    "path": "/utilities/Tools/Registry/validateDrawRegistry - Copy (4).js",
-    "title": "validateDrawRegistry - Copy (4).js",
-    "status": "new"
-  },
-  {
-    "file": "validateDrawRegistry - Copy",
-    "path": "/utilities/Tools/Registry/validateDrawRegistry - Copy.js",
-    "title": "validateDrawRegistry - Copy.js",
-    "status": "new"
   }
 ]

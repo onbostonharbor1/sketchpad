@@ -5,10 +5,11 @@
 */
 
 // ADD to imports at top of utilities.js
-
+import { buildParameterControls } from "./parameterControls.js";
 import { nodeRebuildAndValidateManifests } from "./nodeLayer.js";
 import { showScriptOffcanvas } from "./menuCmds.js";
 import { getUtilitiesCaptionMenuItems } from "./utilitiesMenuCmds.js";
+import { openHelpHomeOverlay } from "./help.js";
 
 import { setCaptionBar }    from "./caption.js";
 import { renderCategories } from "./categories.js";
@@ -335,9 +336,15 @@ function activateUtilitySubtab(tabId) {
 /* ============================================================
    runUtilityEntry(subtab, category, entry)
    ------------------------------------------------------------
-   FIX: entry.path no longer includes the category folder.
-        So we MUST add category back into the import path:
-          /utilities/<Tools|Lab>/<Category>/<file>.js
+   FIX:
+   - Lab scripts that use parameterControls must:
+       1) run once first (so scriptInfo.redrawHandler is set)
+       2) then build controls (so handlers wire correctly)
+   - Tools scripts still run normally and may return HTML for Result.
+============================================================ */
+/* ============================================================
+   runUtilityEntry(subtab, category, entry)
+   ------------------------------------------------------------
 ============================================================ */
 async function runUtilityEntry(subtab, category, entry) {
 
@@ -355,9 +362,12 @@ async function runUtilityEntry(subtab, category, entry) {
       throw new Error("runUtilityEntry: runPattern() not found in " + scriptPath);
     }
 
+    // --------------------------------------------------------
+    // LAB: attach canvas + clear background (your global ctx rule)
+    // --------------------------------------------------------
     if (subtab === "Lab") {
       const sketchDiv = document.getElementById("sketchpad");
-      if (!sketchDiv) throw new Error("runUtilityEntry: #sketchpad not found");
+      if (!sketchDiv) throw new Error("runUtilityEntry(Lab): #sketchpad not found");
 
       sketchDiv.innerHTML = "";
       sketchDiv.appendChild(window.drawCanvas);
@@ -366,27 +376,58 @@ async function runUtilityEntry(subtab, category, entry) {
       ctx.fillRect(0, 0, drawCanvas.width, drawCanvas.height);
     }
 
+    // --------------------------------------------------------
+    // Execute script first (so it can set scriptInfo.params and redrawHandler)
+    // --------------------------------------------------------
     const result = await mod.runPattern();
+
+    // --------------------------------------------------------
+    // LAB: build parameterControls AFTER execution
+    // --------------------------------------------------------
+    if (subtab === "Lab") {
+
+      const actionDiv = document.getElementById("action");
+      if (!actionDiv) throw new Error("runUtilityEntry(Lab): #action not found");
+
+      actionDiv.innerHTML = "";
+
+      // Utilities Lab contract: controls come from scriptInfo.parameters (or .params)
+      if (!mod.scriptInfo) {
+        throw new Error("runUtilityEntry(Lab): scriptInfo missing");
+      }
+
+      // Normalize vocabulary (either name is acceptable)
+      if (mod.scriptInfo.params && !mod.scriptInfo.parameters) {
+        mod.scriptInfo.parameters = mod.scriptInfo.params;
+      } else if (mod.scriptInfo.parameters && !mod.scriptInfo.params) {
+        mod.scriptInfo.params = mod.scriptInfo.parameters;
+      }
+
+      // Fail-fast if the script did not provide parameters
+      if (!mod.scriptInfo.parameters) {
+        throw new Error("runUtilityEntry(Lab): scriptInfo.parameters missing");
+      }
+
+      // Build controls into #action (do NOT pass tab ids here)
+      buildParameterControls(mod.scriptInfo);
+
+      // If the script exposes a redraw handler, run it once after controls exist
+      if (typeof mod.scriptInfo.redrawHandler === "function") {
+        mod.scriptInfo.redrawHandler();
+      }
+    }
 
     updateUtilitiesCaption({
       title: entry.title || entry.filename || "(untitled)",
       path: category + "/" + entry.path,
       subtab,
       category,
-
       manifestPath: `/utilities/${subtab}/${category}/manifest.json`,
       entryPath: entry.path,
       status: entry.status || ""
     });
 
-    // --------------------------------------------------------
-    // CRITICAL BEHAVIOR:
-    // If the tool returns a string (or any non-null value),
-    // treat it as Result HTML and display it.
-    //
-    // If it returns null/undefined, assume the tool wrote directly
-    // into #text (or managed its own UI) and DO NOT overwrite it.
-    // --------------------------------------------------------
+    // Tools: if script returns HTML, show it; Lab draws to canvas and returns null.
     if (subtab !== "Lab") {
       if (result !== null && result !== undefined) {
         displayUtilityResult(result);
@@ -399,7 +440,7 @@ async function runUtilityEntry(subtab, category, entry) {
   } catch (err) {
     console.error("Error executing " + scriptPath + ":", err);
     displayUtilityResult("Error executing " + scriptPath + ": " + err.message);
-    throw err; // FAIL-FAST: bubble it up too
+    throw err;
   }
 
 } // end runUtilityEntry
@@ -522,12 +563,19 @@ function buildUtilitiesOffcanvasHtml() {
       </button>
     </div>
 
+    <div class="cmdButtonRow">
+      <button id="utilitiesHelpButton" class="cmdButton" type="button">
+        Help
+      </button>
+    </div>
+
     <div class="buttonSeparator"></div>
 
     <div id="utilitiesRebuildReport" class="utilitiesRebuildReport"></div>
   `;
 
 } // end buildUtilitiesOffcanvasHtml
+
 
 function formatRebuildReport(report) {
 
@@ -605,6 +653,8 @@ async function refreshUtilitiesAfterRebuild() {
 
 } // end refreshUtilitiesAfterRebuild
 
+// utilities.js  (REPLACE wireUtilitiesCommandsButton with this version)
+
 export function wireUtilitiesCommandsButton() {
 
   setCommandsButton("Commands", () => {
@@ -637,12 +687,36 @@ export function wireUtilitiesCommandsButton() {
 
         }); // end click
 
+        const helpBtn = document.getElementById("utilitiesHelpButton");
+        if (!helpBtn) throw new Error("wireUtilitiesCommandsButton: utilitiesHelpButton missing");
+
+        helpBtn.addEventListener("click", () => {
+
+          // Close/dismiss the Commands offcanvas
+          const panel = document.getElementById("offcanvasPanel");
+          if (!panel) throw new Error("wireUtilitiesCommandsButton: #offcanvasPanel missing");
+
+          if (!window.bootstrap || !window.bootstrap.Offcanvas) {
+            throw new Error("wireUtilitiesCommandsButton: bootstrap.Offcanvas not available");
+          }
+
+          const oc = window.bootstrap.Offcanvas.getOrCreateInstance(panel);
+          oc.hide();
+
+          // Open Help overlay (startup page)
+          openHelpHomeOverlay();
+
+        }); // end click
+
       } // end buildBody
     });
 
   });
 
 } // end wireUtilitiesCommandsButton
+
+
+
 
 /* ============================================================
    refreshUtilitiesFromManifestEdit()

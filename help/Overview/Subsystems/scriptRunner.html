@@ -1,0 +1,288 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Help Treatise — scriptRunner.js (Universal Script Loader + Execution Pipeline)</title>
+
+  <link rel="stylesheet" href="/help/help_treatise.css" />
+</head>
+
+<body>
+
+  <h1>scriptRunner.js — Universal Script Loader and Deterministic Execution Pipeline</h1>
+
+  <p>
+    This page is intentionally “raw help HTML”: it is written as a single self-contained page
+    so you can drop it into your help system as-is, and/or split it later into smaller pages.
+    The discussion is based on one file:
+  </p>
+
+  <ul>
+    <li><span class="mono">ui/scriptRunner.js</span></li>
+  </ul>
+
+  <div class="note">
+    <b>Scope of this treatise</b><br/>
+    1) What this module is responsible for (and what it refuses to do).<br/>
+    2) The script execution contract (which exports a runnable script must provide).<br/>
+    3) Why loadScriptModule() probe-fetches before dynamic import (the “Vite returns index.html” problem).<br/>
+    4) The two execution routes: canvas output vs text output.<br/>
+    5) Exactly what is reset when a script runs (and what is not).
+  </div>
+
+
+  <h2>1. What this file is in the Sketchpad architecture</h2>
+
+  <p>
+    Sketchpad has multiple places where a user can “run a script”:
+    Patterns items, Gallery Scripts items, Utilities Lab, and Utilities Tools.
+    These scripts come from different tabs and different directory trees,
+    but the core runtime requirement is always the same:
+  </p>
+
+  <div class="ok">
+    Load an ES module by path, verify it is really a JavaScript module,
+    then execute it in a deterministic and tab-appropriate way.
+  </div>
+
+  <p>
+    <span class="mono">ui/scriptRunner.js</span> is the single shared execution pipeline.
+    Tabs are responsible for selecting the script path and deciding where it belongs.
+    This module is responsible for:
+  </p>
+
+  <ul>
+    <li>Loading ES modules by rooted path</li>
+    <li>Fail-fast validation (missing file, wrong MIME type, missing exports)</li>
+    <li>Executing the script into either the shared canvas or the <span class="mono">#text</span> region</li>
+    <li>Resetting drawing state when (and only when) a canvas execution occurs</li>
+  </ul>
+
+  <div class="warn">
+    <b>What it deliberately does NOT do</b><br/>
+    It does not interpret “meaning” of scripts, does not manage uiState,
+    and does not decide which scripts exist or where they come from.
+    That selection belongs to each tab/controller.
+  </div>
+
+
+  <h2>2. The execution contract (what scripts must export)</h2>
+
+  <p>
+    This module enforces a simple contract:
+  </p>
+
+  <ul>
+    <li><b>Preferred modern export:</b> <span class="mono">runPattern()</span></li>
+    <li><b>Legacy drawing export:</b> <span class="mono">drawPattern(params)</span> (optionally with <span class="mono">initPattern()</span>)</li>
+    <li><b>Text-only utilities:</b> <span class="mono">render()</span></li>
+  </ul>
+
+  <p>
+    In the current implementation, <span class="mono">loadScriptModule()</span> requires
+    <span class="mono">runPattern()</span> to exist (fail-fast).
+    The execution functions also include fallback logic for legacy patterns,
+    but module loading itself is strict.
+  </p>
+
+  <div class="note">
+    <b>Practical interpretation</b><br/>
+    Treat <span class="mono">runPattern()</span> as the universal “entry point”.
+    If a script is runnable in Sketchpad, it should export <span class="mono">runPattern()</span>.
+  </div>
+
+
+  <h2>3. loadScriptModule(path): reliable module loading</h2>
+
+  <p>
+    <span class="mono">loadScriptModule(path)</span> accepts a rooted browser path such as:
+  </p>
+
+  <pre><code>"/patterns/curve_stitch/parabola.js"</code></pre>
+
+  <p>
+    It performs five responsibilities in strict sequence:
+  </p>
+
+  <ol>
+    <li><b>Validate input</b> (must be a non-empty string).</li>
+    <li><b>Normalize to rooted URL</b> (ensure it begins with “/” and remove accidental “//”).</li>
+    <li><b>Cache-bust in dev</b> by appending a query string timestamp.</li>
+    <li><b>Probe-fetch</b> the URL with <span class="mono">fetch()</span>:
+      <ul>
+        <li>Verify HTTP success (<span class="mono">res.ok</span>)</li>
+        <li>Verify JavaScript MIME type (content-type contains “javascript” or “ecmascript”)</li>
+      </ul>
+    </li>
+    <li><b>Dynamic import</b> the module using the same URL (<span class="mono">import(/* @vite-ignore */ spec)</span>).</li>
+  </ol>
+
+  <h3>3.1 Why probe-fetch exists (the Vite fallback problem)</h3>
+
+  <p>
+    Vite (and many dev servers) will return <span class="mono">index.html</span> when a path is wrong.
+    That produces confusing dynamic-import errors because the browser thinks it is importing JavaScript
+    but receives HTML (text/html) instead.
+  </p>
+
+  <p>
+    Probe-fetch converts that into a fail-fast error with context:
+  </p>
+
+  <ul>
+    <li>It checks <span class="mono">content-type</span> before importing.</li>
+    <li>If it is not JS, it reads a short HTML snippet and includes it in the error.</li>
+  </ul>
+
+  <div class="ok">
+    <b>Bottom line</b><br/>
+    Probe-fetch is the only reliable browser-side “does this module path actually exist”
+    check in the presence of dev-server HTML fallbacks.
+  </div>
+
+  <h3>3.2 Contract enforcement at load time</h3>
+
+  <p>
+    After import, <span class="mono">loadScriptModule()</span> requires:
+  </p>
+
+  <pre><code>typeof mod.runPattern === "function"</code></pre>
+
+  <p>
+    If not present, loading fails immediately. This ensures every runnable script has
+    a single, predictable entry point for Sketchpad.
+  </p>
+
+
+  <h2>4. executeScriptToCanvas(mod, title): controlled canvas execution</h2>
+
+  <p>
+    <span class="mono">executeScriptToCanvas(mod, title)</span> runs a loaded module into the shared canvas.
+    It enforces a deterministic canvas environment:
+  </p>
+
+  <ol>
+    <li>Locate <span class="mono">#sketchpad</span> (fail-fast if missing).</li>
+    <li>Clear it (<span class="mono">pad.innerHTML = ""</span>).</li>
+    <li>Reattach the shared canvas (<span class="mono">pad.appendChild(window.drawCanvas)</span>).</li>
+    <li>Reset drawing state once, deterministically (<span class="mono">resetCanvas()</span>).</li>
+    <li>Execute the script once (prefer <span class="mono">runPattern()</span>).</li>
+  </ol>
+
+  <div class="note">
+    <b>What “reset once” means</b><br/>
+    Sketchpad expects <span class="mono">runPattern()</span> to do as many drawing calls as it wants.
+    This helper’s role is only to clear and reset the environment one time per script run,
+    not to interfere with internal script sequencing.
+  </div>
+
+  <h3>4.1 Legacy fallback path</h3>
+
+  <p>
+    If a module does not use <span class="mono">runPattern()</span> but does provide legacy exports,
+    this function supports:
+  </p>
+
+  <ul>
+    <li><span class="mono">initPattern()</span> to provide params (optional)</li>
+    <li><span class="mono">drawPattern(params)</span> to perform drawing</li>
+  </ul>
+
+  <p>
+    If neither <span class="mono">runPattern</span> nor <span class="mono">drawPattern</span> exists,
+    it throws.
+  </p>
+
+
+  <h2>5. executeScriptToText(mod, title): controlled text/HTML execution</h2>
+
+  <p>
+    <span class="mono">executeScriptToText(mod, title)</span> is used for scripts that produce output
+    intended for the <span class="mono">#text</span> region (Utilities → Tools).
+  </p>
+
+  <p>
+    It is explicitly non-canvas:
+  </p>
+
+  <ul>
+    <li>Does not touch <span class="mono">#sketchpad</span></li>
+    <li>Does not attach a canvas</li>
+    <li>Does not call <span class="mono">resetCanvas()</span></li>
+  </ul>
+
+  <p>
+    It clears <span class="mono">#text</span>, then executes:
+  </p>
+
+  <ul>
+    <li>Preferred: <span class="mono">runPattern()</span> and use its returned string as HTML if provided</li>
+    <li>Alternate: <span class="mono">render()</span> and use its returned string as HTML if provided</li>
+  </ul>
+
+  <p>
+    If no HTML is returned, it writes a small status message to #text
+    and (in the “no usable output” case) throws an error.
+  </p>
+
+
+  <h2>6. Reset dependency: drawState.js and resetCanvas()</h2>
+
+  <p>
+    Canvas execution depends on a concrete import:
+  </p>
+
+  <pre><code>import { resetCanvas } from "/draw/drawState.js";</code></pre>
+
+  <p>
+    This is intentionally a rooted “.js” import so that the browser never falls back to index.html.
+    The reset step is what makes repeated executions deterministic: each run starts from a clean
+    draw-state baseline.
+  </p>
+
+
+  <h2>7. How tabs should use this module (end-to-end pattern)</h2>
+
+  <p>
+    The expected tab/controller usage pattern is:
+  </p>
+
+  <ol>
+    <li>Build a rooted script path (based on the tab’s manifest selection).</li>
+    <li><span class="mono">const mod = await loadScriptModule(path);</span></li>
+    <li>Choose output route:
+      <ul>
+        <li><span class="mono">executeScriptToCanvas(mod, title)</span> for Patterns/Gallery/Lab</li>
+        <li><span class="mono">executeScriptToText(mod, title)</span> for Tools</li>
+      </ul>
+    </li>
+  </ol>
+
+  <div class="ok">
+    <b>Division of responsibilities</b><br/>
+    Tabs decide <i>which</i> script to run and <i>where</i> its output should go.
+    scriptRunner decides <i>how</i> to load it safely and execute it deterministically.
+  </div>
+
+
+  <h2>8. Summary checklist</h2>
+
+  <ul>
+    <li><b>Single pipeline</b>: all runnable scripts are loaded and executed through this module.</li>
+    <li><b>Fail-fast loading</b>: probe-fetch validates HTTP and MIME type before import().</li>
+    <li><b>Contract enforcement</b>: modules must export <span class="mono">runPattern()</span>.</li>
+    <li><b>Two execution targets</b>:
+      canvas (clears <span class="mono">#sketchpad</span>, reattaches canvas, calls <span class="mono">resetCanvas()</span>)
+      vs text (writes HTML into <span class="mono">#text</span>, does not touch canvas).</li>
+    <li><b>Determinism</b>: reset happens once per canvas execution, not per draw call inside the script.</li>
+  </ul>
+
+  <div class="hr"></div>
+
+  <p class="small">
+    End of treatise.
+  </p>
+
+</body>
+</html>

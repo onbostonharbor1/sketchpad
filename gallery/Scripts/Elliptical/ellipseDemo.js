@@ -1,117 +1,186 @@
 /* ============================================================
+   gallery/Scripts/Elliptical/ellipseDemo.js
+   ------------------------------------------------------------
    Ellipse Points — Angle vs Arc-Length
    Gallery Script (ParameterControls-integrated)
 
-   GOAL
-   ----
-   - Draw ellipse points (equal-angle or equal-arc spacing)
-   - Use Sketchpad parameterControls.js to build controls in #action
-   - No uiState usage
-   - Works via Gallery calling runPattern()
+   FIX
+   ---
+   parameterControls.js expects:
+     - info.controls
+     - info.parameters
+     - info.redrawHandler()   << REQUIRED (your error)
 
-   ASSUMPTIONS (FAIL-FAST)
-   -----------------------
-   - window.drawCanvas exists
-   - window.ctx exists
-   - #action exists
-   ============================================================ */
+   GOALS
+   -----
+   - drawRegistry-like top object, worker functions below
+   - init / update / draw lifecycle
+============================================================ */
 
 import { printTitle }             from "/draw/draw_utilities.js";
 import { buildParameterControls } from "/ui/parameterControls.js";
 
-/* ------------------------------------------------------------
-   Helper: pointAtArcLength()
------------------------------------------------------------- */
-function pointAtArcLength(targetLength, maxSamples, cumulative, pts) {
-  let low = 1;
-  let high = maxSamples;
+/* ============================================================
+   scriptInfo  (drawRegistry-shaped)
+============================================================ */
 
-  while (low < high) {
-    const mid = (low + high) >>> 1;
-    if (cumulative[mid] < targetLength) low = mid + 1;
-    else high = mid;
-  }
+export const scriptInfo = {
+  // --- identity / metadata (drawRegistry-like) ---
+  name:        "Ellipse Points Demo",
+  id:          "ellipsePointsDemo",
+  version:     0.1,
+  category:    "Elliptical",
+  source:      "gallery",
+  tags:        ["ellipse", "points", "arc-length"],
+  description: "Ellipse points spaced by equal angle or equal arc-length.",
 
-  const k = low;
-  const prevL = cumulative[k - 1];
-  const nextL = cumulative[k];
+  // --- visual styling placeholders (drawRegistry-like) ---
+  background: null,
+  overlays:   [],
+  transforms: [],
 
-  const denom = (nextL - prevL);
-  const t = (targetLength - prevL) / (denom === 0 ? 1e-9 : denom);
+  // --- persistent runtime state (drawRegistry-like) ---
+  elements: null,
 
-  const A = pts[k - 1];
-  const B = pts[k];
+  // --- UI controls metadata (drawRegistry-like) ---
+  controls: {
+    width:     { label: "Width",      widget: "range",    min: 60,   max: 1000, step: 2,   default: 600,
+                 rangeHeader: true    },
+    height:    { label: "Height",     widget: "range",    min: 60,   max: 1000, step: 2,   default: 360 },
+    rotate:    { label: "Rotation",   widget: "range",    min: -180, max: 180,  step: 1,   default: 0   },
+    cx:        { label: "Center X",   widget: "range",    min: -300, max: 300,  step: 1,   default: 0   },
+    cy:        { label: "Center Y",   widget: "range",    min: -300, max: 300,  step: 1,   default: 0   },
+    numPoints: { label: "Count",      widget: "range",    min: 3,    max: 600,  step: 1,   default: 120 },
+    mode:      { label: "Spacing",    widget: "select",   options: ["angle", "arc"],       default: "arc" },
+    showDots:  { label: "Show Dots",  widget: "checkbox",                                  default: false },
+    lineWidth: { label: "Line Width", widget: "range",    min: 0.3,  max: 4,    step: 0.1, default: 1.2 }
+  },
 
-  return {
-    x: A.x + t * (B.x - A.x),
-    y: A.y + t * (B.y - A.y)
-  };
-} // end pointAtArcLength
+  // --- parameters (authoritative live object; ParameterControls expects this name) ---
+  parameters: {
+    width:     600,
+    height:    360,
+    rotate:    0,
+    cx:        0,
+    cy:        0,
+    numPoints: 120,
+    mode:      "arc",
+    showDots:  false,
+    lineWidth: 1.2
+  },
 
+  // Optional alias (drawRegistry vocabulary) pointing to the SAME object
+  params: null,
 
-/* ------------------------------------------------------------
-   Helper: getEllipsePoints()
------------------------------------------------------------- */
-function getEllipsePoints(width, height, cx, cy, rotDeg, n, mode) {
-  const rx = width / 2;
-  const ry = height / 2;
+  // --- lifecycle wrappers (thin; defer to workers) ---
+  init() {
+    doInit(this);
+  }, // end init
 
-  const rot = rotDeg * Math.PI / 180;
-  const cR = Math.cos(rot);
-  const sR = Math.sin(rot);
+  update(params) {
+    doUpdate(this, params);
+  }, // end update
 
-  function pointAtAngle(theta) {
-    const x0 = rx * Math.cos(theta);
-    const y0 = ry * Math.sin(theta);
+  draw() {
+    doDraw(this);
+  }, // end draw
 
-    return {
-      x: cx + x0 * cR - y0 * sR,
-      y: cy + x0 * sR + y0 * cR
-    };
-  } // end pointAtAngle
+  // --- ParameterControls contract (REQUIRED by your current parameterControls.js) ---
+  // Called after any slider/select/checkbox change.
+  redrawHandler() {
+    this.update(this.parameters);
+    this.draw();
+  }, // end redrawHandler
 
-  if (mode === "angle") {
-    const out = [];
-    for (let i = 0; i < n; i++) {
-      out.push(pointAtAngle(i * 2 * Math.PI / n));
+  // Optional hook (ParameterControls calls this only if it exists)
+  onParamChange() {
+    // no-op (intentionally)
+  } // end onParamChange
+}; // end scriptInfo
+
+scriptInfo.params = scriptInfo.parameters;
+
+/* ============================================================
+   runPattern() — Gallery entry point
+============================================================ */
+export function runPattern(_ctx) {
+  if (!window.drawCanvas) throw new Error("ellipseDemo: window.drawCanvas missing");
+  if (!window.ctx) throw new Error("ellipseDemo: window.ctx missing");
+
+  printTitle(scriptInfo.name);
+
+  // Cold init every time (Gallery semantics today)
+  scriptInfo.init();
+
+  // Build controls into Scripts environment action panel
+  buildParameterControls(scriptInfo, "tab-scripts", true);
+
+  // First render
+  scriptInfo.redrawHandler();
+} // end runPattern
+
+/* ============================================================
+   Worker: doInit(info)
+============================================================ */
+function doInit(info) {
+  if (!info) throw new Error("doInit: info missing");
+  if (!info.parameters) throw new Error("doInit: info.parameters missing");
+
+  const p = info.parameters;
+
+  // Persistent runtime element (drawRegistry-style: elements.element)
+  info.elements = {
+    element: {
+      width:     p.width,
+      height:    p.height,
+      rotate:    p.rotate,
+      cx:        p.cx,
+      cy:        p.cy,
+      numPoints: p.numPoints,
+      mode:      p.mode,
+      showDots:  p.showDots,
+      lineWidth: p.lineWidth
     }
-    return out;
+  };
+} // end doInit
+
+/* ============================================================
+   Worker: doUpdate(info, params)
+============================================================ */
+function doUpdate(info, params) {
+  if (!info) throw new Error("doUpdate: info missing");
+  if (!info.elements || !info.elements.element) throw new Error("doUpdate: info.elements.element missing");
+  if (!params) throw new Error("doUpdate: params missing");
+
+  const e = info.elements.element;
+
+  const keys = Object.keys(info.parameters);
+  for (let i = 0; i < keys.length; i++) {
+    const key = keys[i];
+    const value = params[key];
+    if (value === undefined) continue;
+    e[key] = value;
   }
+} // end doUpdate
 
-  const samples = Math.max(2048, n * 16);
-  const pts = new Array(samples + 1);
-  const cumulative = new Float64Array(samples + 1);
+/* ============================================================
+   Worker: doDraw(info)
+============================================================ */
+function doDraw(info) {
+  if (!info) throw new Error("doDraw: info missing");
+  if (!info.elements || !info.elements.element) throw new Error("doDraw: info.elements.element missing");
 
-  let dist = 0;
-  let prev = null;
+  drawEllipsePoints(info.elements.element);
+} // end doDraw
 
-  for (let i = 0; i <= samples; i++) {
-    const p = pointAtAngle(i * 2 * Math.PI / samples);
-    pts[i] = p;
+/* ============================================================
+   Renderer: drawEllipsePoints(thing)
+============================================================ */
+function drawEllipsePoints(thing) {
+  if (!thing) throw new Error("drawEllipsePoints: thing missing");
+  if (!window.drawCanvas) throw new Error("drawEllipsePoints: window.drawCanvas missing");
+  if (!window.ctx) throw new Error("drawEllipsePoints: window.ctx missing");
 
-    if (prev) dist += Math.hypot(p.x - prev.x, p.y - prev.y);
-    cumulative[i] = dist;
-
-    prev = p;
-  }
-
-  const total = cumulative[samples];
-  const seg = total / n;
-
-  const out = [];
-  for (let i = 0; i < n; i++) {
-    out.push(pointAtArcLength(i * seg, samples, cumulative, pts));
-  }
-
-  return out;
-} // end getEllipsePoints
-
-
-/* ------------------------------------------------------------
-   draw()
-   - This is the actual renderer (matches drawRegistry naming)
------------------------------------------------------------- */
-function draw(thing) {
   const width     = thing.width;
   const height    = thing.height;
   const rotate    = thing.rotate;
@@ -179,116 +248,88 @@ function draw(thing) {
       ctx.fill();
     }
   }
-} // end draw
+} // end drawEllipsePoints
 
+/* ============================================================
+   Geometry helpers
+============================================================ */
 
-/* ------------------------------------------------------------
-   init()
-   - Create persistent runtime element
------------------------------------------------------------- */
-function init() {
-  const p = scriptInfo.params;
+function pointAtArcLength(targetLength, maxSamples, cumulative, pts) {
+  let low = 1;
+  let high = maxSamples;
 
-  scriptInfo.elements = {
-    element: {
-      width:     p.width,
-      height:    p.height,
-      rotate:    p.rotate,
-      cx:        p.cx,
-      cy:        p.cy,
-      numPoints: p.numPoints,
-      mode:      p.mode,
-      showDots:  p.showDots,
-      lineWidth: p.lineWidth
-    }
-  };
-} // end init
-
-
-/* ------------------------------------------------------------
-   update(params)
-   - Apply changes to the persistent element
------------------------------------------------------------- */
-function update(params) {
-  const e = scriptInfo.elements.element;
-
-  for (const key in scriptInfo.params) {
-    const value = params[key];
-    if (value === undefined) continue;
-    e[key] = value;
+  while (low < high) {
+    const mid = (low + high) >>> 1;
+    if (cumulative[mid] < targetLength) low = mid + 1;
+    else high = mid;
   }
-} // end update
 
+  const k = low;
+  const prevL = cumulative[k - 1];
+  const nextL = cumulative[k];
 
-/* ------------------------------------------------------------
-   scriptInfo (ParameterControls contract)
-   - Uses drawRegistry-style internal names:
-       params (not parameters)
-       init / update / draw
-       elements.element (persistent runtime state)
------------------------------------------------------------- */
-export const scriptInfo = {
-  title: "Ellipse Points Demo",
+  const denom = (nextL - prevL);
+  const t = (targetLength - prevL) / (denom === 0 ? 1e-9 : denom);
 
-  // Controls definition for parameterControls.js
-  controls: {
-    width:     { label: "Width",      widget: "range",    min: 60,   max: 1000, step: 2,   default: 600 },
-    height:    { label: "Height",     widget: "range",    min: 60,   max: 1000, step: 2,   default: 360 },
-    rotate:    { label: "Rotation",   widget: "range",    min: -180, max: 180,  step: 1,   default: 0   },
-    cx:        { label: "Center X",   widget: "range",    min: -300, max: 300,  step: 1,   default: 0   },
-    cy:        { label: "Center Y",   widget: "range",    min: -300, max: 300,  step: 1,   default: 0   },
-    numPoints: { label: "Count",      widget: "range",    min: 3,    max: 600,  step: 1,   default: 120 },
-    mode:      { label: "Spacing",    widget: "select",   options: ["angle", "arc"],       default: "arc" },
-    showDots:  { label: "Show Dots",  widget: "checkbox",                                  default: false },
-    lineWidth: { label: "Line Width", widget: "range",    min: 0.3,  max: 4,    step: 0.1, default: 1.2 }
-  },
+  const A = pts[k - 1];
+  const B = pts[k];
 
-  // Default values (renamed to match drawRegistry convention)
-  params: {
-    width:     600,
-    height:    360,
-    rotate:    0,
-    cx:        0,
-    cy:        0,
-    numPoints: 120,
-    mode:      "arc",
-    showDots:  false,
-    lineWidth: 1.2
-  },
+  return {
+    x: A.x + t * (B.x - A.x),
+    y: A.y + t * (B.y - A.y)
+  };
+} // end pointAtArcLength
 
-  // Persistent runtime state (same naming as drawRegistry files)
-  elements: null,
+function getEllipsePoints(width, height, cx, cy, rotDeg, n, mode) {
+  const rx = width / 2;
+  const ry = height / 2;
 
-  // Lifecycle hooks (same naming as drawRegistry files)
-  init,
-  update,
-  draw
-}; // end scriptInfo
+  const rot = rotDeg * Math.PI / 180;
+  const cR = Math.cos(rot);
+  const sR = Math.sin(rot);
 
+  function pointAtAngle(theta) {
+    const x0 = rx * Math.cos(theta);
+    const y0 = ry * Math.sin(theta);
 
-/* ------------------------------------------------------------
-   runPattern() — Gallery entry point
-   ------------------------------------------------------------
-   Gallery calls: await mod.runPattern(ctx)
------------------------------------------------------------- */
-export function runPattern(_ctx) {
-  printTitle(scriptInfo.title);
+    return {
+      x: cx + x0 * cR - y0 * sR,
+      y: cy + x0 * sR + y0 * cR
+    };
+  } // end pointAtAngle
 
-  // 1) Create persistent element once
-  scriptInfo.init();
+  if (mode === "angle") {
+    const out = [];
+    for (let i = 0; i < n; i++) {
+      out.push(pointAtAngle(i * 2 * Math.PI / n));
+    }
+    return out;
+  }
 
-  // 2) Build controls
-  //    Your parameterControls flow should call:
-  //      scriptInfo.update(scriptInfo.params) (or similar)
-  //      scriptInfo.draw(scriptInfo.elements.element)
-  //
-  //    We do not add new assumptions here; we just pass scriptInfo.
-  buildParameterControls(
-    scriptInfo,
-    "tab-scripts",
-    true
-  );
+  const samples = Math.max(2048, n * 16);
+  const pts = new Array(samples + 1);
+  const cumulative = new Float64Array(samples + 1);
 
-  // 3) First draw
-  scriptInfo.draw(scriptInfo.elements.element);
-} // end runPattern
+  let dist = 0;
+  let prev = null;
+
+  for (let i = 0; i <= samples; i++) {
+    const p = pointAtAngle(i * 2 * Math.PI / samples);
+    pts[i] = p;
+
+    if (prev) dist += Math.hypot(p.x - prev.x, p.y - prev.y);
+    cumulative[i] = dist;
+
+    prev = p;
+  }
+
+  const total = cumulative[samples];
+  const seg = total / n;
+
+  const out = [];
+  for (let i = 0; i < n; i++) {
+    out.push(pointAtArcLength(i * seg, samples, cumulative, pts));
+  }
+
+  return out;
+} // end getEllipsePoints

@@ -15,6 +15,7 @@ import { manifest } from "./manifest.js";
 import { showScriptOffcanvas } from "./menuCmds.js";
 import { openEditManifestDialog } from "./menuCmds.js";
 import { archiveItem } from "./menuCmds.js";
+import { buildHelpItem } from "./help.js";
 
 import { refreshGalleryFromManifestEdit } from "./gallery.js";
 
@@ -123,6 +124,9 @@ async function editGalleryManifestItem(info) {
 /* ============================================================
    getGalleryCaptionMenuItems(info)
 =========================================================== */
+/* ============================================================
+   getGalleryCaptionMenuItems(info)
+=========================================================== */
 export async function getGalleryCaptionMenuItems(info) {
 
   if (!info) throw new Error("getGalleryCaptionMenuItems: info missing");
@@ -133,8 +137,14 @@ export async function getGalleryCaptionMenuItems(info) {
      Help
      -------------------------------------------------------- */
   if (info.helpKey) {
-    const helpItem = await menuManager.buildHelpItem("gallery", info.helpKey);
+
+    // FIX: pass recursive subdirs so help.js can traverse the help manifest tree
+    const helpItem = await menuManager.buildHelpItem("gallery", info.helpKey, {
+      subdirs: info.helpSubdirs
+    });
+
     items.push(helpItem);
+
   } else {
     items.push({ label: "Help", disabled: true, onClick: () => {} });
   }

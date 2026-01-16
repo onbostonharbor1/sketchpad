@@ -110,3 +110,73 @@
 .overlayHelp li {
   margin-bottom: 0.4rem;
 }
+
+/* ============================================================
+   NEXT / PREV REGION OVERLAY (NOT overlayContainer)
+   ------------------------------------------------------------
+   This overlay is moved into either:
+     - #text
+     - #sketchpad-wrapper
+   and sits on top of the displayed content.
+============================================================ */
+
+/* The target regions must anchor an absolute child overlay. */
+#text,
+#sketchpad-wrapper {
+  position: relative;
+}
+
+/* The overlay itself fills the target region. */
+#overlay-nextprev {
+  position: absolute;
+  inset: 0;
+  z-index: 50;          /* above content inside the region */
+  display: none;        /* controlled by JS */
+
+  /* Container should not eat events; zones will. */
+  pointer-events: none;
+}
+
+/* Left / Right click zones */
+#overlay-nextprev .nextprev-zone {
+  position: absolute;
+  top: 0;
+  height: 100%;
+  width: 25%;
+
+  /* zones must receive clicks */
+  pointer-events: auto;
+
+  /* keep it invisible but clickable */
+  background: transparent;
+  cursor: pointer;
+}
+
+#overlay-nextprev .nextprev-zone-left  { left: 0; }
+#overlay-nextprev .nextprev-zone-right { right: 0; }
+
+/* Faint chevrons */
+#overlay-nextprev .nextprev-icon {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+
+  font-size: 48px;
+  line-height: 1;
+
+  opacity: 0.18;
+  user-select: none;
+  pointer-events: none;   /* icons do not steal clicks */
+}
+
+#overlay-nextprev .nextprev-icon-left  { left: 10px; }
+#overlay-nextprev .nextprev-icon-right { right: 10px; }
+
+/* TinyMCE popup UI must be above Sketchpad overlays */
+.tox-tinymce-aux,
+.tox-menu,
+.tox-dialog,
+.tox-dropzone,
+.tox-tooltip {
+  z-index: 20000 !important;
+}

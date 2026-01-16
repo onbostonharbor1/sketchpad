@@ -3,5 +3,11 @@
     "filename": "voronoi",
     "path": "voronoi.js",
     "title": "Experimental Voronoi (placeholder)"
+  },
+  {
+    "filename": "radialLinePetals",
+    "path": "radialLinePetals.js",
+    "title": "radialLinePetals.js",
+    "status": "new"
   }
 ]

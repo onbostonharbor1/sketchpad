@@ -6,30 +6,27 @@
   "license": "ISC",
   "scripts": {
     "build:home": "node ./node/maintain_manifests.mjs",
-
     "// Note": "Combined predev into concurrently to prevent one script failure from blocking others",
     "predev": "node ./node/check_ports.mjs & node ./node/generateHelpManifest.mjs & node ./node/maintain_manifests.mjs",
-
     "dev:vite": "vite --port 5173 --strictPort",
     "dev:svc": "node ./node/sketchpadServer.mjs",
-
     "// Logic": "Run maintenance tasks first, then launch the environment",
     "dev:all": "concurrently -k -n SVC,VITE \"npm run dev:svc\" \"npm run dev:vite\"",
     "dev:sketchpad": "npm run predev && npm run dev:all",
-
     "open:sketchpad": "wait-on http://localhost:5173/ && start http://localhost:5173/",
     "start:sketchpad": "concurrently -n MAINT,DEV,OPEN \"npm run predev\" \"npm run dev:all\" \"npm run open:sketchpad\"",
-
     "dev:draw": "npm run dev:vite",
     "open:draw": "wait-on http://localhost:5173/ && start http://localhost:5173/draw.html",
     "start:draw": "concurrently -n VITE,OPEN \"npm run dev:draw\" \"npm run open:draw\"",
-
     "build": "vite build",
     "preview": "vite preview"
   },
   "dependencies": {
     "dexie": "^4.2.1",
-    "sharp": "^0.34.5"
+    "jquery": "^3.7.1",
+    "jstree": "^3.3.17",
+    "sharp": "^0.34.5",
+    "tinymce": "^8.3.2"
   },
   "devDependencies": {
     "concurrently": "^9.2.1",

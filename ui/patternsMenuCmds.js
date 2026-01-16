@@ -8,13 +8,13 @@
      • menuCmds.js remains generic
 ------------------------------------------------------------ */
 
-import { manifest } from "./manifest.js";
-import { menuManager } from "./menuManager.js";
-import { showScriptOffcanvas } from "./menuCmds.js";
-import { archiveItem } from "./menuCmds.js";
+import { manifest }               from "./manifest.js";
+import { menuManager }            from "./menuManager.js";
+import { showScriptOffcanvas }    from "./menuCmds.js";
+import { archiveItem }            from "./menuCmds.js";
 import { openEditManifestDialog } from "./menuCmds.js";
-import { PatternsController } from "./patterns.js";
-
+import { PatternsController }     from "./patterns.js";
+import { buildHelpItem }          from "./help.js";
 
 /* ============================================================
    archivePatternItem(info)

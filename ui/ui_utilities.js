@@ -227,32 +227,6 @@ export function buildCategoryDescriptor(groups, itemLabelFn, onClickFn) {
   });
 }
 
-/* helpManifest.js
-   ------------------------------------------------------------
-   Loads help/manifest.json ONCE and caches it globally.
-   Used by all tabs.
-   ------------------------------------------------------------
-*/
-
-export let helpManifest = null;
-
-export async function loadHelpManifest() {
-  if (helpManifest !== null) return helpManifest;  // cached
-
-  const resp = await fetch("/help/manifest.json");
-  if (!resp.ok) {
-    throw new Error("Missing or unreadable /help/manifest.json");
-  }
-
-  const data = await resp.json();
-
-  if (typeof data !== "object" || Array.isArray(data)) {
-    throw new Error("Help manifest must be an object keyed by tab names");
-  }
-
-  helpManifest = data;
-  return helpManifest;
-} // end loadHelpManifest
 
 /*************************************************************
    setCommandsButtonHandler(onClick)

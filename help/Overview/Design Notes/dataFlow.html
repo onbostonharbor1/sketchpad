@@ -1,0 +1,377 @@
+<!doctype html>
+
+<html lang="en">
+
+<head>
+  <meta charset="utf-8" />
+
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+
+  <title>Help Treatise — Sketchpad Data Flow (Overview)</title>
+
+  <link rel="stylesheet" href="/help/help_treatise.css" />
+</head>
+
+<body>
+
+  <h1>Sketchpad Data Flow (Overview)</h1>
+
+  <p>
+    This document describes Sketchpad data flow at a conceptual level.
+  </p>
+
+  <p>
+    Note: “data flow” in Sketchpad is a broad concept. Sketchpad is not a single pipeline system.
+    It is a collection of cooperating subsystems (tabs, manifests, UI state, drawing runtime objects,
+    overlays, and Node services) that exchange data in predictable ways.
+  </p>
+
+  <p>
+    This treatise is therefore an overview, not an exhaustive formal specification.
+  </p>
+
+  <hr />
+
+  <h2>1. The major data domains in Sketchpad</h2>
+
+  <p>
+    Sketchpad has several distinct kinds of “data,” each with a different lifetime and purpose.
+  </p>
+
+  <h3>A. UI State (uiState.js)</h3>
+
+  <p>
+    UI state is the authoritative record of “what the user is looking at right now.”
+  </p>
+
+  <ul>
+    <li>active tab</li>
+    <li>active category</li>
+    <li>active item</li>
+    <li>active subtab</li>
+    <li>saved view context (categories vs results)</li>
+    <li>last selected index for restoration</li>
+  </ul>
+
+  <p>
+    UI state changes immediately when the user clicks something.
+    Rendering follows state, not the other way around.
+  </p>
+
+  <h3>B. Manifest Data (directoryRegistry.json + manifest.json)</h3>
+
+  <p>
+    Manifests are the authoritative inventory of content:
+  </p>
+
+  <ul>
+    <li>which categories exist</li>
+    <li>which items exist inside each category</li>
+    <li>titles, filenames, paths, metadata fields</li>
+  </ul>
+
+  <p>
+    Manifests are loaded once, cached, and treated as immutable.
+    Tabs only read cached manifest data.
+  </p>
+
+  <h3>C. Runtime Drawing State (elements / params / controls)</h3>
+
+  <p>
+    This is the “live” drawing state used while a script or drawRegistry entry is running.
+  </p>
+
+  <ul>
+    <li><span class="mono">params</span>: current UI values (JSON-safe)</li>
+    <li><span class="mono">controls</span>: declarative metadata for UI generation</li>
+    <li><span class="mono">elements</span>: persistent runtime objects used by draw()</li>
+  </ul>
+
+  <p>
+    Runtime drawing state is created on entry (init) and mutated by update().
+    The draw() function reads from elements only.
+  </p>
+
+  <h3>D. Node Service Data (filesystem + generated reports)</h3>
+
+  <p>
+    Sketchpad includes a Node-side service layer that performs filesystem operations and maintenance tasks.
+    Node tasks produce structured results and log output.
+  </p>
+
+  <p>
+    Examples include:
+  </p>
+
+  <ul>
+    <li>rebuild and validate manifests</li>
+    <li>write thumbnails</li>
+    <li>archive scripts or items</li>
+    <li>edit manifest titles</li>
+  </ul>
+
+  <p>
+    Node tasks do not directly manipulate the UI.
+    They return data to the browser, and the browser decides how to display it.
+  </p>
+
+  <hr />
+
+  <h2>2. The four primary data-flow loops</h2>
+
+  <p>
+    Sketchpad can be understood as four main loops.
+    Each loop is deterministic and has a clear “owner.”
+  </p>
+
+  <h3>Loop 1: UI Navigation Flow (click → uiState → render)</h3>
+
+  <p>
+    This is the core “UI drives UI” rule.
+  </p>
+
+  <ol>
+    <li>User clicks a tab, category, item, or subtab.</li>
+    <li>The tab controller updates uiState immediately.</li>
+    <li>The tab controller renders the correct view based on uiState.</li>
+  </ol>
+
+  <p>
+    The key principle is:
+    uiState is always updated first, then rendering happens.
+  </p>
+
+  <h3>Loop 2: Content Inventory Flow (filesystem → manifest cache → UI)</h3>
+
+  <p>
+    Manifests define what content exists and how it is organized.
+  </p>
+
+  <ol>
+    <li>On cold start, a tab loads its required manifests.</li>
+    <li>Manifests are cached in memory (manifest.cache).</li>
+    <li>UI rendering reads from the cached data only.</li>
+  </ol>
+
+  <p>
+    In normal operation, tabs do not repeatedly fetch manifest files.
+    The cache is treated as authoritative until explicitly invalidated.
+  </p>
+
+  <h3>Loop 3: Drawing Flow (controls → params → update() → elements → draw())</h3>
+
+  <p>
+    This is the canonical drawRegistry-like lifecycle used by scripts and objects.
+  </p>
+
+  <ol>
+    <li>parameterControls renders UI controls based on controls metadata.</li>
+    <li>Control interaction updates params.</li>
+    <li>redrawHandler calls update(params) to apply changes to elements.element.</li>
+    <li>draw() renders deterministically from elements.element.</li>
+  </ol>
+
+  <p>
+    The key principle is:
+    draw() does not read params directly.
+  </p>
+
+  <h3>Loop 4: Maintenance Flow (UI → nodeDispatch → service → UI refresh)</h3>
+
+  <p>
+    This is the “system maintenance” loop used for tasks like rebuild, archive, edit, and thumbnail generation.
+  </p>
+
+  <ol>
+    <li>User invokes a maintenance command (menu item or offcanvas button).</li>
+    <li>Browser calls nodeDispatch with a request name and payload.</li>
+    <li>Node service performs filesystem work and returns structured results.</li>
+    <li>Browser invalidates caches if needed.</li>
+    <li>Browser restores the tab view from uiState.</li>
+  </ol>
+
+  <p>
+    The key principle is:
+    Node work changes files, but the browser decides how to reflect that change.
+  </p>
+
+  <hr />
+
+  <h2>3. Data flow by subsystem (high-level map)</h2>
+
+  <p>
+    Each Sketchpad tab is an independent subsystem.
+    Each subsystem follows the same architectural rules, but reads different data sources.
+  </p>
+
+  <h3>A. Draw Tab</h3>
+
+  <ul>
+    <li>Inventory source: drawRegistry (internal JS objects)</li>
+    <li>State source: uiState.draw</li>
+    <li>Runtime source: drawRegistry entry elements + params</li>
+  </ul>
+
+  <p>
+    Draw Tab is “object driven” rather than “file driven.”
+  </p>
+
+  <h3>B. Patterns Tab</h3>
+
+  <ul>
+    <li>Inventory source: /patterns/&lt;category&gt;/manifest.json</li>
+    <li>State source: uiState.patterns</li>
+    <li>Runtime source: imported module runPattern()</li>
+  </ul>
+
+  <p>
+    Patterns is “file driven,” but scripts are expected to behave like drawRegistry objects when executed.
+  </p>
+
+  <h3>C. Gallery Tab</h3>
+
+  <ul>
+    <li>Inventory source: /gallery/&lt;Domain&gt;/directoryRegistry.json and per-category manifests</li>
+    <li>State source: uiState.gallery</li>
+    <li>Runtime source: images or imported script modules</li>
+  </ul>
+
+  <p>
+    Gallery contains both static content (images) and executable content (scripts).
+  </p>
+
+  <h3>D. Utilities Tab</h3>
+
+  <ul>
+    <li>Inventory source: Utilities manifests (and/or hardwired scripts)</li>
+    <li>State source: uiState.utilities</li>
+    <li>Runtime source: scripts + node service reports</li>
+  </ul>
+
+  <p>
+    Utilities is the “system workbench.” It is where maintenance and inspection tasks are exposed.
+  </p>
+
+  <h3>E. Home Tab</h3>
+
+  <ul>
+    <li>Inventory source: /home/manifest.json (generated by Node)</li>
+    <li>State source: uiState.home</li>
+    <li>Runtime source: scripts (runPattern) and images</li>
+  </ul>
+
+  <p>
+    Home is a curated index, not a content storage system.
+    It points into other parts of the filesystem by rooted path.
+  </p>
+
+  <hr />
+
+  <h2>4. What makes Sketchpad “fail-fast”</h2>
+
+  <p>
+    Sketchpad is intentionally designed to crash loudly when required data is missing.
+    This is not a bug; it is a development strategy.
+  </p>
+
+  <p>
+    Examples of fail-fast conditions:
+  </p>
+
+  <ul>
+    <li>required DOM regions are missing</li>
+    <li>manifest files are missing or unreadable</li>
+    <li>uiState saved context is missing or inconsistent</li>
+    <li>a script does not export expected fields</li>
+    <li>an item path is malformed</li>
+  </ul>
+
+  <p>
+    Fail-fast behavior makes the data flow visible:
+    the console error shows the exact boundary where state and reality diverged.
+  </p>
+
+  <hr />
+
+  <h2>5. Typical end-to-end flows</h2>
+
+  <h3>Flow A: Select a Pattern and run it</h3>
+
+  <ol>
+    <li>User selects Patterns tab.</li>
+    <li>Patterns tab reads cached manifest inventory.</li>
+    <li>User selects a pattern item.</li>
+    <li>uiState.patterns is updated to results view.</li>
+    <li>The module is imported.</li>
+    <li>runPattern() builds controls and draws.</li>
+  </ol>
+
+  <h3>Flow B: Browse Gallery images</h3>
+
+  <ol>
+    <li>User selects Gallery tab and a domain (Ideabook / Patterns / Scripts).</li>
+    <li>Gallery reads cached per-domain manifests.</li>
+    <li>User selects an item.</li>
+    <li>uiState.gallery.saved is updated to results view.</li>
+    <li>Caption bar prev/next navigates by updating index and re-rendering.</li>
+  </ol>
+
+  <h3>Flow C: Maintenance task (Rebuild &amp; Validate)</h3>
+
+  <ol>
+    <li>User opens Commands offcanvas.</li>
+    <li>User clicks Rebuild &amp; Validate.</li>
+    <li>UI calls nodeDispatch.</li>
+    <li>Node service updates manifests and returns report.</li>
+    <li>UI invalidates cache and restores current view from uiState.</li>
+    <li>UI displays report output.</li>
+  </ol>
+
+  <hr />
+
+  <h2>6. What this document does NOT specify</h2>
+
+  <p>
+    This overview does not attempt to define every file and every function.
+    Sketchpad is intentionally modular and each subsystem owns its own internal details.
+  </p>
+
+  <p>
+    Topics not fully specified here include:
+  </p>
+
+  <ul>
+    <li>exact manifest schemas per tab</li>
+    <li>exact overlayManager layer flow</li>
+    <li>caption bar and menu item wiring details</li>
+    <li>future persistence (Dexie) for drawRegistry objects</li>
+    <li>future figure objects and interconnections</li>
+  </ul>
+
+  <p>
+    Those are best handled as separate treatises.
+  </p>
+
+  <hr />
+
+  <h2>Summary</h2>
+
+  <p>
+    Sketchpad data flow is best understood as multiple deterministic loops:
+  </p>
+
+  <ul>
+    <li>UI navigation flow: click → uiState → render</li>
+    <li>content inventory flow: filesystem → manifests → cache → UI</li>
+    <li>drawing flow: controls → params → update → elements → draw</li>
+    <li>maintenance flow: UI → nodeDispatch → service → UI refresh</li>
+  </ul>
+
+  <p>
+    These loops interact, but they remain separate.
+    This separation is what keeps Sketchpad understandable, testable, and fail-fast.
+  </p>
+
+</body>
+
+</html>

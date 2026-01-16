@@ -15,9 +15,11 @@ import { clearDivs }        from "./ui_utilities.js";
 import { initMenuManager }  from "./menuManager.js";
 import { initOverlay }      from "./overlay.js";
 import { uiState }          from "./uiState.js";
+import { disableAllNextPrevOverlays }  from "./nextPrevOverlay.js";   // NEW: global overlay teardown
 
 const START = "START_APP";
 const LAST_TAB_KEY = "sketchpad.lastActiveTab"; // end LAST_TAB_KEY
+
 
 /* ============================================================
    Tab Registry
@@ -167,13 +169,15 @@ function activateTab(tab) {
 
 
 
-
 /* ============================================================
    setUI(tabName)
    PUBLIC ENTRY: All tab switches call this.
 ============================================================ */
 export function setUI(tab) {
 
+  // Guaranteed teardown on EVERY tab switch attempt.
+  // Prevents stale click-zones from surviving into a new tab.
+  disableAllNextPrevOverlays();
   let tabName;
 
   if (tab === START) {
@@ -205,13 +209,6 @@ export function setUI(tab) {
   }
 
   // ----------------------------------------------------------
-  // Persist last active tab so a Vite full reload returns here.
-  // ----------------------------------------------------------
-  if (uiState.activeTab) {
-    localStorage.setItem(LAST_TAB_KEY, uiState.activeTab);
-  }
-
-  // ----------------------------------------------------------
   // Consume launch intent (Home → Draw, etc.)
   // ----------------------------------------------------------
   if (!uiState.launch) return;
@@ -232,6 +229,7 @@ export function setUI(tab) {
   setUI(targetTab);
 
 } // end setUI
+
 
 
 
@@ -265,15 +263,8 @@ function onDomContentLoaded() {
       handleTabChange(btn.id);
     });
   });
-  // If Vite forced a full reload (because a manifest was edited),
-  // resume the last active tab instead of always starting at Home.
-  const lastTab = localStorage.getItem(LAST_TAB_KEY);
 
-  if (lastTab && TabRegistry[lastTab]) {
-    setUI(lastTab);
-  } else {
-    setUI(START);
-  }
+  setUI(START);
 
 } // end onDomContentLoaded
 

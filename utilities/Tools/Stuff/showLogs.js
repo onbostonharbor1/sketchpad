@@ -12,6 +12,7 @@
 =========================================================== */
 
 import { nodeListLogFiles, nodeReadLogFile } from "/ui/nodeLayer.js";
+import { escapeHtml } from "/ui/ui_utilities";
 
 export async function runPattern() {
 
@@ -139,11 +140,3 @@ function renderLogText(textDiv, text, name) {
 } // end renderLogText
 
 
-function escapeHtml(text) {
-  return String(text)
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;")
-    .replaceAll('"', "&quot;")
-    .replaceAll("'", "&#39;");
-} // end escapeHtml

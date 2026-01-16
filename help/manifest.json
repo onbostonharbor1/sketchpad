@@ -1,31 +1,100 @@
 {
-  "Overview": [
-    "actionRegistry",
-    "caption",
-    "categories",
-    "draw",
-    "fileLayer",
-    "gallery",
-    "home",
-    "manifest",
-    "menuManager",
-    "nodeLayer",
-    "overlay",
-    "parameterControls",
-    "patterns",
-    "scriptRunner",
-    "setUI",
-    "uiState",
-    "ui_callbacks",
-    "ui_utilities",
-    "utilities"
+  "root": [
+    "Index"
   ],
   "draw": [
     "inEllipse",
-    "inverseStar"
+    "inverseStar",
+    "linkedCircles"
   ],
-  "patterns": [],
-  "gallery": [],
-  "utilities": [],
-  "figures": []
+  "figures": [],
+  "gallery": {
+    "Ideabook": {
+      "3D": [],
+      "generative": [],
+      "ideas": [],
+      "ok": [],
+      "possible": [],
+      "Pursuit": [],
+      "scans": [],
+      "To Build": [],
+      "working": []
+    },
+    "Patterns": {
+      "PursuitPatterns": [],
+      "ScanPatterns": []
+    },
+    "Scripts": {
+      "Curve Stitch": [],
+      "Elliptical": [
+        "ellipseDemo.js"
+      ],
+      "Experimental": [],
+      "General parametric": [],
+      "Generative": [],
+      "Multiple": [],
+      "Named parametric": [],
+      "Pursuit": [],
+      "Rose": [],
+      "Spiral": [],
+      "Unicorns": []
+    }
+  },
+  "home": [],
+  "Overview": {
+    "Design Notes": [
+      "ConvertToGallery",
+      "dataFlow",
+      "drawRegistry",
+      "runPattern",
+      "sketchpadArchitecture"
+    ],
+    "Subsystems": [
+      "actionRegistry",
+      "caption",
+      "categories",
+      "fileLayer",
+      "manifest",
+      "menuManager",
+      "nodeLayer",
+      "overlay",
+      "parameterControls",
+      "scriptRunner",
+      "setUI",
+      "ui_callbacks",
+      "ui_utilities",
+      "uiState"
+    ],
+    "Tabs": [
+      "draw",
+      "gallery",
+      "home",
+      "patterns",
+      "utilities"
+    ]
+  },
+  "patterns": {
+    "builds": [],
+    "circles": [],
+    "curve_stitch": [],
+    "figures": [],
+    "fundamental": [],
+    "imported": [],
+    "parametric": [],
+    "polar": [],
+    "pursuit": [],
+    "spirals": [],
+    "stuff": [],
+    "unicorn": []
+  },
+  "utilities": {
+    "Lab": {
+      "Backgrounds": [],
+      "Color": []
+    },
+    "Tools": {
+      "Backgrounds": [],
+      "Stuff": []
+    }
+  }
 }

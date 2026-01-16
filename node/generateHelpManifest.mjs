@@ -1,71 +1,169 @@
 /**
  * generateHelpManifest.mjs
  * ------------------------------------------------------------
- * Node script that scans the /help/<helpDir>/ directories and
- * builds manifest.json listing which help files actually exist.
+ * Recursively scans /help and writes /help/manifest.json.
  *
- * This runs BEFORE dev server startup:
+ * OUTPUT SHAPE (YOUR ORIGINAL SHAPE, BUT RECURSIVE)
+ * -------------------------------------------------
+ * - Every directory becomes an object key.
+ * - Leaf directories produce an ARRAY of filenames (NO extension).
+ * - NO ids.
+ * - NO invented keys like "_files".
+ * - Root-level index.html is stored as: manifest.root = ["index"]
+ *
+ * Example:
+ * {
+ *   "root": ["index"],
+ *   "Overview": ["fileLayer", "manifest", ...],
+ *   "draw": ["inEllipse", "inverseStar"],
+ *   "gallery": {
+ *     "Scripts": {
+ *       "Elliptical": ["ellipseDemo.js"]
+ *     }
+ *   }
+ * }
+ *
+ * Runs before Vite:
  *   "dev": "node help/generateHelpManifest.mjs && vite"
- *
- * The browser then imports manifest.json and enables/disables
- * the Help menu item based purely on manifest data.
- *
- * You do NOT run this manually unless you want to.
- * Node has full access to the filesystem; the browser does not.
  */
 
-// Node built-ins (ESM)
 import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
 
-// Resolve __dirname equivalent for ESM
 const __filename = fileURLToPath(import.meta.url);
 const __dirname  = path.dirname(__filename);
+
 const PROJECT_ROOT = path.resolve(__dirname, "..");
 const HELP_ROOT    = path.join(PROJECT_ROOT, "help");
+const OUTPUT_FILE  = path.join(HELP_ROOT, "manifest.json");
 
-const HELP_MANIFEST = "manifest.json";
-const OUTPUT_FILE   = path.join(HELP_ROOT, HELP_MANIFEST);
-console.log(`>>> HELP MANIFEST FILE: ${OUTPUT_FILE} `);
+console.log(">>> HELP ROOT:", HELP_ROOT);
+console.log(">>> HELP MANIFEST FILE:", OUTPUT_FILE);
 
-// Top-level help subdirectories you plan to support
-const HELP_DIRS = ["Overview", "draw", "patterns", "gallery", "utilities", "figures" ];
+if (!fs.existsSync(HELP_ROOT)) {
+  throw new Error("generateHelpManifest: HELP_ROOT not found: " + HELP_ROOT);
+}
+if (!fs.statSync(HELP_ROOT).isDirectory()) {
+  throw new Error("generateHelpManifest: HELP_ROOT is not a directory: " + HELP_ROOT);
+}
 
-// Output structure
-const manifest = {};
+function isHtmlFile(name) {
+  return name.toLowerCase().endsWith(".html");
+} // end isHtmlFile
 
-// ------------------------------------------------------------
-// For each helpDir:
-//   1. Look for /help/<helpDir>/
-//   2. If it exists, list *.html files
-//   3. Store names WITHOUT extension in manifest
-// ------------------------------------------------------------
-HELP_DIRS.forEach((helpDir) => {
-  const helpDirectory = path.join(HELP_ROOT, helpDir);
+function isSkippableDir(name) {
+  return name === "node_modules" || name === ".git";
+} // end isSkippableDir
 
-  if (!fs.existsSync(helpDirectory)) {
-    // No such directory → leave empty list
-    manifest[helpDir] = [];
-    return;
+function sortCaseInsensitive(a, b) {
+  return a.toLowerCase().localeCompare(b.toLowerCase());
+} // end sortCaseInsensitive
+
+function scanDir(absDir, relDir) {
+
+  const entries = fs.readdirSync(absDir, { withFileTypes: true });
+
+  const htmlFiles = [];
+  const subdirs   = [];
+
+  for (const ent of entries) {
+
+    const name = ent.name;
+
+    if (ent.isDirectory()) {
+      if (isSkippableDir(name)) continue;
+      subdirs.push(name);
+      continue;
+    }
+
+    if (ent.isFile() && isHtmlFile(name)) {
+      htmlFiles.push(name);
+      continue;
+    }
   }
 
-  const files = fs.readdirSync(helpDirectory);
-  const htmlFiles = files.filter((f) => f.endsWith(".html"));
+  htmlFiles.sort(sortCaseInsensitive);
+  subdirs.sort(sortCaseInsensitive);
 
-  // Strip .html to get itemName
-  const itemNames = htmlFiles.map((file) =>
-    path.basename(file, ".html")
+  // If directory contains ONLY html files -> leaf array of BASENAMES (no extension)
+  if (htmlFiles.length > 0 && subdirs.length === 0) {
+
+    const out = [];
+
+    for (const f of htmlFiles) {
+      const base = path.basename(f, ".html");  // keep ".js" if present (ellipseDemo.js.html -> ellipseDemo.js)
+      out.push(base);
+    }
+
+    return out;
+  }
+
+  // If directory contains ONLY subdirectories -> nested object
+  if (subdirs.length > 0 && htmlFiles.length === 0) {
+
+    const obj = {};
+
+    for (const d of subdirs) {
+      const absChild = path.join(absDir, d);
+      const relChild = relDir ? (relDir + "/" + d) : d;
+
+      obj[d] = scanDir(absChild, relChild);
+    }
+
+    return obj;
+  }
+
+  // Empty directory -> empty array
+  if (subdirs.length === 0 && htmlFiles.length === 0) {
+    return [];
+  }
+
+  // Mixed content (both html files and subdirs) is ambiguous without inventing a key.
+  // Fail-fast so you see the directory that violates the layout.
+  throw new Error(
+    "generateHelpManifest: directory contains BOTH .html files and subdirectories (unsupported): " +
+    (relDir || "(help root)")
   );
 
-  manifest[helpDir] = itemNames;
-});
+} // end scanDir
+
 
 // ------------------------------------------------------------
-// Write manifest to disk
+// Build manifest
+// ------------------------------------------------------------
+const manifest = {};
+
+// Root-level html files become manifest.root = ["index", ...]
+const rootEntries = fs.readdirSync(HELP_ROOT, { withFileTypes: true });
+
+const rootHtml = rootEntries
+  .filter(e => e.isFile())
+  .map(e => e.name)
+  .filter(isHtmlFile)
+  .sort(sortCaseInsensitive);
+
+manifest.root = rootHtml.map(f => path.basename(f, ".html"));
+
+// Top-level directories under /help become manifest keys
+const topDirs = rootEntries
+  .filter(e => e.isDirectory())
+  .map(e => e.name)
+  .filter(n => !isSkippableDir(n))
+  .sort(sortCaseInsensitive);
+
+for (const d of topDirs) {
+  const absChild = path.join(HELP_ROOT, d);
+  manifest[d] = scanDir(absChild, d);
+}
+
+// ------------------------------------------------------------
+// Write manifest.json
 // ------------------------------------------------------------
 fs.writeFileSync(
   OUTPUT_FILE,
-  JSON.stringify(manifest, null, 2),
+  JSON.stringify(manifest, null, 2) + "\n",
   "utf8"
 );
+
+console.log(">>> WROTE:", OUTPUT_FILE);

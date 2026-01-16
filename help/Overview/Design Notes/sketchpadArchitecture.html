@@ -1,0 +1,1231 @@
+<!doctype html>
+
+<html lang="en">
+
+<head>
+  <meta charset="utf-8" />
+
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+
+  <title>Help Treatise — Sketchpad Architecture (Detailed)</title>
+
+  <link rel="stylesheet" href="/help/help_treatise.css" />
+</head>
+
+<body>
+
+  <a id="toc"></a>
+
+  <h1>Sketchpad Architecture (Detailed)</h1>
+
+  <p>
+    This document is the detailed architectural reference for Sketchpad.
+    It is intended to support implementation, debugging, and long-term consistency.
+  </p>
+
+  <p>
+    This treatise assumes the core Sketchpad design rules:
+  </p>
+
+  <ul>
+    <li>UI state drives the UI; uiState is updated first, then rendering happens.</li>
+    <li>Each tab is an independent subsystem that owns its regions.</li>
+    <li>Tab activation follows TabSpec init/restore/save rules.</li>
+    <li>Manifests are loaded once, cached, and treated as immutable.</li>
+    <li>Fail-fast everywhere; missing data is a broken state, not a “skip” case.</li>
+  </ul>
+
+  <hr />
+
+  <h2>Mini-TOC</h2>
+
+  <ul>
+    <li><a href="#tab-lifecycle">1. Tab Lifecycle (TabSpec + setUI)</a></li>
+    <li><a href="#ui-state">2. uiState (Authoritative UI State)</a></li>
+    <li><a href="#manifest-layer">3. Manifest Layer (manifest.js + cache rules)</a></li>
+    <li><a href="#categories">4. Categories Rendering (categories.js descriptor contract)</a></li>
+    <li><a href="#caption">5. Caption Bar (caption.js + navigation + menus)</a></li>
+    <li><a href="#menus">6. Menus (menuManager + per-tab menuCmds shaping)</a></li>
+    <li><a href="#script-execution">7. Script Execution (runPattern + scriptRunner)</a></li>
+    <li><a href="#drawregistry">8. drawRegistry Architecture (init/update/draw + elements)</a></li>
+    <li><a href="#filelayer">9. File Identity + Paths (fileLayer.js)</a></li>
+    <li><a href="#node-dispatch">10. Node Dispatch (nodeLayer.js)</a></li>
+    <li><a href="#service">11. Node Service (sketchpadService.mjs)</a></li>
+    <li><a href="#maintain-manifests">12. Manifest Maintenance (maintain_manifests.mjs)</a></li>
+    <li><a href="#tab-ownership">13. Per-Tab Ownership Summary</a></li>
+    <li><a href="#diagnostics">14. Diagnostics and Failure Modes (debug map)</a></li>
+    <li><a href="#cross-functional-flows">15. Cross-Functional Flows (end-to-end handoffs)</a></li>
+  </ul>
+
+  <hr />
+
+  <a id="tab-lifecycle"></a>
+
+  <h2>1. Tab Lifecycle (TabSpec + setUI)</h2>
+
+  <p>
+    Sketchpad is organized around top-level tabs.
+    Each tab is a self-contained subsystem that is activated through a TabSpec object.
+  </p>
+
+  <h3>1.1 TabSpec contract</h3>
+
+  <p>
+    Every tab provides a TabSpec with these core lifecycle methods:
+  </p>
+
+  <ul>
+    <li><span class="mono">init(restoredFlag)</span> — cold-start initializer only</li>
+    <li><span class="mono">restore()</span> — rebuild from saved uiState only</li>
+    <li><span class="mono">save()</span> — snapshot current state before leaving tab</li>
+  </ul>
+
+  <p>
+    The TabSpec also declares which regions it owns (caption, text, sketchpad, action).
+  </p>
+
+  <h3>1.2 Cold start vs restore</h3>
+
+  <p>
+    Sketchpad distinguishes two entry cases:
+  </p>
+
+  <ul>
+    <li>
+      Cold start:
+      the tab has no saved state yet, so it builds its UI from defaults.
+    </li>
+
+    <li>
+      Restore:
+      the tab has saved state, so it reconstructs exactly what the user was viewing.
+    </li>
+  </ul>
+
+  <p>
+    Architectural rule:
+    init() must not contain restore logic.
+    restore() must not contain cold-start logic.
+  </p>
+
+  <h3>1.3 setUI.js responsibilities</h3>
+
+  <p>
+    setUI.js is the orchestrator. It must:
+  </p>
+
+  <ul>
+    <li>switch active tab</li>
+    <li>apply theme</li>
+    <li>clear regions on cold init</li>
+    <li>call init() or restore()</li>
+    <li>call save() before leaving a tab</li>
+  </ul>
+
+  <p>
+    Architectural rule:
+    setUI.js does not render tab content.
+    It only delegates to the active tab’s controller logic.
+  </p>
+
+  <p>
+    <a href="#toc">Back to Mini-TOC</a>
+  </p>
+
+  <hr />
+
+  <a id="ui-state"></a>
+
+  <h2>2. uiState (Authoritative UI State)</h2>
+
+  <p>
+    uiState is the authoritative record of what the user is looking at right now.
+    It is the only “truth source” for restore behavior.
+  </p>
+
+  <h3>2.1 uiState as the driver</h3>
+
+  <p>
+    Sketchpad follows the rule:
+  </p>
+
+  <p class="mono">
+    User action → uiState update → rendering
+  </p>
+
+  <p>
+    Rendering never “discovers” state by reading the DOM.
+    State is written first and then the DOM is rebuilt.
+  </p>
+
+  <h3>2.2 Saved state snapshots</h3>
+
+  <p>
+    Each tab maintains a saved snapshot:
+  </p>
+
+  <p class="mono">
+    uiState.&lt;tab&gt;.saved
+  </p>
+
+  <p>
+    This snapshot must contain enough information to reconstruct the exact view:
+  </p>
+
+  <ul>
+    <li>view type (categories vs results vs object workspace)</li>
+    <li>active category name</li>
+    <li>active index or item identity</li>
+    <li>active subtab if the tab has internal subtabs</li>
+  </ul>
+
+  <p>
+    Architectural rule:
+    restore() uses only uiState.&lt;tab&gt;.saved.
+    It must not rely on scattered flags or implicit UI state.
+  </p>
+
+  <p>
+    <a href="#toc">Back to Mini-TOC</a>
+  </p>
+
+  <hr />
+
+  <a id="manifest-layer"></a>
+
+  <h2>3. Manifest Layer (manifest.js + cache rules)</h2>
+
+  <p>
+    Manifests define content inventory.
+    They are the authoritative “what exists” layer for file-based tabs.
+  </p>
+
+  <h3>3.1 What manifest.js owns</h3>
+
+  <p>
+    manifest.js provides:
+  </p>
+
+  <ul>
+    <li>loading JSON manifests by tab/domain name</li>
+    <li>loading directory registries</li>
+    <li>caching loaded results</li>
+    <li>explicit cache invalidation</li>
+  </ul>
+
+  <h3>3.2 Cache rules</h3>
+
+  <p>
+    Architectural rules:
+  </p>
+
+  <ul>
+    <li>Manifests are loaded once and cached.</li>
+    <li>Cached manifest data is treated as immutable.</li>
+    <li>Tabs only read cached data.</li>
+    <li>Cache is invalidated only when a maintenance task changes inventory.</li>
+  </ul>
+
+  <h3>3.3 Why immutability matters</h3>
+
+  <p>
+    Treating manifest cache as immutable prevents subtle drift between:
+  </p>
+
+  <ul>
+    <li>what the UI believes exists</li>
+    <li>what the filesystem actually contains</li>
+  </ul>
+
+  <p>
+    When a maintenance task changes the filesystem, the correct response is:
+  </p>
+
+  <ol>
+    <li>invalidate cache</li>
+    <li>reload manifest</li>
+    <li>restore view from uiState</li>
+  </ol>
+
+  <p>
+    <a href="#toc">Back to Mini-TOC</a>
+  </p>
+
+  <hr />
+
+  <a id="categories"></a>
+
+  <h2>4. Categories Rendering (categories.js descriptor contract)</h2>
+
+  <p>
+    categories.js is a pure renderer for category frames and items.
+    It is intentionally ignorant of tabs, manifests, and filesystem structure.
+  </p>
+
+  <h3>4.1 Input descriptor format</h3>
+
+  <p>
+    Tabs pass an array of frames, where each frame contains:
+  </p>
+
+  <ul>
+    <li>frame title</li>
+    <li>items array</li>
+  </ul>
+
+  <p>
+    Each item includes:
+  </p>
+
+  <ul>
+    <li>display name</li>
+    <li>hasSubitems flag (optional)</li>
+    <li>onClick handler (required)</li>
+  </ul>
+
+  <h3>4.2 Why this matters</h3>
+
+  <p>
+    This design keeps category rendering stable while tabs evolve independently.
+  </p>
+
+  <p>
+    Architectural rule:
+    categories.js does not “decide behavior.”
+    Tabs decide behavior by wiring onClick handlers.
+  </p>
+
+  <p>
+    <a href="#toc">Back to Mini-TOC</a>
+  </p>
+
+  <hr />
+
+  <a id="caption"></a>
+
+  <h2>5. Caption Bar (caption.js + navigation + menus)</h2>
+
+  <p>
+    caption.js builds the caption bar for the active view.
+    It is a shared UI component used across multiple tabs.
+  </p>
+
+  <h3>5.1 Responsibilities</h3>
+
+  <p>
+    caption.js is responsible for:
+  </p>
+
+  <ul>
+    <li>displaying a title string</li>
+    <li>wiring Prev / Next buttons when provided</li>
+    <li>opening a menu when provided</li>
+    <li>optionally enabling the Next/Prev click-zone overlay</li>
+  </ul>
+
+  <h3>5.2 Overlay target anchoring</h3>
+
+  <p>
+    Some views display content in #text (images).
+    Some views display content in #sketchpad-wrapper (canvas host).
+  </p>
+
+  <p>
+    The caption bar must specify which region receives the overlay:
+  </p>
+
+  <ul>
+    <li>overlayTargetId = "text"</li>
+    <li>overlayTargetId = "sketchpad-wrapper"</li>
+  </ul>
+
+  <p>
+    Architectural rule:
+    caption.js becomes the single on/off switch for the overlay.
+  </p>
+
+  <h3>5.3 Menu wiring</h3>
+
+  <p>
+    The caption menu is invoked by passing an onMenu callback:
+  </p>
+
+  <ul>
+    <li>tab builds an info object describing current selection</li>
+    <li>tab asks a per-tab menu builder for menu items</li>
+    <li>menuManager opens the menu anchored to the caption control</li>
+  </ul>
+
+  <p>
+    <a href="#toc">Back to Mini-TOC</a>
+  </p>
+
+  <hr />
+
+  <a id="menus"></a>
+
+  <h2>6. Menus (menuManager + per-tab menuCmds shaping)</h2>
+
+  <p>
+    Sketchpad menus are structured so that:
+  </p>
+
+  <ul>
+    <li>tabs shape context</li>
+    <li>shared commands perform work</li>
+  </ul>
+
+  <h3>6.1 menuManager.js</h3>
+
+  <p>
+    menuManager owns:
+  </p>
+
+  <ul>
+    <li>menu rendering</li>
+    <li>menu positioning</li>
+    <li>closing behavior</li>
+  </ul>
+
+  <h3>6.2 Per-tab menu builders</h3>
+
+  <p>
+    Each tab provides a function like:
+  </p>
+
+  <p class="mono">
+    getPatternsCaptionMenuItems(info)
+  </p>
+
+  <p>
+    This function converts the current view context into menu items.
+  </p>
+
+  <h3>6.3 Shared menu commands</h3>
+
+  <p>
+    Shared menu command modules perform:
+  </p>
+
+  <ul>
+    <li>nodeDispatch calls</li>
+    <li>overlay open/close</li>
+    <li>manifest cache invalidation</li>
+    <li>UI refresh from uiState</li>
+  </ul>
+
+  <p>
+    Architectural rule:
+    per-tab menu modules should be thin “shapers.”
+  </p>
+
+  <p>
+    <a href="#toc">Back to Mini-TOC</a>
+  </p>
+
+  <hr />
+
+  <a id="script-execution"></a>
+
+  <h2>7. Script Execution (runPattern + scriptRunner)</h2>
+
+  <p>
+    Script execution is the bridge between:
+  </p>
+
+  <ul>
+    <li>file-based content inventory</li>
+    <li>drawRegistry-like runtime behavior</li>
+  </ul>
+
+  <h3>7.1 runPattern() as the canonical entry point</h3>
+
+  <p>
+    runPattern() is the orchestrator entry point for Sketchpad scripts.
+  </p>
+
+  <p>
+    Required runPattern sequence:
+  </p>
+
+  <ol>
+    <li>printTitle(scriptInfo.title)</li>
+    <li>alias setup: scriptInfo.parameters = scriptInfo.params</li>
+    <li>init() called once</li>
+    <li>buildParameterControls(scriptInfo, targetId, true)</li>
+    <li>explicit first draw (usually redrawHandler)</li>
+  </ol>
+
+  <p>
+    Architectural rule:
+    runPattern() contains no drawing math.
+  </p>
+
+  <h3>7.2 scriptRunner.js responsibilities</h3>
+
+  <p>
+    scriptRunner handles:
+  </p>
+
+  <ul>
+    <li>importing modules by path</li>
+    <li>executing the correct entry point</li>
+    <li>providing consistent error behavior</li>
+  </ul>
+
+  <p>
+    scriptRunner must not:
+  </p>
+
+  <ul>
+    <li>mutate uiState</li>
+    <li>interpret tab-specific meaning</li>
+    <li>make manifest decisions</li>
+  </ul>
+
+  <p>
+    <a href="#toc">Back to Mini-TOC</a>
+  </p>
+
+  <hr />
+
+  <a id="drawregistry"></a>
+
+  <h2>8. drawRegistry Architecture (init/update/draw + elements)</h2>
+
+  <p>
+    drawRegistry entries are internal “first-class objects.”
+    They are defined as predictable window globals and follow a uniform lifecycle.
+  </p>
+
+  <h3>8.1 The registry object shape</h3>
+
+  <p>
+    A typical entry includes:
+  </p>
+
+  <ul>
+    <li>metadata fields (name, id, category, tags, description)</li>
+    <li>visual fields (background, overlays, transforms)</li>
+    <li>params (JSON-safe defaults)</li>
+    <li>controls (UI metadata)</li>
+    <li>elements (runtime objects)</li>
+    <li>init/update/draw functions</li>
+  </ul>
+
+  <h3>8.2 elements as persistent runtime state</h3>
+
+  <p>
+    elements must be created once in init() and then mutated.
+  </p>
+
+  <p>
+    Canonical shape:
+  </p>
+
+  <p class="mono">
+    elements = { element: { ... } }
+  </p>
+
+  <p>
+    draw() reads only from elements.element.
+    It does not read directly from params.
+  </p>
+
+  <h3>8.3 update(params) rules</h3>
+
+  <p>
+    update(params) is responsible for:
+  </p>
+
+  <ul>
+    <li>copying values into elements.element</li>
+    <li>type normalization (numbers, booleans, points)</li>
+    <li>validation (fail-fast)</li>
+    <li>recomputing derived values</li>
+  </ul>
+
+  <p>
+    update(params) must not:
+  </p>
+
+  <ul>
+    <li>draw</li>
+    <li>build UI</li>
+    <li>create a new element object</li>
+  </ul>
+
+  <p>
+    <a href="#toc">Back to Mini-TOC</a>
+  </p>
+
+  <hr />
+
+  <a id="filelayer"></a>
+
+  <h2>9. File Identity + Paths (fileLayer.js)</h2>
+
+  <p>
+    Sketchpad depends on correct file identity and correct path construction.
+    A large class of failures occur when “the UI thinks a file is X” but the filesystem path is actually Y.
+  </p>
+
+  <h3>9.1 Why fileLayer.js exists</h3>
+
+  <p>
+    Sketchpad contains multiple content trees:
+  </p>
+
+  <ul>
+    <li>/patterns/&lt;category&gt;/</li>
+    <li>/gallery/&lt;Domain&gt;/&lt;Category&gt;/</li>
+    <li>/home/ (rooted references into other trees)</li>
+    <li>/utilities/</li>
+  </ul>
+
+  <p>
+    fileLayer.js exists to enforce consistent identity rules across these trees.
+  </p>
+
+  <h3>9.2 Canonical identity rules</h3>
+
+  <p>
+    Identity rules must define:
+  </p>
+
+  <ul>
+    <li>what string is used to match a manifest entry</li>
+    <li>what string is used as filename</li>
+    <li>what string is used as a script import path</li>
+  </ul>
+
+  <p>
+    If these do not match, menu commands like archive/edit will fail.
+  </p>
+
+  <p>
+    <a href="#toc">Back to Mini-TOC</a>
+  </p>
+
+  <hr />
+
+  <a id="node-dispatch"></a>
+
+  <h2>10. Node Dispatch (nodeLayer.js)</h2>
+
+  <p>
+    The browser cannot directly perform filesystem operations.
+    Node dispatch provides the bridge.
+  </p>
+
+  <h3>10.1 Dispatch request structure</h3>
+
+  <p>
+    A dispatch request contains:
+  </p>
+
+  <ul>
+    <li>requestName</li>
+    <li>payload</li>
+  </ul>
+
+  <p>
+    The payload must be shaped by the active tab using uiState context.
+  </p>
+
+  <h3>10.2 Node dispatch responsibilities</h3>
+
+  <p>
+    nodeLayer.js must:
+  </p>
+
+  <ul>
+    <li>send the request to the service endpoint</li>
+    <li>handle HTTP errors as fail-fast</li>
+    <li>return structured JSON results</li>
+  </ul>
+
+  <p>
+    nodeLayer.js must not:
+  </p>
+
+  <ul>
+    <li>guess UI meaning</li>
+    <li>perform DOM updates</li>
+    <li>hide errors</li>
+  </ul>
+
+  <p>
+    <a href="#toc">Back to Mini-TOC</a>
+  </p>
+
+  <hr />
+
+  <a id="service"></a>
+
+  <h2>11. Node Service (sketchpadService.mjs)</h2>
+
+  <p>
+    sketchpadService.mjs is the central Node service that executes filesystem tasks.
+  </p>
+
+  <h3>11.1 Service role</h3>
+
+  <p>
+    The service:
+  </p>
+
+  <ul>
+    <li>receives dispatch requests</li>
+    <li>executes a named task</li>
+    <li>writes files or performs maintenance</li>
+    <li>returns a structured result</li>
+  </ul>
+
+  <h3>11.2 Result structure</h3>
+
+  <p>
+    Results must include enough information for the UI to:
+  </p>
+
+  <ul>
+    <li>invalidate caches if needed</li>
+    <li>restore the correct view from uiState</li>
+    <li>display logs or reports deterministically</li>
+  </ul>
+
+  <p>
+    Architectural rule:
+    Node service does not “refresh UI.”
+    The UI refreshes itself.
+  </p>
+
+  <p>
+    <a href="#toc">Back to Mini-TOC</a>
+  </p>
+
+  <hr />
+
+  <a id="maintain-manifests"></a>
+
+  <h2>12. Manifest Maintenance (maintain_manifests.mjs)</h2>
+
+  <p>
+    maintain_manifests.mjs is the authoritative inventory maintenance script.
+    It ensures that the UI inventory matches the filesystem inventory.
+  </p>
+
+  <h3>12.1 What it does</h3>
+
+  <ul>
+    <li>scan directories</li>
+    <li>detect categories and items</li>
+    <li>generate or update manifest.json files</li>
+    <li>validate expected fields</li>
+    <li>report added/broken entries</li>
+  </ul>
+
+  <h3>12.2 Why it matters</h3>
+
+  <p>
+    Without maintenance, Sketchpad can drift into broken states:
+  </p>
+
+  <ul>
+    <li>manifest entries pointing to missing files</li>
+    <li>files existing on disk but not in manifests</li>
+    <li>thumbnails missing for new items</li>
+    <li>Home entries referencing stale paths</li>
+  </ul>
+
+  <p>
+    Architectural rule:
+    tabs do not “repair” inventory; maintenance scripts do.
+  </p>
+
+  <p>
+    <a href="#toc">Back to Mini-TOC</a>
+  </p>
+
+  <hr />
+
+  <a id="tab-ownership"></a>
+
+  <h2>13. Per-Tab Ownership Summary</h2>
+
+  <p>
+    Each tab owns its own regions and behavior.
+    Cross-tab UI modification is not allowed.
+  </p>
+
+  <h3>13.1 Draw Tab</h3>
+
+  <ul>
+    <li>inventory: drawRegistry</li>
+    <li>rendering: canvas-based objects</li>
+    <li>controls: parameterControls driven by controls metadata</li>
+  </ul>
+
+  <h3>13.2 Patterns Tab</h3>
+
+  <ul>
+    <li>inventory: patterns manifests</li>
+    <li>rendering: imported scripts executed on canvas</li>
+    <li>navigation: categories + results view + thumbnails</li>
+  </ul>
+
+  <h3>13.3 Gallery Tab</h3>
+
+  <ul>
+    <li>inventory: per-domain registries + per-category manifests</li>
+    <li>rendering: images in #text OR scripts in canvas</li>
+    <li>navigation: domain tabs + shared Results tab</li>
+  </ul>
+
+  <h3>13.4 Utilities Tab</h3>
+
+  <ul>
+    <li>inventory: tools, scripts, reports</li>
+    <li>rendering: text reports + canvas scripts</li>
+    <li>role: system inspection and maintenance</li>
+  </ul>
+
+  <h3>13.5 Home Tab</h3>
+
+  <ul>
+    <li>inventory: generated home manifest</li>
+    <li>rendering: images or scripts by extension</li>
+    <li>role: curated index into other content trees</li>
+  </ul>
+
+  <p>
+    <a href="#toc">Back to Mini-TOC</a>
+  </p>
+
+  <hr />
+
+  <a id="diagnostics"></a>
+
+  <h2>14. Diagnostics and Failure Modes (Debug Map)</h2>
+
+  <p>
+    Sketchpad is fail-fast by design.
+    Missing data is a broken state and must crash loudly.
+  </p>
+
+  <h3>14.1 Common failure signatures</h3>
+
+  <p>
+    Examples:
+  </p>
+
+  <ul>
+    <li>
+      “Missing manifest.json”
+      → inventory is broken or a path is wrong.
+    </li>
+
+    <li>
+      “Results tab clicked but no saved results context exists”
+      → uiState.saved is inconsistent with the UI.
+    </li>
+
+    <li>
+      “source file not found”
+      → manifest identity mismatch (path/filename mismatch).
+    </li>
+
+    <li>
+      “script module missing expected exports”
+      → script is not conforming to the expected runPattern contract.
+    </li>
+  </ul>
+
+  <h3>14.2 Debugging principle</h3>
+
+  <p>
+    Because the system is deterministic, the first thrown error is usually the best one.
+    Fix the earliest boundary where state and reality diverged.
+  </p>
+
+  <p>
+    <a href="#toc">Back to Mini-TOC</a>
+  </p>
+
+  <hr />
+
+  <a id="cross-functional-flows"></a>
+
+  <h2>15. Cross-Functional Flows (End-to-End Handoffs)</h2>
+
+  <p>
+    The subsystem pages explain “what each file owns.”
+    This section explains the end-to-end flows that cut across multiple files.
+    These are the places where responsibility hands off and where most real bugs occur:
+    the UI context must be shaped correctly, identity must be canonical, caches must be invalidated explicitly,
+    and refresh must be driven by uiState restore logic.
+  </p>
+
+  <div class="note">
+    <b>Canonical template used below</b>
+    <br />
+    Purpose → Trigger → Canonical data object → Sequence → Invariants → Failure signatures → Where to debug first
+  </div>
+
+  <h3>15.A Caption menu command flow (caption → menu → node → cache → refresh)</h3>
+
+  <p>
+    <b>Purpose</b>:
+    Execute a command on the currently displayed item (archive/edit/thumbnail/etc.) with correct identity and deterministic UI refresh.
+  </p>
+
+  <p>
+    <b>Trigger</b>:
+    User opens the caption menu and selects a command.
+  </p>
+
+  <p>
+    <b>Canonical data object</b>:
+    An “info object” built by the active tab that contains:
+  </p>
+
+  <ul>
+    <li>domain/category (or tab-specific equivalent)</li>
+    <li>manifestPath</li>
+    <li>matchField and matchValue (canonical identity)</li>
+    <li>filename (canonical file identity string, including extension)</li>
+    <li>optional scriptPath (when a script file is the target)</li>
+    <li>helpKey/helpSubdirs (for Help integration)</li>
+  </ul>
+
+  <p>
+    <b>Sequence (handoff chain)</b>:
+  </p>
+
+  <ol>
+    <li>Tab computes current selection from uiState and/or tab-local state.</li>
+    <li>Tab builds the info object and passes it into its per-tab menu builder.</li>
+    <li>Per-tab menu builder returns menu items (label + onClick handlers).</li>
+    <li>menuManager renders the menu and invokes the selected handler.</li>
+    <li>Shared menu command calls nodeLayer (nodeDispatch) with requestName + payload.</li>
+    <li>sketchpadService.mjs executes the task (may call maintain_manifests.mjs or file ops).</li>
+    <li>Result returns to browser as structured JSON (and possibly a log name).</li>
+    <li>UI invalidates relevant manifest caches explicitly.</li>
+    <li>UI refreshes by reloading manifest and restoring view from uiState (not “DOM discovery”).</li>
+  </ol>
+
+  <p>
+    <b>Invariants</b>:
+  </p>
+
+  <ul>
+    <li>matchField/matchValue must match the actual manifest entry field and value (no guessing).</li>
+    <li>filename must be the canonical identity string (including extension).</li>
+    <li>Cache invalidation must happen before any reload/restore step.</li>
+    <li>Refresh must be driven by uiState.saved; do not invent a new navigation policy mid-command.</li>
+  </ul>
+
+  <p>
+    <b>Failure signatures</b>:
+  </p>
+
+  <ul>
+    <li>“source file not found” → payload identity/path mismatch (often fileLayer normalization mismatch).</li>
+    <li>“manifest entry not found” → matchField/matchValue mismatch or cache not invalidated.</li>
+    <li>command appears to work but UI still shows old list → cache invalidation missing or wrong cache key cleared.</li>
+  </ul>
+
+  <p>
+    <b>Where to debug first</b>:
+    Inspect the built info object (especially matchField/matchValue and manifestPath) and compare it to the manifest entry on disk.
+  </p>
+
+  <p>
+    <a href="#toc">Back to Mini-TOC</a>
+  </p>
+
+  <hr />
+
+  <h3>15.B Commands offcanvas flow (Commands button → maintenance → refresh)</h3>
+
+  <p>
+    <b>Purpose</b>:
+    Run a maintenance task (rebuild/validate manifests, etc.) via an offcanvas panel and return to a correct, refreshed view.
+  </p>
+
+  <p>
+    <b>Trigger</b>:
+    User clicks the global Commands button, then clicks a command inside the offcanvas.
+  </p>
+
+  <p>
+    <b>Canonical data object</b>:
+    The offcanvas command handler uses:
+  </p>
+
+  <ul>
+    <li>requestName + payload (often empty for global maintenance tasks)</li>
+    <li>the tab’s refresh policy (usually “invalidate cache, reload, restore from uiState.saved”)</li>
+  </ul>
+
+  <p>
+    <b>Sequence (handoff chain)</b>:
+  </p>
+
+  <ol>
+    <li>Tab wires Commands button using ui_utilities.js helpers.</li>
+    <li>showCommandsOffcanvas renders HTML and exposes button IDs.</li>
+    <li>Tab command handler calls nodeRebuildAndValidateManifests (nodeLayer request).</li>
+    <li>Service runs maintain_manifests.mjs (or equivalent) and returns report/log.</li>
+    <li>Tab invalidates the relevant manifest caches explicitly.</li>
+    <li>Tab reloads manifests and restores view from uiState.saved (categories/results/etc.).</li>
+    <li>Tab formats and displays the report in the offcanvas panel.</li>
+  </ol>
+
+  <p>
+    <b>Invariants</b>:
+  </p>
+
+  <ul>
+    <li>Offcanvas HTML IDs must exist (fail-fast if missing).</li>
+    <li>Refresh must not overwrite uiState.saved; it must use it.</li>
+    <li>Cache invalidation must precede reload.</li>
+    <li>Results view restoration must rebuild the same selection and caption.</li>
+  </ul>
+
+  <p>
+    <b>Failure signatures</b>:
+  </p>
+
+  <ul>
+    <li>“#...Button missing” → offcanvas HTML does not define expected IDs.</li>
+    <li>After maintenance, Results tab breaks → uiState.saved not preserved or overwritten during refresh.</li>
+    <li>Inventory appears unchanged → cache invalidation missing or performed against the wrong cache key.</li>
+  </ul>
+
+  <p>
+    <b>Where to debug first</b>:
+    Confirm cache invalidation happens, then confirm restore path reads uiState.saved rather than constructing a new default.
+  </p>
+
+  <p>
+    <a href="#toc">Back to Mini-TOC</a>
+  </p>
+
+  <hr />
+
+  <h3>15.C Manifest identity rules across domains (Patterns vs Gallery vs Home)</h3>
+
+  <p>
+    <b>Purpose</b>:
+    Ensure that “the string used to identify an item” is consistent across:
+    display, manifest matching, filesystem path resolution, and node tasks.
+  </p>
+
+  <p>
+    <b>Trigger</b>:
+    Any action that targets a specific item:
+    archive, rename, edit title, delete, thumbnail generation, “open in offcanvas,” etc.
+  </p>
+
+  <p>
+    <b>Canonical data object</b>:
+    A domain-specific identity triple:
+  </p>
+
+  <ul>
+    <li>manifestPath (which manifest file contains the entry)</li>
+    <li>matchField (which field is authoritative for identity)</li>
+    <li>matchValue (the canonical identity string; must match the manifest exactly after normalization rules)</li>
+  </ul>
+
+  <p>
+    <b>Sequence (handoff chain)</b>:
+  </p>
+
+  <ol>
+    <li>UI selects an entry (often containing title/filename/path).</li>
+    <li>Tab converts the entry into the canonical identity triple (via fileLayer rules as needed).</li>
+    <li>Node task uses the identity triple to find the manifest entry and locate the source file.</li>
+  </ol>
+
+  <p>
+    <b>Invariants</b>:
+  </p>
+
+  <ul>
+    <li>matchValue must be the canonical identity string; do not mix “display title” with “file identity.”</li>
+    <li>Any normalization (such as stripping redundant category prefix) must be applied consistently everywhere.</li>
+    <li>Home is a rooted cross-tree index; its entries must preserve enough path context to resolve back into the correct tree.</li>
+  </ul>
+
+  <p>
+    <b>Failure signatures</b>:
+  </p>
+
+  <ul>
+    <li>“source file not found” → identity string looks correct to the UI but is not the real filesystem path.</li>
+    <li>Node reports “entry not found” → matchField/matchValue does not align with the manifest schema for that domain.</li>
+    <li>Thumbnail paths look wrong → a second, non-canonical “filename” string is being used for derived assets.</li>
+  </ul>
+
+  <p>
+    <b>Where to debug first</b>:
+    Inspect the manifest entry on disk and confirm which field is the identity field for that domain.
+    Then confirm the UI’s matchValue matches it exactly (after any documented normalization).
+  </p>
+
+  <p>
+    <a href="#toc">Back to Mini-TOC</a>
+  </p>
+
+  <hr />
+
+  <h3>15.D Tab lifecycle and restore contract (setUI ↔ TabSpec ↔ uiState.saved)</h3>
+
+  <p>
+    <b>Purpose</b>:
+    Ensure that switching tabs or re-entering a tab always reconstructs the same view deterministically.
+  </p>
+
+  <p>
+    <b>Trigger</b>:
+    Tab switch, app reload, or post-maintenance refresh that re-enters a tab.
+  </p>
+
+  <p>
+    <b>Canonical data object</b>:
+    The per-tab snapshot:
+    <span class="mono">uiState.&lt;tab&gt;.saved</span>
+  </p>
+
+  <p>
+    <b>Sequence (handoff chain)</b>:
+  </p>
+
+  <ol>
+    <li>Leaving tab: setUI calls tab.save() (or the tab updates uiState.saved continuously).</li>
+    <li>Entering tab: setUI decides init vs restore solely from uiState.&lt;tab&gt;.saved existence/meaning.</li>
+    <li>Cold init: tab.init builds UI from defaults and writes uiState.saved.</li>
+    <li>Restore: tab.restore reads uiState.saved and rebuilds view exactly.</li>
+  </ol>
+
+  <p>
+    <b>Invariants</b>:
+  </p>
+
+  <ul>
+    <li>init() must not “fix up” restore behavior.</li>
+    <li>restore() must not “assume defaults.”</li>
+    <li>uiState must be written first, then the DOM is built.</li>
+    <li>Tabs own their regions; restore does not reach across into other tabs’ UI.</li>
+  </ul>
+
+  <p>
+    <b>Failure signatures</b>:
+  </p>
+
+  <ul>
+    <li>“Results tab clicked but no saved results context exists” → UI allowed a path into restore without a valid uiState.saved.</li>
+    <li>Tab comes back in the wrong subtab → uiState.saved is missing activeSubtab, or restore ignores it.</li>
+    <li>After maintenance, tab returns to categories unexpectedly → refresh overwrote uiState.saved instead of using it.</li>
+  </ul>
+
+  <p>
+    <b>Where to debug first</b>:
+    Print uiState.&lt;tab&gt;.saved at the moment restore is invoked and compare it to what the UI is showing.
+  </p>
+
+  <p>
+    <a href="#toc">Back to Mini-TOC</a>
+  </p>
+
+  <hr />
+
+  <h3>15.E Script execution lifecycle (tab selection → import → runPattern → parameterControls)</h3>
+
+  <p>
+    <b>Purpose</b>:
+    Execute a script deterministically with consistent UI controls and redraw behavior, regardless of which tab launched it.
+  </p>
+
+  <p>
+    <b>Trigger</b>:
+    User selects a script-like item (Patterns entry, Gallery script entry, Utilities script, Home script entry).
+  </p>
+
+  <p>
+    <b>Canonical data object</b>:
+    The script module plus the runPattern contract:
+  </p>
+
+  <ul>
+    <li>moduleUrl (canonical import path)</li>
+    <li>exports: scriptInfo + runPattern (or the expected alternative exports for legacy scripts)</li>
+    <li>scriptInfo: title + controls + params + redrawHandler bridge</li>
+  </ul>
+
+  <p>
+    <b>Sequence (handoff chain)</b>:
+  </p>
+
+  <ol>
+    <li>Tab resolves a moduleUrl (using correct identity/path rules).</li>
+    <li>scriptRunner imports the module by moduleUrl.</li>
+    <li>scriptRunner invokes runPattern() as the entry point (canonical path).</li>
+    <li>runPattern prints title, prepares compatibility aliases, calls init(), builds controls, performs first draw.</li>
+    <li>parameterControls calls redrawHandler when controls change.</li>
+    <li>redrawHandler calls update(params) then draw().</li>
+  </ol>
+
+  <p>
+    <b>Invariants</b>:
+  </p>
+
+  <ul>
+    <li>runPattern is the orchestrator and does not contain drawing math.</li>
+    <li>draw reads only from elements.element; it does not read params directly.</li>
+    <li>update normalizes types and validates; update must not draw.</li>
+    <li>The moduleUrl must be correct for the active tab’s tree.</li>
+  </ul>
+
+  <p>
+    <b>Failure signatures</b>:
+  </p>
+
+  <ul>
+    <li>“script module missing expected exports” → module does not conform to the required interface.</li>
+    <li>Controls change but nothing redraws → redrawHandler missing or not wired to update/draw.</li>
+    <li>Initial display is blank → runPattern did not perform an explicit first draw.</li>
+  </ul>
+
+  <p>
+    <b>Where to debug first</b>:
+    Confirm moduleUrl resolves, then inspect module exports, then confirm redrawHandler is present and calls update/draw.
+  </p>
+
+  <p>
+    <a href="#toc">Back to Mini-TOC</a>
+  </p>
+
+  <hr />
+
+  <h2>End</h2>
+
+  <p>
+    This treatise is intentionally long and explicit.
+    It exists so that future changes can be made without re-deriving architecture decisions.
+  </p>
+
+  <p>
+    If a new feature requires a structural change, that change should be documented as an explicit
+    architectural update, not introduced silently.
+  </p>
+
+  <p>
+    <a href="#toc">Back to Mini-TOC</a>
+  </p>
+
+</body>
+
+</html>

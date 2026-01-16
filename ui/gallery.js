@@ -9,6 +9,8 @@ import { renderCategories }       from "./categories.js";
 import { fileLayer }              from "./fileLayer.js";
 import { setCaptionBar }          from "./caption.js";
 import { getGalleryCaptionMenuItems } from "./galleryMenuCmds.js";
+import { openHelpHomeOverlay } from "./help.js";
+
 
 import {
   clearDivs,
@@ -961,8 +963,10 @@ async function showNextGalleryItem(domain) {
 } // end showNextGalleryItem
 
 
+/* ============================================================
+   updateGalleryCaption(domain, categoryLabel)
 
-
+============================================================ */
 /* ============================================================
    updateGalleryCaption(domain, categoryLabel)
 
@@ -979,6 +983,11 @@ export function updateGalleryCaption(domain, categoryLabel) {
   }
 
   const isScript = (domain === DOMAIN_SCRIPTS);
+
+  // Overlay target:
+  //   Images (Ideabook/Patterns) are displayed in #text
+  //   Scripts are displayed in #sketchpad-wrapper (canvas host)
+  const overlayTargetId = isScript ? "sketchpad-wrapper" : "text";
 
   // Title shown in caption bar
   const rawTitle = item.title || item.filename || item.path || "(untitled)";
@@ -1021,7 +1030,9 @@ export function updateGalleryCaption(domain, categoryLabel) {
         ? `/gallery/Scripts/${currentCategory}/${fileId}`
         : "",
 
-      helpKey: `${domain}/${currentCategory}/${fileId}`
+      // FIX: help.js needs filename + recursive subdir context
+      helpKey: fileId,
+      helpSubdirs: [domain, currentCategory]
     };
 
     const menuItems = await getGalleryCaptionMenuItems(info);
@@ -1033,13 +1044,11 @@ export function updateGalleryCaption(domain, categoryLabel) {
     title,
     onPrev,
     onNext,
-    onMenu
+    onMenu,
+    overlayTargetId
   });
 
 } // end updateGalleryCaption
-
-
-
 
 
 function buildGalleryOffcanvasHtml() {
@@ -1051,12 +1060,19 @@ function buildGalleryOffcanvasHtml() {
       </button>
     </div>
 
+    <div class="cmdButtonRow">
+      <button id="galleryHelpButton" class="cmdButton" type="button">
+        Help
+      </button>
+    </div>
+
     <div class="buttonSeparator"></div>
 
     <div id="galleryRebuildReport" class="galleryRebuildReport"></div>
   `;
 
 } // end buildGalleryOffcanvasHtml
+
 
 function formatRebuildReport(report) {
 
@@ -1228,12 +1244,34 @@ export function wireGalleryCommandsButton() {
 
         }); // end click
 
+        const helpBtn = document.getElementById("galleryHelpButton");
+        if (!helpBtn) throw new Error("wireGalleryCommandsButton: galleryHelpButton missing");
+
+        helpBtn.addEventListener("click", () => {
+
+          // Close/dismiss the Commands offcanvas
+          const panel = document.getElementById("offcanvasPanel");
+          if (!panel) throw new Error("wireGalleryCommandsButton: #offcanvasPanel missing");
+
+          if (!window.bootstrap || !window.bootstrap.Offcanvas) {
+            throw new Error("wireGalleryCommandsButton: bootstrap.Offcanvas not available");
+          }
+
+          const oc = window.bootstrap.Offcanvas.getOrCreateInstance(panel);
+          oc.hide();
+
+          // Open Help overlay (startup page)
+          openHelpHomeOverlay();
+
+        }); // end click
+
       } // end buildBody
     });
 
   });
 
 } // end wireGalleryCommandsButton
+
 
 function removeResultsSubtab() {
   const btn = document.querySelector(

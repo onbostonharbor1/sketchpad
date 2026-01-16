@@ -16,6 +16,8 @@
    - window.ctx exists
    ============================================================ */
 
+let ctx = null;
+
 const steps  = 1000;   // number of iterations
 const dt     = 0.1;    // step size
 const radius = 200;    // initial circle radius
@@ -86,14 +88,20 @@ function drawPursuit(pts) {
 
 
 /* ------------------------------------------------------------
-   runPattern() — Gallery entry point
+   runPattern(ctx) — Gallery entry point
 ------------------------------------------------------------ */
-export function runPattern() {
+export function runPattern(_ctx) {
+
+  ctx = _ctx || window.ctx;
+  if (!ctx) throw new Error("pursuitStatic.runPattern: no ctx provided and window.ctx is null");
 
   const w = ctx.canvas.width;
   const h = ctx.canvas.height;
 
+  ctx.save();
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
   ctx.clearRect(0, 0, w, h);
+  ctx.restore();
 
   let pts;
 

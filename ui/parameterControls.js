@@ -1,3 +1,130 @@
+/* ============================================================
+   ParameterControls — Control Schema Flags (def.*)
+   ------------------------------------------------------------
+   This file consumes per-control schema objects ("def") from:
+     - drawRegistry.controls (Draw tab)
+     - scriptInfo.controls   (Scripts tab)
+
+   The following def.* members are treated as FLAGS or OPTIONS
+   that change rendering or behavior.
+
+   ------------------------------------------------------------
+   RANGE CONTROLS (widget: "range")
+   ------------------------------------------------------------
+
+   >> step
+
+   def.min / def.max / def.step
+     - Numeric range configuration for <input type="range">.
+     - Applied in both setRangeControl() and setRangeHeaderControl().
+
+   >> noButtons
+
+   def.noButtons === true
+     - Suppresses the small step buttons (< and >) that sit immediately
+       left/right of the slider.
+     - Used by BOTH range styles:
+         setRangeControl()
+         setRangeHeaderControl()
+
+   >> rangeHeader
+
+   def.rangeHeader === true
+     - Selects which RANGE UI variant to draw when widget === "range".
+     - Used only by setRangeControlUnified():
+         true  -> setRangeHeaderControl()
+         false -> setRangeControl() (classic min/readout/max style)
+
+     NOTE: This makes "range" and "rangeHeader" interchangeable by
+           schema flag instead of by widget name.
+
+   def.rebuildControls === true
+     - After a control changes value, the Action panel is rebuilt
+       by calling:
+         buildDrawParameterData(info)
+         renderParameterControls(info, data, tabId)
+     - Used by:
+         setRangeControl()
+         setRangeHeaderControl()
+         setRadioControl()
+     - (Other control types may add support later.)
+
+   ------------------------------------------------------------
+   HIDDEN CONTROLS (widget: "hidden")
+   ------------------------------------------------------------
+   >> hidden
+
+   def.widget === "hidden"
+     - Control is not rendered (returns null) and does not consume
+       space in the Action panel.
+     - Implemented in buildSingleControl() via setHiddenControl().
+
+   ------------------------------------------------------------
+   STATIC TEXT (widget: "staticText")
+   ------------------------------------------------------------
+
+   def.showKey = "<boolean-parameter-key>"
+     - Conditional visibility for staticText controls.
+     - If def.showKey is present and info.parameters[def.showKey] !== true,
+       buildSingleControl() returns null (control is skipped).
+
+   ------------------------------------------------------------
+   POINT PICKERS (widget: "pointPicker" / "pointPickerArray")
+   ------------------------------------------------------------
+
+   >> noReadout
+
+   def.noReadout === true
+     - Suppresses the x,y readout text input(s) for point pickers.
+     - Implemented in setPointPickerControl() and setPointPickerArrayControl().
+     - NOTE: setPointPickerControl currently also hides the entire field
+       (field.style.display = "none") when noReadout is true.
+
+   ------------------------------------------------------------
+   BUTTON CONTROLS (widget: "button")
+   ------------------------------------------------------------
+
+   def.fullRow === true
+     - Button spans both grid columns (gridColumn: "1 / -1") and is centered.
+     - Otherwise button is placed in column 2 (control column).
+     - Implemented in setButtonControl().
+
+   def.redraw === true
+     - After the button action runs, forces info.redrawHandler().
+     - Implemented in setButtonControl().
+
+   ------------------------------------------------------------
+   ACCORDION CONTROLS (widget: "accordion")
+   ------------------------------------------------------------
+
+   def.startOpen === true
+     - Accordion sections start open; default is closed.
+     - Implemented in setAccordionControl().
+
+   def.redrawOnToggle === true
+     - Calls info.redrawHandler() when a section is shown/hidden.
+     - Implemented in setAccordionControl().
+
+   sec.listClass / sec.itemClass (optional section members)
+     - Optional CSS class overrides for accordion "items" list rendering.
+     - Used in setAccordionControl() when sec.items exists.
+
+   ------------------------------------------------------------
+   SELECT / RADIO OPTIONS
+   ------------------------------------------------------------
+
+   def.options (array)
+     - Enumerated options for widget: "select" and widget: "radio".
+     - Used by setSelectControl() and setRadioControl().
+
+   ------------------------------------------------------------
+   NOTE ON info.onParamChange (Option A)
+   ------------------------------------------------------------
+   This file treats info.onParamChange as OPTIONAL.
+   If present and a function, it is called after value updates.
+   (setRangeHeaderControl used to require it; it no longer does.)
+   ============================================================ */
+
 import { overlayManager } from "./overlay.js";
 
 /* ===========================================================
@@ -31,77 +158,60 @@ export function buildParameterControls(
   targetTabId = "tab-generic",
   render = true
 ) {
-  // ---------------------------------------------------------
-  // controlData will become an array of normalized objects,
-  // each describing ONE UI control (slider, text input, etc.)
-  //
-  // At this stage, it is PURE DATA — no DOM, no rendering.
-  // ---------------------------------------------------------
   let controlData = [];
 
   // ---------------------------------------------------------
-  // TAB ENVIRONMENT SELECTION
-  //
-  // The targetTabId determines which *tab ecosystem*
-  // this control set belongs to.
-  //
-  // We do NOT test for equality — we test prefixes —
-  // because subtabs may exist (e.g., tab-draw-main,
-  // tab-scripts-tools, etc.).
+  // AUTO-DETECT ENVIRONMENT (CRITICAL FIX)
   // ---------------------------------------------------------
+  // If caller did not provide a specific tab id, infer the
+  // correct builder from the shape of sourceInfo.
+  //
+  // Utilities Lab passes scriptInfo directly.
+  // scriptInfo has: { parameters, controls, redrawHandler, ... }
+  //
+  // Draw passes a tabState with: { drawRegistry, parameters, ... }
+  // ---------------------------------------------------------
+  if (targetTabId === "tab-generic") {
 
-  if (targetTabId.startsWith("tab-scripts")) {
+    // ScriptInfo path (Utilities / Scripts-style)
+    if (sourceInfo && sourceInfo.controls) {
+      controlData = buildScriptParameterData(sourceInfo);
+    }
 
-    // -----------------------------------------------------
-    // SCRIPTS TAB ENVIRONMENT
-    //
-    // Data is sourced from a script descriptor object.
-    // Controls typically affect:
-    //   - script parameters
-    //   - tool execution behavior
-    //
-    // Rendering destination (later):
-    //   Scripts tab → Action panel
-    // -----------------------------------------------------
+    // Draw tabState path
+    else if (sourceInfo && sourceInfo.drawRegistry) {
+      controlData = buildDrawParameterData(sourceInfo);
+    }
+
+    // Unknown shape -> no controls
+    else {
+      controlData = [];
+    }
+
+  } else if (targetTabId.startsWith("tab-scripts")) {
+
     controlData = buildScriptParameterData(sourceInfo);
 
   } else if (targetTabId.startsWith("tab-draw")) {
 
-    // -----------------------------------------------------
-    // DRAW TAB ENVIRONMENT
-    //
-    // Data is sourced from uiState.drawRegistry and
-    // uiState.parameters.
-    //
-    // Controls typically affect:
-    //   - live drawing parameters
-    //   - redraw behavior on canvas
-    //
-    // Rendering destination (later):
-    //   Draw tab → Action panel
-    // -----------------------------------------------------
     controlData = buildDrawParameterData(sourceInfo);
+
+  } else {
+
+    // Fallback: if caller provided some other tab id, still try shape-based inference
+    if (sourceInfo && sourceInfo.controls) {
+      controlData = buildScriptParameterData(sourceInfo);
+    } else if (sourceInfo && sourceInfo.drawRegistry) {
+      controlData = buildDrawParameterData(sourceInfo);
+    } else {
+      controlData = [];
+    }
   }
 
-  // ---------------------------------------------------------
-  // OPTIONAL RENDERING PHASE
-  //
-  // Rendering is optional so callers may:
-  //   - inspect / transform control data
-  //   - test schemas
-  //   - reuse control definitions elsewhere
-  //
-  // When rendering occurs, DOM output is written into
-  // the ACTION AREA of the specified TAB ENVIRONMENT.
-  // ---------------------------------------------------------
   if (render) {
     renderParameterControls(sourceInfo, controlData, targetTabId);
   }
 
-  // ---------------------------------------------------------
-  // Always return the control metadata array so the caller
-  // can retain or reuse it regardless of rendering.
-  // ---------------------------------------------------------
   return controlData;
 } // end buildParameterControls
 
@@ -475,7 +585,7 @@ function buildSingleControl(info, key, def, value, tabId) {
 
   switch (def.widget) {
     case "range":
-      setRangeControl(field, label, def, value, info, key, tabId);
+      setRangeControlUnified(field, label, def, value, info, key, tabId);
       break;
 
     // inside buildSingleControl() switch
@@ -552,6 +662,16 @@ function setHiddenControl(info, key, def, value, tabId) {
   return null;
 } // end setHiddenControl
 
+function setRangeControlUnified(field, label, def, value, info, key, tabId) {
+
+  if (def.rangeHeader === true) {
+    setRangeHeaderControl(field, label, def, value, info, key, tabId);
+  } else {
+    setRangeControl(field, label, def, value, info, key, tabId);
+  }
+
+} // end setRangeControlUnified
+
 
 /* ------------------------------------------------------------
    setRangeHeaderControl()
@@ -583,10 +703,13 @@ function setRangeHeaderControl(field, _label, def, value, info, key, tabId) {
   if (!def) throw new Error("setRangeHeaderControl: def missing for key " + key);
   if (!info) throw new Error("setRangeHeaderControl: info missing for key " + key);
   if (!info.parameters) throw new Error("setRangeHeaderControl: info.parameters missing for key " + key);
-  if (typeof info.onParamChange !== "function") throw new Error("setRangeHeaderControl: info.onParamChange is not a function");
   if (typeof info.redrawHandler !== "function") throw new Error("setRangeHeaderControl: info.redrawHandler is not a function");
   if (!tabId) throw new Error("setRangeHeaderControl: tabId missing");
   if (!key) throw new Error("setRangeHeaderControl: key missing");
+
+  // NOTE (Option A):
+  // info.onParamChange is OPTIONAL for interchangeability with setRangeControl().
+  // If present, we call it; if missing, we do nothing.
 
   // ----------------------------------------------------------
   // Defaults (no ?? / no optional chaining)
@@ -600,7 +723,7 @@ function setRangeHeaderControl(field, _label, def, value, info, key, tabId) {
   // ----------------------------------------------------------
   const wrap = document.createElement("div");
   wrap.className = "ctrl-rangehdr-wrap";
-  wrap.style.gridColumn = "1 / -1";     // << key fix: full width across the 2-col grid
+  wrap.style.gridColumn = "1 / -1";     // full width across the 2-col grid
 
   // ----------------------------------------------------------
   // Header row: label (left) + current value (right)
@@ -632,14 +755,27 @@ function setRangeHeaderControl(field, _label, def, value, info, key, tabId) {
   input.step = String(step);
   input.value = String(value);
 
-  input.addEventListener("input", () => {
+  function clampValue(v) {
+    const lo = parseFloat(input.min);
+    const hi = parseFloat(input.max);
+    if (v < lo) return lo;
+    if (v > hi) return hi;
+    return v;
+  } // end clampValue
 
-    const newVal = parseFloat(input.value);
+  function applyValue(newVal) {
 
-    val.textContent = String(newVal);
-    info.parameters[key] = newVal;
+    const clamped = clampValue(newVal);
 
-    info.onParamChange();
+    input.value = String(clamped);
+
+    val.textContent = String(clamped);
+    info.parameters[key] = clamped;
+
+    if (typeof info.onParamChange === "function") {
+      info.onParamChange();
+    }
+
     info.redrawHandler();
 
     if (def.rebuildControls) {
@@ -647,13 +783,59 @@ function setRangeHeaderControl(field, _label, def, value, info, key, tabId) {
       renderParameterControls(info, data, tabId);
     }
 
+  } // end applyValue
+
+  input.addEventListener("input", () => {
+    const newVal = parseFloat(input.value);
+    applyValue(newVal);
   }); // end input.addEventListener
+
+  // ----------------------------------------------------------
+  // Slider row: optional buttons + range input
+  // (reuses the SAME button classes as setRangeControl)
+  // ----------------------------------------------------------
+  const sliderRow = document.createElement("div");
+  sliderRow.className = "ctrl-range-slider-row";
+
+  if (!def.noButtons) {
+
+    const decBtn = document.createElement("button");
+    decBtn.type = "button";
+    decBtn.className = "ctrl-range-step-btn ctrl-range-step-dec";
+    decBtn.textContent = "<";
+
+    const incBtn = document.createElement("button");
+    incBtn.type = "button";
+    incBtn.className = "ctrl-range-step-btn ctrl-range-step-inc";
+    incBtn.textContent = ">";
+
+    decBtn.addEventListener("click", () => {
+      const s   = parseFloat(input.step);
+      const cur = parseFloat(input.value);
+      applyValue(cur - s);
+    }); // end decBtn.addEventListener
+
+    incBtn.addEventListener("click", () => {
+      const s   = parseFloat(input.step);
+      const cur = parseFloat(input.value);
+      applyValue(cur + s);
+    }); // end incBtn.addEventListener
+
+    sliderRow.appendChild(decBtn);
+    sliderRow.appendChild(input);
+    sliderRow.appendChild(incBtn);
+
+  } else {
+
+    sliderRow.appendChild(input);
+
+  }
 
   // ----------------------------------------------------------
   // Assemble
   // ----------------------------------------------------------
   wrap.appendChild(head);
-  wrap.appendChild(input);
+  wrap.appendChild(sliderRow);
 
   field.appendChild(wrap);
 
@@ -661,9 +843,7 @@ function setRangeHeaderControl(field, _label, def, value, info, key, tabId) {
 
 
 
-/* ------------------------------------------------------------
-   setRangeControl()
------------------------------------------------------------- */
+
 function setRangeControl(field, label, def, value, info, key, tabId) {
 
   const wrapper = document.createElement("div");
@@ -695,12 +875,24 @@ function setRangeControl(field, label, def, value, info, key, tabId) {
   input.id = tabId + "-" + key;
   input.className = "ctrl-range";
 
-  input.addEventListener("input", () => {
+  function clampValue(v) {
+    const min = parseFloat(input.min);
+    const max = parseFloat(input.max);
+    if (v < min) return min;
+    if (v > max) return max;
+    return v;
+  } // end clampValue
 
-    const newVal = parseFloat(input.value);
+  function applyValue(newVal) {
 
-    readout.textContent = newVal;
-    info.parameters[key] = newVal;
+    const clamped = clampValue(newVal);
+
+    // Set the slider value (range input expects a string)
+    input.value = String(clamped);
+
+    // Keep UI + model in sync using the same logic as dragging
+    readout.textContent = clamped;
+    info.parameters[key] = clamped;
 
     // IMPORTANT:
     // Some scriptInfo objects do not define onParamChange().
@@ -716,15 +908,61 @@ function setRangeControl(field, label, def, value, info, key, tabId) {
       renderParameterControls(info, data, tabId);
     }
 
+  } // end applyValue
+
+  input.addEventListener("input", () => {
+    const newVal = parseFloat(input.value);
+    applyValue(newVal);
   }); // end input.addEventListener
 
   wrapper.appendChild(row);
-  wrapper.appendChild(input);
+
+  // Slider row: optional buttons + range input
+  const sliderRow = document.createElement("div");
+  sliderRow.className = "ctrl-range-slider-row";
+
+  if (!def.noButtons) {
+
+    const decBtn = document.createElement("button");
+    decBtn.type = "button";
+    decBtn.className = "ctrl-range-step-btn ctrl-range-step-dec";
+    decBtn.textContent = "<";
+
+    const incBtn = document.createElement("button");
+    incBtn.type = "button";
+    incBtn.className = "ctrl-range-step-btn ctrl-range-step-inc";
+    incBtn.textContent = ">";
+
+    decBtn.addEventListener("click", () => {
+      const step = parseFloat(input.step);
+      const cur  = parseFloat(input.value);
+      applyValue(cur - step);
+    }); // end decBtn.addEventListener
+
+    incBtn.addEventListener("click", () => {
+      const step = parseFloat(input.step);
+      const cur  = parseFloat(input.value);
+      applyValue(cur + step);
+    }); // end incBtn.addEventListener
+
+    sliderRow.appendChild(decBtn);
+    sliderRow.appendChild(input);
+    sliderRow.appendChild(incBtn);
+
+  } else {
+
+    sliderRow.appendChild(input);
+
+  }
+
+  wrapper.appendChild(sliderRow);
 
   field.appendChild(label);
   field.appendChild(wrapper);
 
 } // end setRangeControl
+
+
 
 
 /* ------------------------------------------------------------
@@ -885,11 +1123,7 @@ function removePointPickerDots(container, tabId, key) {
    - info.redrawHandler exists
 ------------------------------------------------------------ */
 
-/* ------------------------------------------------------------
-   setPointPickerControl()
-   ------------------------------------------------------------
-   Updated to support def.showCoords: false
------------------------------------------------------------- */
+
 /* ------------------------------------------------------------
    setPointPickerControl()
    ------------------------------------------------------------

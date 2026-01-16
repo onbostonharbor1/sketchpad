@@ -8,13 +8,11 @@
   {
     "filename": "sineWave",
     "path": "sineWave.js",
-    "status": "useless",
     "title": "Sine Wave"
   },
   {
     "filename": "sineWavePoints",
     "path": "sineWavePoints.js",
-    "status": "useless",
     "title": "Sine Wave Points"
   }
 ]

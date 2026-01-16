@@ -28,6 +28,9 @@
 
 import { buildParameterControls } from "/ui/parameterControls.js";
 
+let ctx = null;
+
+
 /* ------------------------------------------------------------
    drawMicePursuit(thing)
 ------------------------------------------------------------ */
@@ -132,6 +135,7 @@ function drawMicePursuit(thing) {
    init()
 ------------------------------------------------------------ */
 function init() {
+
   const p = scriptInfo.params;
 
   scriptInfo.elements = {
@@ -144,6 +148,7 @@ function init() {
       color:      p.color
     }
   };
+
 } // end init
 
 
@@ -151,13 +156,22 @@ function init() {
    update(params)
 ------------------------------------------------------------ */
 function update(params) {
+
   const e = scriptInfo.elements.element;
 
-  for (const key in scriptInfo.params) {
-    const value = params[key];
-    if (value === undefined) continue;
-    e[key] = value;
-  }
+  e.nMice      = parseInt(params.nMice, 10);
+  e.sideLength = parseFloat(params.sideLength);
+  e.iterations = parseInt(params.iterations, 10);
+  e.tStep      = parseFloat(params.tStep);
+  e.scale      = parseFloat(params.scale);
+  e.color      = params.color;
+
+  if (e.nMice < 3) e.nMice = 3;
+  if (e.sideLength < 1) e.sideLength = 1;
+  if (e.iterations < 1) e.iterations = 1;
+  if (e.tStep <= 0) e.tStep = 0.1;
+  if (e.scale <= 0) e.scale = 0.1;
+
 } // end update
 
 
@@ -173,9 +187,11 @@ function draw() {
    scriptInfo (ParameterControls contract)
 ------------------------------------------------------------ */
 export const scriptInfo = {
+
   title: "Mice Pursuit (Curve Stitch)",
 
   controls: {
+
     nMice: {
       label: "Mice (vertices)",
       widget: "range",
@@ -184,6 +200,7 @@ export const scriptInfo = {
       step: 1,
       default: 5
     },
+
     sideLength: {
       label: "Side Length",
       widget: "range",
@@ -192,6 +209,7 @@ export const scriptInfo = {
       step: 5,
       default: 250
     },
+
     iterations: {
       label: "Iterations",
       widget: "range",
@@ -200,6 +218,7 @@ export const scriptInfo = {
       step: 1,
       default: 95
     },
+
     tStep: {
       label: "Time Step",
       widget: "range",
@@ -208,6 +227,7 @@ export const scriptInfo = {
       step: 0.1,
       default: 4
     },
+
     scale: {
       label: "Scale",
       widget: "range",
@@ -216,12 +236,14 @@ export const scriptInfo = {
       step: 0.1,
       default: 1
     },
+
     color: {
       label: "Color",
       widget: "colorPicker",
       default: "#0000ff"
     }
-  },
+
+  }, // end controls
 
   params: {
     nMice: 5,
@@ -230,7 +252,7 @@ export const scriptInfo = {
     tStep: 4,
     scale: 1,
     color: "#0000ff"
-  },
+  }, // end params
 
   elements: null,
 
@@ -257,6 +279,9 @@ export const scriptInfo = {
    runPattern(ctx) — Gallery entry point
 ------------------------------------------------------------ */
 export function runPattern(_ctx) {
+
+  ctx = _ctx || window.ctx;
+  if (!ctx) throw new Error("micePursuit.runPattern: no ctx provided and window.ctx is null");
 
   // Alias for parameterControls (your existing pattern)
   scriptInfo.parameters = scriptInfo.params;

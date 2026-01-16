@@ -21,9 +21,10 @@ import {
   setCommandsButtonLabel,
   setCommandsButton,
   showCommandsOffcanvas
-} from "./ui_utilities.js";
+}                                from "./ui_utilities.js";
 import { nodeRebuildAndValidateManifests } from "./nodeLayer.js";
 import { showScriptOffcanvas } from "./menuCmds.js";
+import { buildHelpItem } from "./help.js";
 
 const DEFAULT_DRAW_SUBTAB = "tab-categories";   // Categories is always the root
 const TAB_NAME            = "draw";             // Used for help/menu lookups

@@ -1,0 +1,306 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Help Treatise — nodeLayer.js (Browser → Node Dispatch Bridge)</title>
+
+  <link rel="stylesheet" href="/help/help_treatise.css" />
+</head>
+
+<body>
+
+  <h1>nodeLayer.js — Browser-side Bridge to the Node Service</h1>
+
+  <p>
+    This page is intentionally “raw help HTML”: it is written as a single self-contained page
+    so you can drop it into your help system as-is, and/or split it later into smaller pages.
+    The discussion is based on one file:
+  </p>
+
+  <ul>
+    <li><span class="mono">ui/nodeLayer.js</span> (browser-side)</li>
+  </ul>
+
+  <div class="note">
+    <b>Scope of this treatise</b><br/>
+    1) What <span class="mono">nodeLayer.js</span> does and does not do.<br/>
+    2) The single transport primitive: <span class="mono">nodeDispatch(requestName, payload)</span>.<br/>
+    3) The “thin convenience wrappers” (<span class="mono">nodeListLogFiles</span>, <span class="mono">nodeReadLogFile</span>, <span class="mono">nodeRebuildAndValidateManifests</span>).<br/>
+    4) Failure behavior and how UI code should use results.
+  </div>
+
+
+  <h2>1. What nodeLayer is in the Sketchpad architecture</h2>
+
+  <p>
+    Sketchpad runs UI code in the browser, but some operations are fundamentally “Node-side”:
+    scanning folders, rewriting manifests, writing thumbnails, reading local log files, and so on.
+    The browser cannot do those things directly.
+  </p>
+
+  <p>
+    <span class="mono">ui/nodeLayer.js</span> exists to provide a single, consistent bridge:
+  </p>
+
+  <ul>
+    <li>The UI calls a function in <span class="mono">nodeLayer.js</span>.</li>
+    <li><span class="mono">nodeLayer</span> sends a structured request to the local Node service.</li>
+    <li>The Node service runs the task and returns structured JSON.</li>
+    <li>The UI renders the JSON report (usually into <span class="mono">#text</span> in Utilities, or into a tab report panel).</li>
+  </ul>
+
+  <div class="ok">
+    <b>Strict boundary rule</b><br/>
+    <span class="mono">nodeLayer.js</span> does NOT implement tasks.<br/>
+    It only transports requests and returns results.
+  </div>
+
+
+  <h2>2. The single transport primitive: nodeDispatch()</h2>
+
+  <p>
+    The heart of the file is one function:
+  </p>
+
+  <pre><code>export async function nodeDispatch(requestName, payload = {})</code></pre>
+
+  <p>
+    Think of <span class="mono">nodeDispatch</span> as your “RPC call” (remote procedure call) to the Node service.
+    It takes:
+  </p>
+
+  <ul>
+    <li><span class="mono">requestName</span> — a string identifying which Node task to run</li>
+    <li><span class="mono">payload</span> — an object carrying any task parameters</li>
+  </ul>
+
+  <p>
+    It always sends the same JSON envelope:
+  </p>
+
+  <pre><code>{
+  requestName: requestName,
+  payload: payload
+}</code></pre>
+
+
+  <h3>2.1 Endpoint and method</h3>
+
+  <p>
+    The service endpoint is hard-coded:
+  </p>
+
+  <pre><code>POST http://localhost:5174/dispatch</code></pre>
+
+  <p>
+    The request uses:
+  </p>
+
+  <ul>
+    <li>HTTP method: <span class="mono">POST</span></li>
+    <li>Header: <span class="mono">Content-Type: application/json</span></li>
+    <li>Body: JSON stringified envelope</li>
+  </ul>
+
+  <div class="note">
+    <b>Why hard-code?</b><br/>
+    This reflects the intended “local tool” model: Sketchpad runs a known local Node service.
+    If you later want configurability, this file is the single place to introduce it.
+  </div>
+
+
+  <h3>2.2 Fail-fast error behavior</h3>
+
+  <p>
+    <span class="mono">nodeDispatch</span> is explicitly fail-fast on HTTP failures:
+  </p>
+
+  <ul>
+    <li>If <span class="mono">response.ok</span> is false, it reads the response text and throws an Error.</li>
+    <li>The error message includes the HTTP status, status text, and response body.</li>
+  </ul>
+
+  <pre><code>throw new Error(
+  `nodeDispatch: HTTP ${status} ${statusText}: ${text}`
+);</code></pre>
+
+  <div class="warn">
+    <b>Practical implication</b><br/>
+    If the Node service is not running, or the endpoint is wrong, or the service rejects the request,
+    the UI will get a thrown error (a visible console error unless the caller catches and renders it).
+  </div>
+
+  <p>
+    If HTTP succeeds, it returns:
+  </p>
+
+  <pre><code>return await response.json();</code></pre>
+
+  <div class="ok">
+    <b>Contract expectation</b><br/>
+    The Node service is expected to always return valid JSON on success.
+  </div>
+
+
+  <h2>3. Higher-level helpers (thin wrappers)</h2>
+
+  <p>
+    Below <span class="mono">nodeDispatch</span>, this file defines a small set of convenience functions:
+  </p>
+
+  <ul>
+    <li><span class="mono">nodeListLogFiles(limit = 10)</span></li>
+    <li><span class="mono">nodeReadLogFile(name)</span></li>
+    <li><span class="mono">nodeRebuildAndValidateManifests()</span></li>
+  </ul>
+
+  <p>
+    Each wrapper has one job:
+  </p>
+
+  <ul>
+    <li>Choose the correct <span class="mono">requestName</span></li>
+    <li>Build the correct payload shape</li>
+    <li>Return the JSON report from the Node service</li>
+  </ul>
+
+  <div class="ok">
+    <b>Key architectural principle</b><br/>
+    UI code should call these named helpers instead of sprinkling raw requestName strings everywhere.
+    That keeps your system consistent and makes it easier to rename tasks later.
+  </div>
+
+
+  <h3>3.1 nodeListLogFiles(limit)</h3>
+
+  <p>
+    Calls:
+  </p>
+
+  <pre><code>nodeDispatch("listLogFiles", { limit })</code></pre>
+
+  <p>
+    Intended usage:
+  </p>
+
+  <ul>
+    <li>The UI requests a list of available log files.</li>
+    <li>The UI displays the list (for selection) and/or renders it in Utilities.</li>
+  </ul>
+
+
+  <h3>3.2 nodeReadLogFile(name)</h3>
+
+  <p>
+    Calls:
+  </p>
+
+  <pre><code>nodeDispatch("readLogFile", { name })</code></pre>
+
+  <p>
+    Intended usage:
+  </p>
+
+  <ul>
+    <li>The UI requests the contents of a specific log file.</li>
+    <li>The Node service reads the file and returns content as JSON (likely text content plus metadata).</li>
+    <li>The UI renders it in a viewer area (usually <span class="mono">#text</span>).</li>
+  </ul>
+
+
+  <h3>3.3 nodeRebuildAndValidateManifests()</h3>
+
+  <p>
+    Calls:
+  </p>
+
+  <pre><code>nodeDispatch("manifestMaintenance", {})</code></pre>
+
+  <p>
+    Intended usage:
+  </p>
+
+  <ul>
+    <li>The UI requests the Node service to scan folders and rebuild/validate manifests.</li>
+    <li>The Node service returns a structured report (what changed, what was fixed, what failed).</li>
+    <li>The calling tab invalidates its cached manifest data and reloads (because the browser cannot auto-detect on-disk changes).</li>
+  </ul>
+
+  <div class="ok">
+    <b>Important lifecycle note</b><br/>
+    Calling this Node task is only half of the operation.<br/>
+    The other half is UI-side cache invalidation + reload.
+    <span class="mono">nodeLayer</span> does not do that; the tab/controller must.
+  </div>
+
+
+  <h2>4. What nodeLayer assumes about the Node service</h2>
+
+  <p>
+    <span class="mono">nodeLayer</span> makes very few assumptions, but they are strict:
+  </p>
+
+  <ul>
+    <li>The service is reachable at <span class="mono">http://localhost:5174/dispatch</span>.</li>
+    <li>The service accepts a JSON envelope with <span class="mono">requestName</span> and <span class="mono">payload</span>.</li>
+    <li>On success, the service returns valid JSON.</li>
+    <li>On failure, the service returns a meaningful response body (text) so <span class="mono">nodeDispatch</span> can include it in the thrown error.</li>
+  </ul>
+
+  <div class="warn">
+    <b>Separation of responsibility</b><br/>
+    <span class="mono">nodeLayer.js</span> does not validate payload schemas.
+    If you want payload validation, it belongs either:
+    1) in the calling UI code (client-side validation), and/or
+    2) in the Node service (authoritative validation).
+  </div>
+
+
+  <h2>5. How UI code is expected to use results</h2>
+
+  <p>
+    The usage model is:
+  </p>
+
+  <ol>
+    <li>Call a <span class="mono">nodeXXX()</span> function.</li>
+    <li>Receive a JSON report object.</li>
+    <li>Render it in the UI (often as formatted text).</li>
+  </ol>
+
+  <p>
+    Example pattern:
+  </p>
+
+  <pre><code>import { nodeRebuildAndValidateManifests } from "./nodeLayer.js";
+
+const report = await nodeRebuildAndValidateManifests();
+// render report into #text
+// then clear/reload caches and refresh the active view</code></pre>
+
+  <div class="note">
+    <b>Why “structured JSON” matters</b><br/>
+    It keeps Node tasks composable and testable: tasks can return detailed data,
+    and the UI can decide how to display it without scraping strings.
+  </div>
+
+
+  <h2>6. Summary checklist</h2>
+
+  <ul>
+    <li><b>nodeLayer.js</b> is browser-side transport only: it does not implement any Node tasks.</li>
+    <li><b>nodeDispatch</b> is the single primitive: POST JSON to the dispatch endpoint and return JSON.</li>
+    <li><b>Fail-fast</b>: non-OK HTTP responses throw with status + response body.</li>
+    <li><b>Wrappers</b> provide stable names for Node requests so UI code doesn’t scatter request strings.</li>
+    <li><b>Cache refresh is not automatic</b>: after maintenance tasks, the calling tab must invalidate and reload its cached manifest data.</li>
+  </ul>
+
+  <div class="hr"></div>
+
+  <p class="small">
+    End of treatise.
+  </p>
+
+</body>
+</html>

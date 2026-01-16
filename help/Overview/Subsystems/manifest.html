@@ -1,0 +1,485 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Help Treatise — How Sketchpad Manifests Are Loaded, Cached, and Used (manifest.js + patterns.js)</title>
+
+  <link rel="stylesheet" href="/help/help_treatise.css" />
+</head>
+
+<body>
+
+  <h1>How Sketchpad Manifest Data Is Read, Stored, and Used</h1>
+
+  <p>
+    This page is intentionally “raw help HTML”: it is written as a single self-contained page
+    so you can drop it into your help system as-is, and/or split it later into smaller pages.
+    The discussion is based on two files:
+  </p>
+
+  <ul>
+    <li><span class="mono">ui/manifest.js</span> (the generic loader and cache)</li>
+    <li><span class="mono">ui/patterns.js</span> (one consumer of manifest data)</li>
+  </ul>
+
+  <div class="note">
+    <b>Scope of this treatise</b><br/>
+    1) Exactly how <span class="mono">manifest.json</span> data is loaded and cached by <span class="mono">ManifestManager</span>.<br/>
+    2) Exactly how <span class="mono">patterns.js</span> receives and uses that manifest data.<br/>
+    3) How a tab knows to “rewrite/refresh” manifests after they are updated, and what the refresh sequence is.
+  </div>
+
+
+  <h2>1. What “manifest” means in this architecture</h2>
+
+  <p>
+    A “manifest” is JSON data that describes the available items in a content area.
+    In this architecture there are two possible directory models, and
+    <span class="mono">ManifestManager.get(basedir)</span> automatically selects between them:
+  </p>
+
+  <h3>1.1 DirectoryRegistry model (categories)</h3>
+
+  <p>
+    If <span class="mono">../&lt;basedir&gt;/directoryRegistry.json</span> exists:
+  </p>
+
+  <ul>
+    <li>That registry file is read as an array of category names.</li>
+    <li>For each category, <span class="mono">../&lt;basedir&gt;/&lt;category&gt;/manifest.json</span> is loaded (if it exists).</li>
+    <li>The returned result is an “array-of-arrays”, where each inner array corresponds to one category.</li>
+  </ul>
+
+  <pre><code>[
+  [ /* category 0 items */ ],
+  [ /* category 1 items */ ],
+  ...
+]</code></pre>
+
+  <h3>1.2 Flat manifest model (no categories)</h3>
+
+  <p>
+    If no directory registry exists but <span class="mono">../&lt;basedir&gt;/manifest.json</span> exists:
+  </p>
+
+  <ul>
+    <li>That single file is loaded as a flat array.</li>
+    <li>The returned result is that array.</li>
+  </ul>
+
+  <pre><code>[
+  { /* item */ },
+  { /* item */ },
+  ...
+]</code></pre>
+
+  <h3>1.3 Nothing exists</h3>
+
+  <p>
+    If neither model exists, <span class="mono">get(basedir)</span> returns <span class="mono">[]</span>.
+  </p>
+
+
+  <h2>2. manifest.js: reading and caching rules</h2>
+
+  <p>
+    <span class="mono">ui/manifest.js</span> defines <span class="mono">ManifestManager</span>, then exports a singleton instance
+    named <span class="mono">manifest</span>.
+    Tabs import <span class="mono">manifest</span> and call <span class="mono">manifest.get(...)</span>.
+  </p>
+
+  <h3>2.1 The only official cache is ManifestManager.cache</h3>
+
+  <p>
+    In the class constructor:
+  </p>
+
+  <pre><code>this.cache = {};         // basedir → loaded data (array or array-of-arrays)
+this.registryCache = {}; // basedir → directoryRegistry array (if present)</code></pre>
+
+  <p>
+    The meaning is:
+  </p>
+
+  <ul>
+    <li><span class="mono">cache[basedir]</span> stores the result of a successful load for that basedir.</li>
+    <li><span class="mono">registryCache[basedir]</span> stores the directory registry array if the directoryRegistry model was used.</li>
+  </ul>
+
+  <p>
+    Important: The cache is keyed only by <span class="mono">basedir</span>.
+    So <span class="mono">manifest.get("patterns")</span> and <span class="mono">manifest.get("gallery/Ideabook")</span>
+    are cached independently.
+  </p>
+
+  <h3>2.2 get(basedir) load algorithm (exact sequence)</h3>
+
+  <ol>
+    <li>If <span class="mono">this.cache</span> already contains <span class="mono">basedir</span>, return it immediately.</li>
+    <li>Else check for <span class="mono">directoryRegistry.json</span>.</li>
+    <li>
+      If present: load it, validate it is an array, then for each category:
+      <ul>
+        <li>Check if the category’s <span class="mono">manifest.json</span> exists.</li>
+        <li>If it exists: load it, validate it is an array, push it.</li>
+        <li>If it does not exist: push an empty array for that category.</li>
+      </ul>
+      Cache and return the resulting array-of-arrays, and cache the directory registry array.
+    </li>
+    <li>If no directory registry: check for the flat <span class="mono">manifest.json</span>.</li>
+    <li>If present: load it, validate it is an array, cache it, return it.</li>
+    <li>If nothing exists: cache <span class="mono">[]</span>, return <span class="mono">[]</span>.</li>
+  </ol>
+
+  <div class="ok">
+    <b>Fail-fast behavior in manifest.js</b><br/>
+    If a directory registry exists but is not an array, it throws.<br/>
+    If a category manifest exists but is not an array, it throws.<br/>
+    If a flat manifest exists but is not an array, it throws.
+  </div>
+
+  <h3>2.3 getRegistry(basedir)</h3>
+
+  <p>
+    <span class="mono">getRegistry</span> is a convenience getter for the directory registry, but it only works if:
+  </p>
+
+  <ul>
+    <li>A directoryRegistry existed, and</li>
+    <li><span class="mono">get(basedir)</span> has already been called at least once (so the registry is cached).</li>
+  </ul>
+
+  <p>
+    If either condition is false, <span class="mono">getRegistry(basedir)</span> returns <span class="mono">[]</span>.
+  </p>
+
+  <h3>2.4 clearCache()</h3>
+
+  <p>
+    <span class="mono">clearCache()</span> resets both caches:
+  </p>
+
+  <pre><code>this.cache = {};
+this.registryCache = {};</code></pre>
+
+  <p>
+    Meaning: after clearCache, any subsequent <span class="mono">manifest.get(basedir)</span> will reload from disk
+    (through fileLayer).
+  </p>
+
+
+  <h2>3. patterns.js: how it receives manifest information</h2>
+
+  <p>
+    In the Patterns tab, manifest data is loaded once, reshaped once, then used thereafter.
+    Patterns does not repeatedly call <span class="mono">manifest.get("patterns")</span> directly in every operation.
+    Instead it builds and uses a tab-friendly structure stored at <span class="mono">manifest.cache.patterns</span>.
+  </p>
+
+  <div class="warn">
+    <b>Structural note (Patterns adds an additional cache)</b><br/>
+    <span class="mono">ManifestManager</span> already has its own cache at <span class="mono">manifest.cache</span> (class field).<br/>
+    Patterns creates a second, separate cache object by writing <span class="mono">manifest.cache.patterns</span>.<br/>
+    That is not part of <span class="mono">ManifestManager</span>’s class contract; it is an application-level convention.
+  </div>
+
+  <h3>3.1 ensurePatternsManifestLoaded(): one-time load + reshape</h3>
+
+  <p>
+    Patterns uses a dedicated loader:
+  </p>
+
+  <pre><code>async function ensurePatternsManifestLoaded() {
+  if (manifest.cache &amp;&amp; manifest.cache.patterns) return;
+
+  const raw      = await manifest.get("patterns");
+  const registry = manifest.getRegistry("patterns");
+
+  ...build map...
+  manifest.cache.patterns = map;
+}</code></pre>
+
+  <p>
+    Interpretation:
+  </p>
+
+  <ul>
+    <li>It checks whether <span class="mono">manifest.cache.patterns</span> exists. If yes, it does nothing.</li>
+    <li>Otherwise it calls <span class="mono">manifest.get("patterns")</span>, which returns an array-of-arrays.</li>
+    <li>It calls <span class="mono">manifest.getRegistry("patterns")</span> to get the category names.</li>
+    <li>Then it reshapes the array-of-arrays into a map keyed by category name.</li>
+  </ul>
+
+  <pre><code>{
+  "curve_stitch": [ entry, entry, ... ],
+  "polygons":     [ entry, entry, ... ],
+  ...
+}</code></pre>
+
+  <p>
+    This reshape is the crucial bridge between the generic loader output and the Patterns tab’s usage model.
+    Everything else in Patterns assumes it can do:
+  </p>
+
+  <pre><code>manifest.cache.patterns[categoryName]  // → list of entries</code></pre>
+
+  <h3>3.2 Where Patterns uses the manifest cache</h3>
+
+  <p>
+    Patterns uses <span class="mono">manifest.cache.patterns</span> in three main areas:
+  </p>
+
+  <h3>3.2.1 Category list view</h3>
+
+  <p>
+    When showing categories (<span class="mono">showCategoryList()</span>):
+  </p>
+
+  <ul>
+    <li>It calls <span class="mono">ensurePatternsManifestLoaded()</span>.</li>
+    <li>It reads <span class="mono">const groups = manifest.cache.patterns;</span>.</li>
+    <li>It passes that map to <span class="mono">buildCategoryDescriptor(...)</span>, which drives <span class="mono">renderCategories(...)</span>.</li>
+  </ul>
+
+  <p>
+    The category frames are built purely from the cached manifest map,
+    not by scanning the filesystem or re-reading JSON at render time.
+  </p>
+
+  <h3>3.2.2 Pattern selection and display</h3>
+
+  <p>
+    When a pattern is selected, <span class="mono">showSelectedPattern(category, index)</span> does:
+  </p>
+
+  <ul>
+    <li>Calls <span class="mono">ensurePatternsManifestLoaded()</span>.</li>
+    <li>
+      Looks up the list for the category:
+      <div class="indent"><span class="mono">const list = manifest.cache.patterns?.[category] || [];</span></div>
+    </li>
+    <li>Selects the item by index: <span class="mono">const item = list[index];</span></li>
+    <li>Builds the script path and helpKey from the category + filename.</li>
+  </ul>
+
+  <p>
+    So the manifest entry supplies:
+  </p>
+
+  <ul>
+    <li><span class="mono">item.filename</span> (used to load the module and to build image/thumb paths)</li>
+    <li><span class="mono">item.title</span> (used for caption display, fallback label rules, etc.)</li>
+    <li>Any other manifest fields you may add later (tags, description, etc.)</li>
+  </ul>
+
+  <h3>3.2.3 Thumbnail grid</h3>
+
+  <p>
+    When rendering the thumbnail grid in <span class="mono">renderPatternThumbGrid(category)</span>:
+  </p>
+
+  <ul>
+    <li>It reads <span class="mono">const list = manifest.cache.patterns[category];</span></li>
+    <li>It passes that list into <span class="mono">renderThumbnailGrid(...)</span>.</li>
+    <li>
+      The thumbnail path uses <span class="mono">entry.filename</span>:
+      <div class="indent"><span class="mono">./patterns/&lt;category&gt;/images/thumb_&lt;filename&gt;.png</span></div>
+    </li>
+  </ul>
+
+  <p>
+    Again: no filesystem work happens here; the manifest is the authoritative list.
+  </p>
+
+
+  <h2>4. What “stored” means: three layers of storage</h2>
+
+  <p>
+    There are three distinct places where manifest data exists:
+  </p>
+
+  <ol>
+    <li><b>On disk</b>: JSON files under <span class="mono">/patterns</span> (and other basedirs).</li>
+    <li><b>In ManifestManager</b>: <span class="mono">manifest.cache[basedir]</span> and <span class="mono">manifest.registryCache[basedir]</span>.</li>
+    <li><b>In Patterns’ reshaped cache</b>: <span class="mono">manifest.cache.patterns</span> (categoryName → list).</li>
+  </ol>
+
+  <p>
+    So “read, stored, and used” maps to:
+  </p>
+
+  <ul>
+    <li><b>Read</b> = fileLayer loads JSON from disk (called by ManifestManager.get).</li>
+    <li><b>Stored</b> = cached into ManifestManager + reshaped into Patterns’ map cache.</li>
+    <li><b>Used</b> = UI/controller logic reads the map cache for categories, thumbnails, captions, and script lookup.</li>
+  </ul>
+
+
+  <h2>5. How a tab knows manifests were updated (refresh / rebuild lifecycle)</h2>
+
+  <p>
+    There are two “update” situations:
+  </p>
+
+  <ul>
+    <li><b>Rebuild/maintenance</b>: Node scans folders and rewrites manifests on disk.</li>
+    <li><b>Edit</b>: Node edits a single manifest entry (e.g., title change), rewriting JSON on disk.</li>
+  </ul>
+
+  <p>
+    In both cases, the key is:
+  </p>
+
+  <div class="ok">
+    <b>The browser cannot detect on-disk changes automatically.</b><br/>
+    The tab must explicitly decide “my cached data is stale”, then clear caches and reload.
+  </div>
+
+  <h3>5.1 Patterns’ explicit refresh path (Rebuild &amp; Validate command)</h3>
+
+  <p>
+    In <span class="mono">wirePatternsCommandsButton()</span>, when “Rebuild &amp; Validate” is clicked:
+  </p>
+
+  <ol>
+    <li>UI calls <span class="mono">nodeRebuildAndValidateManifests()</span> (browser → nodeLayer → Node service).</li>
+    <li>Node performs maintenance and returns a report.</li>
+    <li>Patterns invalidates caches:</li>
+  </ol>
+
+  <pre><code>manifest.clearCache();
+if (manifest.cache) delete manifest.cache.patterns;</code></pre>
+
+  <p>
+    Then Patterns reloads:
+  </p>
+
+  <pre><code>await ensurePatternsManifestLoaded();</code></pre>
+
+  <p>
+    Then Patterns re-renders whichever view is active:
+  </p>
+
+  <ul>
+    <li>If view is “pattern”: call <span class="mono">showSelectedPattern(cat, idx)</span>.</li>
+    <li>Else: call <span class="mono">showCategoryList()</span>.</li>
+  </ul>
+
+  <p>
+    So “knowing manifests changed” is not automatic: the command handler knows it just asked Node to rewrite manifests,
+    therefore it clears caches and reloads.
+  </p>
+
+  <h3>5.2 Edit operations: same refresh requirement</h3>
+
+  <p>
+    “Edit Manifest Title” (or any manifest-editing command) should follow the same pattern after Node confirms the write:
+  </p>
+
+  <ol>
+    <li>Browser triggers a Node task that writes updated JSON.</li>
+    <li>Tab invalidates relevant caches.</li>
+    <li>Tab reloads manifest data.</li>
+    <li>Tab refreshes any UI derived from that manifest data (caption, category list labels, ordering if affected, etc.).</li>
+  </ol>
+
+
+  <h2>6. Patterns’ dependency boundary: what Patterns assumes ManifestManager provides</h2>
+
+  <p>
+    Patterns relies on exactly these ManifestManager features:
+  </p>
+
+  <ul>
+    <li><span class="mono">await manifest.get("patterns")</span> loads raw data (array-of-arrays for directoryRegistry model).</li>
+    <li><span class="mono">manifest.getRegistry("patterns")</span> returns category names (after get has been called).</li>
+    <li><span class="mono">manifest.clearCache()</span> can be used after Node writes to disk.</li>
+  </ul>
+
+  <p>
+    Everything else is a Patterns tab convention:
+  </p>
+
+  <ul>
+    <li>Building <span class="mono">manifest.cache.patterns</span> as a categoryName → list map.</li>
+    <li>Using that map as the single data source for category frames and thumbnails.</li>
+  </ul>
+
+
+  <h2>7. Concrete end-to-end example (manifest → UI → script execution)</h2>
+
+  <ol>
+    <li>Patterns init calls <span class="mono">ensurePatternsManifestLoaded()</span>.</li>
+    <li><span class="mono">manifest.get("patterns")</span> reads:
+      <ul>
+        <li><span class="mono">patterns/directoryRegistry.json</span></li>
+        <li>and for each category: <span class="mono">patterns/&lt;category&gt;/manifest.json</span></li>
+      </ul>
+    </li>
+    <li>ensurePatternsManifestLoaded reshapes into:
+      <div class="indent mono">manifest.cache.patterns = { categoryName: [entries...] }</div>
+    </li>
+    <li><span class="mono">showCategoryList()</span> builds clickable category frames from that map.</li>
+    <li>User click stores selection into <span class="mono">uiState.patterns</span> and calls <span class="mono">showSelectedPattern(category, idx)</span>.</li>
+    <li><span class="mono">showSelectedPattern</span> looks up the manifest entry to get <span class="mono">filename</span> and <span class="mono">title</span>.</li>
+    <li>It builds <span class="mono">scriptPath</span>, loads the module, executes it into the canvas.</li>
+    <li>It updates UI derived from the manifest entry (caption title and thumbnail grid).</li>
+  </ol>
+
+
+  <h2>8. Help-system integration notes</h2>
+
+  <p>
+    If your help system uses <span class="mono">menuManager.buildHelpItem(tabName, helpKey)</span>, Patterns supplies:
+  </p>
+
+  <ul>
+    <li><span class="mono">tabName = "patterns"</span></li>
+    <li><span class="mono">helpKey = "&lt;category&gt;/&lt;filename&gt;"</span></li>
+  </ul>
+
+  <p>
+    For a pattern file <span class="mono">patterns/curve_stitch/myParabola.js</span>,
+    the help key becomes:
+  </p>
+
+  <pre><code>curve_stitch/myParabola</code></pre>
+
+  <p>
+    Depending on your convention, a typical help path would be:
+  </p>
+
+  <pre><code>help/patterns/curve_stitch/myParabola.html</code></pre>
+
+  <p>
+    Note the parallel concept:
+  </p>
+
+  <ul>
+    <li><b>Content manifests</b> describe Patterns/Gallery/etc items.</li>
+    <li><b>Help manifests</b> describe which help pages exist.</li>
+  </ul>
+
+
+  <h2>9. Summary checklist</h2>
+
+  <ul>
+    <li><b>ManifestManager.get(basedir)</b> loads directoryRegistry model (array-of-arrays) or flat model (array).</li>
+    <li><b>ManifestManager caches</b> results per basedir, plus optional directory registry per basedir.</li>
+    <li><b>Patterns reshapes</b> into <span class="mono">manifest.cache.patterns</span> as a category map.</li>
+    <li><b>Patterns consumes</b> that map for category frames, thumbnails, and selecting items by index.</li>
+    <li>
+      <b>After Node rewrites manifests</b>, the tab invalidates and reloads using:
+      <div class="indent mono">manifest.clearCache(); delete manifest.cache.patterns; await ensurePatternsManifestLoaded();</div>
+    </li>
+  </ul>
+
+  <div class="hr"></div>
+
+  <p class="small">
+    End of treatise.
+  </p>
+
+</body>
+</html>

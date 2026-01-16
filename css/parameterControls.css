@@ -175,14 +175,15 @@ input.ctrl-text[type="text"] {
 } /* end .ctrl-rangehdr-head */
 
 .ctrl-rangehdr-label {
-  font-size: 0.95rem;
-} /* end .ctrl-rangehdr-label */
+  font-size: 0.8rem;
+}
 
 .ctrl-rangehdr-value {
-  font-size: 0.95rem;
+  font-size: 0.8rem;
   text-align: right;
   min-width: 3.5rem;
-} /* end .ctrl-rangehdr-value */
+}
+
 
 .ctrl-rangehdr {
   width: 100%;
@@ -377,3 +378,26 @@ input.ctrl-text[type="text"] {
 .ctrl-accordion-item:hover {
   text-decoration: underline;
 }
+
+.ctrl-range-slider-row {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+} /* end .ctrl-range-slider-row */
+
+.ctrl-range-step-btn {
+  width: 11px;
+  height: 11px;
+  padding: 0;
+  line-height: 1;
+  font-size: 7px;
+  border-radius: 3px;
+  cursor: pointer;
+  border: 1px solid #bbb;   /* light gray */
+  background-color: #f5f5f5;
+}
+
+
+.ctrl-range {
+  flex: 1;
+} /* end .ctrl-range */

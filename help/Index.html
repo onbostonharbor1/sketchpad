@@ -1,0 +1,603 @@
+<!doctype html>
+
+<html lang="en">
+
+<head>
+  <meta charset="utf-8" />
+
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+
+  <title>Help Treatise — Sketchpad Architecture (High-Level + Detailed Map)</title>
+
+  <link rel="stylesheet" href="/help/help_treatise.css" />
+</head>
+
+<body>
+
+  <h1>Sketchpad Architecture</h1>
+
+  <p>
+    This document provides two complementary views of Sketchpad architecture:
+  </p>
+
+  <ul>
+    <li>
+      A high-level overview (“mental model”) for fast re-entry and orientation.
+    </li>
+
+    <li>
+      A detailed architectural map (“how it really works”) for implementation and debugging.
+    </li>
+  </ul>
+
+  <p>
+    This is a raw help HTML file intended to be dropped directly into the Sketchpad help system.
+  </p>
+
+  <hr />
+
+  <h2>Part 1 — High-Level Overview (Mental Model)</h2>
+
+  <p>
+    Sketchpad is not one monolithic application.
+    It is a set of independent tab subsystems that share a common UI shell and a common drawing surface.
+  </p>
+
+  <p>
+    At the highest level, Sketchpad is built around five major “pillars”:
+  </p>
+
+  <ol>
+    <li>Tab architecture (TabSpec lifecycle + uiState restoration)</li>
+    <li>Content inventory (manifests + registry files + caching)</li>
+    <li>Rendering (shared canvas + drawing lifecycle)</li>
+    <li>UI composition (caption bar, categories grid, controls, overlays)</li>
+    <li>Node service layer (maintenance + filesystem operations)</li>
+  </ol>
+
+  <h3>1. Tabs are independent subsystems</h3>
+
+  <p>
+    Each top-level tab (Draw, Patterns, Gallery, Utilities, Home, Figures, etc.) is its own subsystem.
+    It owns its regions and its internal state.
+  </p>
+
+  <p>
+    Each tab is activated through a TabSpec that defines:
+  </p>
+
+  <ul>
+    <li>init() — cold start only</li>
+    <li>restore() — rebuild from saved uiState only</li>
+    <li>save() — snapshot current state before leaving the tab</li>
+  </ul>
+
+  <p>
+    The core principle is:
+    UI state drives the UI, and is updated before rendering.
+  </p>
+
+  <h3>2. Manifests and registries define what content exists</h3>
+
+  <p>
+    Sketchpad content is discovered and organized by inventory sources:
+  </p>
+
+  <ul>
+    <li>
+      Patterns: filesystem manifests under <span class="mono">/patterns/&lt;category&gt;/manifest.json</span>
+    </li>
+    <li>
+      Gallery: domain registries + per-category manifests under <span class="mono">/gallery/&lt;Domain&gt;/</span>
+    </li>
+    <li>
+      Home: a generated flat manifest under <span class="mono">/home/manifest.json</span>
+    </li>
+    <li>
+      Draw: internal registry objects (drawRegistry entries) loaded as modules
+    </li>
+  </ul>
+
+  <p>
+    Manifests are loaded once, cached, treated as immutable, and only invalidated intentionally.
+  </p>
+
+  <h3>3. Drawing uses a consistent lifecycle</h3>
+
+  <p>
+    Whether a drawing is a drawRegistry entry or a Gallery/Patterns script, the mental model is the same:
+  </p>
+
+  <ul>
+    <li><span class="mono">params</span> hold JSON-safe UI values</li>
+    <li><span class="mono">controls</span> describe UI metadata</li>
+    <li><span class="mono">elements</span> hold runtime drawing objects</li>
+    <li><span class="mono">init()</span> creates elements once</li>
+    <li><span class="mono">update(params)</span> copies values into elements</li>
+    <li><span class="mono">draw()</span> renders deterministically from elements</li>
+  </ul>
+
+  <p>
+    The draw function reads from <span class="mono">elements.element</span>, not directly from params.
+  </p>
+
+  <h3>4. Node maintenance is separate from UI rendering</h3>
+
+  <p>
+    Maintenance tasks (rebuild manifests, archive items, edit manifest titles, generate thumbnails, etc.)
+    are executed by a Node service layer.
+  </p>
+
+  <p>
+    Node tasks change files on disk and return structured results.
+    The browser then invalidates caches and re-renders based on uiState.
+  </p>
+
+  <hr />
+
+  <h2>Part 2 — Detailed Architecture (Subsystem Map)</h2>
+
+  <p>
+    This section is organized as a “map of responsibilities.”
+    The goal is to make debugging deterministic:
+    if something breaks, you should be able to identify which subsystem owns the failure.
+  </p>
+
+  <hr />
+
+  <h2>A. Core UI Shell</h2>
+
+  <h3>A1. uiState.js (Authoritative UI state)</h3>
+
+  <p>
+    <span class="mono">uiState</span> is the authoritative record of what the user is currently viewing.
+  </p>
+
+  <p>
+    Each tab has a state container, typically with:
+  </p>
+
+  <ul>
+    <li>activeCategory</li>
+    <li>activeItem (or activeIndex)</li>
+    <li>activeSubtab</li>
+    <li>saved (the restore snapshot)</li>
+  </ul>
+
+  <p>
+    Architectural rule:
+    uiState is updated immediately on user action, before any rendering occurs.
+  </p>
+
+  <h3>A2. setUI.js (Tab activation and lifecycle orchestration)</h3>
+
+  <p>
+    The UI shell owns tab switching and lifecycle dispatch.
+  </p>
+
+  <p>
+    The shell must:
+  </p>
+
+  <ul>
+    <li>switch themes</li>
+    <li>clear regions on cold init</li>
+    <li>call TabSpec.init(restoredFlag) OR TabSpec.restore()</li>
+    <li>call TabSpec.save() before leaving a tab</li>
+  </ul>
+
+  <p>
+    Architectural rule:
+    setUI.js does not render content.
+    It only delegates to the active tab subsystem.
+  </p>
+
+  <hr />
+
+  <h2>B. Shared UI Components</h2>
+
+  <h3>B1. categories.js (Category grid renderer)</h3>
+
+  <p>
+    categories.js is a pure renderer.
+    It does not know about manifests, tabs, or filesystem layout.
+  </p>
+
+  <p>
+    Input contract:
+    an array of category frames where each frame contains:
+  </p>
+
+  <ul>
+    <li>frame title</li>
+    <li>items array</li>
+    <li>each item includes an onClick handler</li>
+  </ul>
+
+  <p>
+    Architectural rule:
+    tabs build descriptor arrays; categories.js only renders them.
+  </p>
+
+  <h3>B2. caption.js (Caption bar + navigation + menu)</h3>
+
+  <p>
+    caption.js builds the caption bar for a tab view.
+  </p>
+
+  <p>
+    The caption bar is the single point where these concerns converge:
+  </p>
+
+  <ul>
+    <li>title display</li>
+    <li>Prev / Next navigation callbacks</li>
+    <li>menu anchor and dropdown invocation</li>
+    <li>optional click-zone overlay enabling/disabling</li>
+  </ul>
+
+  <p>
+    Architectural rule:
+    caption behavior must be driven by the same callbacks used for navigation.
+  </p>
+
+  <h3>B3. ui_utilities.js (Shared mechanical helpers)</h3>
+
+  <p>
+    ui_utilities.js contains shared helpers for mechanical UI work.
+  </p>
+
+  <p>
+    Examples include:
+  </p>
+
+  <ul>
+    <li>thumbnail grid rendering</li>
+    <li>selected thumbnail highlighting</li>
+    <li>commands button wiring</li>
+    <li>offcanvas creation and display</li>
+    <li>small DOM utilities (clear regions, etc.)</li>
+  </ul>
+
+  <p>
+    Architectural rule:
+    base controller functions should remain readable; helpers do mechanical DOM work.
+  </p>
+
+  <h3>B4. menuManager.js + menuCmds.js (Menu system)</h3>
+
+  <p>
+    The menu system provides a structured way to attach commands to the caption bar.
+  </p>
+
+  <p>
+    Typical flow:
+  </p>
+
+  <ol>
+    <li>tab builds an info object (manifestPath, filename, matchField, etc.)</li>
+    <li>tab calls get&lt;Tab&gt;CaptionMenuItems(info)</li>
+    <li>menuManager.open(items, anchor)</li>
+    <li>menuCmds executes commands (archive, edit, view source, etc.)</li>
+  </ol>
+
+  <p>
+    Architectural rule:
+    per-tab menu command modules shape data; shared menuCmds does the work.
+  </p>
+
+  <hr />
+
+  <h2>C. Drawing and Script Execution</h2>
+
+  <h3>C1. Shared canvas + ctx contract</h3>
+
+  <p>
+    Sketchpad assumes one shared coordinate space and one authoritative drawing context.
+  </p>
+
+  <p>
+    Core constraints:
+  </p>
+
+  <ul>
+    <li>There is exactly one canvas and one drawing context</li>
+    <li>Drawing code uses <span class="mono">ctx</span> directly</li>
+    <li>No script may create or resolve ctx</li>
+    <li>If ctx is missing, the system must crash loudly</li>
+  </ul>
+
+  <p>
+    This is required so overlays, nodes, handles, guides, and figures can interconnect.
+  </p>
+
+  <h3>C2. drawRegistry entries (internal objects)</h3>
+
+  <p>
+    A drawRegistry entry is an object placed on window with a predictable name, such as:
+  </p>
+
+  <p class="mono">
+    window.drawRegistry_mysticRose
+  </p>
+
+  <p>
+    Each entry describes one “first-class object” that can be selected, controlled, and drawn.
+  </p>
+
+  <p>
+    The entry contains:
+  </p>
+
+  <ul>
+    <li>metadata (name, id, category, tags, description, version)</li>
+    <li>style fields (background, overlays, transforms)</li>
+    <li>params (JSON-safe defaults)</li>
+    <li>controls (UI metadata)</li>
+    <li>elements (persistent runtime state)</li>
+    <li>init/update/draw lifecycle</li>
+  </ul>
+
+  <p>
+    Architectural rule:
+    init() creates elements once, update() mutates elements, draw() renders deterministically.
+  </p>
+
+  <h3>C3. runPattern() (script entry point)</h3>
+
+  <p>
+    runPattern() is the entry point for executing a script module in Sketchpad.
+  </p>
+
+  <p>
+    The contract is:
+  </p>
+
+  <ol>
+    <li>printTitle(scriptInfo.title)</li>
+    <li>alias setup (scriptInfo.parameters = scriptInfo.params)</li>
+    <li>init() called exactly once per load</li>
+    <li>buildParameterControls(scriptInfo, targetId, true)</li>
+    <li>explicit first draw (usually via redrawHandler)</li>
+  </ol>
+
+  <p>
+    Architectural rule:
+    runPattern() orchestrates; it does not implement drawing math.
+  </p>
+
+  <h3>C4. scriptRunner.js (module loading and execution)</h3>
+
+  <p>
+    scriptRunner is responsible for:
+  </p>
+
+  <ul>
+    <li>importing ES modules by path</li>
+    <li>executing the expected entry point (runPattern or equivalent)</li>
+    <li>providing consistent error reporting paths</li>
+  </ul>
+
+  <p>
+    Architectural rule:
+    loading and execution are separate from UI state and category selection.
+  </p>
+
+  <hr />
+
+  <h2>D. File Inventory and Path Logic</h2>
+
+  <h3>D1. manifest.js (Loading + caching inventory)</h3>
+
+  <p>
+    manifest.js provides a centralized way to load and cache manifest data.
+  </p>
+
+  <p>
+    Key principles:
+  </p>
+
+  <ul>
+    <li>manifests are loaded once</li>
+    <li>cached data is treated as immutable</li>
+    <li>tabs read cached data only</li>
+    <li>cache invalidation is explicit (clearCache)</li>
+  </ul>
+
+  <h3>D2. fileLayer.js (File path normalization + identity)</h3>
+
+  <p>
+    fileLayer.js exists because Sketchpad must operate across multiple directory systems:
+  </p>
+
+  <ul>
+    <li>patterns: category folders</li>
+    <li>gallery: domains + categories</li>
+    <li>home: rooted paths pointing into other trees</li>
+    <li>utilities: scripts and logs</li>
+  </ul>
+
+  <p>
+    The role of fileLayer.js is to enforce consistent path rules and identity rules.
+  </p>
+
+  <p>
+    Typical responsibilities include:
+  </p>
+
+  <ul>
+    <li>normalizing relative paths</li>
+    <li>deriving canonical identifiers used for manifest matching</li>
+    <li>preventing category-prefix duplication (e.g. "3D/401.jpg")</li>
+    <li>providing stable keys for menu operations (archive/edit)</li>
+  </ul>
+
+  <p>
+    Architectural rule:
+    if the manifest identity is wrong, maintenance commands will break.
+    fileLayer.js is where those identity rules should live.
+  </p>
+
+  <hr />
+
+  <h2>E. Node Service Layer (Maintenance and Generation)</h2>
+
+  <p>
+    The Node service layer exists to perform filesystem work that the browser cannot do.
+  </p>
+
+  <p>
+    Node tasks must be invoked explicitly through the dispatch service.
+  </p>
+
+  <h3>E1. nodeLayer.js (Browser → Node bridge)</h3>
+
+  <p>
+    nodeLayer.js is the client-side dispatcher.
+  </p>
+
+  <p>
+    It sends structured requests:
+  </p>
+
+  <ul>
+    <li>requestName</li>
+    <li>payload</li>
+  </ul>
+
+  <p>
+    And it receives structured results:
+  </p>
+
+  <ul>
+    <li>success/failure</li>
+    <li>report object</li>
+    <li>log name or log content</li>
+  </ul>
+
+  <p>
+    Architectural rule:
+    nodeLayer does not interpret UI context; tabs shape payloads.
+  </p>
+
+  <h3>E2. sketchpadService.mjs (Central dispatch service)</h3>
+
+  <p>
+    sketchpadService.mjs is the Node-side service entry point.
+  </p>
+
+  <p>
+    It hosts the dispatch table and executes filesystem tasks.
+  </p>
+
+  <p>
+    Typical task categories:
+  </p>
+
+  <ul>
+    <li>manifest maintenance</li>
+    <li>archive item operations</li>
+    <li>thumbnail writing</li>
+    <li>manifest edits (title/status changes)</li>
+    <li>validation reports and log generation</li>
+  </ul>
+
+  <p>
+    Architectural rule:
+    the service returns structured JSON; the browser decides how to display it.
+  </p>
+
+  <h3>E3. maintain_manifests.mjs (Inventory rebuild and validation)</h3>
+
+  <p>
+    maintain_manifests.mjs is a Node maintenance script responsible for generating and validating manifest data.
+  </p>
+
+  <p>
+    Its purpose is to keep the filesystem inventory consistent with the UI’s expectations.
+  </p>
+
+  <p>
+    It typically:
+  </p>
+
+  <ul>
+    <li>scans directories for categories and items</li>
+    <li>updates manifest.json files</li>
+    <li>generates reports of added/broken items</li>
+    <li>creates log output for inspection</li>
+  </ul>
+
+  <p>
+    Architectural rule:
+    this script is authoritative for “what exists on disk.”
+    Tabs must not guess inventory.
+  </p>
+
+  <hr />
+
+  <h2>F. Tab Subsystems (Ownership Summary)</h2>
+
+  <h3>F1. Draw Tab</h3>
+
+  <ul>
+    <li>Inventory: drawRegistry entries</li>
+    <li>State: uiState.draw</li>
+    <li>Runtime: init/update/draw lifecycle on registry objects</li>
+  </ul>
+
+  <h3>F2. Patterns Tab</h3>
+
+  <ul>
+    <li>Inventory: /patterns/&lt;category&gt;/manifest.json</li>
+    <li>State: uiState.patterns</li>
+    <li>Runtime: imported modules + runPattern contract</li>
+  </ul>
+
+  <h3>F3. Gallery Tab</h3>
+
+  <ul>
+    <li>Inventory: /gallery/&lt;Domain&gt;/directoryRegistry.json + per-category manifests</li>
+    <li>State: uiState.gallery</li>
+    <li>Runtime: images OR imported scripts</li>
+  </ul>
+
+  <h3>F4. Utilities Tab</h3>
+
+  <ul>
+    <li>Inventory: utilities scripts and tools</li>
+    <li>State: uiState.utilities</li>
+    <li>Runtime: maintenance reports + script execution</li>
+  </ul>
+
+  <h3>F5. Home Tab</h3>
+
+  <ul>
+    <li>Inventory: /home/manifest.json (generated)</li>
+    <li>State: uiState.home</li>
+    <li>Runtime: scripts or images based on file extension</li>
+  </ul>
+
+  <hr />
+
+  <h2>Summary</h2>
+
+  <p>
+    Sketchpad architecture is a deliberate separation of concerns:
+  </p>
+
+  <ul>
+    <li>Tabs are independent subsystems that own their regions and state.</li>
+    <li>Manifests and registries define inventory and are cached as immutable.</li>
+    <li>Drawing is standardized around init/update/draw and elements.element.</li>
+    <li>UI helpers render; controllers decide behavior.</li>
+    <li>Node services perform filesystem work; UI invalidates caches and restores from uiState.</li>
+  </ul>
+
+  <p>
+    This separation is what makes Sketchpad deterministic, fail-fast, and maintainable.
+  </p>
+
+</body>
+
+</html>

@@ -1,0 +1,394 @@
+<!doctype html>
+
+<html lang="en">
+
+<head>
+  <meta charset="utf-8" />
+
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+
+  <title>Help Treatise — Design Rules: Gallery Script Conversion (Authoritative)</title>
+
+  <link rel="stylesheet" href="/help/help_treatise.css" />
+</head>
+
+<body>
+
+  <h1>DESIGN RULES — GALLERY SCRIPT CONVERSION (AUTHORITATIVE)</h1>
+
+  <p>
+    This document is the authoritative conversion contract for converting standalone drawing scripts into Gallery scripts.
+  </p>
+
+  <p>
+    It is meant to be pasted back verbatim before any future conversion request.
+    No interpretation. No optimization. No “helpful” adjustments.
+  </p>
+
+  <hr />
+
+  <h2>FOUNDATIONAL CONSTRAINTS (NON-NEGOTIABLE)</h2>
+
+  <ol>
+    <li>There is exactly ONE canvas and ONE drawing context (ctx).</li>
+    <li>ctx is predefined, global, and authoritative.</li>
+    <li>All drawing code assumes ctx already exists.</li>
+    <li>No script may create, cache, pass, alias, or resolve ctx.</li>
+    <li>No script may reference window.ctx.</li>
+    <li>No script may accept _ctx or any canvas parameter.</li>
+    <li>If ctx does not exist, the system must crash loudly.</li>
+    <li>Conversions MUST NOT introduce any ctx-related logic.</li>
+  </ol>
+
+  <p>
+    This rule exists because:
+  </p>
+
+  <ul>
+    <li>The entire Sketchpad system is built on a single shared coordinate space.</li>
+    <li>Overlays, nodes, handles, guides, and figures must interconnect exactly.</li>
+    <li>External standalone drawings must be drop-in compatible with Sketchpad.</li>
+    <li>Any ctx indirection risks breaking that guarantee.</li>
+  </ul>
+
+  <p>
+    All draw code uses ctx directly. Period.
+  </p>
+
+  <hr />
+
+  <h2>PURPOSE OF CONVERSION</h2>
+
+  <p>
+    The conversion exists for ONE reason only:
+    To make Gallery scripts look, read, and behave like drawRegistry entries, so that:
+  </p>
+
+  <ol>
+    <li>You can mentally read any Gallery script the same way you read a drawRegistry entry.</li>
+    <li>parameterControls can treat Gallery scripts and drawRegistry entries consistently.</li>
+    <li>The conversion is mechanical, repeatable, and low-risk.</li>
+  </ol>
+
+  <p>
+    This is NOT:
+  </p>
+
+  <ul>
+    <li>A drawRegistry conversion</li>
+    <li>A refactor</li>
+    <li>An architectural redesign</li>
+    <li>A math rewrite</li>
+  </ul>
+
+  <hr />
+
+  <h2>CANONICAL INTERNAL MODEL (MANDATORY)</h2>
+
+  <p>
+    Every converted Gallery script MUST implement the following internal vocabulary and lifecycle:
+  </p>
+
+  <h3>1. params</h3>
+
+  <ul>
+    <li>JSON-safe defaults.</li>
+    <li>Holds current UI values.</li>
+    <li>Replaces any previous parameters object.</li>
+    <li>Must NOT be used directly for drawing.</li>
+  </ul>
+
+  <h3>2. controls</h3>
+
+  <ul>
+    <li>Declarative metadata for parameterControls.</li>
+    <li>
+      Schema must remain exactly as expected:
+      <ul>
+        <li>label</li>
+        <li>widget</li>
+        <li>min / max / step</li>
+        <li>options</li>
+        <li>default</li>
+      </ul>
+    </li>
+    <li>Must never be mutated.</li>
+  </ul>
+
+  <h3>3. elements</h3>
+
+  <ul>
+    <li>Persistent runtime state.</li>
+    <li>Created exactly once in init().</li>
+    <li>
+      Must have the shape:
+      <pre><code>elements = { element: { … } }</code></pre>
+    </li>
+    <li>elements.element is the only object draw() reads from.</li>
+    <li>
+      May contain:
+      <ul>
+        <li>normalized values</li>
+        <li>derived values</li>
+        <li>cached geometry</li>
+        <li>arrays, points, etc.</li>
+      </ul>
+    </li>
+  </ul>
+
+  <h3>4. init()</h3>
+
+  <ul>
+    <li>Cold-start only.</li>
+    <li>Creates elements.</li>
+    <li>Seeds elements.element from params.</li>
+    <li>May validate initial values.</li>
+    <li>May compute derived values.</li>
+    <li>
+      MUST NOT:
+      <ul>
+        <li>build UI</li>
+        <li>draw</li>
+        <li>reference parameterControls</li>
+        <li>touch ctx beyond assuming it exists</li>
+      </ul>
+    </li>
+  </ul>
+
+  <h3>5. update(newParams)</h3>
+
+  <ul>
+    <li>Copies values from params into elements.element.</li>
+    <li>Handles all type normalization (parseFloat, parseInt, booleans).</li>
+    <li>Handles all validation (fail-fast).</li>
+    <li>Recomputes derived data.</li>
+    <li>MUST NOT draw.</li>
+    <li>MUST NOT create new element objects.</li>
+    <li>MUST NOT mutate controls.</li>
+  </ul>
+
+  <h3>6. draw()</h3>
+
+  <ul>
+    <li>Reads ONLY from elements.element.</li>
+    <li>Clears and draws deterministically.</li>
+    <li>Uses ctx directly.</li>
+    <li>MUST NOT read from params.</li>
+    <li>MUST NOT mutate params or controls.</li>
+  </ul>
+
+  <hr />
+
+  <h2>runPattern() — GALLERY ENTRY POINT</h2>
+
+  <p>
+    runPattern() is the orchestrator.
+  </p>
+
+  <p>
+    It MUST perform the following steps in order:
+  </p>
+
+  <ol>
+    <li>
+      printTitle(scriptInfo.title)
+    </li>
+
+    <li>
+      Compatibility alias setup
+      <pre><code>scriptInfo.parameters = scriptInfo.params</code></pre>
+    </li>
+
+    <li>
+      init()
+      <p>
+        Called exactly once per script load.
+      </p>
+    </li>
+
+    <li>
+      buildParameterControls(scriptInfo, targetId, true)
+      <ul>
+        <li>targetId must not change.</li>
+      </ul>
+    </li>
+
+    <li>
+      First draw
+      <ul>
+        <li>Must be explicit.</li>
+        <li>Typically via scriptInfo.redrawHandler().</li>
+      </ul>
+    </li>
+  </ol>
+
+  <p>
+    No ctx handling of any kind occurs here.
+  </p>
+
+  <hr />
+
+  <h2>PARAMETERCONTROLS COMPATIBILITY (MANDATORY BRIDGE)</h2>
+
+  <p>
+    parameterControls currently expects these fields:
+  </p>
+
+  <ul>
+    <li>scriptInfo.title</li>
+    <li>scriptInfo.controls</li>
+    <li>scriptInfo.parameters</li>
+    <li>scriptInfo.redrawHandler</li>
+    <li>scriptInfo.onParamChange (may be required even if empty)</li>
+  </ul>
+
+  <p>
+    Because the canonical model uses params/init/update/draw, a compatibility bridge is REQUIRED.
+  </p>
+
+  <p>
+    The bridge is:
+  </p>
+
+  <h3>1. scriptInfo.parameters</h3>
+
+  <ul>
+    <li>Alias to scriptInfo.params.</li>
+  </ul>
+
+  <h3>2. scriptInfo.redrawHandler</h3>
+
+  <ul>
+    <li>Must exist.</li>
+    <li>
+      Must do exactly:
+      <pre><code>update(this.params);
+draw();</code></pre>
+    </li>
+  </ul>
+
+  <h3>3. scriptInfo.onParamChange</h3>
+
+  <ul>
+    <li>Must exist.</li>
+    <li>May be a no-op.</li>
+    <li>May alias redrawHandler if required.</li>
+  </ul>
+
+  <p>
+    This allows:
+  </p>
+
+  <ul>
+    <li>Immediate standardization</li>
+    <li>Zero changes to parameterControls</li>
+    <li>Safe batch conversion of many scripts</li>
+  </ul>
+
+  <hr />
+
+  <h2>MECHANICAL CONVERSION CHECKLIST</h2>
+
+  <p>
+    For each script, do ONLY the following:
+  </p>
+
+  <ol>
+    <li>Leave all math and drawing logic untouched.</li>
+    <li>Rename parameters → params.</li>
+    <li>Introduce elements and init().</li>
+    <li>Implement update(params).</li>
+    <li>Implement draw().</li>
+    <li>Add compatibility aliases.</li>
+    <li>Update runPattern() to follow the required sequence.</li>
+  </ol>
+
+  <p>
+    Nothing else.
+  </p>
+
+  <hr />
+
+  <h2>WHAT MUST NEVER CHANGE</h2>
+
+  <p>
+    During conversion, DO NOT:
+  </p>
+
+  <ul>
+    <li>Touch ctx handling.</li>
+    <li>Add ctx parameters.</li>
+    <li>Add ctx caching.</li>
+    <li>Add safety wrappers for ctx.</li>
+    <li>Change geometry math.</li>
+    <li>Change coordinate systems.</li>
+    <li>Change colors or defaults.</li>
+    <li>Change canvas clearing behavior.</li>
+    <li>Change buildParameterControls usage.</li>
+    <li>Introduce new abstractions.</li>
+  </ul>
+
+  <hr />
+
+  <h2>FAILURE MODES (DIAGNOSTIC MAP)</h2>
+
+  <ol>
+    <li>
+      Controls move, nothing redraws
+      <p>
+        → Missing or broken redrawHandler.
+      </p>
+    </li>
+
+    <li>
+      Drawing ignores control values
+      <p>
+        → draw() reading params or stale locals instead of elements.element.
+      </p>
+    </li>
+
+    <li>
+      Blank initial render
+      <p>
+        → No explicit first draw in runPattern().
+      </p>
+    </li>
+
+    <li>
+      Wrong numeric behavior
+      <p>
+        → Type normalization missing in update().
+      </p>
+    </li>
+
+    <li>
+      Extra testing burden
+      <p>
+        → Conversion touched things it was not allowed to touch.
+      </p>
+    </li>
+  </ol>
+
+  <hr />
+
+  <h2>AUTHORITATIVE SUMMARY</h2>
+
+  <p>
+    A converted Gallery script:
+  </p>
+
+  <ul>
+    <li>Uses drawRegistry vocabulary.</li>
+    <li>Preserves Gallery execution semantics.</li>
+    <li>Assumes ctx exists and uses it directly.</li>
+    <li>Contains NO ctx logic whatsoever.</li>
+    <li>Is structurally uniform with every other converted script.</li>
+    <li>Requires minimal testing because nothing else changed.</li>
+  </ul>
+
+
+
+
+</body>
+
+</html>

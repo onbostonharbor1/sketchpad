@@ -16,10 +16,15 @@
      • v-button is created here, but menuManager controls open/close
 
    Dependencies:
-     • menuManager.js (must expose: hasMenuItems(), openMenu())
+     • menuManager.js
+     • nextPrevOverlay.js
 ============================================================ */
 
 import { menuManager } from "./menuManager.js";
+import {
+  enableNextPrevOverlay,
+  disableNextPrevOverlay
+} from "./nextPrevOverlay.js";
 
 /* ------------------------------------------------------------
    setCaptionBar(config)
@@ -32,14 +37,27 @@ import { menuManager } from "./menuManager.js";
        title:     <string>       (title to display)
        onPrev:    <function>     (optional)
        onNext:    <function>     (optional)
+       onMenu:    <function>     (optional)
+       overlayTargetId: <string> (optional: "text" or
+                                 "sketchpad-wrapper")
      }
 
    Notes:
      • Caption bar is cleared on each call.
      • Buttons only appear if callbacks are provided.
+     • This function also controls the Next/Prev click-zone
+       overlay automatically.
 ------------------------------------------------------------ */
 export function setCaptionBar(config) {
-  const { targetId, title, onPrev, onNext, onMenu } = config;
+
+  const {
+    targetId,
+    title,
+    onPrev,
+    onNext,
+    onMenu,
+    overlayTargetId
+  } = config;
 
   const el = document.getElementById(targetId);
   if (!el) throw new Error(`setCaptionBar: #${targetId} not found`);
@@ -49,13 +67,43 @@ export function setCaptionBar(config) {
   el.style.justifyContent = "space-between";
   el.style.alignItems     = "center";
 
+  // ----------------------------------------------------------
+  // NextPrev overlay (automatic on/off switch)
+  // ----------------------------------------------------------
+  if (
+    typeof onPrev === "function" &&
+    typeof onNext === "function" &&
+    overlayTargetId
+  ) {
+
+    const targetEl = document.getElementById(overlayTargetId);
+    if (!targetEl) {
+      throw new Error(
+        "setCaptionBar: overlayTargetId not found: #" + overlayTargetId
+      );
+    }
+
+    enableNextPrevOverlay({
+      targetEl,
+      onPrev,
+      onNext
+    });
+
+  } else {
+    disableNextPrevOverlay();
+  }
+
+  // ----------------------------------------------------------
   // Left side: title
+  // ----------------------------------------------------------
   const titleSpan = document.createElement("span");
   titleSpan.className = "caption-title";
   titleSpan.textContent = title || "";
   el.appendChild(titleSpan);
 
+  // ----------------------------------------------------------
   // Right side: Prev / Next / v
+  // ----------------------------------------------------------
   const btnRow = document.createElement("div");
   btnRow.className = "caption-buttons";
   el.appendChild(btnRow);
@@ -74,12 +122,13 @@ export function setCaptionBar(config) {
     btnRow.appendChild(bNext);
   }
 
+  // ----------------------------------------------------------
   // Menu button (always exists)
+  // ----------------------------------------------------------
   const bMenu = document.createElement("button");
   bMenu.textContent = "v";
   btnRow.appendChild(bMenu);
 
-  // Caller chooses whether menu opens or not
   if (typeof onMenu === "function") {
     bMenu.onclick = (ev) => onMenu(bMenu, ev);
   } else {
@@ -87,7 +136,9 @@ export function setCaptionBar(config) {
     bMenu.style.opacity = "0.4";
     bMenu.style.cursor = "default";
   }
-}
+
+} // end setCaptionBar
+
 
 /* ============================================================
    normalizeCaptionEntry(raw)
@@ -100,12 +151,8 @@ export function setCaptionBar(config) {
        • filename
        • category
 
-   This is purely a convenience function so tabs do not need
-   to build their own entry structs in slightly different ways.
-
    Arguments:
-     raw (object) – tab-specific metadata (drawRegistry entry,
-                    pattern entry, gallery entry, etc.)
+     raw (object) – tab-specific metadata
 
    Returns:
      {
@@ -113,10 +160,6 @@ export function setCaptionBar(config) {
        filename: <string|null>,
        category: <string|null>
      }
-
-   Notes:
-     • No tab-specific logic here.
-     • Safe for ALL tabs (draw, patterns, gallery, utilities).
 ============================================================ */
 export function normalizeCaptionEntry(raw = {}) {
   return {
@@ -127,26 +170,12 @@ export function normalizeCaptionEntry(raw = {}) {
 } // end normalizeCaptionEntry
 
 
-
 /* ============================================================
    buildMenuHandler(tabName, context)
    ------------------------------------------------------------
    Purpose:
      Construct a safe onMenu handler for setCaptionBar that uses
      menuManager.open(tabName, context).
-
-   This allows each tab to keep its menu logic extremely small.
-
-   Arguments:
-     tabName (string) – "draw", "patterns", "gallery", etc.
-     context (object) – information needed by menuManager
-
-   Returns:
-     function – event handler that calls menuManager.open()
-
-   Notes:
-     • MenuManager handles all real menu logic.
-     • Caption bar only needs a callback.
 ============================================================ */
 export function buildMenuHandler(tabName, context = {}) {
   return function onMenuClick(btn, ev) {
@@ -155,31 +184,12 @@ export function buildMenuHandler(tabName, context = {}) {
 } // end buildMenuHandler
 
 
-
 /* ============================================================
    rebuildCaption(config)
    ------------------------------------------------------------
    Purpose:
      Clear the target caption element and rebuild it via
      setCaptionBar(config) in one call.
-
-   Arguments:
-     config (object)
-       {
-         targetId: "caption",
-         title: <string>,
-         onPrev: <function> (optional),
-         onNext: <function> (optional),
-         onMenu: <function> (optional)
-       }
-
-   Behavior:
-     • Ensures old content is removed.
-     • Delegates full construction to setCaptionBar().
-
-   Notes:
-     • This keeps tabs from directly manipulating the DOM.
-     • Helps maintain consistent caption behavior across tabs.
 ============================================================ */
 export function rebuildCaption(config) {
   const el = document.getElementById(config.targetId);

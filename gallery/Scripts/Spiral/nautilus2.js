@@ -28,12 +28,255 @@
 
 import { buildParameterControls } from "/ui/parameterControls.js";
 
-let ctx = null;
+
+/* ============================================================
+   scriptInfo  (drawRegistry-shaped top object)
+============================================================ */
+
+export const scriptInfo = {
+
+  // --- identity / metadata (drawRegistry-like) ---
+  name:        "Nautilus (Interactive)",
+  id:          "nautilusInteractive",
+  version:     0.1,
+  category:    "Elliptical",
+  source:      "gallery",
+  tags:        ["nautilus", "spiral", "curve-stitch"],
+  description: "Interactive nautilus spiral with optional ribs and chamber marks.",
+
+  // --- visual styling placeholders (drawRegistry-like) ---
+  background: null,
+  overlays:   [],
+  transforms: [],
+
+  // --- persistent runtime state (drawRegistry-like) ---
+  elements: null,
+
+  // --------------------------------------------------------
+  // controls (as provided)
+  // --------------------------------------------------------
+  controls: {
+
+    translateXFrac: { label: "Translate X", widget: "range", min: 0.0, max: 1.0, step: 0.01, default: 0.48 },
+    translateYFrac: { label: "Translate Y", widget: "range", min: 0.0, max: 1.0, step: 0.01, default: 0.55 },
+
+    cx:            { label: "Center X",   widget: "range", min: -1000, max: 1000, step: 1,      default: 50 },
+    cy:            { label: "Center Y",   widget: "range", min: -1000, max: 1000, step: 1,      default: 150 },
+    rotation:      { label: "Rotation",   widget: "range", min: -6.283, max: 6.283, step: 0.01, default: -Math.PI * 0.25 },
+
+    turns:         { label: "Turns",      widget: "range", min: 0.25, max: 10.0, step: 0.05, default: 4.0 },
+    points:        { label: "Points",     widget: "range", min: 50,   max: 8000, step: 10,   default: 1600 },
+
+    startRadius:   { label: "Start Radius", widget: "range", min: 0.1, max: 200, step: 0.1,  default: 4 },
+    tightness:     { label: "Tightness",    widget: "range", min: 0.01, max: 1.0, step: 0.01, default: 0.30 },
+
+    drawSpiral:    { label: "Draw Spiral",  widget: "checkbox", default: true },
+    spiralWidth:   { label: "Spiral Width", widget: "range", min: 0.1, max: 20, step: 0.1, default: 2 },
+    spiralColor:   { label: "Spiral Color", widget: "text", default: "#222" },
+
+    fillShell:       { label: "Fill Shell",      widget: "checkbox", default: true },
+    shellThickness:  { label: "Shell Thickness", widget: "range", min: 1, max: 200, step: 1, default: 34 },
+    shellColor:      { label: "Shell Color",     widget: "text", default: "#f2efe8" },
+
+    ribs:          { label: "Ribs",      widget: "checkbox", default: true },
+    interval:      { label: "Interval",  widget: "range", min: 1, max: 200, step: 1, default: 50 },
+    ribEvery:      { label: "Rib Every", widget: "range", min: 1, max: 20,  step: 1, default: 2 },
+    ribAlpha:      { label: "Rib Alpha", widget: "range", min: 0.0, max: 1.0, step: 0.01, default: 0.22 },
+    ribWidth:      { label: "Rib Width", widget: "range", min: 0.1, max: 10.0, step: 0.1, default: 1 },
+    ribColor:      { label: "Rib Color", widget: "text", default: "#2c3e50" },
+
+    chambers:        { label: "Chambers",       widget: "checkbox", default: true },
+    chamberGrowth:   { label: "Chamber Growth", widget: "range", min: 1.01, max: 2.0,  step: 0.01, default: 1.23 },
+    maxChambers:     { label: "Max Chambers",   widget: "range", min: 0,    max: 60,   step: 1,    default: 22 },
+    chamberWidth:    { label: "Chamber Width",  widget: "range", min: 0.1,  max: 10.0, step: 0.1,  default: 1.25 },
+    chamberColor:    { label: "Chamber Color",  widget: "text", default: "#666" }
+
+  }, // end controls
+
+  // --------------------------------------------------------
+  // params (as provided; authoritative live object)
+  // --------------------------------------------------------
+  params: {
+
+    translateXFrac: 0.48,
+    translateYFrac: 0.55,
+
+    cx: 50,
+    cy: 150,
+    rotation: -Math.PI * 0.25,
+
+    turns: 4.0,
+    points: 1600,
+
+    startRadius: 4,
+    tightness: 0.30,
+
+    drawSpiral: true,
+    spiralWidth: 2,
+    spiralColor: "#222",
+
+    fillShell: true,
+    shellThickness: 34,
+    shellColor: "#f2efe8",
+
+    ribs: true,
+    interval: 50,
+    ribEvery: 2,
+    ribAlpha: 0.22,
+    ribWidth: 1,
+    ribColor: "#2c3e50",
+
+    chambers: true,
+    chamberGrowth: 1.23,
+    maxChambers: 22,
+    chamberWidth: 1.25,
+    chamberColor: "#666"
+
+  }, // end params
+
+  // --------------------------------------------------------
+  // lifecycle wrappers (thin; defer to workers)
+  // --------------------------------------------------------
+  init() {
+    doInit(this);
+  }, // end init
+
+  update(params) {
+    doUpdate(this, params);
+  }, // end update
+
+  draw() {
+    doDraw(this);
+  }, // end draw
+
+  // --------------------------------------------------------
+  // parameterControls compatibility
+  // --------------------------------------------------------
+  parameters: null,
+
+  onParamChange() {
+    // intentionally empty (matches your existing contract)
+  }, // end onParamChange
+
+  redrawHandler() {
+    this.update(this.params);
+    this.draw();
+  } // end redrawHandler
+
+}; // end scriptInfo
+
+
+/* ============================================================
+   runPattern() — Gallery entry point
+============================================================ */
+export function runPattern(_ctx) {
+
+  const ctx2 = _ctx || window.ctx;
+  if (!ctx2) throw new Error("nautilusInteractive.runPattern: no ctx provided and window.ctx is null");
+
+  scriptInfo.parameters = scriptInfo.params;
+
+  scriptInfo.init();
+
+  buildParameterControls(
+    scriptInfo,
+    "tab-scripts",
+    true
+  );
+
+  scriptInfo.redrawHandler();
+
+} // end runPattern
+
+
+/* ============================================================
+   Worker: doInit(info)
+============================================================ */
+function doInit(info) {
+
+  if (!info) throw new Error("doInit: info missing");
+  if (!info.params) throw new Error("doInit: info.params missing");
+
+  // Capture ctx once per runPattern/init (fail-fast: ctx must exist).
+  // We store it into elements so helpers can access via info.elements.ctx.
+  const ctx2 = window.ctx;
+  if (!ctx2) throw new Error("doInit: window.ctx missing");
+
+  info.elements = {
+    ctx: ctx2,
+    thing: cloneThingFromParams(info.params)
+  };
+
+} // end doInit
+
+
+/* ============================================================
+   Worker: doUpdate(info, params)
+============================================================ */
+function doUpdate(info, params) {
+
+  if (!info) throw new Error("doUpdate: info missing");
+  if (!info.elements) throw new Error("doUpdate: info.elements missing");
+  if (!info.elements.thing) throw new Error("doUpdate: info.elements.thing missing");
+  if (!params) throw new Error("doUpdate: params missing");
+
+  const t = info.elements.thing;
+
+  // Copy values (no silent fallbacks)
+  for (const key in info.params) {
+    const value = params[key];
+    if (value === undefined) continue;
+    t[key] = value;
+  }
+
+  // enforce integer-ish fields (range widgets deliver numbers but not necessarily ints)
+  t.points      = Math.floor(t.points);
+  t.interval    = Math.floor(t.interval);
+  t.ribEvery    = Math.floor(t.ribEvery);
+  t.maxChambers = Math.floor(t.maxChambers);
+
+} // end doUpdate
+
+
+/* ============================================================
+   Worker: doDraw(info)
+============================================================ */
+function doDraw(info) {
+
+  if (!info) throw new Error("doDraw: info missing");
+  if (!info.elements) throw new Error("doDraw: info.elements missing");
+  if (!info.elements.ctx) throw new Error("doDraw: info.elements.ctx missing");
+  if (!info.elements.thing) throw new Error("doDraw: info.elements.thing missing");
+
+  drawAll(info.elements.ctx, info.elements.thing);
+
+} // end doDraw
+
+
+/* ============================================================
+   Helpers: cloneThingFromParams(params)
+============================================================ */
+function cloneThingFromParams(params) {
+
+  const out = {};
+
+  for (const key in params) {
+    out[key] = params[key];
+  }
+
+  return out;
+
+} // end cloneThingFromParams
+
+
+/* ============================================================
+   Drawing helpers (original code, minimally adapted to take ctx)
+============================================================ */
 
 /* ------------------------------------------------------------
    strokePolyline(points, width, color)
 ------------------------------------------------------------ */
-function strokePolyline(points, width, color) {
+function strokePolyline(ctx, points, width, color) {
 
   if (points.length < 2) return;
 
@@ -100,7 +343,7 @@ function toRGBA(color, alpha) {
 /* ------------------------------------------------------------
    drawNautilus(thing)
 ------------------------------------------------------------ */
-function drawNautilus(thing) {
+function drawNautilus(ctx, thing) {
 
   const theta0 = 0;
   const theta1 = thing.turns * Math.PI * 2;
@@ -142,7 +385,7 @@ function drawNautilus(thing) {
 
   // --- main spiral
   if (thing.drawSpiral) {
-    strokePolyline(pts, thing.spiralWidth, thing.spiralColor);
+    strokePolyline(ctx, pts, thing.spiralWidth, thing.spiralColor);
   }
 
   // --- curve-stitch ribs (i -> i + interval)
@@ -212,7 +455,7 @@ function drawNautilus(thing) {
         });
       }
 
-      strokePolyline(local, thing.chamberWidth, thing.chamberColor);
+      strokePolyline(ctx, local, thing.chamberWidth, thing.chamberColor);
     }
 
     ctx.restore();
@@ -224,7 +467,7 @@ function drawNautilus(thing) {
 /* ------------------------------------------------------------
    drawAll(thing)
 ------------------------------------------------------------ */
-function drawAll(thing) {
+function drawAll(ctx, thing) {
 
   const w = ctx.canvas.width;
   const h = ctx.canvas.height;
@@ -234,152 +477,6 @@ function drawAll(thing) {
 
   ctx.translate(w * thing.translateXFrac, h * thing.translateYFrac);
 
-  drawNautilus(thing);
+  drawNautilus(ctx, thing);
 
 } // end drawAll
-
-
-/* ------------------------------------------------------------
-   scriptInfo (ParameterControls contract)
------------------------------------------------------------- */
-export const scriptInfo = {
-
-  title: "Nautilus (Interactive)",
-
-  controls: {
-
-    translateXFrac: { label: "Translate X", widget: "range", min: 0.0, max: 1.0, step: 0.01, default: 0.48 },
-    translateYFrac: { label: "Translate Y", widget: "range", min: 0.0, max: 1.0, step: 0.01, default: 0.55 },
-
-    cx:            { label: "Center X",   widget: "range", min: -1000, max: 1000, step: 1,    default: 50 },
-    cy:            { label: "Center Y",   widget: "range", min: -1000, max: 1000, step: 1,    default: 150 },
-    rotation:      { label: "Rotation",   widget: "range", min: -6.283, max: 6.283, step: 0.01, default: -Math.PI * 0.25 },
-
-    turns:         { label: "Turns",      widget: "range", min: 0.25, max: 10.0, step: 0.05, default: 4.0 },
-    points:        { label: "Points",     widget: "range", min: 50,   max: 8000, step: 10,   default: 1600 },
-
-    startRadius:   { label: "Start Radius", widget: "range", min: 0.1, max: 200, step: 0.1,  default: 4 },
-    tightness:     { label: "Tightness",    widget: "range", min: 0.01, max: 1.0, step: 0.01, default: 0.30 },
-
-    drawSpiral:    { label: "Draw Spiral", widget: "checkbox", default: true },
-    spiralWidth:   { label: "Spiral Width", widget: "range", min: 0.1, max: 20, step: 0.1, default: 2 },
-    spiralColor:   { label: "Spiral Color", widget: "text", default: "#222" },
-
-    fillShell:       { label: "Fill Shell", widget: "checkbox", default: true },
-    shellThickness:  { label: "Shell Thickness", widget: "range", min: 1, max: 200, step: 1, default: 34 },
-    shellColor:      { label: "Shell Color", widget: "text", default: "#f2efe8" },
-
-    ribs:          { label: "Ribs", widget: "checkbox", default: true },
-    interval:      { label: "Interval", widget: "range", min: 1, max: 200, step: 1, default: 50 },
-    ribEvery:      { label: "Rib Every", widget: "range", min: 1, max: 20, step: 1, default: 2 },
-    ribAlpha:      { label: "Rib Alpha", widget: "range", min: 0.0, max: 1.0, step: 0.01, default: 0.22 },
-    ribWidth:      { label: "Rib Width", widget: "range", min: 0.1, max: 10.0, step: 0.1, default: 1 },
-    ribColor:      { label: "Rib Color", widget: "text", default: "#2c3e50" },
-
-    chambers:        { label: "Chambers", widget: "checkbox", default: true },
-    chamberGrowth:   { label: "Chamber Growth", widget: "range", min: 1.01, max: 2.0, step: 0.01, default: 1.23 },
-    maxChambers:     { label: "Max Chambers", widget: "range", min: 0, max: 60, step: 1, default: 22 },
-    chamberWidth:    { label: "Chamber Width", widget: "range", min: 0.1, max: 10.0, step: 0.1, default: 1.25 },
-    chamberColor:    { label: "Chamber Color", widget: "text", default: "#666" }
-  },
-
-  params: {
-
-    translateXFrac: 0.48,
-    translateYFrac: 0.55,
-
-    cx: 50,
-    cy: 150,
-    rotation: -Math.PI * 0.25,
-
-    turns: 4.0,
-    points: 1600,
-
-    startRadius: 4,
-    tightness: 0.30,
-
-    drawSpiral: true,
-    spiralWidth: 2,
-    spiralColor: "#222",
-
-    fillShell: true,
-    shellThickness: 34,
-    shellColor: "#f2efe8",
-
-    ribs: true,
-    interval: 50,
-    ribEvery: 2,
-    ribAlpha: 0.22,
-    ribWidth: 1,
-    ribColor: "#2c3e50",
-
-    chambers: true,
-    chamberGrowth: 1.23,
-    maxChambers: 22,
-    chamberWidth: 1.25,
-    chamberColor: "#666"
-  },
-
-  elements: null,
-
-  init() {
-    this.elements = { thing: { ...this.params } };
-  }, // end init
-
-  update(params) {
-
-    const t = this.elements.thing;
-
-    for (const key in this.params) {
-      const value = params[key];
-      if (value === undefined) continue;
-      t[key] = value;
-    }
-
-    // enforce integer-ish fields (range widgets deliver numbers but not necessarily ints)
-    t.points = Math.floor(t.points);
-    t.interval = Math.floor(t.interval);
-    t.ribEvery = Math.floor(t.ribEvery);
-    t.maxChambers = Math.floor(t.maxChambers);
-
-  }, // end update
-
-  draw() {
-    drawAll(this.elements.thing);
-  }, // end draw
-
-  parameters: null, // assigned in runPattern()
-
-  redrawHandler() {
-    this.update(this.params);
-    this.draw();
-  }, // end redrawHandler
-
-  onParamChange() {
-    // intentionally empty (matches your existing contract)
-  } // end onParamChange
-
-}; // end scriptInfo
-
-
-/* ------------------------------------------------------------
-   runPattern() — Gallery entry point
------------------------------------------------------------- */
-export function runPattern(_ctx) {
-
-  ctx = _ctx || window.ctx;
-  if (!ctx) throw new Error("nautilus2.runPattern: no ctx provided and window.ctx is null");
-
-  scriptInfo.parameters = scriptInfo.params;
-
-  scriptInfo.init();
-
-  buildParameterControls(
-    scriptInfo,
-    "tab-scripts",
-    true
-  );
-
-  scriptInfo.redrawHandler();
-
-} // end runPattern

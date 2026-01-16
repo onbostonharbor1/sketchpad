@@ -24,15 +24,255 @@
 import { buildParameterControls } from "/ui/parameterControls.js";
 
 
-/* ------------------------------------------------------------
+/* ============================================================
    Static text blocks (kept out of widget clutter)
------------------------------------------------------------- */
+   NOTE:
+   Must be declared BEFORE scriptInfo references them.
+============================================================ */
 const NAUTILUS_INTRO_TEXT =
   "A parametric / logarithmic spiral with chord-stitching produces shell-like ridges."; // end NAUTILUS_INTRO_TEXT
 
 const NAUTILUS_TIP_TEXT =
   "Tip: increase points and lower opacity for smoother shells. Try different skip values to change ridges."; // end NAUTILUS_TIP_TEXT
 
+
+/* ============================================================
+   scriptInfo  (drawRegistry-shaped top object)
+============================================================ */
+
+export const scriptInfo = {
+
+  // --- identity / metadata (drawRegistry-like) ---
+  name:        "Nautilus — Curve Stitching",
+  id:          "nautilusCurveStitching",
+  version:     0.1,
+  category:    "Elliptical",
+  source:      "gallery",
+  tags:        ["nautilus", "spiral", "curve-stitch"],
+  description: "Log-spiral curve stitching with shell-like ridges.",
+
+  // --- visual styling placeholders (drawRegistry-like) ---
+  background: null,
+  overlays:   [],
+  transforms: [],
+
+  // --- persistent runtime state (drawRegistry-like) ---
+  elements: null,
+
+  // --------------------------------------------------------
+  // controls (kept as-is; uses rangeHeader + staticText + button)
+  // --------------------------------------------------------
+  controls: {
+
+    introText: {
+      widget: "staticText",
+      getText: function (info) {
+        return info.params.introText;
+      }
+    }, // end introText
+
+    points: {
+      label: "Points",
+      widget: "rangeHeader",
+      min: 64,
+      max: 3000,
+      step: 1,
+      default: 600
+    }, // end points
+
+    turns: {
+      label: "Turns (θ max / 2π)",
+      widget: "rangeHeader",
+      min: 1,
+      max: 20,
+      step: 1,
+      default: 6
+    }, // end turns
+
+    b: {
+      label: "Spiral tightness (b)",
+      widget: "rangeHeader",
+      min: 0.05,
+      max: 0.8,
+      step: 0.01,
+      default: 0.20
+    }, // end b
+
+    skip: {
+      label: "Chord skip (connect i → i + skip)",
+      widget: "rangeHeader",
+      min: 1,
+      max: 200,
+      step: 1,
+      default: 10
+    }, // end skip
+
+    alpha: {
+      label: "Stroke opacity",
+      widget: "rangeHeader",
+      min: 0.01,
+      max: 0.5,
+      step: 0.01,
+      default: 0.12
+    }, // end alpha
+
+    exportPng: {
+      label: "Export PNG",
+      widget: "button",
+      action: function () {
+        exportCanvasPng("nautilus");
+      }
+    }, // end exportPng
+
+    tipText: {
+      widget: "staticText",
+      getText: function (info) {
+        return info.params.tipText;
+      }
+    } // end tipText
+
+  }, // end controls
+
+  // --------------------------------------------------------
+  // params (authoritative live object)
+  // --------------------------------------------------------
+  params: {
+    introText: NAUTILUS_INTRO_TEXT,
+    tipText:   NAUTILUS_TIP_TEXT,
+
+    points: 600,
+    turns:  6,
+    b:      0.20,
+    skip:   10,
+    alpha:  0.12
+  }, // end params
+
+  // --------------------------------------------------------
+  // lifecycle wrappers (thin; defer to workers)
+  // --------------------------------------------------------
+  init() {
+    doInit(this);
+  }, // end init
+
+  update(params) {
+    doUpdate(this, params);
+  }, // end update
+
+  draw() {
+    doDraw(this);
+  }, // end draw
+
+  // --------------------------------------------------------
+  // parameterControls compatibility
+  // --------------------------------------------------------
+  parameters: null,
+
+  onParamChange() {
+    // required by some parameterControls flows
+  }, // end onParamChange
+
+  redrawHandler() {
+    this.update(this.params);
+    this.draw();
+  } // end redrawHandler
+
+}; // end scriptInfo
+
+
+/* ============================================================
+   runPattern(ctx)
+============================================================ */
+export function runPattern(_ctx) {
+
+  if (!window.ctx) throw new Error("nautilus: window.ctx missing");
+
+  scriptInfo.parameters = scriptInfo.params;
+
+  scriptInfo.init();
+
+  buildParameterControls(
+    scriptInfo,
+    "tab-scripts",
+    true
+  );
+
+  scriptInfo.redrawHandler();
+
+} // end runPattern
+
+
+/* ============================================================
+   Worker: doInit(info)
+============================================================ */
+function doInit(info) {
+
+  if (!info) throw new Error("doInit: info missing");
+  if (!info.params) throw new Error("doInit: info.params missing");
+
+  const p = info.params;
+
+  info.elements = {
+    element: {
+      introText: p.introText,
+      tipText:   p.tipText,
+
+      points: p.points,
+      turns:  p.turns,
+      b:      p.b,
+      skip:   p.skip,
+      alpha:  p.alpha
+    }
+  };
+
+} // end doInit
+
+
+/* ============================================================
+   Worker: doUpdate(info, params)
+============================================================ */
+function doUpdate(info, params) {
+
+  if (!info) throw new Error("doUpdate: info missing");
+  if (!info.elements || !info.elements.element) throw new Error("doUpdate: info.elements.element missing");
+  if (!params) throw new Error("doUpdate: params missing");
+
+  const e = info.elements.element;
+
+  e.introText = params.introText;
+  e.tipText   = params.tipText;
+
+  e.points = parseInt(params.points, 10);
+  e.turns  = parseInt(params.turns, 10);
+  e.b      = parseFloat(params.b);
+  e.skip   = parseInt(params.skip, 10);
+  e.alpha  = parseFloat(params.alpha);
+
+  if (e.points < 64) e.points = 64;
+  if (e.turns  < 1)  e.turns  = 1;
+  if (e.skip   < 1)  e.skip   = 1;
+
+  if (e.b < 0.05) e.b = 0.05;
+  if (e.alpha < 0.01) e.alpha = 0.01;
+
+} // end doUpdate
+
+
+/* ============================================================
+   Worker: doDraw(info)
+============================================================ */
+function doDraw(info) {
+
+  if (!info) throw new Error("doDraw: info missing");
+  if (!info.elements || !info.elements.element) throw new Error("doDraw: info.elements.element missing");
+
+  drawNautilus(info.elements.element);
+
+} // end doDraw
+
+
+/* ============================================================
+   Math / drawing helpers (original code, unchanged)
+============================================================ */
 
 /* ------------------------------------------------------------
    lerp(a, b, t)
@@ -257,190 +497,3 @@ function drawNautilus(thing) {
   ctx.stroke();
 
 } // end drawNautilus
-
-
-/* ------------------------------------------------------------
-   init()
------------------------------------------------------------- */
-function init() {
-
-  const p = scriptInfo.params;
-
-  scriptInfo.elements = {
-    element: {
-      introText: p.introText,
-      tipText:   p.tipText,
-
-      points: p.points,
-      turns:  p.turns,
-      b:      p.b,
-      skip:   p.skip,
-      alpha:  p.alpha
-    }
-  };
-
-} // end init
-
-
-/* ------------------------------------------------------------
-   update(params)
------------------------------------------------------------- */
-function update(params) {
-
-  const e = scriptInfo.elements.element;
-
-  e.introText = params.introText;
-  e.tipText   = params.tipText;
-
-  e.points = parseInt(params.points, 10);
-  e.turns  = parseInt(params.turns, 10);
-  e.b      = parseFloat(params.b);
-  e.skip   = parseInt(params.skip, 10);
-  e.alpha  = parseFloat(params.alpha);
-
-  if (e.points < 64) e.points = 64;
-  if (e.turns  < 1)  e.turns  = 1;
-  if (e.skip   < 1)  e.skip   = 1;
-
-  if (e.b < 0.05) e.b = 0.05;
-  if (e.alpha < 0.01) e.alpha = 0.01;
-
-} // end update
-
-
-/* ------------------------------------------------------------
-   draw()
------------------------------------------------------------- */
-function draw() {
-  drawNautilus(scriptInfo.elements.element);
-} // end draw
-
-
-/* ------------------------------------------------------------
-   scriptInfo
------------------------------------------------------------- */
-export const scriptInfo = {
-
-  title: "Nautilus — Curve Stitching",
-
-  controls: {
-
-    introText: {
-      widget: "staticText",
-      getText: function (info) {
-        return info.params.introText;
-      }
-    }, // end introText
-
-    points: {
-      label: "Points",
-      widget: "rangeHeader",
-      min: 64,
-      max: 3000,
-      step: 1,
-      default: 600
-    }, // end points
-
-    turns: {
-      label: "Turns (θ max / 2π)",
-      widget: "rangeHeader",
-      min: 1,
-      max: 20,
-      step: 1,
-      default: 6
-    }, // end turns
-
-    b: {
-      label: "Spiral tightness (b)",
-      widget: "rangeHeader",
-      min: 0.05,
-      max: 0.8,
-      step: 0.01,
-      default: 0.20
-    }, // end b
-
-    skip: {
-      label: "Chord skip (connect i → i + skip)",
-      widget: "rangeHeader",
-      min: 1,
-      max: 200,
-      step: 1,
-      default: 10
-    }, // end skip
-
-    alpha: {
-      label: "Stroke opacity",
-      widget: "rangeHeader",
-      min: 0.01,
-      max: 0.5,
-      step: 0.01,
-      default: 0.12
-    }, // end alpha
-
-    exportPng: {
-      label: "Export PNG",
-      widget: "button",
-      action: function () {
-        exportCanvasPng("nautilus");
-      }
-    }, // end exportPng
-
-    tipText: {
-      widget: "staticText",
-      getText: function (info) {
-        return info.params.tipText;
-      }
-    } // end tipText
-
-  }, // end controls
-
-  params: {
-    introText: NAUTILUS_INTRO_TEXT,
-    tipText:   NAUTILUS_TIP_TEXT,
-
-    points: 600,
-    turns:  6,
-    b:      0.20,
-    skip:   10,
-    alpha:  0.12
-  }, // end params
-
-  elements: null,
-
-  init,
-  update,
-  draw,
-
-  // parameterControls compatibility
-  parameters: null,
-
-  onParamChange() {
-    // required by some parameterControls flows
-  }, // end onParamChange
-
-  redrawHandler() {
-    this.update(this.params);
-    this.draw();
-  } // end redrawHandler
-
-}; // end scriptInfo
-
-
-/* ------------------------------------------------------------
-   runPattern(ctx)
------------------------------------------------------------- */
-export function runPattern(_ctx) {
-
-  scriptInfo.parameters = scriptInfo.params;
-
-  scriptInfo.init();
-
-  buildParameterControls(
-    scriptInfo,
-    "tab-scripts",
-    true
-  );
-
-  scriptInfo.redrawHandler();
-
-} // end runPattern

@@ -10,6 +10,7 @@
 */
 import { nodeRebuildAndValidateManifests } from "./nodeLayer.js";
 import { getPatternsCaptionMenuItems } from "./patternsMenuCmds.js";
+import { openHelpHomeOverlay } from "./help.js";
 
 import { renderCategories }     from "./categories.js";
 import { setCaptionBar }        from "./caption.js";
@@ -299,6 +300,10 @@ function updatePatternsCaption(category, item, helpKey) {
     onPrev: () => onPrev(),
     onNext: () => onNext(),
 
+    // Patterns renders into the sketchpad region (canvas).
+    // So the Next/Prev click-zone overlay must be anchored there.
+    overlayTargetId: "sketchpad-wrapper",
+
     onMenu: async (anchor) => {
 
       const info = {
@@ -326,6 +331,7 @@ function updatePatternsCaption(category, item, helpKey) {
   });
 
 } // end updatePatternsCaption
+
 
 
 
@@ -639,12 +645,19 @@ function buildPatternsOffcanvasHtml() {
       </button>
     </div>
 
+    <div class="cmdButtonRow">
+      <button id="patternsHelpButton" class="cmdButton" type="button">
+        Help
+      </button>
+    </div>
+
     <div class="buttonSeparator"></div>
 
     <div id="patternsRebuildReport" class="patternsRebuildReport"></div>
   `;
 
 } // end buildPatternsOffcanvasHtml
+
 
 function formatRebuildReport(report) {
 
@@ -739,12 +752,34 @@ export function wirePatternsCommandsButton() {
 
         }); // end click
 
+        const helpBtn = document.getElementById("patternsHelpButton");
+        if (!helpBtn) throw new Error("wirePatternsCommandsButton: patternsHelpButton missing");
+
+        helpBtn.addEventListener("click", () => {
+
+          // Close/dismiss the Commands offcanvas
+          const panel = document.getElementById("offcanvasPanel");
+          if (!panel) throw new Error("wirePatternsCommandsButton: #offcanvasPanel missing");
+
+          if (!window.bootstrap || !window.bootstrap.Offcanvas) {
+            throw new Error("wirePatternsCommandsButton: bootstrap.Offcanvas not available");
+          }
+
+          const oc = window.bootstrap.Offcanvas.getOrCreateInstance(panel);
+          oc.hide();
+
+          // Open Help overlay (startup page)
+          openHelpHomeOverlay();
+
+        }); // end click
+
       } // end buildBody
     });
 
   });
 
 } // end wirePatternsCommandsButton
+
 
 
 // end patterns.js

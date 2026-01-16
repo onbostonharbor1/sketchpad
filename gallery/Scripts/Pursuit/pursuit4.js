@@ -45,6 +45,25 @@ look
 
 import { buildParameterControls } from "/ui/parameterControls.js";
 
+let ctx = null;
+
+
+/* ------------------------------------------------------------
+   clearCanvasFull()
+------------------------------------------------------------ */
+function clearCanvasFull() {
+
+  const w = ctx.canvas.width;
+  const h = ctx.canvas.height;
+
+  ctx.save();
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
+  ctx.clearRect(0, 0, w, h);
+  ctx.restore();
+
+} // end clearCanvasFull
+
+
 /* ------------------------------------------------------------
    drawPursuit(thing)
 ------------------------------------------------------------ */
@@ -74,11 +93,7 @@ function drawPursuit(thing) {
 
   const R = w * 0.38;
 
-  // clear canvas
-  ctx.save();
-  ctx.setTransform(1, 0, 0, 1, 0, 0);
-  ctx.clearRect(0, 0, w, h);
-  ctx.restore();
+  clearCanvasFull();
 
   // background
   ctx.fillStyle = "white";
@@ -88,7 +103,9 @@ function drawPursuit(thing) {
   ctx.strokeStyle = "blue";
 
   function vertex(i) {
+
     const theta = (2 * Math.PI * i) / sides - Math.PI / 2; // start at top
+
     let x = cx + R * Math.cos(theta);
     let y = cy + R * Math.sin(theta);
 
@@ -96,6 +113,7 @@ function drawPursuit(thing) {
     if (reflectY) y = h - y;
 
     return { x, y };
+
   } // end vertex
 
   const verts = [];
@@ -105,12 +123,14 @@ function drawPursuit(thing) {
 
   // pursuit stitching
   for (let i = 0; i < sides; i++) {
+
     const v1 = verts[i];
     const v2 = verts[(i + 1) % sides];
     const v3 = verts[(i + 2) % sides];
     const v4 = verts[(i + 3) % sides];
 
     for (let j = 0; j <= steps; j++) {
+
       const t = j / steps;
 
       const x1 = v1.x + (v2.x - v1.x) * t;
@@ -123,6 +143,7 @@ function drawPursuit(thing) {
       ctx.moveTo(x1, y1);
       ctx.lineTo(x2, y2);
       ctx.stroke();
+
     }
   }
 
@@ -133,6 +154,7 @@ function drawPursuit(thing) {
    init()
 ------------------------------------------------------------ */
 function init() {
+
   const p = scriptInfo.params;
 
   scriptInfo.elements = {
@@ -143,6 +165,7 @@ function init() {
       reflectY: p.reflectY
     }
   };
+
 } // end init
 
 
@@ -150,13 +173,23 @@ function init() {
    update(params)
 ------------------------------------------------------------ */
 function update(params) {
+
   const t = scriptInfo.elements.thing;
 
+  // preserve existing pattern: shallow copy from params to elements
   for (const key in scriptInfo.params) {
     const value = params[key];
     if (value === undefined) continue;
     t[key] = value;
   }
+
+  // normalize numeric fields (range may deliver numbers or strings)
+  t.SIDES = parseInt(t.SIDES, 10);
+  t.STEPS = parseInt(t.STEPS, 10);
+
+  if (t.SIDES < 3) t.SIDES = 3;
+  if (t.STEPS < 1) t.STEPS = 1;
+
 } // end update
 
 
@@ -172,21 +205,22 @@ function draw() {
    scriptInfo (ParameterControls contract)
 ------------------------------------------------------------ */
 export const scriptInfo = {
+
   title: "Pursuit Polygon Curve Stitch",
 
   controls: {
-    SIDES:    { label: "Sides", widget: "range", min: 3,  max: 16, step: 1, default: 6 },
-    STEPS:    { label: "Steps", widget: "range", min: 1,  max: 200, step: 1, default: 40 },
+    SIDES:    { label: "Sides",    widget: "range",     min: 3,  max: 16,  step: 1, default: 6 },
+    STEPS:    { label: "Steps",    widget: "range",     min: 1,  max: 200, step: 1, default: 40 },
     reflectX: { label: "Reflect X", widget: "checkbox", default: false },
     reflectY: { label: "Reflect Y", widget: "checkbox", default: false }
-  },
+  }, // end controls
 
   params: {
     SIDES: 6,
     STEPS: 40,
     reflectX: false,
     reflectY: false
-  },
+  }, // end params
 
   elements: null,
 
@@ -212,6 +246,9 @@ export const scriptInfo = {
    runPattern() — Gallery entry point
 ------------------------------------------------------------ */
 export function runPattern(_ctx) {
+
+  ctx = _ctx || window.ctx;
+  if (!ctx) throw new Error("pursuitPolygon.runPattern: no ctx provided and window.ctx is null");
 
   scriptInfo.parameters = scriptInfo.params;
 

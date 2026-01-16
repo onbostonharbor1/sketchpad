@@ -22,6 +22,7 @@
 
 import { menuManager } from "./menuManager.js";
 import { getHomeCaptionMenuItems } from "./homeMenuCmds.js";
+import { openHelpHomeOverlay } from "./help.js";
 
 import { uiState } from "./uiState.js";
 import { clearDivs, setCommandsButtonLabel } from "./ui_utilities.js";
@@ -475,15 +476,19 @@ function setHomeCaption(titleText) {
 
 /* ------------------------------------------------------------
    setHomeCaptionForResult(entry)
-   Arguments:
-     - entry (object): selected home manifest entry
    ------------------------------------------------------------
    Role:
      - Builds caption bar for Results:
          - Title from entry.title/entry.file
-         - Menu items from getHomeCaptionMenuItems(entry)
+         - Menu items from getHomeCaptionMenuItems(bundle)
      - Injects full rooted path into "#caption .caption-buttons"
        immediately before the menu button.
+
+   IMPORTANT FIX:
+     - Do NOT capture bundle in a closure.
+     - Build bundle fresh inside onMenu so "Edit Manifest"
+       always sees the current status/title without requiring
+       a tab switch or caption rebuild.
 ------------------------------------------------------------ */
 function setHomeCaptionForResult(entry) {
 
@@ -500,43 +505,49 @@ function setHomeCaptionForResult(entry) {
     throw new Error("setHomeCaptionForResult: entry.path missing");
   }
 
-  // Build a single “context bundle” (Patterns-style) to hand off to homeMenuCmds.js.
-  // Home’s manifest is flat: /home/manifest.json.
-  // Entry identity should be resolvable from this bundle (typically by entry.path).
-  const ctxBundle = {
-    tabName: "home",
-
-    // Manifest identity
-    manifestPath: "/home/manifest.json",
-
-    // Entry identity (pick ONE stable key; path is usually best)
-    entryPath: fullPath,
-
-    // Convenience fields for UI/editor defaults
-    title: entry.title || "",
-    file: entry.file || "",
-    status: (typeof entry.status === "string") ? entry.status : "",
-
-    // For menu enable/disable + “Show Script” / Help decisions
-    isScript: isJsPath(fullPath),
-    scriptPath: isJsPath(fullPath) ? fullPath : null,
-
-    // Optional: if you later add Home help items
-    helpKey: null
-  };
-
   // Build the caption bar FIRST (this creates caption-buttons + menu button)
   setCaptionBar({
     targetId: "caption",
     title: title,
+
     onMenu: async (anchor) => {
 
-      // homeMenuCmds.js owns the menu list and dispatch targets.
-      // It should include (at least):
-      //   - Edit Manifest  → edits title + status ("" = none)
-      //   - Show Script    → enabled only when ctxBundle.isScript is true
-      //   - Help           → optional later
-      const items = await getHomeCaptionMenuItems(ctxBundle);
+      // ------------------------------------------------------
+      // Build bundle FRESH every time the menu opens.
+      // This prevents stale status/title when Results stays up.
+      // ------------------------------------------------------
+      ensureHomeSavedState();
+
+      const active = uiState.home.saved.activeEntry;
+      if (!active) throw new Error("Home caption menu: activeEntry missing");
+
+      const activePath = active.path;
+      if (typeof activePath !== "string" || !activePath.length) {
+        throw new Error("Home caption menu: activeEntry.path missing");
+      }
+
+      const bundle = {
+        tabName: "home",
+
+        // Manifest identity
+        manifestPath: "/home/manifest.json",
+
+        // Entry identity
+        entryPath: activePath,
+
+        // Convenience fields for UI/editor defaults (CURRENT VALUES)
+        title: active.title || "",
+        file:  active.file  || "",
+        status: (typeof active.status === "string") ? active.status : "",
+
+        // Script detection
+        isScript: isJsPath(activePath),
+        scriptPath: isJsPath(activePath) ? activePath : null,
+
+        helpKey: null
+      };
+
+      const items = await getHomeCaptionMenuItems(bundle);
       menuManager.open(items, anchor);
 
     } // end onMenu
@@ -567,6 +578,7 @@ function setHomeCaptionForResult(entry) {
   btnBar.insertBefore(span, menuBtn);
 
 } // end setHomeCaptionForResult
+
 
 
 
@@ -800,10 +812,75 @@ export async function refreshHomeCategoriesFromManifestEdit() {
   homeManifestData    = null;
   homeManifestGrouped = null;
 
-  // Bust browser cache and rebuild homeManifestGrouped.
+  // Bust browser cache and rebuild homeManifestGrouped + homeManifestData
   await loadHomeManifest_async(true);
 
+  // ----------------------------------------------------------
+  // Desired behavior:
+  //   - If status changed (non-empty -> non-empty): stay in Results.
+  //   - If status cleared OR entry removed from /home/manifest.json:
+  //       exit Results and go back to Categories.
+  //   - ALSO: keep uiState.home.saved.activeEntry in sync with
+  //       the refreshed manifest so the next Edit dialog seeds
+  //       the correct values.
+  // ----------------------------------------------------------
+  ensureHomeSavedState();
+
+  // If we are not in Results, nothing else to do.
+  if (uiState.home.saved.view !== HOME_VIEW_RESULTS) return;
+
+  const active = uiState.home.saved.activeEntry;
+  if (!active) return;
+
+  const entryPath = active.path;
+  if (!entryPath) throw new Error("refreshHomeCategoriesFromManifestEdit: activeEntry.path missing");
+
+  // Find the entry in the freshly reloaded manifest array.
+  const match = homeManifestData.find((e) => {
+    return e && e.path === entryPath;
+  });
+
+  // Case 1: Entry was removed from manifest (correct behavior for cleared status).
+  if (!match) {
+
+    uiState.home.saved.view         = HOME_VIEW_CATEGORIES;
+    uiState.home.saved.activeStatus = null;
+    uiState.home.saved.activeIndex  = null;
+    uiState.home.saved.activeEntry  = null;
+
+    await switchHomeView(HOME_VIEW_CATEGORIES);
+    return;
+  }
+
+  // Case 2: Entry still exists, but status was cleared (browser-side "skip" rule).
+  const status = match.status;
+
+  if (typeof status !== "string" || status.trim() === "") {
+
+    uiState.home.saved.view         = HOME_VIEW_CATEGORIES;
+    uiState.home.saved.activeStatus = null;
+    uiState.home.saved.activeIndex  = null;
+    uiState.home.saved.activeEntry  = null;
+
+    await switchHomeView(HOME_VIEW_CATEGORIES);
+    return;
+  }
+
+  // Case 3: Status changed but is still non-empty.
+  // Requirement: stay in Results and do NOT redraw — but DO sync the saved entry
+  // so subsequent Edit Manifest shows the correct current values.
+  if (typeof match.title === "string") active.title = match.title;
+  if (typeof match.file  === "string") active.file  = match.file;
+  active.status = String(match.status);
+
+  // Keep activeStatus consistent with the entry’s current status (used by UI state).
+  uiState.home.saved.activeStatus = active.status;
+
+  return;
+
 } // end refreshHomeCategoriesFromManifestEdit
+
+
 
 
 /* ------------------------------------------------------------
@@ -815,6 +892,16 @@ export async function refreshHomeCategoriesFromManifestEdit() {
      - Validates entries are objects and have required "status".
      - Returns map: { statusKey: [entry, ...], ... }.
 ------------------------------------------------------------ */
+/* ------------------------------------------------------------
+   groupHomeEntriesByStatus(list)
+   Arguments:
+     - list (array): flat manifest array
+   ------------------------------------------------------------
+   Role:
+     - Validates entries are objects.
+     - SKIPS entries with missing/blank "status".
+     - Returns map: { statusKey: [entry, ...], ... }.
+------------------------------------------------------------ */
 function groupHomeEntriesByStatus(list) {
   const grouped = {};
 
@@ -824,9 +911,15 @@ function groupHomeEntriesByStatus(list) {
     }
 
     const status = entry.status;
-    if (!status) {
-      throw new Error("Home manifest entry is missing required 'status'");
-    }
+
+    // --------------------------------------------------------
+    // IMPORTANT RULE:
+    // If status is missing or "", the item is NOT ACTIVE
+    // and must NOT appear in Home.
+    // We skip it (do not throw).
+    // --------------------------------------------------------
+    if (typeof status !== "string") return;
+    if (status.trim() === "") return;
 
     if (!grouped[status]) grouped[status] = [];
     grouped[status].push(entry);
@@ -834,6 +927,7 @@ function groupHomeEntriesByStatus(list) {
 
   return grouped;
 } // end groupHomeEntriesByStatus
+
 
 
 /* ------------------------------------------------------------
@@ -1168,12 +1262,19 @@ function buildHomeOffcanvasHtml() {
       </button>
     </div>
 
+    <div class="cmdButtonRow">
+      <button id="homeHelpButton" class="cmdButton" type="button">
+        Help
+      </button>
+    </div>
+
     <div class="buttonSeparator"></div>
 
     <div id="homeRebuildReport" class="homeRebuildReport"></div>
   `;
 
 } // end buildHomeOffcanvasHtml
+
 
 
 /* ------------------------------------------------------------
@@ -1238,13 +1339,14 @@ function formatRebuildReport(report) {
 
 /* ------------------------------------------------------------
    wireHomeCommandsButton()
-   Arguments:
+  Ắruments:
      - None
    ------------------------------------------------------------
    Role:
      - Wires the global Commands button to open the Home Maintenance offcanvas.
      - Runs rebuild/validate; clears manifest caches; forces Home manifest reload;
        updates report text.
+     - Adds Help button (same behavior as Utilities)
 ------------------------------------------------------------ */
 export function wireHomeCommandsButton() {
 
@@ -1289,12 +1391,34 @@ export function wireHomeCommandsButton() {
 
         }); // end click
 
+        const helpBtn = document.getElementById("homeHelpButton");
+        if (!helpBtn) throw new Error("wireHomeCommandsButton: #homeHelpButton missing");
+
+        helpBtn.addEventListener("click", () => {
+
+          // Close/dismiss the Commands offcanvas
+          const panel = document.getElementById("offcanvasPanel");
+          if (!panel) throw new Error("wireHomeCommandsButton: #offcanvasPanel missing");
+
+          if (!window.bootstrap || !window.bootstrap.Offcanvas) {
+            throw new Error("wireHomeCommandsButton: bootstrap.Offcanvas not available");
+          }
+
+          const oc = window.bootstrap.Offcanvas.getOrCreateInstance(panel);
+          oc.hide();
+
+          // Open Help overlay (startup page)
+          openHelpHomeOverlay();
+
+        }); // end click
+
       } // end buildBody
     });
 
   });
 
 } // end wireHomeCommandsButton
+
 
 
 /* ============================================================

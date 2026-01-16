@@ -1,0 +1,410 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Help Treatise — menuManager.js (Caption Menu Manager + Help Menu Item Builder)</title>
+
+  <link rel="stylesheet" href="/help/help_treatise.css" />
+</head>
+
+<body>
+
+  <h1>menuManager.js — Caption Menu Manager and Help-Item Builder</h1>
+
+  <p>
+    This page is intentionally “raw help HTML”: it is written as a single self-contained page
+    so you can drop it into your help system as-is, and/or split it later into smaller pages.
+    The discussion is based on one file:
+  </p>
+
+  <ul>
+    <li><span class="mono">ui/menuManager.js</span></li>
+  </ul>
+
+  <div class="note">
+    <b>Scope of this treatise</b><br/>
+    1) What <span class="mono">menuManager</span> is for (and what it is NOT for).<br/>
+    2) The life cycle: lazy init, open, close, outside-click dismissal, Escape dismissal.<br/>
+    3) How menu items are validated and rendered.<br/>
+    4) The special helper <span class="mono">buildHelpItem(tabName, helpKey)</span> and how it integrates with the help manifest.
+  </div>
+
+
+  <h2>1. What this file is in the Sketchpad architecture</h2>
+
+  <p>
+    <span class="mono">menuManager.js</span> provides a small, reusable “caption dropdown menu” system:
+  </p>
+
+  <ul>
+    <li>Build and show a menu (a floating DOM panel) anchored to a specific UI element.</li>
+    <li>Render a list of menu items (label + click handler), with optional disabled items.</li>
+    <li>Dismiss the menu deterministically on outside click or Escape.</li>
+    <li>Support a “Help” menu item that is enabled/disabled based on the help manifest.</li>
+  </ul>
+
+  <div class="ok">
+    <b>Boundary rule</b><br/>
+    <span class="mono">menuManager</span> is a UI utility. It is NOT a tab controller.<br/>
+    It does not decide what commands a tab should have; it only displays the menu that a tab provides.
+  </div>
+
+
+  <h2>2. Core design: non-IIFE + lazy-init</h2>
+
+  <p>
+    This file is explicitly designed to be “lazy-init capable”.
+    It has a module-level <span class="mono">ready</span> flag and requires an explicit initialization call:
+  </p>
+
+  <pre><code>export function initMenuManager() {
+  ready = true;
+}</code></pre>
+
+  <p>
+    Any attempt to open a menu before initialization triggers a fail-fast error:
+  </p>
+
+  <pre><code>menuManager: not initialized (call initMenuManager first)</code></pre>
+
+  <div class="note">
+    <b>Why this matters</b><br/>
+    In a modular UI, you often want a predictable startup sequence:
+    initialize shared UI utilities first, then allow tabs to use them.
+    The <span class="mono">ready</span> flag enforces that contract.
+  </div>
+
+
+  <h2>3. Public API surface</h2>
+
+  <p>
+    The module exports two things:
+  </p>
+
+  <ul>
+    <li><span class="mono">initMenuManager()</span> (explicit one-time initialization)</li>
+    <li><span class="mono">menuManager</span> object with methods:
+      <span class="mono">open</span>, <span class="mono">close</span>, <span class="mono">clear</span>,
+      <span class="mono">createMenuItem</span>, <span class="mono">buildHelpItem</span>,
+      and <span class="mono">isReady()</span>.
+    </li>
+  </ul>
+
+  <p>
+    Everything else in the file is private helper functionality used to implement those exports.
+  </p>
+
+
+  <h2>4. Internal state (module-private)</h2>
+
+  <p>
+    The menu is managed as a single instance at a time. The file keeps these module-private variables:
+  </p>
+
+  <ul>
+    <li><span class="mono">menuEl</span> — the DOM element for the currently open menu (or null)</li>
+    <li><span class="mono">outsideHandler</span> — the document mousedown handler used to detect outside clicks</li>
+    <li><span class="mono">escHandler</span> — the document keydown handler used to detect Escape</li>
+    <li><span class="mono">ready</span> — whether initialization has occurred</li>
+  </ul>
+
+  <div class="ok">
+    <b>Single-menu invariant</b><br/>
+    Calling <span class="mono">open</span> always closes any existing menu first.
+    This guarantees only one menu exists in the DOM at a time.
+  </div>
+
+
+  <h2>5. Creating and validating menu items</h2>
+
+  <h3>5.1 createMenuItem(label, onClick, disabled=false)</h3>
+
+  <p>
+    <span class="mono">createMenuItem</span> is a convenience constructor that produces the standard item shape:
+  </p>
+
+  <pre><code>{ label, onClick, disabled }</code></pre>
+
+  <p>
+    It enforces that <span class="mono">label</span> is a string (fail-fast).
+  </p>
+
+  <div class="note">
+    <b>Intent</b><br/>
+    Tabs can build menus using a consistent item format without duplicating object literal boilerplate.
+  </div>
+
+
+  <h3>5.2 validateItems(items)</h3>
+
+  <p>
+    Before rendering, the menu validates the item list:
+  </p>
+
+  <ul>
+    <li><span class="mono">items</span> must be an array.</li>
+    <li>Each item must exist and have a <span class="mono">label</span> string.</li>
+    <li>If the item is NOT disabled, it must have an <span class="mono">onClick</span> function.</li>
+  </ul>
+
+  <div class="warn">
+    <b>Fail-fast behavior</b><br/>
+    If a tab provides malformed items, <span class="mono">open</span> throws immediately, rather than silently rendering a broken menu.
+  </div>
+
+  <p>
+    This is consistent with your overall Sketchpad design preference:
+    missing wiring should crash loudly so you can fix it.
+  </p>
+
+
+  <h2>6. Rendering and positioning: open(items, anchor)</h2>
+
+  <p>
+    <span class="mono">open</span> is the workhorse. It requires:
+  </p>
+
+  <ul>
+    <li><span class="mono">items</span> — array of validated menu item objects</li>
+    <li><span class="mono">anchor</span> — a real DOM element (<span class="mono">HTMLElement</span>) that the menu is positioned under</li>
+  </ul>
+
+  <h3>6.1 High-level open sequence (exact)</h3>
+
+  <ol>
+    <li>Ensure <span class="mono">ready</span> (must call <span class="mono">initMenuManager</span> first).</li>
+    <li>Validate <span class="mono">items</span> is an array and <span class="mono">anchor</span> is a DOM element.</li>
+    <li>Validate item structure via <span class="mono">validateItems</span>.</li>
+    <li>Close any existing menu (<span class="mono">close()</span>).</li>
+    <li>Create <span class="mono">menuEl</span> (a <span class="mono">&lt;div&gt;</span> with class <span class="mono">caption-menu</span>).</li>
+    <li>For each item, create a <span class="mono">caption-menu-item</span> div:
+      <ul>
+        <li>Set text to label.</li>
+        <li>If disabled, add <span class="mono">disabled</span> class and no click handler.</li>
+        <li>If enabled, attach click handler that closes then calls <span class="mono">item.onClick()</span>.</li>
+      </ul>
+    </li>
+    <li>Append the menu to <span class="mono">#wrapper</span>.</li>
+    <li>Position the menu under the anchor using <span class="mono">positionMenu(anchor, menuEl)</span>.</li>
+    <li>Install dismissal handlers:
+      <ul>
+        <li>Outside mousedown closes the menu.</li>
+        <li>Escape key closes the menu.</li>
+      </ul>
+    </li>
+  </ol>
+
+  <div class="note">
+    <b>Why append to #wrapper?</b><br/>
+    It keeps menus inside your main UI container so they inherit positioning assumptions and theme styles.
+    It also makes it easy to reason about z-index and overlay interactions.
+  </div>
+
+
+  <h3>6.2 positionMenu(anchor, menuEl)</h3>
+
+  <p>
+    The positioning strategy is simple and explicit:
+  </p>
+
+  <ul>
+    <li>Get the anchor’s viewport rect (<span class="mono">getBoundingClientRect()</span>).</li>
+    <li>Add scroll offsets (<span class="mono">pageXOffset</span>, <span class="mono">pageYOffset</span>).</li>
+    <li>Set absolute positioning so the menu appears directly under the anchor (with a 4px gap).</li>
+  </ul>
+
+  <div class="warn">
+    <b>Implication</b><br/>
+    The menu is “document-positioned” (absolute in page coordinates).
+    If you later change the layout so <span class="mono">#wrapper</span> becomes a positioned container
+    with its own coordinate system, the positioning rules may need revisiting.
+  </div>
+
+
+  <h2>7. Closing behavior: close() and clear()</h2>
+
+  <h3>7.1 close()</h3>
+
+  <p>
+    <span class="mono">close</span> is responsible for cleanup:
+  </p>
+
+  <ul>
+    <li>Remove <span class="mono">menuEl</span> from the DOM if present.</li>
+    <li>Clear <span class="mono">menuEl</span> reference to null.</li>
+    <li>Remove outside-click handler if installed.</li>
+    <li>Remove Escape handler if installed.</li>
+  </ul>
+
+  <div class="ok">
+    <b>No listener leaks</b><br/>
+    The close path always removes its document-level listeners, so menus do not accumulate handlers over time.
+  </div>
+
+  <h3>7.2 clear()</h3>
+
+  <p>
+    <span class="mono">clear()</span> is just an alias for <span class="mono">close()</span>.
+    It exists because some callers prefer the semantic “clear menus” phrasing.
+  </p>
+
+
+  <h2>8. The special helper: buildHelpItem(tabName, helpKey)</h2>
+
+  <p>
+    <span class="mono">buildHelpItem</span> is an async factory that builds a single menu item:
+  </p>
+
+  <ul>
+    <li>If help exists for the current context, return an enabled “Help” item that opens the overlay.</li>
+    <li>If help does NOT exist, return a disabled “Help” item.</li>
+  </ul>
+
+  <div class="ok">
+    <b>Key architectural point</b><br/>
+    Tabs can always include “Help” in their caption menu without duplicating existence checks.
+    <span class="mono">buildHelpItem</span> centralizes the “is this help available?” decision.
+  </div>
+
+
+  <h3>8.1 How it decides if help exists</h3>
+
+  <p>
+    The help system is driven by a separate help manifest that lists which help pages exist.
+    <span class="mono">buildHelpItem</span> loads that manifest via:
+  </p>
+
+  <pre><code>const helpData = await loadHelpManifest();   // cached, deterministic</code></pre>
+
+  <p>
+    It then reads the list for the tab:
+  </p>
+
+  <pre><code>const list = helpData[tabName];</code></pre>
+
+  <p>
+    If that is not an array, Help is disabled.
+    If it is an array but does not include <span class="mono">helpKey</span>, Help is disabled.
+  </p>
+
+  <div class="note">
+    <b>Important detail</b><br/>
+    This uses the help manifest as the authority, not filesystem probing.
+    That keeps the UI deterministic and avoids repeated HTTP probes.
+  </div>
+
+
+  <h3>8.2 The help path and overlay launch</h3>
+
+  <p>
+    If the help key exists, <span class="mono">buildHelpItem</span> constructs:
+  </p>
+
+  <pre><code>/help/&lt;tabName&gt;/&lt;helpKey&gt;.html</code></pre>
+
+  <p>
+    and returns an enabled menu item that calls:
+  </p>
+
+  <pre><code>showHelpOverlay(path, helpKey)</code></pre>
+
+  <p>
+    So:
+  </p>
+
+  <ul>
+    <li><span class="mono">menuManager</span> decides whether “Help” is enabled.</li>
+    <li><span class="mono">overlay.js</span> decides how help is displayed.</li>
+    <li><span class="mono">ui_utilities.js</span> provides the cached help manifest loader.</li>
+  </ul>
+
+  <div class="ok">
+    <b>Separation of concerns</b><br/>
+    This file does not render help content itself; it simply wires an action to open help.
+  </div>
+
+
+  <h2>9. What the imports imply (and what is currently unused)</h2>
+
+  <p>
+    The file imports:
+  </p>
+
+  <ul>
+    <li><span class="mono">showHelpOverlay</span> from <span class="mono">overlay.js</span></li>
+    <li><span class="mono">fileLayer</span> from <span class="mono">fileLayer.js</span></li>
+    <li><span class="mono">manifest</span> from <span class="mono">manifest.js</span></li>
+    <li><span class="mono">loadHelpManifest</span> from <span class="mono">ui_utilities.js</span></li>
+  </ul>
+
+  <div class="warn">
+    <b>Current code reality</b><br/>
+    In the code you pasted, <span class="mono">fileLayer</span> and <span class="mono">manifest</span> are imported but not used.
+    That is harmless at runtime but it is “noise” that can mislead a reader about dependencies.
+  </div>
+
+  <p>
+    Interpreting intent:
+  </p>
+
+  <ul>
+    <li><span class="mono">loadHelpManifest</span> is the true authority for help existence.</li>
+    <li><span class="mono">fileLayer</span> could be used for existence probing, but the manifest-driven model has replaced that need.</li>
+    <li><span class="mono">manifest</span> appears unnecessary here unless later menu items depend on content manifests.</li>
+  </ul>
+
+  <p>
+    If you keep the imports, it implies “this module might later expand to include manifest-driven items beyond Help”.
+    If you remove them, it clarifies the current boundary.
+  </p>
+
+
+  <h2>10. How tabs are expected to use menuManager</h2>
+
+  <p>
+    A typical pattern for a caption “menu” button is:
+  </p>
+
+  <ol>
+    <li>Tab builds an array of items (some enabled, some disabled).</li>
+    <li>Tab calls <span class="mono">menuManager.open(items, anchorElement)</span>.</li>
+    <li>The menu renders and manages its own dismissal and cleanup.</li>
+  </ol>
+
+  <p>
+    Items are usually created either as raw object literals or via:
+  </p>
+
+  <pre><code>menuManager.createMenuItem("Label", handler, disabled)</code></pre>
+
+  <p>
+    For help, the tab can do:
+  </p>
+
+  <pre><code>const helpItem = await menuManager.buildHelpItem(tabName, helpKey);</code></pre>
+
+  <p>
+    then include <span class="mono">helpItem</span> in the menu items list.
+  </p>
+
+
+  <h2>11. Summary checklist</h2>
+
+  <ul>
+    <li><b>menuManager</b> shows one floating caption menu at a time.</li>
+    <li><b>Lazy init</b>: <span class="mono">initMenuManager()</span> must be called before any <span class="mono">open</span>.</li>
+    <li><b>Fail-fast</b> item validation catches missing labels and missing click handlers for enabled items.</li>
+    <li><b>Deterministic dismissal</b>: outside click and Escape both close the menu and remove listeners.</li>
+    <li><b>buildHelpItem</b> enables/disables Help based on the cached help manifest and opens help via <span class="mono">showHelpOverlay</span>.</li>
+    <li><b>Imports</b>: in the current version, <span class="mono">fileLayer</span> and <span class="mono">manifest</span> are unused and may be removed for clarity.</li>
+  </ul>
+
+  <div class="hr"></div>
+
+  <p class="small">
+    End of treatise.
+  </p>
+
+</body>
+</html>
