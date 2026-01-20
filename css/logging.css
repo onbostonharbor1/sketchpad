@@ -1,0 +1,178 @@
+/* ui/panic.css
+   ------------------------------------------------------------
+   Panic UI styling (for ui/panic.js)
+   ------------------------------------------------------------ */
+
+#panicOverlay {
+  position: fixed;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
+  padding: 20px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  background: rgba(0, 0, 0, 0.92);
+  z-index: 999999;
+}
+
+#panicOverlay .panic-panel {
+  width: min(1000px, 95vw);
+  max-height: 90vh;
+
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+
+  padding: 16px;
+
+  background: #111;
+  border: 3px solid #f00;
+  border-radius: 10px;
+
+  box-shadow: 0 0 0 4px rgba(255, 0, 0, 0.25);
+}
+
+#panicOverlay .panic-title {
+  color: #fff;
+  font: 700 18px sans-serif;
+}
+
+#panicOverlay .panic-hint {
+  color: #ddd;
+  font: 13px sans-serif;
+}
+
+#panicOverlay .panic-textarea {
+  width: 100%;
+  height: 55vh;
+
+  resize: none;
+
+  background: #000;
+  color: #0f0;
+
+  border: 1px solid #444;
+  padding: 10px;
+
+  font: 12px/1.3 monospace;
+  white-space: pre;
+}
+
+#panicOverlay .panic-buttons {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+#panicOverlay .panic-buttons button {
+  font: 14px sans-serif;
+  padding: 6px 12px;
+  cursor: pointer;
+
+  background: #222;
+  color: #fff;
+  border: 1px solid #666;
+  border-radius: 6px;
+}
+
+#panicOverlay .panic-buttons button:hover {
+  background: #333;
+  border-color: #aaa;
+}
+
+#panicOverlay .panic-buttons button:active {
+  background: #111;
+}
+
+/* css/logging.css
+   ------------------------------------------------------------
+   Floating Debug Log Overlay (optional)
+   Harmless to include even if not activated.
+   ------------------------------------------------------------ */
+
+#debugLogOverlay {
+  position: fixed;
+  right: 12px;
+  bottom: 12px;
+  z-index: 999998;
+
+  width: 520px;
+  max-width: calc(100vw - 24px);
+
+  font: 12px/1.25 monospace;
+  color: #fff;
+
+  user-select: text;
+}
+
+#debugLogOverlay .debuglog-panel {
+  border: 2px solid #888;
+  border-radius: 10px;
+
+  background: rgba(0, 0, 0, 0.82);
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.45);
+  overflow: hidden;
+}
+
+#debugLogOverlay .debuglog-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+
+  padding: 8px 10px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+
+  background: rgba(30, 30, 30, 0.95);
+}
+
+#debugLogOverlay .debuglog-title {
+  font: 700 13px sans-serif;
+  color: #fff;
+}
+
+#debugLogOverlay .debuglog-controls {
+  display: flex;
+  gap: 8px;
+}
+
+#debugLogOverlay .debuglog-controls button {
+  padding: 4px 10px;
+
+  font: 12px sans-serif;
+  color: #fff;
+
+  background: rgba(60, 60, 60, 0.95);
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  border-radius: 8px;
+
+  cursor: pointer;
+}
+
+#debugLogOverlay .debuglog-controls button:hover {
+  background: rgba(85, 85, 85, 0.95);
+}
+
+#debugLogOverlay .debuglog-controls button:active {
+  background: rgba(40, 40, 40, 0.95);
+}
+
+#debugLogOverlay .debuglog-body {
+  max-height: 40vh;
+  overflow: auto;
+
+  padding: 8px 10px;
+  white-space: pre-wrap;
+}
+
+#debugLogOverlay .debuglog-line {
+  padding: 2px 0;
+  border-bottom: 1px dotted rgba(255, 255, 255, 0.08);
+}
+
+#debugLogOverlay .debuglog-line:last-child {
+  border-bottom: none;
+}

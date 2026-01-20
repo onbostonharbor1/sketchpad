@@ -33,7 +33,6 @@ import "./drawRegistry/parametrics.js";
 import "./drawRegistry/radiate.js";
 import "./drawRegistry/regularPolygon.js";
 import "./drawRegistry/bird.js";
-import "./drawRegistry/lissajous.js";
 import "./drawRegistry/nautilus.js";
 import "./drawRegistry/regularPursuit.js";
 
@@ -49,6 +48,7 @@ import "./ui/caption.js";
 import "./ui/categories.js";
 import "./ui/fileLayer.js";
 import "./ui/help.js";
+import "./ui/logging.js";
 import "./ui/manifest.js";
 import "./ui/menuCmds.js";
 import "./ui/menuManager.js";

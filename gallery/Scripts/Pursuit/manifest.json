@@ -40,5 +40,11 @@
     "filename": "pursuit",
     "path": "pursuit.js",
     "title": "Pusuit"
+  },
+  {
+    "filename": "pusuitSurface",
+    "path": "pusuitSurface.js",
+    "title": "pusuitSurface.js",
+    "status": "new"
   }
 ]

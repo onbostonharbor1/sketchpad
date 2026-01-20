@@ -8,5 +8,23 @@
     "filename": "ellipseDemo",
     "path": "ellipseDemo.js",
     "title": "Ellipse Demo"
+  },
+  {
+    "filename": "generativeModulated",
+    "path": "generativeModulated.js",
+    "title": "generativeModulated.js",
+    "status": "new"
+  },
+  {
+    "filename": "modulatdCircle2",
+    "path": "modulatdCircle2.js",
+    "title": "modulatdCircle2.js",
+    "status": "new"
+  },
+  {
+    "filename": "modulatedCircle",
+    "path": "modulatedCircle.js",
+    "title": "modulatedCircle.js",
+    "status": "new"
   }
 ]

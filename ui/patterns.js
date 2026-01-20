@@ -11,13 +11,12 @@
 import { nodeRebuildAndValidateManifests } from "./nodeLayer.js";
 import { getPatternsCaptionMenuItems } from "./patternsMenuCmds.js";
 import { openHelpHomeOverlay } from "./help.js";
-
+import { formatRebuildReportShared } from "./ui_utilities.js";
 import { renderCategories }     from "./categories.js";
 import { setCaptionBar }        from "./caption.js";
 import { menuManager }          from "./menuManager.js";
 
-import { loadScriptModule, executeScriptToCanvas }
-                                from "./scriptRunner.js";
+import { runScriptByPath } from "./scriptRunner.js";
 import {
   renderThumbnailGrid,
   buildCategoryDescriptor,
@@ -484,7 +483,6 @@ export function renderPatternThumbGrid(category) {
 } // end renderPatternThumbGrid
 
 
-
 /* ============================================================
    showSelectedPattern(category, index)
    ------------------------------------------------------------
@@ -501,11 +499,11 @@ async function showSelectedPattern(category, index) {
   };
 
   await ensurePatternsManifestLoaded();
-  const list = manifest.cache.patterns?.[category] || [];
+  const list = manifest.cache.patterns[category] || [];
   const item = list[index];
 
-  const textDiv  = document.getElementById("text");
-  const padDiv   = document.getElementById("sketchpad");
+  const textDiv   = document.getElementById("text");
+  const padDiv    = document.getElementById("sketchpad");
   const actionDiv = document.getElementById("action");
 
   if (!textDiv || !padDiv || !actionDiv) {
@@ -527,43 +525,34 @@ async function showSelectedPattern(category, index) {
   const scriptPath = `/patterns/${category}/${filename}.js`;
   const helpKey    = `${category}/${filename}`;
 
-  // Load and execute pattern script
-  let mod = null;
-
+  // REVISED (scriptRunner):
+  // Single unified call:
+  //   - loads module
+  //   - attaches canvas
+  //   - resets canvas
+  //   - runs runPattern() (compat: may pass ctx)
+  //   - builds parameterControls if scriptInfo exists
   try {
-    mod = await loadScriptModule(scriptPath);
-  } catch (err) {
-    padDiv.innerHTML =
-      `<p style='color:red'>Pattern load error: ${err.message}</p>`;
-    return;
-  }
-
-  // Attach shared canvas
-  if (!window.drawCanvas) {
-    throw new Error("showSelectedPattern: window.drawCanvas missing");
-  }
-
-  padDiv.appendChild(window.drawCanvas);
-
-  ctx.fillStyle = "#ffffff";
-  ctx.fillRect(0, 0, drawCanvas.width, drawCanvas.height);
-
-  try {
-    executeScriptToCanvas(mod, filename);
+    await runScriptByPath(scriptPath, "canvas", {
+      canvasRegionId: "sketchpad",
+      enableControls: true
+    });
   } catch (err) {
     padDiv.innerHTML =
       `<p style='color:red'>Pattern execute error: ${err.message}</p>`;
     return;
   }
 
-   renderPatternThumbGrid(category);
+  renderPatternThumbGrid(category);
 
-   // Caption bar: "{category}: {title}"
-  updatePatternsCaption(category, item, filename, helpKey, scriptPath);
+  // Caption bar: "{category}: {title}"
+  updatePatternsCaption(category, item, helpKey);
 
   // Ensure Pattern subtab active
   addPatternSubtab(category);
 } // end showSelectedPattern
+
+
 
 
 /* ============================================================
@@ -658,54 +647,8 @@ function buildPatternsOffcanvasHtml() {
 
 } // end buildPatternsOffcanvasHtml
 
-
-function formatRebuildReport(report) {
-
-  if (!report) throw new Error("formatRebuildReport: report missing");
-
-  if (report.request !== "manifestMaintenance") {
-    throw new Error("formatRebuildReport: unexpected request: " + String(report.request));
-  }
-
-  const lines = [];
-
-  lines.push("Log: " + (report.logName || "(none)"));
-  lines.push("");
-
-  const addedMap  = report.added  || {};
-  const brokenMap = report.broken || {};
-
-  const addedKeys  = Object.keys(addedMap).sort((a, b) => a.localeCompare(b));
-  const brokenKeys = Object.keys(brokenMap).sort((a, b) => a.localeCompare(b));
-
-  if (addedKeys.length) {
-    lines.push("ADDED (status=new):");
-    for (const group of addedKeys) {
-      lines.push("  " + group);
-      for (const item of (addedMap[group] || [])) {
-        lines.push("    • " + item);
-      }
-    }
-    lines.push("");
-  }
-
-  if (brokenKeys.length) {
-    lines.push("BROKEN (virtual home items):");
-    for (const group of brokenKeys) {
-      lines.push("  " + group);
-      for (const item of (brokenMap[group] || [])) {
-        lines.push("    • " + (item && item.path ? item.path : String(item)));
-      }
-    }
-    lines.push("");
-  }
-
-  if (!addedKeys.length && !brokenKeys.length) {
-    lines.push("No Added or Broken items.");
-  }
-
-  return lines.join("\n");
-
+export function formatRebuildReport(report) {
+  return formatRebuildReportShared(report);
 } // end formatRebuildReport
 
 export function wirePatternsCommandsButton() {

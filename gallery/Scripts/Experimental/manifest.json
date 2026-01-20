@@ -1,8 +1,9 @@
 [
   {
-    "filename": "voronoi",
-    "path": "voronoi.js",
-    "title": "Experimental Voronoi (placeholder)"
+    "filename": "concentricCircles",
+    "path": "concentricCircles.js",
+    "title": "concentricCircles.js",
+    "status": "new"
   },
   {
     "filename": "radialLinePetals",

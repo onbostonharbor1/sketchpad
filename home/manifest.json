@@ -1,14 +1,44 @@
 [
   {
-    "file": "changeColorRamp",
-    "path": "/utilities/Lab/Color/changeColorRamp.js",
-    "title": "changeColorRamp.js",
+    "file": "3Lobed",
+    "path": "/gallery/Scripts/General parametric/3Lobed.js",
+    "title": "3Lobed.js",
+    "status": "favorite"
+  },
+  {
+    "file": "bezierBlossom",
+    "path": "/gallery/Scripts/Unicorns/bezierBlossom.js",
+    "title": "Bezier Blossum",
+    "status": "favorite"
+  },
+  {
+    "file": "bird",
+    "path": "/gallery/Scripts/Unicorns/bird.js",
+    "title": "bird.js",
     "status": "new"
   },
   {
-    "file": "changeColorRampHslRgb",
-    "path": "/utilities/Lab/Color/changeColorRampHslRgb.js",
-    "title": "changeColorRampHslRgb.js",
+    "file": "bird2",
+    "path": "/gallery/Scripts/Unicorns/bird2.js",
+    "title": "bird2.js",
+    "status": "new"
+  },
+  {
+    "file": "boat",
+    "path": "/gallery/Scripts/Unicorns/boat.js",
+    "title": "boat.js",
+    "status": "new"
+  },
+  {
+    "file": "butterfly",
+    "path": "/gallery/Scripts/General parametric/butterfly.js",
+    "title": "butterfly.js",
+    "status": "new"
+  },
+  {
+    "file": "cardiodFromCircles",
+    "path": "/gallery/Scripts/Named parametric/cardiodFromCircles.js",
+    "title": "cardiodFromCircles.js",
     "status": "new"
   },
   {
@@ -16,6 +46,101 @@
     "path": "/patterns/builds/parabolasWithinCircles.js",
     "title": "Circular Parabola and Inner Star",
     "status": "bestfriend"
+  },
+  {
+    "file": "cochleoid",
+    "path": "/gallery/Scripts/Named parametric/cochleoid.js",
+    "title": "cochleoid.js",
+    "status": "new"
+  },
+  {
+    "file": "concentricCircles",
+    "path": "/gallery/Scripts/Experimental/concentricCircles.js",
+    "title": "concentricCircles.js",
+    "status": "new"
+  },
+  {
+    "file": "curveStitch",
+    "path": "/gallery/Scripts/Curve Stitch/curveStitch.js",
+    "title": "curveStitch.js",
+    "status": "new"
+  },
+  {
+    "file": "curveStitchEditor",
+    "path": "/gallery/Scripts/Unicorns/curveStitchEditor.js",
+    "title": "curveStitchEditor.js",
+    "status": "new"
+  },
+  {
+    "file": "cycloid0119_164221",
+    "path": "/gallery/Patterns/circles/cycloid0119_164221.png",
+    "title": "cycloid0119_164221.png",
+    "status": "new"
+  },
+  {
+    "file": "cycloidLike",
+    "path": "/gallery/Scripts/Envelopes/cycloidLike.js",
+    "title": "cycloidLike.js",
+    "status": "new"
+  },
+  {
+    "file": "epicycloid",
+    "path": "/gallery/Scripts/Named parametric/epicycloid.js",
+    "title": "epicycloid.js",
+    "status": "new"
+  },
+  {
+    "file": "epitrochoid",
+    "path": "/gallery/Scripts/Named parametric/epitrochoid.js",
+    "title": "Epitrochoid",
+    "status": "favorite"
+  },
+  {
+    "file": "epitrochoid_good",
+    "path": "/gallery/Scripts/Named parametric/epitrochoid_good.js",
+    "title": "epitrochoid_good.js",
+    "status": "new"
+  },
+  {
+    "file": "epitrochoid1",
+    "path": "/gallery/Scripts/Named parametric/epitrochoid1.js",
+    "title": "epitrochoid1.js",
+    "status": "new"
+  },
+  {
+    "file": "fourParabolicLike",
+    "path": "/gallery/Scripts/Multiple/fourParabolicLike.js",
+    "title": "fourParabolicLike.js",
+    "status": "new"
+  },
+  {
+    "file": "generativeModulated",
+    "path": "/gallery/Scripts/Elliptical/generativeModulated.js",
+    "title": "generativeModulated.js",
+    "status": "new"
+  },
+  {
+    "file": "golden",
+    "path": "/gallery/Scripts/Spiral/golden.js",
+    "title": "golden.js",
+    "status": "new"
+  },
+  {
+    "file": "hypocycloid",
+    "path": "/gallery/Scripts/Named parametric/hypocycloid.js",
+    "title": "hypocycloid.js",
+    "status": "favorite"
+  },
+  {
+    "file": "hypotrochoid",
+    "path": "/gallery/Scripts/Named parametric/hypotrochoid.js",
+    "title": "hypotrochoid.js",
+    "status": "favorite"
+  },
+  {
+    "file": "IMG_idea",
+    "path": "/gallery/Ideabook/ideas/IMG_idea.PNG",
+    "title": "IMG_idea.PNG"
   },
   {
     "file": "inverseStar.js",
@@ -40,12 +165,102 @@
     "registryKey": "linkedCircles"
   },
   {
+    "file": "lissajois1",
+    "path": "/gallery/Scripts/Named parametric/lissajois1.js",
+    "title": "lissajois1.js",
+    "status": "new"
+  },
+  {
+    "file": "lissajoius2",
+    "path": "/gallery/Scripts/Named parametric/lissajoius2.js",
+    "title": "lissajoius2.js",
+    "status": "new"
+  },
+  {
+    "file": "LISSAJOUS100",
+    "path": "/gallery/Scripts/Named parametric/LISSAJOUS100.js",
+    "title": "LISSAJOUS100.js",
+    "status": "favorite"
+  },
+  {
+    "file": "lissajous3",
+    "path": "/gallery/Scripts/Named parametric/lissajous3.js",
+    "title": "lissajous3.js",
+    "status": "new"
+  },
+  {
+    "file": "lissajous4",
+    "path": "/gallery/Scripts/Named parametric/lissajous4.js",
+    "title": "lissajous4.js",
+    "status": "new"
+  },
+  {
+    "file": "lissajous5",
+    "path": "/gallery/Scripts/Named parametric/lissajous5.js",
+    "title": "lissajous5.js",
+    "status": "new"
+  },
+  {
+    "file": "manyParametric",
+    "path": "/gallery/Scripts/Multiple/manyParametric.js",
+    "title": "manyParametric.js",
+    "status": "new"
+  },
+  {
+    "file": "modulatdCircle2",
+    "path": "/gallery/Scripts/Elliptical/modulatdCircle2.js",
+    "title": "modulatdCircle2.js",
+    "status": "new"
+  },
+  {
+    "file": "modulatedCircle",
+    "path": "/gallery/Scripts/Elliptical/modulatedCircle.js",
+    "title": "modulatedCircle.js",
+    "status": "new"
+  },
+  {
     "file": "mysticRoseEllipse.js",
     "path": "/drawRegistry/mysticRoseEllipse.js",
     "title": "Mystic Rose (ellipse)",
     "status": "new",
     "sourceType": "drawRegistry",
     "registryKey": "mysticRoseEllipse"
+  },
+  {
+    "file": "mysticRose0119_000827",
+    "path": "/gallery/Patterns/unicorns/mysticRose0119_000827.png",
+    "title": "mysticRose0119_000827.png",
+    "status": "new"
+  },
+  {
+    "file": "ovalBoat",
+    "path": "/gallery/Scripts/Curve Stitch/ovalBoat.js",
+    "title": "ovalBoat.js",
+    "status": "new"
+  },
+  {
+    "file": "parabolas",
+    "path": "/gallery/Scripts/Envelopes/parabolas.js",
+    "title": "parabolas.js",
+    "status": "new"
+  },
+  {
+    "file": "parametricSketcher",
+    "path": "/gallery/Scripts/Multiple/parametricSketcher.js",
+    "title": "parametricSketcher.js",
+    "status": "favorite"
+  },
+  {
+    "file": "playground",
+    "path": "/gallery/Scripts/Multiple/playground.js",
+    "title": "playground.js",
+    "status": "new"
+  },
+  {
+    "file": "polygonalSpiral",
+    "path": "/gallery/Scripts/Spiral/polygonalSpiral.js",
+    "title": "polygonalSpiral.js",
+    "status": "new"
   },
   {
     "file": "pureSpiral",
@@ -72,9 +287,69 @@
     "status": "new"
   },
   {
+    "file": "pusuitSurface",
+    "path": "/gallery/Scripts/Pursuit/pusuitSurface.js",
+    "title": "pusuitSurface.js",
+    "status": "new"
+  },
+  {
     "file": "radialLinePetals",
     "path": "/gallery/Scripts/Experimental/radialLinePetals.js",
     "title": "radialLinePetals.js",
+    "status": "new"
+  },
+  {
+    "file": "radialPetals",
+    "path": "/gallery/Scripts/Unicorns/radialPetals.js",
+    "title": "radialPetals.js",
+    "status": "new"
+  },
+  {
+    "file": "ribbon1",
+    "path": "/gallery/Scripts/Unicorns/ribbon1.js",
+    "title": "ribbon1.js",
+    "status": "new"
+  },
+  {
+    "file": "ribbon2",
+    "path": "/gallery/Scripts/Unicorns/ribbon2.js",
+    "title": "ribbon2.js",
+    "status": "new"
+  },
+  {
+    "file": "ribbonAnimated",
+    "path": "/gallery/Scripts/Unicorns/ribbonAnimated.js",
+    "title": "ribbonAnimated.js",
+    "status": "new"
+  },
+  {
+    "file": "rose",
+    "path": "/gallery/Scripts/Rose/rose.js",
+    "title": "rose.js",
+    "status": "new"
+  },
+  {
+    "file": "roseAndLissajous",
+    "path": "/gallery/Scripts/Multiple/roseAndLissajous.js",
+    "title": "roseAndLissajous.js",
+    "status": "new"
+  },
+  {
+    "file": "roseCurve",
+    "path": "/gallery/Scripts/Named parametric/roseCurve.js",
+    "title": "roseCurve.js",
+    "status": "new"
+  },
+  {
+    "file": "strophoid",
+    "path": "/gallery/Scripts/General parametric/strophoid.js",
+    "title": "strophoid.js",
+    "status": "new"
+  },
+  {
+    "file": "tractrix",
+    "path": "/gallery/Scripts/Curve Stitch/tractrix.js",
+    "title": "tractrix.js",
     "status": "new"
   },
   {
@@ -82,5 +357,11 @@
     "path": "/utilities/Tools/Registry/validateDrawRegistry.js",
     "title": "Validate Draw Registry",
     "status": "current"
+  },
+  {
+    "file": "weaving",
+    "path": "/gallery/Scripts/Curve Stitch/weaving.js",
+    "title": "weaving.js",
+    "status": "favorite"
   }
 ]

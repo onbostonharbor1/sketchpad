@@ -1,7 +1,26 @@
 [
   {
-    "filename": "voronoi",
-    "path": "voronoi.js",
-    "title": "Curve Stitch Voronoi (placeholder)"
+    "filename": "curveStitch",
+    "path": "curveStitch.js",
+    "title": "curveStitch.js",
+    "status": "new"
+  },
+  {
+    "filename": "ovalBoat",
+    "path": "ovalBoat.js",
+    "title": "ovalBoat.js",
+    "status": "new"
+  },
+  {
+    "filename": "tractrix",
+    "path": "tractrix.js",
+    "title": "tractrix.js",
+    "status": "new"
+  },
+  {
+    "filename": "weaving",
+    "path": "weaving.js",
+    "title": "weaving.js",
+    "status": "favorite"
   }
 ]

@@ -34,6 +34,11 @@ export async function runManifestMaintenance() {
     request: "manifestMaintenance", status: "ok", logName, logPath,
     manifestsWritten: [], homeWritten: false,
     added: {}, broken: {},
+
+    // NEW: better UI reporting
+    addedFiles: [],
+    removedFiles: [],
+
     drawRegistry: { scanned: 0, statusItems: 0 },
     drawRegistryStatus: [],
     homeCounts: { statusItems: 0, total: 0 }
@@ -84,10 +89,16 @@ async function processPatterns(report, log) {
 
     for (const fileName of jsFiles) {
       if (byPath.has(fileName)) continue;
+
       const baseName = stripExt(fileName, ".js");
       manifest.push({ filename: baseName, path: fileName, title: fileName, status: "new" });
+
+      // NEW: report exact file added
+      report.addedFiles.push(`patterns/${category}/${fileName}`);
+
       if (fs.existsSync(dummyThumb)) ensurePatternDummyThumb(catDir, baseName, dummyThumb);
     }
+
     if (writeJsonIfChanged(manifestPath, manifest)) report.manifestsWritten.push(manifestPath);
   }
 } // end processPatterns
@@ -111,8 +122,13 @@ async function processGalleryScripts(report, log) {
 
     for (const fileName of jsFiles) {
       if (byPath.has(fileName)) continue;
+
       manifest.push({ filename: stripExt(fileName, ".js"), path: fileName, title: fileName, status: "new" });
+
+      // NEW: report exact file added
+      report.addedFiles.push(`gallery/Scripts/${category}/${fileName}`);
     }
+
     if (writeJsonIfChanged(manifestPath, manifest)) report.manifestsWritten.push(manifestPath);
   }
 } // end processGalleryScripts
@@ -138,8 +154,13 @@ async function processGalleryImages(report, log) {
 
       for (const fileName of diskImages) {
         if (byPath.has(fileName)) continue;
+
         manifest.push({ filename: path.parse(fileName).name, path: fileName, title: fileName, status: "new" });
+
+        // NEW: report exact file added
+        report.addedFiles.push(`gallery/${domain}/${category}/${fileName}`);
       }
+
       if (writeJsonIfChanged(manifestPath, manifest)) report.manifestsWritten.push(manifestPath);
     }
   }
@@ -165,8 +186,13 @@ async function processUtilities(report, log) {
 
       for (const fileName of jsFiles) {
         if (byPath.has(fileName)) continue;
+
         manifest.push({ filename: stripExt(fileName, ".js"), path: fileName, title: fileName, status: "new" });
+
+        // NEW: report exact file added
+        report.addedFiles.push(`utilities/${domain}/${category}/${fileName}`);
       }
+
       if (writeJsonIfChanged(manifestPath, manifest)) report.manifestsWritten.push(manifestPath);
     }
   }
@@ -247,19 +273,36 @@ function makeRootedPathFromManifest(absManifestPosix, entry) {
 
 /**
  * Alphabetizes and stringifies JSON data. Writes to disk only if the content (or order) has changed.
+ *
+ * IMPORTANT:
+ * This function MUST NOT mutate the input array, because callers may still be using
+ * the same in-memory manifest object later in the maintenance run.
  */
 function writeJsonIfChanged(filePath, data) {
+
+  let outData = data;
+
   if (Array.isArray(data)) {
-    data.sort((a, b) => {
+
+    // sort a COPY so we do not mutate the caller's array
+    outData = [...data].sort((a, b) => {
       const tA = String(a.title || a.filename || a.file || "").toLowerCase();
       const tB = String(b.title || b.filename || b.file || "").toLowerCase();
       return tA.localeCompare(tB);
     });
+
   }
-  const next = JSON.stringify(data, null, 2) + "\n";
-  if (fs.existsSync(filePath) && fs.readFileSync(filePath, "utf8") === next) return false;
+
+  const next = JSON.stringify(outData, null, 2) + "\n";
+
+  if (fs.existsSync(filePath)) {
+    const prev = fs.readFileSync(filePath, "utf8");
+    if (prev === next) return false;
+  }
+
   fs.writeFileSync(filePath, next, "utf8");
   return true;
+
 } // end writeJsonIfChanged
 
 /**
@@ -302,7 +345,10 @@ function stripExt(name, ext) { return name.endsWith(ext) ? name.slice(0, -ext.le
  */
 function countStatusItems(l) { return l.filter(e => e.status).length; } // end countStatusItems
 
-// --- EXECUTION ---
 runManifestMaintenance()
-  .then(report => console.log(`>>> SUCCESS: ${report.homeCounts.total} items sorted.`))
+  .then(report => {
+    const n = report.manifestsWritten.length;
+    const home = report.homeWritten ? "yes" : "no";
+    console.log(`>>> SUCCESS: ${report.homeCounts.total} items sorted. manifestsWritten=${n} homeWritten=${home}`);
+  })
   .catch(err => { console.error("!!! FAILED", err); process.exit(1); });

@@ -3,14 +3,15 @@
    Gallery Tab
    ------------------------------------------------------------
 */
+import { formatRebuildReportShared } from "./ui_utilities.js";
 
 import { nodeRebuildAndValidateManifests } from "./nodeLayer.js";
 import { renderCategories }       from "./categories.js";
-import { fileLayer }              from "./fileLayer.js";
+// import { fileLayer }              from "./fileLayer.js";
 import { setCaptionBar }          from "./caption.js";
 import { getGalleryCaptionMenuItems } from "./galleryMenuCmds.js";
 import { openHelpHomeOverlay } from "./help.js";
-
+import { runScriptByPath } from "./scriptRunner.js";
 
 import {
   clearDivs,
@@ -664,9 +665,7 @@ async function showGalleryResultsImages(domain, category, startIndex) {
   updateGalleryCaption(domain, category);
 } // end showGalleryResultsImages
 
-/* ============================================================
-   showGalleryResultsScripts(index)
-============================================================ */
+
 /* ============================================================
    showGalleryResultsScripts(category, index)
    ------------------------------------------------------------
@@ -706,6 +705,7 @@ async function showGalleryResultsScripts(category, index) {
   await showGalleryScript(category, list[idx]);
   updateGalleryCaption(DOMAIN_SCRIPTS, category);
 } // end showGalleryResultsScripts
+
 
 
 /* ============================================================
@@ -780,137 +780,140 @@ function showGalleryImage(domain, category, entry) {
    ------------------------------------------------------------
    Scripts are now located at:
      /gallery/Scripts/<Category>/<filename>
+
+   Unified script execution (scriptRunner only).
+   No legacy multi-export branching.
+   No ctx argument passed to runPattern.
 ============================================================ */
+
+
 async function showGalleryScript(category, entry) {
+
+  if (!category) throw new Error("showGalleryScript: category missing");
+  if (!entry) throw new Error("showGalleryScript: entry missing");
+  if (!entry.filename) throw new Error("showGalleryScript: entry.filename missing");
+
   const textDiv   = document.getElementById("text");
   const actionDiv = document.getElementById("action");
   const sketchDiv = document.getElementById("sketchpad");
 
-  if (!textDiv || !actionDiv || !sketchDiv) {
-    throw new Error("showGalleryScript: required region missing");
-  }
+  if (!textDiv) throw new Error("showGalleryScript: #text not found");
+  if (!actionDiv) throw new Error("showGalleryScript: #action not found");
+  if (!sketchDiv) throw new Error("showGalleryScript: #sketchpad not found");
 
   textDiv.innerHTML   = "";
   actionDiv.innerHTML = "";
   sketchDiv.innerHTML = "";
 
-  sketchDiv.appendChild(window.drawCanvas);
+  const scriptPath = `/gallery/Scripts/${category}/${entry.filename}`;
 
-  ctx.fillStyle = "#ffffff";
-  ctx.fillRect(0, 0, drawCanvas.width, drawCanvas.height);
-
-  const moduleUrl = `/gallery/Scripts/${category}/${entry.filename}`;
-  const mod = await import(/* @vite-ignore */ moduleUrl);
-
-  if (mod.patternMeta && mod.initPattern && mod.drawPattern) {
-    const meta   = mod.patternMeta;
-    const params = mod.initPattern();
-    buildScriptControls(meta, params, actionDiv, () => mod.drawPattern(params));
-    mod.drawPattern(params);
-    return;
+  try {
+    await runScriptByPath(scriptPath, "canvas", {
+      canvasRegionId: "sketchpad",
+      enableControls: true
+    });
+  } catch (err) {
+    throw new Error("showGalleryScript: execute error: " + err.message);
   }
 
-  if (mod.runPattern) {
-    await mod.runPattern(ctx);
-    return;
-  }
-
-  throw new Error("showGalleryScript: script module missing expected exports");
 } // end showGalleryScript
+
+
+
 
 
 /* ============================================================
    buildScriptControls()
 ============================================================ */
-function buildScriptControls(meta, params, panel, onChange) {
-  const box = document.createElement("div");
-  box.className = "script-controls";
+// function buildScriptControls(meta, params, panel, onChange) {
+//   const box = document.createElement("div");
+//   box.className = "script-controls";
 
-  (meta.parameters || []).forEach((def) => {
-    const row = document.createElement("div");
-    row.className = "script-control-row";
+//   (meta.parameters || []).forEach((def) => {
+//     const row = document.createElement("div");
+//     row.className = "script-control-row";
 
-    const label = document.createElement("label");
-    label.textContent = def.label || def.key;
-    row.appendChild(label);
+//     const label = document.createElement("label");
+//     label.textContent = def.label || def.key;
+//     row.appendChild(label);
 
-    let input = null;
+//     let input = null;
 
-    if (def.widget === "range") {
-      input = document.createElement("input");
-      input.type  = "range";
-      input.min   = def.min;
-      input.max   = def.max;
-      input.step  = def.step;
-      input.value = params[def.key];
+//     if (def.widget === "range") {
+//       input = document.createElement("input");
+//       input.type  = "range";
+//       input.min   = def.min;
+//       input.max   = def.max;
+//       input.step  = def.step;
+//       input.value = params[def.key];
 
-      const out = document.createElement("span");
-      out.className = "script-control-readout";
-      out.textContent = input.value;
+//       const out = document.createElement("span");
+//       out.className = "script-control-readout";
+//       out.textContent = input.value;
 
-      input.addEventListener("input", () => {
-        params[def.key] = Number(input.value);
-        out.textContent = input.value;
-        onChange();
-      });
+//       input.addEventListener("input", () => {
+//         params[def.key] = Number(input.value);
+//         out.textContent = input.value;
+//         onChange();
+//       });
 
-      row.appendChild(input);
-      row.appendChild(out);
-      box.appendChild(row);
-      return;
-    }
+//       row.appendChild(input);
+//       row.appendChild(out);
+//       box.appendChild(row);
+//       return;
+//     }
 
-    if (def.widget === "checkbox") {
-      input = document.createElement("input");
-      input.type = "checkbox";
-      input.checked = !!params[def.key];
+//     if (def.widget === "checkbox") {
+//       input = document.createElement("input");
+//       input.type = "checkbox";
+//       input.checked = !!params[def.key];
 
-      input.addEventListener("input", () => {
-        params[def.key] = input.checked;
-        onChange();
-      });
+//       input.addEventListener("input", () => {
+//         params[def.key] = input.checked;
+//         onChange();
+//       });
 
-      row.appendChild(input);
-      box.appendChild(row);
-      return;
-    }
+//       row.appendChild(input);
+//       box.appendChild(row);
+//       return;
+//     }
 
-    if (def.widget === "select") {
-      input = document.createElement("select");
+//     if (def.widget === "select") {
+//       input = document.createElement("select");
 
-      (def.options || []).forEach((optValue) => {
-        const opt = document.createElement("option");
-        opt.value = optValue;
-        opt.textContent = optValue;
-        if (optValue === params[def.key]) opt.selected = true;
-        input.appendChild(opt);
-      });
+//       (def.options || []).forEach((optValue) => {
+//         const opt = document.createElement("option");
+//         opt.value = optValue;
+//         opt.textContent = optValue;
+//         if (optValue === params[def.key]) opt.selected = true;
+//         input.appendChild(opt);
+//       });
 
-      input.addEventListener("input", () => {
-        params[def.key] = input.value;
-        onChange();
-      });
+//       input.addEventListener("input", () => {
+//         params[def.key] = input.value;
+//         onChange();
+//       });
 
-      row.appendChild(input);
-      box.appendChild(row);
-      return;
-    }
+//       row.appendChild(input);
+//       box.appendChild(row);
+//       return;
+//     }
 
-    input = document.createElement("input");
-    input.type = "text";
-    input.value = params[def.key];
+//     input = document.createElement("input");
+//     input.type = "text";
+//     input.value = params[def.key];
 
-    input.addEventListener("input", () => {
-      params[def.key] = input.value;
-      onChange();
-    });
+//     input.addEventListener("input", () => {
+//       params[def.key] = input.value;
+//       onChange();
+//     });
 
-    row.appendChild(input);
-    box.appendChild(row);
-  });
+//     row.appendChild(input);
+//     box.appendChild(row);
+//   });
 
-  panel.appendChild(box);
-} // end buildScriptControls
+//   panel.appendChild(box);
+// } // end buildScriptControls
 
 /* ============================================================
    showPrevGalleryItem()
@@ -1074,69 +1077,119 @@ function buildGalleryOffcanvasHtml() {
 } // end buildGalleryOffcanvasHtml
 
 
-function formatRebuildReport(report) {
+/* ============================================================
+   formatRebuildReport(report)
+   ------------------------------------------------------------
+   TAB-LOCAL WRAPPER.
+   Calls the shared implementation in ui_utilities.js.
+============================================================ */
 
-  if (!report) throw new Error("formatRebuildReport: report missing");
-
-  if (report.request !== "manifestMaintenance") {
-    throw new Error("formatRebuildReport: unexpected request: " + String(report.request));
-  }
-
-  const lines = [];
-
-  lines.push("Log: " + (report.logName || "(none)"));
-  lines.push("");
-
-  const addedMap  = report.added  || {};
-  const brokenMap = report.broken || {};
-
-  const addedKeys  = Object.keys(addedMap).sort((a, b) => a.localeCompare(b));
-  const brokenKeys = Object.keys(brokenMap).sort((a, b) => a.localeCompare(b));
-
-  if (addedKeys.length) {
-    lines.push("ADDED (status=new):");
-    for (const group of addedKeys) {
-      lines.push("  " + group);
-      for (const item of (addedMap[group] || [])) {
-        lines.push("    • " + item);
-      }
-    }
-    lines.push("");
-  }
-
-  if (brokenKeys.length) {
-    lines.push("BROKEN (virtual home items):");
-    for (const group of brokenKeys) {
-      lines.push("  " + group);
-      for (const item of (brokenMap[group] || [])) {
-        lines.push("    • " + (item && item.path ? item.path : String(item)));
-      }
-    }
-    lines.push("");
-  }
-
-  if (!addedKeys.length && !brokenKeys.length) {
-    lines.push("No Added or Broken items.");
-  }
-
-  return lines.join("\n");
-
+export function formatRebuildReport(report) {
+  return formatRebuildReportShared(report);
 } // end formatRebuildReport
+
+
+
+/* ============================================================
+   refreshGalleryFromManifestEdit()
+   ------------------------------------------------------------
+   FIX (match Utilities pattern):
+   After reloading manifests, rehydrate uiState.gallery.activeItem
+   from the newly loaded galleryCache. Otherwise uiState still holds
+   the old entry object (with stale status/title), so Edit Manifest
+   reopens showing the previous values even though disk is updated.
+============================================================ */
+
 
 export async function refreshGalleryFromManifestEdit() {
 
-  // Force cache drop
+  // Drop manifest cache
   if (manifest && typeof manifest.clearCache === "function") {
     manifest.clearCache();
   }
   if (manifest.cache) delete manifest.cache.gallery;
 
+  // Reload cache
   galleryCache = null;
   await ensureGalleryCacheLoaded();
 
+  // ----------------------------------------------------------
+  // CRITICAL: rehydrate activeItem from refreshed cache
+  // ----------------------------------------------------------
+  const domain   = uiState.gallery.activeDomain;
+  const category = uiState.gallery.activeCategory;
+  const item     = uiState.gallery.activeItem;
+
+  if (domain && category && item) {
+
+    const domainMap = galleryCache[domain];
+    if (!domainMap) {
+      throw new Error("refreshGalleryFromManifestEdit: missing domain map '" + String(domain) + "'");
+    }
+
+    const list = domainMap[category];
+    if (!Array.isArray(list)) {
+      throw new Error("refreshGalleryFromManifestEdit: missing category '" + String(category) + "' in " + domain);
+    }
+
+    // Gallery canonical match is by path (same as caption info.matchField)
+    const matchValue =
+      (domain === DOMAIN_SCRIPTS)
+        ? String(item.path)
+        : String(normalizeGalleryEntryPath(category, item));
+
+    let found = null;
+
+    for (let i = 0; i < list.length; i++) {
+      const entry = list[i];
+
+      const entryMatch =
+        (domain === DOMAIN_SCRIPTS)
+          ? String(entry.path)
+          : String(normalizeGalleryEntryPath(category, entry));
+
+      if (entryMatch === matchValue) {
+        found = entry;
+        break;
+      }
+    }
+
+    if (!found) {
+
+      // This happens after Archive (the entry is removed from manifest).
+      // It must NOT throw. We pick a safe fallback and continue.
+
+      uiState.gallery.activeItem = null;
+
+      // If we are in results view, clamp index to list bounds.
+      if (uiState.gallery.saved && uiState.gallery.saved.view === "results") {
+
+        // If list is empty, restore() will naturally go back to categories.
+        if (list.length > 0) {
+
+          let idx = uiState.gallery.saved.index;
+          if (typeof idx !== "number") idx = 0;
+
+          if (idx < 0) idx = 0;
+          if (idx >= list.length) idx = list.length - 1;
+
+          uiState.gallery.saved.index = idx;
+          uiState.gallery.activeItem = list[idx];
+        }
+      }
+
+      await restoreGalleryTab();
+      return;
+    }
+
+    uiState.gallery.activeItem = found;
+  }
+
+  // Restore deterministically
   await restoreGalleryTab();
 
 } // end refreshGalleryFromManifestEdit
+
 
 
 async function refreshGalleryAfterRebuild() {

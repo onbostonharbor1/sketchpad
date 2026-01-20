@@ -5,9 +5,10 @@
 */
 
 // ADD to imports at top of utilities.js
-import { buildParameterControls } from "./parameterControls.js";
+
 import { nodeRebuildAndValidateManifests } from "./nodeLayer.js";
-import { showScriptOffcanvas } from "./menuCmds.js";
+import { runScriptByPath } from "./scriptRunner.js";
+import { formatRebuildReportShared } from "./ui_utilities.js";
 import { getUtilitiesCaptionMenuItems } from "./utilitiesMenuCmds.js";
 import { openHelpHomeOverlay } from "./help.js";
 
@@ -333,18 +334,14 @@ function activateUtilitySubtab(tabId) {
 } // end activateUtilitySubtab
 
 
+
 /* ============================================================
    runUtilityEntry(subtab, category, entry)
    ------------------------------------------------------------
-   FIX:
-   - Lab scripts that use parameterControls must:
-       1) run once first (so scriptInfo.redrawHandler is set)
-       2) then build controls (so handlers wire correctly)
-   - Tools scripts still run normally and may return HTML for Result.
-============================================================ */
-/* ============================================================
-   runUtilityEntry(subtab, category, entry)
-   ------------------------------------------------------------
+   UPDATED:
+   - Uses scriptRunner (same pipeline as Gallery/Patterns)
+   - No direct dynamic import here
+   - No ctx plumbing here
 ============================================================ */
 async function runUtilityEntry(subtab, category, entry) {
 
@@ -356,65 +353,44 @@ async function runUtilityEntry(subtab, category, entry) {
   const scriptPath = `/utilities/${subtab}/${category}/${entry.path}`;
 
   try {
-    const mod = await import(/* @vite-ignore */ scriptPath + `?t=${Date.now()}`);
 
-    if (typeof mod.runPattern !== "function") {
-      throw new Error("runUtilityEntry: runPattern() not found in " + scriptPath);
-    }
+    // Clear regions (Utilities convention)
+    const textDiv = document.getElementById("text");
+    const actionDiv = document.getElementById("action");
+    const sketchDiv = document.getElementById("sketchpad");
 
-    // --------------------------------------------------------
-    // LAB: attach canvas + clear background (your global ctx rule)
-    // --------------------------------------------------------
-    if (subtab === "Lab") {
-      const sketchDiv = document.getElementById("sketchpad");
-      if (!sketchDiv) throw new Error("runUtilityEntry(Lab): #sketchpad not found");
+    if (!textDiv) throw new Error("runUtilityEntry: #text not found");
+    if (!actionDiv) throw new Error("runUtilityEntry: #action not found");
+    if (!sketchDiv) throw new Error("runUtilityEntry: #sketchpad not found");
 
-      sketchDiv.innerHTML = "";
-      sketchDiv.appendChild(window.drawCanvas);
+    textDiv.innerHTML = "";
+    actionDiv.innerHTML = "";
+    sketchDiv.innerHTML = "";
 
-      ctx.fillStyle = "#ffffff";
-      ctx.fillRect(0, 0, drawCanvas.width, drawCanvas.height);
-    }
+    let result = null;
 
-    // --------------------------------------------------------
-    // Execute script first (so it can set scriptInfo.params and redrawHandler)
-    // --------------------------------------------------------
-    const result = await mod.runPattern();
-
-    // --------------------------------------------------------
-    // LAB: build parameterControls AFTER execution
-    // --------------------------------------------------------
     if (subtab === "Lab") {
 
-      const actionDiv = document.getElementById("action");
-      if (!actionDiv) throw new Error("runUtilityEntry(Lab): #action not found");
+      // Canvas execution (controls optional, built only if scriptInfo exists)
+      result = await runScriptByPath(scriptPath, "canvas", {
+        canvasRegionId: "sketchpad",
+        controlsRegionId: "action",
+        enableControls: true
+      });
 
-      actionDiv.innerHTML = "";
+    } else if (subtab === "Tools") {
 
-      // Utilities Lab contract: controls come from scriptInfo.parameters (or .params)
-      if (!mod.scriptInfo) {
-        throw new Error("runUtilityEntry(Lab): scriptInfo missing");
+      // Text execution
+      result = await runScriptByPath(scriptPath, "text", {
+        textRegionId: "text"
+      });
+
+      if (typeof result === "string") {
+        uiState.utilities.lastResult = result;
       }
 
-      // Normalize vocabulary (either name is acceptable)
-      if (mod.scriptInfo.params && !mod.scriptInfo.parameters) {
-        mod.scriptInfo.parameters = mod.scriptInfo.params;
-      } else if (mod.scriptInfo.parameters && !mod.scriptInfo.params) {
-        mod.scriptInfo.params = mod.scriptInfo.parameters;
-      }
-
-      // Fail-fast if the script did not provide parameters
-      if (!mod.scriptInfo.parameters) {
-        throw new Error("runUtilityEntry(Lab): scriptInfo.parameters missing");
-      }
-
-      // Build controls into #action (do NOT pass tab ids here)
-      buildParameterControls(mod.scriptInfo);
-
-      // If the script exposes a redraw handler, run it once after controls exist
-      if (typeof mod.scriptInfo.redrawHandler === "function") {
-        mod.scriptInfo.redrawHandler();
-      }
+    } else {
+      throw new Error("runUtilityEntry: invalid subtab '" + String(subtab) + "'");
     }
 
     updateUtilitiesCaption({
@@ -427,11 +403,10 @@ async function runUtilityEntry(subtab, category, entry) {
       status: entry.status || ""
     });
 
-    // Tools: if script returns HTML, show it; Lab draws to canvas and returns null.
-    if (subtab !== "Lab") {
+    // Tools: keep Result box behavior consistent with existing Utilities UX
+    if (subtab === "Tools") {
       if (result !== null && result !== undefined) {
         displayUtilityResult(result);
-        uiState.utilities.lastResult = result;
       }
     }
 
@@ -444,6 +419,7 @@ async function runUtilityEntry(subtab, category, entry) {
   }
 
 } // end runUtilityEntry
+
 
 
 
@@ -577,64 +553,28 @@ function buildUtilitiesOffcanvasHtml() {
 } // end buildUtilitiesOffcanvasHtml
 
 
-function formatRebuildReport(report) {
-
-  if (!report) throw new Error("formatRebuildReport: report missing");
-
-  if (report.request !== "manifestMaintenance") {
-    throw new Error("formatRebuildReport: unexpected request: " + String(report.request));
-  }
-
-  const lines = [];
-
-  lines.push("Log: " + (report.logName || "(none)"));
-  lines.push("");
-
-  const addedMap  = report.added  || {};
-  const brokenMap = report.broken || {};
-
-  const addedKeys  = Object.keys(addedMap).sort((a, b) => a.localeCompare(b));
-  const brokenKeys = Object.keys(brokenMap).sort((a, b) => a.localeCompare(b));
-
-  if (addedKeys.length) {
-    lines.push("ADDED (status=new):");
-    for (const group of addedKeys) {
-      lines.push("  " + group);
-      for (const item of (addedMap[group] || [])) {
-        lines.push("    • " + item);
-      }
-    }
-    lines.push("");
-  }
-
-  if (brokenKeys.length) {
-    lines.push("BROKEN (virtual home items):");
-    for (const group of brokenKeys) {
-      lines.push("  " + group);
-      for (const item of (brokenMap[group] || [])) {
-        lines.push("    • " + (item && item.path ? item.path : String(item)));
-      }
-    }
-    lines.push("");
-  }
-
-  if (!addedKeys.length && !brokenKeys.length) {
-    lines.push("No Added or Broken items.");
-  }
-
-  return lines.join("\n");
-
+export function formatRebuildReport(report) {
+  return formatRebuildReportShared(report);
 } // end formatRebuildReport
 
-async function refreshUtilitiesAfterRebuild() {
+/* ============================================================
+   refreshUtilitiesFromManifestEdit()
+   ------------------------------------------------------------
+   FIX:
+   After reloading manifests, rehydrate uiState.utilities.activeUtilityItem
+   from the newly loaded utilitiesCache. Otherwise uiState still holds
+   the old entry object (with stale status/title), so Edit Manifest
+   reopens showing the previous values even though disk is updated.
+============================================================ */
+export async function refreshUtilitiesFromManifestEdit() {
 
-  // Force cache drop
+  // Drop manifest cache
   if (manifest && typeof manifest.clearCache === "function") {
     manifest.clearCache();
   }
   if (manifest.cache) delete manifest.cache.utilities;
 
-  // Reload local cache (same logic as initUtilityTab)
+  // Reload cache (same as init path)
   const toolsRaw = await manifest.get("utilities/Tools");
   const labRaw   = await manifest.get("utilities/Lab");
 
@@ -646,14 +586,51 @@ async function refreshUtilitiesAfterRebuild() {
   toolsRegistry.forEach((cat, i) => utilitiesCache.Tools[cat] = toolsRaw[i] || []);
   labRegistry.forEach((cat, i) => utilitiesCache.Lab[cat] = labRaw[i] || []);
 
-  // Re-render current subtab/view deterministically
-  const tabId = uiState.utilities.activeUtilityTabId || "tab-tools";
-  await setUtilitySubtabs();
-  await switchUtilityTab(tabId);
+  // ----------------------------------------------------------
+  // CRITICAL: rehydrate activeUtilityItem from the refreshed cache
+  // ----------------------------------------------------------
+  const subtab   = uiState.utilities.lastUtilitySubtab;
+  const category = uiState.utilities.activeUtilityCategory;
+  const entry    = uiState.utilities.activeUtilityItem;
 
-} // end refreshUtilitiesAfterRebuild
+  if (subtab && category && entry && entry.path) {
 
-// utilities.js  (REPLACE wireUtilitiesCommandsButton with this version)
+    const domain = (subtab === "Tools") ? utilitiesCache.Tools
+                 : (subtab === "Lab")   ? utilitiesCache.Lab
+                 : null;
+
+    if (!domain) {
+      throw new Error("refreshUtilitiesFromManifestEdit: invalid subtab '" + String(subtab) + "'");
+    }
+
+    const list = domain[category];
+    if (!Array.isArray(list)) {
+      throw new Error("refreshUtilitiesFromManifestEdit: missing category '" + String(category) + "' in " + subtab);
+    }
+
+    let found = null;
+    for (let i = 0; i < list.length; i++) {
+      if (list[i] && list[i].path === entry.path) {
+        found = list[i];
+        break;
+      }
+    }
+
+    if (!found) {
+      throw new Error(
+        "refreshUtilitiesFromManifestEdit: active entry not found after reload: " +
+        subtab + "/" + category + "/" + entry.path
+      );
+    }
+
+    uiState.utilities.activeUtilityItem = found;
+  }
+
+  // Restore Utilities deterministically (Gallery model)
+  await restoreUtilityTab();
+
+} // end refreshUtilitiesFromManifestEdit
+
 
 export function wireUtilitiesCommandsButton() {
 
@@ -716,39 +693,6 @@ export function wireUtilitiesCommandsButton() {
 } // end wireUtilitiesCommandsButton
 
 
-
-
-/* ============================================================
-   refreshUtilitiesFromManifestEdit()
-   ------------------------------------------------------------
-   FIX:
-   Make Utilities follow the SAME refresh→restore pattern
-   as Gallery. No ad-hoc rendering. No tab switching.
-=========================================================== */
-export async function refreshUtilitiesFromManifestEdit() {
-
-  // Drop manifest cache
-  if (manifest && typeof manifest.clearCache === "function") {
-    manifest.clearCache();
-  }
-  if (manifest.cache) delete manifest.cache.utilities;
-
-  // Reload cache (same as init path)
-  const toolsRaw = await manifest.get("utilities/Tools");
-  const labRaw   = await manifest.get("utilities/Lab");
-
-  const toolsRegistry = manifest.getRegistry("utilities/Tools");
-  const labRegistry   = manifest.getRegistry("utilities/Lab");
-
-  utilitiesCache = { Tools: {}, Lab: {} };
-
-  toolsRegistry.forEach((cat, i) => utilitiesCache.Tools[cat] = toolsRaw[i] || []);
-  labRegistry.forEach((cat, i) => utilitiesCache.Lab[cat] = labRaw[i] || []);
-
-  // 🔑 CRITICAL: restore Utilities deterministically (Gallery model)
-  await restoreUtilityTab();
-
-} // end refreshUtilitiesFromManifestEdit
 
 
 

@@ -27,6 +27,11 @@
   box-sizing: border-box;
 }
 
+/* Force select controls (like Space) to white background */
+#action .draw-controls select {
+  background-color: #ffffff !important;
+}
+
 /* ---- Readout values ---- */
 .draw-controls .ctrl-readout {
   color: #000;

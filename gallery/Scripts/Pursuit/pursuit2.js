@@ -34,8 +34,6 @@
 import { printTitle } from "/draw/draw_utilities.js";
 import { buildParameterControls } from "/ui/parameterControls.js";
 
-let ctx = null;
-
 
 /* ------------------------------------------------------------
    clearCanvasFull()
@@ -394,8 +392,6 @@ export const scriptInfo = {
 ------------------------------------------------------------ */
 export function runPattern(_ctx) {
 
-  ctx = _ctx || window.ctx;
-  if (!ctx) throw new Error("pursuitCurvesRules.runPattern: no ctx provided and window.ctx is null");
 
   printTitle(scriptInfo.title);
 

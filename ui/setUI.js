@@ -16,10 +16,60 @@ import { initMenuManager }  from "./menuManager.js";
 import { initOverlay }      from "./overlay.js";
 import { uiState }          from "./uiState.js";
 import { disableAllNextPrevOverlays }  from "./nextPrevOverlay.js";   // NEW: global overlay teardown
+import { installPanicHandlers, checkStructure } from "./logging.js";
 
 const START = "START_APP";
 const LAST_TAB_KEY = "sketchpad.lastActiveTab"; // end LAST_TAB_KEY
 
+/* ============================================================
+   Begin with installing a panic alert box for errors and
+   then checking that the structure of everything is ok.
+=========================================================== */
+
+// installPanicHandlers();
+checkStructure({
+  requiredIds: [
+    "wrapper",
+    "tabs",
+    "mainTabs",
+
+    "content",
+    "control",
+    "button",
+    "commandsButton",
+    "buttonSeparator",
+    "action",
+
+    "main",
+    "subtabs",
+    "caption",
+    "text",
+
+    "sketchpad-wrapper",
+    "sketchpad",
+    "canvasOverlayLayers",
+    "interaction-layer",
+    "bbox-layer",
+    "nodes-layer",
+    "guides-layer",
+
+    "offcanvasPanel",
+
+    "overlayContainer",
+    "overlayBackground",
+    "overlayPanel",
+    "overlayHeader",
+    "overlayTitle",
+    "overlayClose",
+    "overlayContent",
+    "overlay-help",
+    "overlay-forms",
+    "overlay-debug",
+    "overlay-nextprev"
+  ],
+  canvasId: "interaction-layer",
+  requireCtx: true
+});
 
 /* ============================================================
    Tab Registry

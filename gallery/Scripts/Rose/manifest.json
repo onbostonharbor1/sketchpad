@@ -3,5 +3,11 @@
     "filename": "voronoi",
     "path": "voronoi.js",
     "title": "Rose Voronoi (placeholder)"
+  },
+  {
+    "filename": "rose",
+    "path": "rose.js",
+    "title": "rose.js",
+    "status": "new"
   }
 ]

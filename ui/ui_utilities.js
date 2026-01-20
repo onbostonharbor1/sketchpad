@@ -328,6 +328,75 @@ export function showOffcanvasPanel({ title, bodyHtml }) {
 } // end showOffcanvasPanel
 
 
+
+export function formatRebuildReportShared(report) {
+
+  if (!report) throw new Error("formatRebuildReportShared: report missing");
+
+  if (report.request !== "manifestMaintenance") {
+    throw new Error("formatRebuildReportShared: unexpected request: " + String(report.request));
+  }
+
+  const lines = [];
+
+  lines.push("Log: " + (report.logName || "(none)"));
+  lines.push("");
+
+  // ----------------------------------------------------------
+  // Writes summary
+  // ----------------------------------------------------------
+  const manifestsWritten = Array.isArray(report.manifestsWritten)
+    ? report.manifestsWritten
+    : [];
+
+  const homeWritten = !!report.homeWritten;
+
+  lines.push("Writes:");
+  lines.push("  Manifests written: " + manifestsWritten.length);
+  lines.push("  Home manifest written: " + (homeWritten ? "yes" : "no"));
+  lines.push("");
+
+  // ----------------------------------------------------------
+  // ADDED files (the part you actually care about)
+  // ----------------------------------------------------------
+  const addedFiles = Array.isArray(report.addedFiles) ? report.addedFiles : [];
+
+  if (addedFiles.length) {
+    lines.push("Added files:");
+    for (const p of addedFiles) {
+      lines.push("• " + p);
+    }
+    lines.push("");
+  }
+
+  // ----------------------------------------------------------
+  // BROKEN items (optional)
+  // ----------------------------------------------------------
+  const brokenFiles = Array.isArray(report.brokenFiles) ? report.brokenFiles : [];
+
+  if (brokenFiles.length) {
+    lines.push("Broken files:");
+    for (const p of brokenFiles) {
+      lines.push("• " + p);
+    }
+    lines.push("");
+  }
+
+  // ----------------------------------------------------------
+  // Nothing happened
+  // ----------------------------------------------------------
+  if (!manifestsWritten.length && !homeWritten && !addedFiles.length && !brokenFiles.length) {
+    lines.push("No Added or Broken items.");
+  }
+
+  return lines.join("\n");
+
+} // end formatRebuildReportShared
+
+
+
+
+
 export function escapeHtml(text) {
   return String(text)
     .replaceAll("&", "&amp;")

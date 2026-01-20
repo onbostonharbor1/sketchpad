@@ -1,19 +1,17 @@
 [
   {
-    "filename": "changeColorRamp",
-    "path": "changeColorRamp.js",
-    "title": "changeColorRamp.js",
-    "status": "new"
-  },
-  {
     "filename": "changeColorRampHslRgb",
     "path": "changeColorRampHslRgb.js",
-    "title": "changeColorRampHslRgb.js",
-    "status": "new"
+    "title": "Change Color HSL/RGB"
   },
   {
     "filename": "showColors",
     "path": "showColors.js",
     "title": "Show Colors"
+  },
+  {
+    "filename": "changeColorRamp",
+    "path": "changeColorRamp.js",
+    "title": "Transition between 2 colors"
   }
 ]

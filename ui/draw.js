@@ -9,11 +9,9 @@
      - Integrate with caption bar + menuManager
      - Provide save/restore for Draw state
    ------------------------------------------------------------ */
-
+import { formatRebuildReportShared } from "./ui_utilities.js";
 import { setCaptionBar }          from "./caption.js";
 import { renderCategories }       from "./categories.js";
-import { copyActiveDrawObject, resetActiveDrawObject }
-                                  from "./drawMenuCmds.js";
 import { menuManager }            from "./menuManager.js";
 import { buildParameterControls } from "./parameterControls.js";
 import {
@@ -24,7 +22,10 @@ import {
 }                                from "./ui_utilities.js";
 import { nodeRebuildAndValidateManifests } from "./nodeLayer.js";
 import { showScriptOffcanvas } from "./menuCmds.js";
-import { buildHelpItem } from "./help.js";
+import { copyActiveDrawObject, resetActiveDrawObject, createPngFromActiveDrawObject, createPatternFromActiveDrawObject }
+                                  from "./drawMenuCmds.js";
+
+// import { buildHelpItem } from "./help.js";
 
 const DEFAULT_DRAW_SUBTAB = "tab-categories";   // Categories is always the root
 const TAB_NAME            = "draw";             // Used for help/menu lookups
@@ -612,8 +613,15 @@ function setDrawCaption(entry) {
     // Script path for Show Script
     const scriptPath = `/drawRegistry/${registryKey}.js`;
 
+    // Bundle context for downstream menu commands
+    const menuContext = {
+      category: entry.category || "uncategorized",
+      id: entry.id || registryKey,
+      registryKey: registryKey
+    };
+
     // Build menu items
-    const items = await buildDrawMenuItems("draw", registryKey, scriptPath);
+    const items = await buildDrawMenuItems("draw", registryKey, scriptPath, menuContext);
 
     // Open menu
     menuManager.open(items, anchor);
@@ -627,6 +635,9 @@ function setDrawCaption(entry) {
     onMenu: onMenu
   });
 } // end setDrawCaption
+
+
+
 
 /*************************************************************
    setDrawText()
@@ -690,7 +701,9 @@ export function saveDrawState() {
    Build menu array for Draw tab.
    Uses menuManager.buildHelpItem()
 *************************************************************/
-export async function buildDrawMenuItems(tabName, itemName, scriptPath) {
+
+
+export async function buildDrawMenuItems(tabName, itemName, scriptPath, menuContext) {
   const items = [];
 
   // HELP
@@ -703,6 +716,21 @@ export async function buildDrawMenuItems(tabName, itemName, scriptPath) {
     onClick: () => showScriptOffcanvas(scriptPath, itemName)
   });
 
+    items.push({
+    label: "Create Pattern",
+    onClick: async () => {
+      await createPatternFromActiveDrawObject(menuContext);
+    }
+  });
+
+  // CREATE PNG
+  items.push({
+    label: "Create PNG",
+    onClick: async () => {
+      await createPngFromActiveDrawObject(menuContext);
+    }
+  });
+
   // DUPLICATE
   items.push({
     label: "Duplicate",
@@ -713,14 +741,16 @@ export async function buildDrawMenuItems(tabName, itemName, scriptPath) {
 
   // RESET
   items.push({
-  label: "Reset",
-  onClick: () => {
-    resetActiveDrawObject();
-  }
-});
+    label: "Reset",
+    onClick: () => {
+      resetActiveDrawObject();
+    }
+  });
 
   return items;
 } // end buildDrawMenuItems
+
+
 
 /*************************************************************
    collectRegistryEntries()
@@ -914,51 +944,220 @@ export function wireDrawCommandsButton() {
 
 } // end wireDrawCommandsButton
 
-function formatRebuildReport(report) {
-
-  if (!report) throw new Error("formatRebuildReport: report missing");
-
-  if (report.request !== "manifestMaintenance") {
-    throw new Error("formatRebuildReport: unexpected request: " + String(report.request));
-  }
-
-  const lines = [];
-
-  lines.push("Log: " + (report.logName || "(none)"));
-  lines.push("");
-
-  const addedMap  = report.added  || {};
-  const brokenMap = report.broken || {};
-
-  const addedKeys  = Object.keys(addedMap).sort((a, b) => a.localeCompare(b));
-  const brokenKeys = Object.keys(brokenMap).sort((a, b) => a.localeCompare(b));
-
-  if (addedKeys.length) {
-    lines.push("ADDED (status=new):");
-    for (const group of addedKeys) {
-      lines.push("  " + group);
-      for (const item of (addedMap[group] || [])) {
-        lines.push("    • " + item);
-      }
-    }
-    lines.push("");
-  }
-
-  if (brokenKeys.length) {
-    lines.push("BROKEN (virtual home items):");
-    for (const group of brokenKeys) {
-      lines.push("  " + group);
-      for (const item of (brokenMap[group] || [])) {
-        lines.push("    • " + (item && item.path ? item.path : String(item)));
-      }
-    }
-    lines.push("");
-  }
-
-  if (!addedKeys.length && !brokenKeys.length) {
-    lines.push("No Added or Broken items.");
-  }
-
-  return lines.join("\n");
-
+export function formatRebuildReport(report) {
+  return formatRebuildReportShared(report);
 } // end formatRebuildReport
+
+/* ============================================================
+   draw/exportPatternScript.js
+   ------------------------------------------------------------
+   Helper: createPatternScriptTextFromDrawRegistry(entry, params)
+
+   Purpose:
+     - Convert the current Draw tab state (drawRegistry entry + live params)
+       into a standalone Patterns script file text.
+
+   Output:
+     - A complete ES module script as a STRING.
+     - It exports runPattern() only (Patterns contract).
+     - It uses the drawRegistry entry's init/update/draw lifecycle.
+     - It does NOT write files. (Node service will do that later.)
+
+   Notes:
+     - This is the FIRST STEP: "display the drawRegistry file as if it were
+       a patterns script".
+     - We keep it minimal and deterministic.
+============================================================ */
+
+/* ============================================================
+   createPatternScriptTextFromDrawRegistry(entry, params)
+   ------------------------------------------------------------
+   Creates the TEXT of a Patterns-tab script file from a
+   drawRegistry entry + a concrete params object snapshot.
+
+   IMPORTANT
+   ---------
+   - This function returns a STRING (the full .js file contents).
+   - It does NOT write files.
+   - It does NOT create thumbnails.
+   - It does NOT update manifests.
+   - It does NOT depend on uiState.
+   - It is intended to be called by the Draw "Create Pattern"
+     menu command pipeline.
+
+   Inputs
+   ------
+   entry  : drawRegistry entry object (must have name, params, controls, init/update/draw)
+   params : the CURRENT params snapshot to bake into the exported script
+
+   Output file responsibilities (later):
+     - sketchpadService will write this string into:
+         /patterns/<category>/<idName><timestamp>.js
+
+   Notes
+   -----
+   This is a "Patterns script view" of a drawRegistry entry:
+     - it exports scriptInfo + runPattern()
+     - it runs deterministically with a frozen params snapshot
+     - it does not provide interactivity beyond running once
+============================================================ */
+export function createPatternScriptTextFromDrawRegistry(entry, params) {
+
+  if (!entry) throw new Error("createPatternScriptTextFromDrawRegistry: entry missing");
+  if (!params) throw new Error("createPatternScriptTextFromDrawRegistry: params missing");
+
+  if (typeof entry.name !== "string" || entry.name.trim() === "") {
+    throw new Error("createPatternScriptTextFromDrawRegistry: entry.name missing/invalid");
+  }
+
+  // We do NOT attempt to validate init/update/draw exist here.
+  // If the caller passes a broken entry, it should fail later.
+
+  const title = entry.name.trim();
+
+  // ------------------------------------------------------------
+  // JSON snapshot of params (this is the whole point)
+  // ------------------------------------------------------------
+  // Fail-fast: this MUST be JSON-serializable.
+  let paramsJson = "";
+  try {
+    paramsJson = JSON.stringify(params, null, 2);
+  } catch (err) {
+    throw new Error("createPatternScriptTextFromDrawRegistry: params not JSON-serializable: " + err.message);
+  }
+
+  // ------------------------------------------------------------
+  // Controls snapshot (optional but useful for future UI)
+  // ------------------------------------------------------------
+  // We include controls if present so the script can later be
+  // made interactive with minimal effort.
+  let controlsJson = "null";
+  if (entry.controls) {
+    try {
+      controlsJson = JSON.stringify(entry.controls, null, 2);
+    } catch (err) {
+      throw new Error("createPatternScriptTextFromDrawRegistry: entry.controls not JSON-serializable: " + err.message);
+    }
+  }
+
+  // ------------------------------------------------------------
+  // IMPORTANT LIMITATION (KNOWN / INTENTIONAL)
+  // ------------------------------------------------------------
+  // This exported Patterns script will re-import the drawRegistry
+  // module by ID. That means it does NOT embed the full draw
+  // algorithm. It simply "runs the same registry entry" with
+  // the frozen params snapshot.
+  //
+  // This is exactly what you want for step 1: static export.
+  //
+  // Later, if you want a "fully standalone pattern file" with
+  // no registry dependency, that is a different exporter.
+  // ------------------------------------------------------------
+
+  const out = `/* ============================================================
+   PATTERN EXPORT (from Draw)
+   ------------------------------------------------------------
+   Title: ${escapeForBlockComment(title)}
+
+   This file was generated by Sketchpad's Draw → Create Pattern.
+   It is a "static snapshot" of a drawRegistry object state.
+
+   Behavior:
+     - Imports the drawRegistry entry by idName
+     - Applies the frozen params snapshot below
+     - Runs init/update/draw once
+
+   NOTE
+   ----
+   This file is intentionally minimal and deterministic.
+============================================================ */
+
+import { resetCanvas } from "/ui/drawState.js";
+
+/* ============================================================
+   scriptInfo
+============================================================ */
+export const scriptInfo = {
+
+  title: ${JSON.stringify(title)},
+
+  // Frozen params snapshot (the exported state)
+  params: ${paramsJson},
+
+  // Optional: copied controls (may be null)
+  controls: ${controlsJson},
+
+  // Compatibility aliases (some runners expect .parameters)
+  parameters: null,
+
+  onParamChange() {
+    // no-op (static export)
+  }, // end onParamChange
+
+  redrawHandler: null
+
+}; // end scriptInfo
+
+
+/* ============================================================
+   runPattern()
+   ------------------------------------------------------------
+   Contract:
+     - NO ctx argument
+     - Uses global ctx getter
+============================================================ */
+export async function runPattern() {
+
+  // Keep vocabulary consistent with your system.
+  scriptInfo.parameters = scriptInfo.params;
+
+  resetCanvas();
+
+  // Import the drawRegistry module by ID.
+  // The generator will substitute the correct idName at write time.
+  //
+  // IMPORTANT:
+  // This placeholder token MUST be replaced before writing:
+  //   "__DRAW_REGISTRY_ID__"
+  const mod = await import(/* @vite-ignore */\`/drawRegistry/__DRAW_REGISTRY_ID__.js?t=\${Date.now()}\`);
+
+  // Registry entry must be exposed on window.drawRegistry by that module.
+  if (!window.drawRegistry) {
+    throw new Error("Pattern export: window.drawRegistry missing after import");
+  }
+
+  const idName = "__DRAW_REGISTRY_ID__";
+  const entry = window.drawRegistry[idName];
+
+  if (!entry) {
+    throw new Error("Pattern export: drawRegistry entry not found: " + idName);
+  }
+
+  // Apply frozen params snapshot.
+  entry.params = structuredClone(scriptInfo.params);
+
+  // Run lifecycle once.
+  entry.init();
+  entry.update(entry.params);
+  entry.draw(entry.params);
+
+  return null;
+
+} // end runPattern
+`;
+
+  return out;
+
+} // end createPatternScriptTextFromDrawRegistry
+
+
+/* ============================================================
+   escapeForBlockComment(s)
+============================================================ */
+function escapeForBlockComment(s) {
+
+  // Prevent closing the comment block early.
+  return String(s).replace(/\*\//g, "* /");
+
+} // end escapeForBlockComment
+

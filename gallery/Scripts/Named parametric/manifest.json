@@ -1,7 +1,97 @@
 [
   {
+    "filename": "cardiodFromCircles",
+    "path": "cardiodFromCircles.js",
+    "title": "cardiodFromCircles.js",
+    "status": "new"
+  },
+  {
+    "filename": "cochleoid",
+    "path": "cochleoid.js",
+    "title": "cochleoid.js",
+    "status": "new"
+  },
+  {
+    "filename": "epicycloid",
+    "path": "epicycloid.js",
+    "title": "epicycloid.js",
+    "status": "new"
+  },
+  {
+    "filename": "epitrochoid",
+    "path": "epitrochoid.js",
+    "title": "Epitrochoid",
+    "status": "favorite"
+  },
+  {
+    "filename": "epitrochoid_good",
+    "path": "epitrochoid_good.js",
+    "title": "epitrochoid_good.js",
+    "status": "new"
+  },
+  {
+    "filename": "epitrochoid1",
+    "path": "epitrochoid1.js",
+    "title": "epitrochoid1.js",
+    "status": "new"
+  },
+  {
+    "filename": "hypocycloid",
+    "path": "hypocycloid.js",
+    "title": "hypocycloid.js",
+    "status": "favorite"
+  },
+  {
+    "filename": "hypotrochoid",
+    "path": "hypotrochoid.js",
+    "title": "hypotrochoid.js",
+    "status": "favorite"
+  },
+  {
+    "filename": "lissajois1",
+    "path": "lissajois1.js",
+    "title": "lissajois1.js",
+    "status": "new"
+  },
+  {
+    "filename": "lissajoius2",
+    "path": "lissajoius2.js",
+    "title": "lissajoius2.js",
+    "status": "new"
+  },
+  {
     "filename": "lissajous",
     "path": "lissajous.js",
     "title": "Lissajous (ineractive)"
+  },
+  {
+    "filename": "LISSAJOUS100",
+    "path": "LISSAJOUS100.js",
+    "title": "LISSAJOUS100.js",
+    "status": "favorite"
+  },
+  {
+    "filename": "lissajous3",
+    "path": "lissajous3.js",
+    "title": "lissajous3.js",
+    "status": "new"
+  },
+  {
+    "filename": "lissajous4",
+    "path": "lissajous4.js",
+    "title": "lissajous4.js",
+    "status": "new"
+  },
+  {
+    "filename": "lissajous5",
+    "path": "lissajous5.js",
+    "title": "lissajous5.js",
+    "status": "new"
+  },
+  {
+    "filename": "roseCurve",
+    "path": "roseCurve.js",
+    "title": "roseCurve.js",
+    "status": "new"
   }
 ]

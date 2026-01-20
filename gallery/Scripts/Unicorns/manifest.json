@@ -1,5 +1,59 @@
 [
   {
+    "filename": "bezierBlossom",
+    "path": "bezierBlossom.js",
+    "title": "Bezier Blossum",
+    "status": "favorite"
+  },
+  {
+    "filename": "bird",
+    "path": "bird.js",
+    "title": "bird.js",
+    "status": "new"
+  },
+  {
+    "filename": "bird2",
+    "path": "bird2.js",
+    "title": "bird2.js",
+    "status": "new"
+  },
+  {
+    "filename": "boat",
+    "path": "boat.js",
+    "title": "boat.js",
+    "status": "new"
+  },
+  {
+    "filename": "curveStitchEditor",
+    "path": "curveStitchEditor.js",
+    "title": "curveStitchEditor.js",
+    "status": "new"
+  },
+  {
+    "filename": "radialPetals",
+    "path": "radialPetals.js",
+    "title": "radialPetals.js",
+    "status": "new"
+  },
+  {
+    "filename": "ribbon1",
+    "path": "ribbon1.js",
+    "title": "ribbon1.js",
+    "status": "new"
+  },
+  {
+    "filename": "ribbon2",
+    "path": "ribbon2.js",
+    "title": "ribbon2.js",
+    "status": "new"
+  },
+  {
+    "filename": "ribbonAnimated",
+    "path": "ribbonAnimated.js",
+    "title": "ribbonAnimated.js",
+    "status": "new"
+  },
+  {
     "filename": "voronoi",
     "path": "voronoi.js",
     "title": "Voronoi"

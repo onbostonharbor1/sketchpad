@@ -1,7 +1,32 @@
 [
   {
-    "filename": "voronoi",
-    "path": "voronoi.js",
-    "title": "Multiple Voronoi (placeholder)"
+    "filename": "fourParabolicLike",
+    "path": "fourParabolicLike.js",
+    "title": "fourParabolicLike.js",
+    "status": "new"
+  },
+  {
+    "filename": "manyParametric",
+    "path": "manyParametric.js",
+    "title": "manyParametric.js",
+    "status": "new"
+  },
+  {
+    "filename": "parametricSketcher",
+    "path": "parametricSketcher.js",
+    "title": "parametricSketcher.js",
+    "status": "favorite"
+  },
+  {
+    "filename": "playground",
+    "path": "playground.js",
+    "title": "playground.js",
+    "status": "new"
+  },
+  {
+    "filename": "roseAndLissajous",
+    "path": "roseAndLissajous.js",
+    "title": "roseAndLissajous.js",
+    "status": "new"
   }
 ]

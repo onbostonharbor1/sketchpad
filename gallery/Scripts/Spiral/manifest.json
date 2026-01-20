@@ -1,5 +1,11 @@
 [
   {
+    "filename": "golden",
+    "path": "golden.js",
+    "title": "golden.js",
+    "status": "new"
+  },
+  {
     "filename": "nautilusInteractive",
     "path": "nautilusInteractive.js",
     "title": "Nautilus (interactive)"
@@ -8,5 +14,11 @@
     "filename": "nautilus2",
     "path": "nautilus2.js",
     "title": "Nautilus (interactive) detailed"
+  },
+  {
+    "filename": "polygonalSpiral",
+    "path": "polygonalSpiral.js",
+    "title": "polygonalSpiral.js",
+    "status": "new"
   }
 ]

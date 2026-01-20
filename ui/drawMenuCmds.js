@@ -1,13 +1,55 @@
-/*************************************************************
-   copyActiveDrawObject()
-   -----------------------------------------------------------
-   Duplicate the currently active drawRegistry entry into
-   a new subtab with "(Copy)" or "(Copy n)" suffix.
-*************************************************************/
+/* drawMenuCmds.js
+   ------------------------------------------------------------
+   ADAPTER ONLY:
+   - This file does NOT do canvas work.
+   - It derives context and dispatches to ui/menuCmds.js.
+------------------------------------------------------------ */
+
 import { addDrawSubtab } from "./draw.js";
 import { drawActiveTab } from "./draw.js";
 import { markTabClean } from "./draw.js";
 import { DrawController } from "./draw.js";
+import { createGalleryPatternPng } from "./menuCmds.js";   // NEW
+import { createPatternScript } from "./menuCmds.js";   // NEW (next to createGalleryPatternPng)
+
+
+export async function createPatternFromActiveDrawObject(menuContext) {
+
+  if (!menuContext) throw new Error("createPatternFromActiveDrawObject: menuContext missing");
+
+  const category = menuContext.category;
+  const idName   = menuContext.id;
+
+  if (typeof category !== "string" || category.trim() === "") {
+    throw new Error("createPatternFromActiveDrawObject: menuContext.category missing/invalid");
+  }
+
+  if (typeof idName !== "string" || idName.trim() === "") {
+    throw new Error("createPatternFromActiveDrawObject: menuContext.id missing/invalid");
+  }
+
+  const tabId = uiState.draw.activeSubtab;
+  const info  = uiState.draw.tabs[tabId];
+
+  if (!info || info.type !== "object") {
+    throw new Error("createPatternFromActiveDrawObject: active draw tab is not an object tab");
+  }
+
+  const entry = info.drawRegistry;
+  if (!entry) throw new Error("createPatternFromActiveDrawObject: drawRegistry entry missing");
+
+  const params = info.parameters;
+  if (!params) throw new Error("createPatternFromActiveDrawObject: active parameters missing");
+
+  await createPatternScript({
+    category: category,
+    idName:   idName,
+    entry:    entry,
+    params:   params
+  });
+
+} // end createPatternFromActiveDrawObject
+
 
 export function copyActiveDrawObject() {
   const tabId = uiState.draw.activeSubtab;
@@ -104,6 +146,33 @@ export async function resetActiveDrawObject() {
 
   drawActiveTab();
 } // end resetActiveDrawObject
+
+
+export async function createPngFromActiveDrawObject(menuContext) {
+
+  if (!menuContext) throw new Error("createPngFromActiveDrawObject: menuContext missing");
+
+  const category = menuContext.category;
+  const idName   = menuContext.id;
+
+  if (typeof category !== "string" || category.trim() === "") {
+    throw new Error("createPngFromActiveDrawObject: menuContext.category missing/invalid");
+  }
+
+  if (typeof idName !== "string" || idName.trim() === "") {
+    throw new Error("createPngFromActiveDrawObject: menuContext.id missing/invalid");
+  }
+
+  const canvas = window.drawCanvas;
+  if (!canvas) throw new Error("createPngFromActiveDrawObject: window.drawCanvas missing");
+
+  await createGalleryPatternPng({
+    category: category,
+    idName:   idName,
+    canvas:   canvas
+  });
+
+} // end createPngFromActiveDrawObject
 
 
 

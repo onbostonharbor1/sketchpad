@@ -10,7 +10,6 @@ window.drawRegistry = Object.assign(
     drawline:           window.drawRegistry_line,
     twoLines:            window.drawRegistry_2lines,
     linkedCircles:      window.drawRegistry_linkedCircles,
-    lissajous:          window.drawRegistry_lissajous,
     mysticRose:         window.drawRegistry_mysticRose,
     mysticRoseEllipse:  window.drawRegistry_mysticRoseEllipse,
     nautilus:           window.drawRegistry_nautilus,

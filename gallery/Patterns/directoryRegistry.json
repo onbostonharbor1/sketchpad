@@ -1,4 +1,11 @@
-[ 
- "PursuitPatterns" 
-, "ScanPatterns" 
-] 
+[
+ "circles",
+ "curve_stitch",
+ "fundamental",
+ "imported",
+ "parametrics",
+ "pursuit",
+ "spiral",
+ "unicorns",
+ "ScanPatterns"
+]

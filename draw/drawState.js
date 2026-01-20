@@ -26,7 +26,6 @@ export function resetCanvas() {
 } // end resetCanvas
 
 
-
 (function setupCanvas() {
 
   const CANVAS_ID = "sharedCanvas";
@@ -34,19 +33,21 @@ export function resetCanvas() {
 
   let canvas = document.getElementById(CANVAS_ID);
 
+  // Create the canvas only if it doesn't exist (UI may already have one)
   if (!canvas) {
     canvas = document.createElement("canvas");
     canvas.id = CANVAS_ID;
-    canvas.width = 1000;
-    canvas.height = 1000;
-  }
+    canvas.width = 600;
+    canvas.height = 600;
 
-  const host = document.getElementById(canvasHostId);
-  if (!host) {
-    throw new Error("setupCanvas: #" + canvasHostId + " not found");
+    // If Sketchpad UI exists, attach there; otherwise fall back to <body>
+    const host = document.getElementById(canvasHostId);
+    if (host) {
+      host.appendChild(canvas);
+    } else {
+      document.body.appendChild(canvas);
+    }
   }
-
-  host.appendChild(canvas);
 
   const ctx = canvas.getContext("2d");
   if (!ctx) throw new Error("setupCanvas: getContext('2d') returned null");
@@ -54,16 +55,20 @@ export function resetCanvas() {
   window.drawCanvas = canvas;
   window.drawCtx = ctx;
 
-  resetCanvas();
 })(); // end setupCanvas
 
 
 Object.defineProperty(window, "ctx", {
   get() {
-    if (!window.drawCtx) {
-      throw new Error("ctx getter: window.drawCtx is not initialized");
-    }
-    return window.drawCtx;
+    // if layer system exists, use it
+    const layer = window.CanvasManager?.getLayer?.();
+    if (layer?.ctx) return layer.ctx;
+
+    // otherwise fall back to current draw context
+    if (window.drawCtx) return window.drawCtx;
+    if (typeof gl === "object" && gl.ctx) return gl.ctx;
+
+    return null;
   },
   configurable: true
 }); // end global ctx getter
@@ -78,4 +83,4 @@ export let drawState = {
   newLine:         10,
   pts:             [],
   ctr:             0
-};
+}; // end drawState

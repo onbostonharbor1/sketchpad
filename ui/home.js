@@ -23,7 +23,7 @@
 import { menuManager } from "./menuManager.js";
 import { getHomeCaptionMenuItems } from "./homeMenuCmds.js";
 import { openHelpHomeOverlay } from "./help.js";
-
+import { formatRebuildReportShared } from "./ui_utilities.js";
 import { uiState } from "./uiState.js";
 import { clearDivs, setCommandsButtonLabel } from "./ui_utilities.js";
 import { setCommandsButtonHandler, showCommandsOffcanvas } from "./ui_utilities.js";
@@ -1277,63 +1277,8 @@ function buildHomeOffcanvasHtml() {
 
 
 
-/* ------------------------------------------------------------
-   formatRebuildReport(report)
-   Arguments:
-     - report (object): node service response object
-   ------------------------------------------------------------
-   Role:
-     - Formats rebuild/validate report into plain text block.
------------------------------------------------------------- */
-function formatRebuildReport(report) {
-
-  if (!report) throw new Error("formatRebuildReport: report missing");
-
-  // Service now returns: request: "manifestMaintenance"
-  if (report.request !== "manifestMaintenance") {
-    throw new Error("formatRebuildReport: unexpected request: " + String(report.request));
-  }
-
-  const lines = [];
-
-  lines.push("Log: " + (report.logName || "(none)"));
-  lines.push("");
-
-  // report.added and report.broken are maps: { groupKey: [items...] }
-  const addedMap  = report.added  || {};
-  const brokenMap = report.broken || {};
-
-  const addedKeys  = Object.keys(addedMap).sort((a, b) => a.localeCompare(b));
-  const brokenKeys = Object.keys(brokenMap).sort((a, b) => a.localeCompare(b));
-
-  if (addedKeys.length) {
-    lines.push("ADDED (status=new):");
-    for (const group of addedKeys) {
-      lines.push("  " + group);
-      for (const item of (addedMap[group] || [])) {
-        lines.push("    • " + item);
-      }
-    }
-    lines.push("");
-  }
-
-  if (brokenKeys.length) {
-    lines.push("BROKEN (virtual home items):");
-    for (const group of brokenKeys) {
-      lines.push("  " + group);
-      for (const item of (brokenMap[group] || [])) {
-        lines.push("    • " + (item && item.path ? item.path : String(item)));
-      }
-    }
-    lines.push("");
-  }
-
-  if (!addedKeys.length && !brokenKeys.length) {
-    lines.push("No Added or Broken items.");
-  }
-
-  return lines.join("\n");
-
+export function formatRebuildReport(report) {
+  return formatRebuildReportShared(report);
 } // end formatRebuildReport
 
 

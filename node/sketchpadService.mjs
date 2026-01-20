@@ -110,8 +110,15 @@ case "manifestMaintenance":
     case "archiveItem":
       return await archiveItem(payload);
 
+    case "writePatternFromDrawRegistry":
+      return await writePatternFromDrawRegistry(payload);
+
+
     case "writeHelpFile":
       return await writeHelpFile(payload);
+
+    case "writeGalleryPatternPng":
+      return await writeGalleryPatternPng(payload);
 
 
     default:
@@ -2004,3 +2011,358 @@ async function writeHelpFile(payload = {}) {
 
 } // end writeHelpFile
 
+
+
+/* ===========================================================
+   TASK: writeGalleryPatternPng
+
+   DESCRIPTION
+   -----------
+   Writes TWO PNGs provided by the browser into:
+
+     ./gallery/Patterns/<category>/
+     ./gallery/Patterns/<category>/images/
+
+   Files:
+     <idName><timestamp>.png
+     images/thumb_<idName><timestamp>.png
+
+   ALSO UPDATES MANIFEST
+   ---------------------
+   Updates:
+     ./gallery/Patterns/<category>/manifest.json
+
+   Adds a new entry:
+     {
+       filename: "<baseName>",                 // no extension
+       path:     "<category>/<pngName>",       // matches Gallery model
+       title:    "<pngName>",                  // placeholder title
+       status:   "new"
+     }
+
+   Payload:
+     {
+       category      : "<category>",        // ex: "circles"
+       idName        : "<drawRegistryId>",  // ex: "ellipse"
+       pngBase64     : "<base64 png bytes>",
+       thumbBase64   : "<base64 png bytes>"
+     }
+=========================================================== */
+
+export async function writeGalleryPatternPng(payload = {}) {
+
+  const category    = payload.category;
+  const idName      = payload.idName;
+  const pngBase64   = payload.pngBase64;
+  const thumbBase64 = payload.thumbBase64;
+
+  if (typeof category !== "string" || category.trim() === "") {
+    throw new Error("writeGalleryPatternPng: category missing or invalid");
+  }
+
+  if (typeof idName !== "string" || idName.trim() === "") {
+    throw new Error("writeGalleryPatternPng: idName missing or invalid");
+  }
+
+  if (typeof pngBase64 !== "string" || pngBase64.trim() === "") {
+    throw new Error("writeGalleryPatternPng: pngBase64 missing or invalid");
+  }
+
+  if (typeof thumbBase64 !== "string" || thumbBase64.trim() === "") {
+    throw new Error("writeGalleryPatternPng: thumbBase64 missing or invalid");
+  }
+
+  const galleryRoot = path.resolve("./gallery");
+  assertDirectoryExists(galleryRoot, "writeGalleryPatternPng: gallery root missing: " + galleryRoot);
+
+  const patternsRoot = path.join(galleryRoot, "Patterns");
+  assertDirectoryExists(patternsRoot, "writeGalleryPatternPng: ./gallery/Patterns missing: " + patternsRoot);
+
+  const categoryDir = path.join(patternsRoot, category);
+  assertDirectoryExists(categoryDir, "writeGalleryPatternPng: category dir missing: " + categoryDir);
+
+  const imagesDir = path.join(categoryDir, "images");
+  if (!fs.existsSync(imagesDir)) {
+    fs.mkdirSync(imagesDir, { recursive: true });
+  }
+  assertDirectoryExists(imagesDir, "writeGalleryPatternPng: images dir missing: " + imagesDir);
+
+  const manifestPath = path.join(categoryDir, "manifest.json");
+  assertFileExists(manifestPath, "writeGalleryPatternPng: manifest missing: " + manifestPath);
+
+  const stamp = makeTimestampForFilename();
+  const base  = String(idName).trim() + stamp;
+
+  const pngName   = base + ".png";
+  const thumbName = "thumb_" + base + ".png";
+
+  const pngPath   = path.join(categoryDir, pngName);
+  const thumbPath = path.join(imagesDir, thumbName);
+
+  if (fs.existsSync(pngPath)) fs.unlinkSync(pngPath);
+  fs.writeFileSync(pngPath, Buffer.from(pngBase64, "base64"), { flag: "w" });
+  assertFileExists(pngPath, "writeGalleryPatternPng: write failed: " + pngPath);
+
+  if (fs.existsSync(thumbPath)) fs.unlinkSync(thumbPath);
+  fs.writeFileSync(thumbPath, Buffer.from(thumbBase64, "base64"), { flag: "w" });
+  assertFileExists(thumbPath, "writeGalleryPatternPng: write failed: " + thumbPath);
+
+  const manifest = readJsonFileSync(manifestPath);
+  if (!Array.isArray(manifest)) {
+    throw new Error("writeGalleryPatternPng: manifest must be an array: " + manifestPath);
+  }
+
+  const entryPath = category + "/" + pngName;
+
+  manifest.push({
+    filename: base,
+    path:     entryPath,
+    title:    pngName,
+    status:   "new"
+  });
+
+  writeJsonFileSync(manifestPath, manifest);
+
+  return {
+    request: "writeGalleryPatternPng",
+    status: "ok",
+    category,
+    idName,
+    stamp,
+    filenameBase: base,
+    pngPath,
+    thumbPath,
+    manifestPath,
+    manifestIndexAdded: manifest.length - 1
+  };
+
+} // end writeGalleryPatternPng
+
+
+/* ===========================================================
+   TASK: writePatternFromDrawRegistry
+
+   DESCRIPTION
+   -----------
+   Writes:
+     ./patterns/<category>/<idName><timestamp>.js
+     ./patterns/<category>/images/thumb_<idName><timestamp>.png
+
+   ALSO UPDATES MANIFEST
+   ---------------------
+   Updates:
+     ./patterns/<category>/manifest.json
+
+   Adds a new entry (Patterns model: local filename path):
+     {
+       filename: "<baseName>",        // no extension
+       path:     "<jsName>",          // local filename inside category folder
+       title:    "<jsName>",          // placeholder title
+       status:   "new"
+     }
+
+   Payload:
+     {
+       category    : "<category>",        // ex: "fundamental"
+       idName      : "<drawRegistryId>",  // ex: "parabola"
+       scriptText  : "<full js file text>",
+       thumbBase64 : "<base64 png bytes>" // already sized in UI (your choice)
+     }
+=========================================================== */
+
+/*************************************************************
+   writePatternFromDrawRegistry(spec)
+   -----------------------------------------------------------
+   UI worker for "Create Pattern" (Draw tab).
+
+   Responsibilities:
+     1) Validate spec + canvas
+     2) Build pattern script text
+     3) Convert canvas to PNG base64 + 50x50 thumb base64
+     4) Dispatch Node request: writePatternFromDrawRegistry
+     5) Force manifest refresh (same pattern as archive/edit/png)
+     6) Display a clear completion message
+
+   Expected spec:
+     {
+       category : "<patterns category>",
+       idName   : "<drawRegistry id>",
+       entry    : <drawRegistry entry object>,
+       parameters : <current parameters object>,
+       canvas   : HTMLCanvasElement
+     }
+*************************************************************/
+
+/*************************************************************
+   writePatternFromDrawRegistry(spec)
+   -----------------------------------------------------------
+   UI worker for "Create Pattern" (Draw tab).
+
+   IMPORTANT:
+   - The Node service error you are seeing ("entry missing/invalid")
+     is NOT about the drawRegistry entry object.
+     It means the NODE handler expects a manifest entry object named
+     payload.entry, and we were not sending it.
+
+   This function sends BOTH:
+     - payload.entry      (manifest entry object)
+     - payload.scriptText (the JS file text)
+
+   Expected spec:
+     {
+       category    : "<patterns category>",
+       idName      : "<drawRegistry id>",
+       title       : "<optional title override>",
+       canvas      : HTMLCanvasElement
+     }
+*************************************************************/
+
+/*************************************************************
+   writePatternFromDrawRegistry(spec)
+   -----------------------------------------------------------
+   UI worker for "Create Pattern" (Draw tab).
+
+   IMPORTANT:
+   - The Node service error you are seeing ("entry missing/invalid")
+     is NOT about the drawRegistry entry object.
+     It means the NODE handler expects a manifest entry object named
+     payload.entry, and we were not sending it.
+
+   This function sends BOTH:
+     - payload.entry      (manifest entry object)
+     - payload.scriptText (the JS file text)
+
+   Expected spec:
+     {
+       category    : "<patterns category>",
+       idName      : "<drawRegistry id>",
+       title       : "<optional title override>",
+       canvas      : HTMLCanvasElement
+     }
+*************************************************************/
+
+
+/* ===========================================================
+   TASK: writePatternFromDrawRegistry
+
+   Payload:
+     {
+       category    : "<category>",
+       idName      : "<drawRegistryId>",
+       scriptText  : "<full js file text>",
+       thumbBase64 : "<base64 png bytes>"
+     }
+
+   Writes:
+     ./patterns/<category>/<idName><stamp>.js
+     ./patterns/<category>/images/thumb_<idName><stamp>.png
+
+   Updates:
+     ./patterns/<category>/manifest.json
+=========================================================== */
+export async function writePatternFromDrawRegistry(payload = {}) {
+
+  const category    = payload.category;
+  const idName      = payload.idName;
+  const scriptText  = payload.scriptText;
+  const thumbBase64 = payload.thumbBase64;
+
+  if (typeof category !== "string" || category.trim() === "") {
+    throw new Error("writePatternFromDrawRegistry: category missing/invalid");
+  }
+
+  if (typeof idName !== "string" || idName.trim() === "") {
+    throw new Error("writePatternFromDrawRegistry: idName missing/invalid");
+  }
+
+  if (typeof scriptText !== "string" || scriptText.trim() === "") {
+    throw new Error("writePatternFromDrawRegistry: scriptText missing/invalid");
+  }
+
+  if (typeof thumbBase64 !== "string" || thumbBase64.trim() === "") {
+    throw new Error("writePatternFromDrawRegistry: thumbBase64 missing/invalid");
+  }
+
+  const patternsRoot = path.resolve("./patterns");
+  assertDirectoryExists(patternsRoot, "writePatternFromDrawRegistry: patterns root missing: " + patternsRoot);
+
+  const categoryDir = path.join(patternsRoot, category);
+  assertDirectoryExists(categoryDir, "writePatternFromDrawRegistry: category dir missing: " + categoryDir);
+
+  const imagesDir = path.join(categoryDir, "images");
+  if (!fs.existsSync(imagesDir)) {
+    fs.mkdirSync(imagesDir, { recursive: true });
+  }
+  assertDirectoryExists(imagesDir, "writePatternFromDrawRegistry: images dir missing: " + imagesDir);
+
+  const manifestPath = path.join(categoryDir, "manifest.json");
+  assertFileExists(manifestPath, "writePatternFromDrawRegistry: manifest missing: " + manifestPath);
+
+  const stamp = makeTimestampForFilename();
+  const base  = String(idName).trim() + stamp;
+
+  const jsName    = base + ".js";
+  const thumbName = "thumb_" + base + ".png";
+
+  const scriptPath = path.join(categoryDir, jsName);
+  const thumbPath  = path.join(imagesDir, thumbName);
+
+  if (fs.existsSync(scriptPath)) fs.unlinkSync(scriptPath);
+  fs.writeFileSync(scriptPath, scriptText, "utf8");
+  assertFileExists(scriptPath, "writePatternFromDrawRegistry: write failed: " + scriptPath);
+
+  if (fs.existsSync(thumbPath)) fs.unlinkSync(thumbPath);
+  fs.writeFileSync(thumbPath, Buffer.from(thumbBase64, "base64"), { flag: "w" });
+  assertFileExists(thumbPath, "writePatternFromDrawRegistry: write failed: " + thumbPath);
+
+  const manifest = readJsonFileSync(manifestPath);
+  if (!Array.isArray(manifest)) {
+    throw new Error("writePatternFromDrawRegistry: manifest must be an array: " + manifestPath);
+  }
+
+  manifest.push({
+    filename: base,
+    path:     jsName,    // Patterns model: local filename within category folder
+    title:    jsName,    // placeholder title (your documented rule)
+    status:   "new"
+  });
+
+  writeJsonFileSync(manifestPath, manifest);
+
+  return {
+    request: "writePatternFromDrawRegistry",
+    status: "ok",
+    category,
+    idName,
+    stamp,
+    filenameBase: base,
+    scriptPath,
+    thumbPath,
+    manifestPath,
+    manifestIndexAdded: manifest.length - 1
+  };
+
+} // end writePatternFromDrawRegistry
+
+
+
+
+/* -----------------------------------------------------------
+   makeTimestampForFilename()
+
+   Returns: YYYYMMDD_HHMMSS
+----------------------------------------------------------- */
+function makeTimestampForFilename() {
+
+  const d = new Date();
+
+  const mm   = String(d.getMonth() + 1).padStart(2, "0");
+  const dd   = String(d.getDate()).padStart(2, "0");
+
+  const hh   = String(d.getHours()).padStart(2, "0");
+  const min  = String(d.getMinutes()).padStart(2, "0");
+  const ss   = String(d.getSeconds()).padStart(2, "0");
+
+  return mm + dd + "_" + hh + min + ss;
+
+} // end makeTimestampForFilename
