@@ -42,14 +42,14 @@ window.drawRegistry_inverseStar = {
   // --- UI metadata (controls) ---
   controls: {
     radius:    { widget: "range", min: 10,  max: 400, step: 5,   label: "Radius:" },
-    lineWidth: { widget: "range", min: 1,   max: 5,   step: 1,   label: "Width:" },
+    lineWidth: { widget: "range", min: .5,  max: 2.5, step: .5,  label: "Line wid.:" },
     numNodes:  { widget: "range", min: 3,   max: 16,  step: 1,   label: "Nodes:" },
     numSteps:  { widget: "range", min: 10,  max: 64,  step: 1,   label: "Steps:" },
     rotate:    { widget: "range", min: 0,   max: 360, step: 5,   label: "Rotation:" },
     xScale:    { widget: "range", min: 0.5, max: 2,   step: 0.1, label: "X Scale:" },
     yScale:    { widget: "range", min: 0.5, max: 2,   step: 0.1, label: "Y Scale:" },
     color:     { widget: "colorPicker",                          label: "Color:" },
-    midpoint:  { widget: "pointPicker",                          label: "Midpoint:" }
+    midpoint:  { widget: "pointPicker",     noReadout: true,     label: "Midpoint:" }
   },
 
   // ==========================================================

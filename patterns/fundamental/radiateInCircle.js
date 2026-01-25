@@ -1,4 +1,4 @@
-import { createNodes, drawNodes, drawLine } from "/draw/draw_utilities.js";
+import { createNodes, drawNodes, drawLine } from "/draw/drawUtilities.js";
 import { Point, StringThing } from "/classes/classes.js";
 
 export function runPattern(){

@@ -1,7 +1,7 @@
 
 import { Point } from "/classes/classes.js";
 import { arcCurvature } from "/draw/drawEllipse.js";
-import { drawLine } from "/draw/draw_utilities.js";
+import { drawLine } from "/draw/drawUtilities.js";
 
 export function runPattern() {
 

@@ -1,6 +1,6 @@
 import { Ellipse } from "/classes/ellipseClass.js";
 import { Point, Line } from "/classes/classes.js";
-import { createNodes, drawCircle, drawLines,ptsOnLine,stitcher } from "/draw/draw_utilities.js";
+import { createNodes, drawCircle, drawLines,ptsOnLine,stitcher } from "/draw/drawUtilities.js";
 import { drawInCircle } from "/draw/drawEllipse.js";
 
 export function runPattern() {

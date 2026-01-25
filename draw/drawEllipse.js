@@ -1,20 +1,7 @@
 import { Ellipse, START_END, FULL, TAPER, START_TAPER, END_TAPER }
                                from "../classes/ellipseClass.js";
 import { Line, Point }         from "../classes/classes.js";
-import { drawLine, drawNodes, toRadians } from "./draw_utilities.js";
-import {
-  beginPath,
-  arc,
-  closePath,
-  fill,
-  fillText,
-  fillRect,
-  lineTo,
-  moveTo,
-  restore,
-  save,
-  stroke
-} from "./drawRedefines.js";
+import { drawLine, drawNodes, toRadians } from "./drawUtilities.js";
 
 const CLOSE     = true;
 const DONT_DRAW = true;

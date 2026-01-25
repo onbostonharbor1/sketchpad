@@ -11,7 +11,7 @@
 import { nodeRebuildAndValidateManifests } from "./nodeLayer.js";
 import { getPatternsCaptionMenuItems } from "./patternsMenuCmds.js";
 import { openHelpHomeOverlay } from "./help.js";
-import { formatRebuildReportShared } from "./ui_utilities.js";
+import { formatRebuildReportShared } from "./uiUtilities.js";
 import { renderCategories }     from "./categories.js";
 import { setCaptionBar }        from "./caption.js";
 import { menuManager }          from "./menuManager.js";
@@ -24,7 +24,7 @@ import {
   setCommandsButtonLabel,
   setCommandsButton,
   showCommandsOffcanvas
-} from "./ui_utilities.js";
+} from "./uiUtilities.js";
 import { showScriptOffcanvas } from "./menuCmds.js";
 import { manifest }            from "./manifest.js";
 

@@ -10,6 +10,12 @@
     "title": "Inches To Pixels"
   },
   {
+    "filename": "setCanvasSize",
+    "path": "setCanvasSize.js",
+    "title": "setCanvasSize.js",
+    "status": "new"
+  },
+  {
     "filename": "ShowLogs",
     "path": "showLogs.js",
     "title": "Show Logs"

@@ -1,6 +1,6 @@
 import { StringThing, Point } from "/classes/classes.js";
 import { drawInverseStar, drawRegularPolygon } from "/draw/drawRegular.js";
-import { drawManyParabs } from "/draw/draw_utilities.js";
+import { drawManyParabs } from "/draw/drawUtilities.js";
 
 export function runPattern(){
   //	printTitle("Figure23: Drawing many parabolas");

@@ -18,7 +18,7 @@ import "tinymce/models/dom";
 import "tinymce/skins/ui/oxide/skin.min.css";
 
 import { nodeDispatch }     from "./nodeLayer.js";
-import { escapeHtml }       from "./ui_utilities.js";
+import { escapeHtml }       from "./uiUtilities.js";
 import { getTinyMceConfig } from "./tinyMceConfig.js";
 import { showHelpOverlay }  from "./overlay.js";
 import { overlayManager } from "./overlay.js";

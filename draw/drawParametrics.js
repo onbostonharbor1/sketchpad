@@ -18,7 +18,7 @@
 
 import { Point }               from "/classes/classes.js";
 import { Parametric }          from "/classes/parametric.js";
-import { drawLine, printText } from "/draw/draw_utilities.js";
+import { drawLine, printText } from "/draw/drawUtilities.js";
 
 /* ============================================================
    drawOldPolar(angle, rad, pts)

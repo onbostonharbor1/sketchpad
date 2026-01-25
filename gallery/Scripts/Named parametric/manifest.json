@@ -2,14 +2,12 @@
   {
     "filename": "cardiodFromCircles",
     "path": "cardiodFromCircles.js",
-    "title": "cardiodFromCircles.js",
-    "status": "new"
+    "title": "cardiodFromCircles.js"
   },
   {
     "filename": "cochleoid",
     "path": "cochleoid.js",
-    "title": "cochleoid.js",
-    "status": "new"
+    "title": "cochleoid.js"
   },
   {
     "filename": "epicycloid",
@@ -38,13 +36,12 @@
   {
     "filename": "hypocycloid",
     "path": "hypocycloid.js",
-    "title": "hypocycloid.js",
-    "status": "favorite"
+    "title": "hypocycloid.js"
   },
   {
     "filename": "hypotrochoid",
     "path": "hypotrochoid.js",
-    "title": "hypotrochoid.js",
+    "title": "Hypotrochoid",
     "status": "favorite"
   },
   {

@@ -3,6 +3,16 @@
 // ===========================================================
 // Canvas setup and global context getter
 // ===========================================================
+export let drawState = {
+  title:           "",
+  canvasWidth:     null,
+  canvasHeight:    null,
+  debug:           false,
+  final:           false,
+  pts:             [],
+  ctr:             0
+}; // end drawState
+
 
 export function resetCanvas() {
   const canvas = window.drawCanvas;
@@ -37,8 +47,10 @@ export function resetCanvas() {
   if (!canvas) {
     canvas = document.createElement("canvas");
     canvas.id = CANVAS_ID;
-    canvas.width = 600;
-    canvas.height = 600;
+    canvas.width = 800;
+    canvas.height =800;
+    drawState.canvasHeight = canvas.height;
+    drawState.canvasWidth  = canvas.width;
 
     // If Sketchpad UI exists, attach there; otherwise fall back to <body>
     const host = document.getElementById(canvasHostId);
@@ -73,14 +85,3 @@ Object.defineProperty(window, "ctx", {
   configurable: true
 }); // end global ctx getter
 
-
-export let drawState = {
-  currentTitle:    "",
-  currentFileName: "",
-  debug:           false,
-  dot:             false,
-  final:           false,
-  newLine:         10,
-  pts:             [],
-  ctr:             0
-}; // end drawState

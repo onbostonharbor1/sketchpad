@@ -1,8 +1,25 @@
 [
   {
+    "filename": "arcsAndInner",
+    "path": "arcsAndInner.js",
+    "title": "arcsAndInner.js",
+    "status": "new"
+  },
+  {
     "filename": "curveStitch",
     "path": "curveStitch.js",
-    "title": "curveStitch.js",
+    "title": "curveStitch.js"
+  },
+  {
+    "filename": "manyJoinedParabs",
+    "path": "manyJoinedParabs.js",
+    "title": "manyJoinedParabs.js",
+    "status": "new"
+  },
+  {
+    "filename": "manyJoinedParabs1",
+    "path": "manyJoinedParabs1.js",
+    "title": "manyJoinedParabs1.js",
     "status": "new"
   },
   {
@@ -10,6 +27,18 @@
     "path": "ovalBoat.js",
     "title": "ovalBoat.js",
     "status": "new"
+  },
+  {
+    "filename": "OVERLAP",
+    "path": "OVERLAP.js",
+    "title": "OVERLAP.js",
+    "status": "new"
+  },
+  {
+    "filename": "overlappingStars1",
+    "path": "overlappingStars1.js",
+    "title": "overlappingStars1.js",
+    "status": "working"
   },
   {
     "filename": "tractrix",

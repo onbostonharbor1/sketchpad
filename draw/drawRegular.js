@@ -15,7 +15,7 @@
 import { drawState } from "/draw/drawState.js";
 import { Line, Point, StringThing }       from "../classes/classes.js";
 import { createNodes, drawLines, drawParabs, drawNodes,
-	 ptsOnLine, stitcher, getPreviousIndex, applyCutoffToParabSegments }            from "./draw_utilities.js";
+	 ptsOnLine, stitcher, getPreviousIndex, applyCutoffToParabSegments }            from "./drawUtilities.js";
 
 function createArms(thing, lines) {
   const arms = [];

@@ -219,12 +219,11 @@ export const scriptInfo = {
 
 
 /* ============================================================
-   runPattern(ctx)
+   runPattern()
 ============================================================ */
-export function runPattern(_ctx) {
+export function runPattern() {
 
-  const ctx2 = _ctx || window.ctx;
-  if (!ctx2) throw new Error("spiralizeVoronoi.runPattern: no ctx provided and window.ctx is null");
+  cons
 
   scriptInfo.parameters = scriptInfo.params;
 

@@ -1,5 +1,5 @@
 import { StringThing, Point } from "/classes/classes.js";
-import { drawCircle } from "/draw/draw_utilities.js";
+import { drawCircle } from "/draw/drawUtilities.js";
 import { drawInnerStar, drawCircularParabola } from "/draw/drawRegular.js";
 
 export function runPattern() {

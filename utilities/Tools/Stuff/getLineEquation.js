@@ -1,4 +1,4 @@
-import { getLineEquation, printText } from "/draw/draw_utilities.js";
+import { getLineEquation, printText } from "/draw/drawUtilities.js";
 import { Point } from "/classes/classes.js";
 
 

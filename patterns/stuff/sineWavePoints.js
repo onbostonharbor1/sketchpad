@@ -1,5 +1,5 @@
 import { Point }     from "/classes/classes.js";
-import { toRadians, drawCircle, printCircNum } from "/draw/draw_utilities.js";
+import { toRadians, drawCircle, printCircNum } from "/draw/drawUtilities.js";
 
 export function runPattern(){
     //	printTitle("Test 28");

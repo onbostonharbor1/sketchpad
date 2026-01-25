@@ -1,7 +1,5 @@
-import{ beginPath, closePath, lineTo, moveTo, stroke}
-                                             from "./drawRedefines.js";
 import { getEllipsePoints }                  from "./drawEllipse.js";
-import { createNodes, drawLine, ptsOnLine }  from "./draw_utilities.js";
+import { createNodes, drawLine, ptsOnLine }  from "./drawUtilities.js";
 import { Line, Point }                               from "/classes/classes.js";
 
 //////////////////////////////////////////////////////////////////

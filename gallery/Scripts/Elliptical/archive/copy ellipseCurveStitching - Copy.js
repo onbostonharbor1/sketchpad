@@ -467,9 +467,9 @@ export const scriptInfo = {
 
 
 /* ------------------------------------------------------------
-   runPattern(ctx)
+   runPattern()
 ------------------------------------------------------------ */
-export function runPattern(_ctx) {
+export function runPattern() {
 
   scriptInfo.parameters = scriptInfo.params;
 

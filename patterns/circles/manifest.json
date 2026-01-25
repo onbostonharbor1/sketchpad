@@ -67,11 +67,13 @@
   {
     "filename": "twoEllipses",
     "path": "twoEllipses.js",
-    "title": "Two Ellipses"
+    "title": "Two Ellipses",
+    "status": "To Gallery"
   },
   {
     "filename": "whirlsInCircle",
     "path": "whirlsInCircle.js",
-    "title": "Whirls In Circle"
+    "title": "Whirls In Circle",
+    "status": "To Gallery"
   }
 ]

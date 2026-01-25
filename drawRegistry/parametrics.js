@@ -24,7 +24,7 @@ window.drawRegistry_parametrics = {
   source:      "internal",
   tags:        ["Parametric"],
   description: "Two parametric demos with a selector accordion",
-  status:      "",
+  status:      "broken",
   hover:       "",
 
   // -- visual styling ---

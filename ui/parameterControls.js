@@ -1268,18 +1268,16 @@ function setPointPickerArrayControl(field, label, def, value, info, key, tabId) 
   const canvas = document.getElementById("sharedCanvas");
   if (!canvas) throw new Error("pointPickerArray: #sharedCanvas not found");
 
-  // Use the same access pattern you already used successfully.
   const container = overlayManager.canvasLayers["interaction"];
   if (!container) throw new Error("pointPickerArray: interaction-layer missing");
 
-  // The container MUST accept events or the dots cannot be dragged.
+  // Dots must be able to receive pointer events.
   container.style.display = "block";
   container.style.pointerEvents = "auto";
 
   // ------------------------------------------------------------
-  // Clean up previous dots for THIS control instance only.
-  // (This does NOT solve the “dots persist on numCircles change”
-  // issue in general, but it prevents duplicates for this key.)
+  // Remove any existing dots for THIS control instance only.
+  // Prevents duplicates when the action panel is rebuilt.
   // ------------------------------------------------------------
   const prefix = "dot-" + tabId + "-" + key + "-";
   const children = Array.from(container.children);
@@ -1291,14 +1289,12 @@ function setPointPickerArrayControl(field, label, def, value, info, key, tabId) 
     }
   }
 
-  // If noReadout is set, we draw dots only (no label/readouts).
   const noReadout = !!def.noReadout;
 
   // Optional readouts (one per point), only if not suppressed.
   const readouts = [];
 
   if (!noReadout) {
-    // If we do show readouts, include the label and stack readouts.
     field.appendChild(label);
 
     for (let i = 0; i < value.length; i++) {
@@ -1319,10 +1315,10 @@ function setPointPickerArrayControl(field, label, def, value, info, key, tabId) 
 
   // ------------------------------------------------------------
   // Create N draggable dots.
-  // Each dot uses the same drag model as your single picker:
-  //   - mousedown on dot starts drag
-  //   - window mousemove updates coordinates
-  //   - window mouseup ends drag
+  // IMPORTANT:
+  // - Mousemove/mouseup listeners are installed ONLY during drag.
+  // - They are removed on mouseup.
+  // This prevents stale handlers and duplicated listeners.
   // ------------------------------------------------------------
   for (let i = 0; i < value.length; i++) {
     const p = value[i];
@@ -1340,27 +1336,41 @@ function setPointPickerArrayControl(field, label, def, value, info, key, tabId) 
 
     let isDragging = false;
 
-    const onMouseMove = (e) => {
+    function onMouseMove(e) {
       if (!isDragging) return;
+
       e.preventDefault();
 
       const rect = canvas.getBoundingClientRect();
       const newX = e.clientX - rect.left;
       const newY = e.clientY - rect.top;
 
+      // Move the dot (visual)
       dot.style.left = (newX - 5) + "px";
       dot.style.top  = (newY - 5) + "px";
 
+      // Update the underlying model
       info.parameters[key][i].x = newX;
       info.parameters[key][i].y = newY;
 
+      // Update readout if enabled
       if (!noReadout) {
         readouts[i].value = Math.round(newX) + ", " + Math.round(newY);
       }
 
       if (typeof info.onParamChange === "function") info.onParamChange();
       info.redrawHandler();
-    };
+    } // end onMouseMove
+
+    function endDrag() {
+      if (!isDragging) return;
+
+      isDragging = false;
+      dot.style.cursor = "grab";
+
+      window.removeEventListener("mousemove", onMouseMove);
+      window.removeEventListener("mouseup", endDrag);
+    } // end endDrag
 
     dot.addEventListener("mousedown", (e) => {
       e.preventDefault();
@@ -1368,18 +1378,16 @@ function setPointPickerArrayControl(field, label, def, value, info, key, tabId) 
 
       isDragging = true;
       dot.style.cursor = "grabbing";
-    });
 
-    window.addEventListener("mouseup", () => {
-      if (isDragging) {
-        isDragging = false;
-        dot.style.cursor = "grab";
-      }
-    });
-
-    window.addEventListener("mousemove", onMouseMove, { passive: false });
+      window.addEventListener("mousemove", onMouseMove, { passive: false });
+      window.addEventListener("mouseup", endDrag);
+    }); // end dot.addEventListener
   }
+
 } // end setPointPickerArrayControl
+
+
+
 
 /* ------------------------------------------------------------
    setRadioControl()

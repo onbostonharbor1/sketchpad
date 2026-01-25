@@ -10,6 +10,12 @@
     "title": "Circular Parabola & Inner Star"
   },
   {
+    "filename": "curvedArcsInnerStar",
+    "path": "curvedArcsInnerStar.js",
+    "title": "curvedArcsInnerStar.js",
+    "status": "new"
+  },
+  {
     "filename": "fourInverseStar",
     "path": "fourInverseStar.js",
     "title": "Four Inverse Stars"

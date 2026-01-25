@@ -7,7 +7,8 @@
   {
     "filename": "complicatedParabolas",
     "path": "complicatedParabolas.js",
-    "title": "Complicated Parabolas"
+    "title": "Complicated Parabolas",
+    "status": "Broken"
   },
   {
     "filename": "lotsInCircles",

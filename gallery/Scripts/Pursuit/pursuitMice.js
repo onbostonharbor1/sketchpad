@@ -15,7 +15,7 @@
    GOAL
    ----
    Gallery Scripts file that:
-     - exports runPattern(ctx)
+     - exports runPattern()
      - draws into the shared Sketchpad canvas
      - uses parameterControls.js in #action (Gallery/Scripts region)
 
@@ -276,12 +276,9 @@ export const scriptInfo = {
 
 
 /* ------------------------------------------------------------
-   runPattern(ctx) — Gallery entry point
+   runPattern() — Gallery entry point
 ------------------------------------------------------------ */
-export function runPattern(_ctx) {
-
-  ctx = _ctx || window.ctx;
-  if (!ctx) throw new Error("micePursuit.runPattern: no ctx provided and window.ctx is null");
+export function runPattern() {
 
   // Alias for parameterControls (your existing pattern)
   scriptInfo.parameters = scriptInfo.params;

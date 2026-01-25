@@ -1,7 +1,7 @@
 import { Line, Point }     from "../../classes/classes.js";
 import { CurveStitch }     from "../../classes/curveStitchClass.js";
 import { drawManyParabs }  from "../../draw/drawRegular.js";
-import { printTitle }      from "../../draw/draw_utilities.js";
+import { printTitle }      from "../../draw/drawUtilities.js";
 
 export function runPattern() {
     printTitle("Two Parabolas in one call");

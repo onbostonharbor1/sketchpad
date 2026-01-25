@@ -1,5 +1,11 @@
 [
   {
+    "filename": "boat",
+    "path": "boat.js",
+    "title": "boat.js",
+    "status": "new"
+  },
+  {
     "filename": "voronoi",
     "path": "voronoi.js",
     "title": "Generative Voronoi (placeholer)"

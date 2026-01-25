@@ -18,19 +18,6 @@
 import { Point, Line } from "../classes/classes.js";
 import { drawState }   from "./drawState.js";
 import { drawParab }   from "/draw/drawRegular.js";
-// import {
-//   beginPath,
-//   arc,
-//   closePath,
-//   fill,
-//   fillText,
-//   fillRect,
-//   lineTo,
-//   moveTo,
-//   restore,
-//   save,
-//   stroke
-// } from "../draw/drawRedefines.js";
 
 const toRadians = (deg) => deg * (Math.PI / 180);
 const toDegrees = (rad) => rad * (180 / Math.PI);
@@ -485,7 +472,7 @@ function printText(text, pt) {
 
 
 function printTitle(text = "No Title") {
-  drawState.currentTitle = text;
+  drawState.title = text;
   //   updateOverlayTitle(); // Sync overlay if present
 }
 //function printTitle(options = {}) {

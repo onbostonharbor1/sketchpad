@@ -235,12 +235,9 @@ export const scriptInfo = {
 scriptInfo.params = scriptInfo.parameters;
 
 /* ============================================================
-   runPattern(ctx) — Gallery entry point
+   runPattern() — Gallery entry point
 ============================================================ */
-export function runPattern(_ctx) {
-
-  if (!window.ctx) throw new Error("ellipseStitchDemo: window.ctx missing");
-
+export function runPattern() {
   // Cold init each run; stop any prior loop first.
   if (scriptInfo.elements && scriptInfo.elements.element) {
     stopAnimationLoop(scriptInfo);

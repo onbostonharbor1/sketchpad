@@ -1,4 +1,4 @@
-/* ui_callbacks.js
+/* uiCallbacks.js
    ------------------------------------------------------------
    Central UI Callback Layer (Third / Correct Version)
    - No orchestrators, no generic tab APIs.

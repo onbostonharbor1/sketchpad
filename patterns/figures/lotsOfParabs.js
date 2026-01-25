@@ -1,7 +1,7 @@
 // figure 72 lot of parabs
 import { background, drawSpeckledRadialGradient } from "/draw/background.js";
 import { Point, StringThing } from "/classes/classes.js";
-import { setPt } from "/draw/draw_utilities";
+import { setPt } from "/draw/drawUtilities";
 import { drawParab, drawInverseStar }   from "/draw/drawRegular.js";
 
 export function runPattern(){

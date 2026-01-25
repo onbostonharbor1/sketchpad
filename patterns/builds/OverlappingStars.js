@@ -1,5 +1,5 @@
 import { drawState } from "/draw/drawState.js";
-import { drawLine, printCircNum, _m }  from "/draw/draw_utilities.js";
+import { drawLine, printCircNum, _m }  from "/draw/drawUtilities.js";
 import { StringThing, Point } from "/classes/classes.js";
 import { drawParab } from "/draw/drawRegular.js";
 

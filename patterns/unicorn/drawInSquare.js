@@ -1,6 +1,6 @@
 import { Point, StringThing, Line } from "/classes/classes.js";
 import { createNodes, ptsOnLine, drawLine }
-                                  from "/draw/draw_utilities.js";
+                                  from "/draw/drawUtilities.js";
 
 // drawing in square
 

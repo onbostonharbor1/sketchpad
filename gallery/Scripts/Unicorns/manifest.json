@@ -1,27 +1,15 @@
 [
   {
-    "filename": "bezierBlossom",
-    "path": "bezierBlossom.js",
-    "title": "Bezier Blossum",
-    "status": "favorite"
-  },
-  {
     "filename": "bird",
     "path": "bird.js",
     "title": "bird.js",
     "status": "new"
   },
   {
-    "filename": "bird2",
-    "path": "bird2.js",
-    "title": "bird2.js",
-    "status": "new"
-  },
-  {
-    "filename": "boat",
-    "path": "boat.js",
-    "title": "boat.js",
-    "status": "new"
+    "filename": "bezierBlossom",
+    "path": "bezierBlossom.js",
+    "title": "Butterfly",
+    "status": "favorite"
   },
   {
     "filename": "curveStitchEditor",

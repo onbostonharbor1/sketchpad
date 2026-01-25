@@ -2,7 +2,7 @@ import { Ellipse, START_END, FULL, TAPER, START_TAPER, END_TAPER }
     from "../../classes/ellipseClass.js";
 import { drawInCircle } from "../../draw/drawEllipse.js";
 import { Point } from "../../classes/classes.js";
-//import { printTitle }   from "../../draw/draw_utilities";
+//import { printTitle }   from "../../draw/drawUtilities";
 
 export function runPattern() {
     let s = {

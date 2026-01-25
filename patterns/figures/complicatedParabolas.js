@@ -2,7 +2,7 @@
     import { Radiate }                  from "/classes/radiate.js";
     import { createPrintNodes, ptsOnLine, stitcher, drawLine,
               drawLines, _m}
-                                  from "/draw/draw_utilities.js";
+                                  from "/draw/drawUtilities.js";
     import { drawParab} from "/draw/drawRegular.js";
     import { drawRadiate }          from "/draw/drawUnicorns.js";
     import { drawState } from "/draw/drawState.js";

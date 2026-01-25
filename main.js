@@ -10,9 +10,8 @@ import "./classes/radiate.js";
 
 // === Drawing utilities ===
 import "./draw/drawState.js";
-import "./draw/drawRedefines.js";
 import "./draw/color.js";
-import "./draw/draw_utilities.js";
+import "./draw/drawUtilities.js";
 import "./draw/drawLinkedCircles.js";
 import "./draw/drawRegular.js";
 import "./draw/drawEllipse.js";
@@ -41,14 +40,13 @@ import "./drawRegistry/drawRegistry.js";
 
 // === UI subsystem ===
 import "./ui/uiState.js";
-import "./ui/ui_callbacks.js";
+import "./ui/uiCallbacks.js";
 
 import "./ui/actionRegistry.js";
 import "./ui/caption.js";
 import "./ui/categories.js";
 import "./ui/fileLayer.js";
 import "./ui/help.js";
-import "./ui/logging.js";
 import "./ui/manifest.js";
 import "./ui/menuCmds.js";
 import "./ui/menuManager.js";
@@ -70,8 +68,9 @@ import "./ui/patterns.js";
 import "./ui/patternsMenuCmds.js";
 import "./ui/utilities.js";
 import "./ui/utilitiesMenuCmds.js";
+
 // UI infrastructure
-import "./ui/ui_utilities.js";
+import "./ui/uiUtilities.js";
 import "./ui/setUI.js";
 
 console.log("Sketchpad loaded under Vite.");

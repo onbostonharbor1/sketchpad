@@ -1,5 +1,5 @@
 import { Line, Point, StringThing }      from "../classes/classes.js";
-import { drawALine } from "../draw/draw_utilities.js";
+import { drawALine } from "../draw/drawUtilities.js";
 
 window.drawRegistry_bird = {
     name:        "Bird (temp)",

@@ -22,7 +22,7 @@
    - #action exists
    ============================================================ */
 
-import { printTitle } from "/draw/draw_utilities.js";
+import { printTitle } from "/draw/drawUtilities.js";
 import { buildParameterControls } from "/ui/parameterControls.js";
 
 let ctx = null;

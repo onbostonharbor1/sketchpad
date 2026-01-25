@@ -186,14 +186,8 @@ function clearCanvasBackground(color = "#ffffff") {
   const canvas = window.drawCanvas;
   if (!canvas) throw new Error("clearCanvasBackground: window.drawCanvas missing");
 
-  // IMPORTANT:
-  // Many scripts historically use a provided ctx argument (runPattern(ctx)).
-  // We obtain ctx from the global getter: window.ctx.
-  const c = window.ctx;
-  if (!c) throw new Error("clearCanvasBackground: window.ctx missing");
-
-  c.fillStyle = color;
-  c.fillRect(0, 0, canvas.width, canvas.height);
+  ctx.fillStyle = color;
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
 
 } // end clearCanvasBackground
 
@@ -236,37 +230,6 @@ function buildControlsIfPresent(mod, options) {
 
 
 /* ===========================================================
-   runPatternCompat(mod)
-   -----------------------------------------------------------
-   Compatibility rule:
-     - If runPattern declares 1+ parameters, call runPattern(ctx).
-     - Else call runPattern().
-
-   This preserves older scripts that REQUIRE ctx as an argument,
-   without forcing newer scripts to accept it.
-=========================================================== */
-async function runPatternCompat(mod) {
-
-  if (!mod) throw new Error("runPatternCompat: mod missing");
-  if (typeof mod.runPattern !== "function") {
-    throw new Error("runPatternCompat: mod.runPattern missing");
-  }
-
-  // ctx source of truth for compatibility:
-  // scripts that need ctx should accept it as a parameter.
-  const c = window.ctx;
-
-  if (mod.runPattern.length >= 1) {
-    await mod.runPattern(c);
-    return;
-  }
-
-  await mod.runPattern();
-
-} // end runPatternCompat
-
-
-/* ===========================================================
    executeScriptToCanvas(mod, title, options)
    ===========================================================
    Execute a module into the shared canvas.
@@ -282,6 +245,10 @@ async function runPatternCompat(mod) {
    CONTROLS
    --------
    - controlsRegionId defaults to #action
+
+   CONTRACT:
+   - Always calls mod.runPattern() with NO arguments.
+   - Relies on the global 'ctx' getter defined in drawState.js.
 =========================================================== */
 export async function executeScriptToCanvas(mod, title, options = {}) {
 
@@ -289,19 +256,25 @@ export async function executeScriptToCanvas(mod, title, options = {}) {
 
   const regionId = options.canvasRegionId || "sketchpad";
 
+  // Ensure the physical canvas is in the right place
   attachCanvasToRegion(regionId);
 
+  // Blue Core State Reset (re-triggers your global ctx getter logic)
   resetCanvas();
 
   const clearBg = (options.clearBackground !== false);
   if (clearBg) {
-    clearCanvasBackground(options.backgroundColor || "#ffffff");
+    // We can use the bare 'ctx' here because of your global getter
+    ctx.fillStyle = options.backgroundColor || "#ffffff";
+    ctx.fillRect(0, 0, drawState.canvasWidth, drawState.canvasHeight);
   }
 
-  // Execute script (compat: runPattern() or runPattern(ctx))
-  await runPatternCompat(mod);
+  /* DEBUG BREAKPOINT LOCATION:
+     Set your breakpoint here. Step into (F11) to debug the script.
+  */
+  await mod.runPattern();
 
-  // Optional parameter controls (ONLY if scriptInfo exists)
+  // Optional parameter controls
   buildControlsIfPresent(mod, {
     enableControls: !!options.enableControls,
     controlsRegionId: options.controlsRegionId || "action"

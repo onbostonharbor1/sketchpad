@@ -11,7 +11,7 @@
 //    drawTheodorusSpiral
 /////////////////////////////////////////////////////////////////
 /////////////////////////////////////////////////////////////////
-import { toRadians, drawLine } from "/draw/draw_utilities";
+import { toRadians, drawLine } from "/draw/drawUtilities";
 import { Point }               from "/classes/classes.js";
 
 

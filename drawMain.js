@@ -17,9 +17,8 @@ import "./classes/overlayClass.js";
 import "./classes/radiate.js";
 
 // === Drawing utilities ===
-import "./draw/drawRedefines.js";
 import "./draw/color.js";
-import "./draw/draw_utilities.js";
+import "./draw/drawUtilities.js";
 import "./draw/drawLinkedCircles.js";
 import "./draw/drawRegular.js";
 import "./draw/drawEllipse.js";

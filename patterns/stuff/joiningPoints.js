@@ -1,7 +1,7 @@
 import { Point, StringThing }     from "/classes/classes.js";
 import { drawState }              from "/draw/drawState.js";
 import { drawLine, drawManyParabs, printCircNum }
-                                  from "/draw/draw_utilities.js";
+                                  from "/draw/drawUtilities.js";
 
 export function runPattern() {
   let x = 50;

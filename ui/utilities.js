@@ -8,7 +8,7 @@
 
 import { nodeRebuildAndValidateManifests } from "./nodeLayer.js";
 import { runScriptByPath } from "./scriptRunner.js";
-import { formatRebuildReportShared } from "./ui_utilities.js";
+import { formatRebuildReportShared } from "./uiUtilities.js";
 import { getUtilitiesCaptionMenuItems } from "./utilitiesMenuCmds.js";
 import { openHelpHomeOverlay } from "./help.js";
 
@@ -20,7 +20,7 @@ import {
   setCommandsButtonLabel,
   setCommandsButton,
   showCommandsOffcanvas
-} from "./ui_utilities.js";
+} from "./uiUtilities.js";
 
 import { menuManager }      from "./menuManager.js";
 

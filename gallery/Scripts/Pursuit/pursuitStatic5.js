@@ -88,12 +88,9 @@ function drawPursuit(pts) {
 
 
 /* ------------------------------------------------------------
-   runPattern(ctx) — Gallery entry point
+   runPattern() — Gallery entry point
 ------------------------------------------------------------ */
-export function runPattern(_ctx) {
-
-  ctx = _ctx || window.ctx;
-  if (!ctx) throw new Error("pursuitStatic.runPattern: no ctx provided and window.ctx is null");
+export function runPattern() {
 
   const w = ctx.canvas.width;
   const h = ctx.canvas.height;

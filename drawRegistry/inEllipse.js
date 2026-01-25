@@ -11,7 +11,7 @@ import { drawInEllipse }          from "../draw/drawEllipse.js";
 
 
 window.drawRegistry_inEllipse = {
-  name: "In Ellipse",
+  name: "Chords in Ellipse",
   id: "inEllipse",
   version: 0.4,
   category: "circles",
@@ -48,7 +48,7 @@ window.drawRegistry_inEllipse = {
   // UI Controls metadata
   // ==========================================================
   controls: {
-    midpoint: { widget: "pointPicker", label: "Center:" },
+    midpoint: { widget: "pointPicker", noReadout: true, label: "Center:" },
     ellipse_a: {
       widget: "range",
       min: 50,
@@ -66,9 +66,9 @@ window.drawRegistry_inEllipse = {
     chordLength: {
       widget: "range",
       min: 10,
-      max: 80,
+      max: 50,
       step: 1,
-      label: "Chord Length:",
+      label: "Chord len:",
     },
     numNodes: {
       widget: "range",
@@ -94,11 +94,11 @@ window.drawRegistry_inEllipse = {
     withinCirc: {
       widget: "select",
       options: [
-        { value: START_END, label: "Start–End" },
-        { value: FULL, label: "Full" },
-        { value: TAPER, label: "Taper (Both)" },
+        { value: START_END,   label: "Start–End" },
+        { value: FULL,        label: "Full" },
+        { value: TAPER,       label: "Taper (Both)" },
         { value: START_TAPER, label: "Start Taper" },
-        { value: END_TAPER, label: "End Taper" },
+        { value: END_TAPER,   label: "End Taper" },
       ],
       label: "Mode:",
     },
@@ -109,7 +109,7 @@ window.drawRegistry_inEllipse = {
       min: 1,
       max: 5,
       step: 1,
-      label: "Line Width:",
+      label: "Line wid.:",
     },
   },
 

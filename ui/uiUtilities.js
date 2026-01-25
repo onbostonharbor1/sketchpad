@@ -285,7 +285,7 @@ export function showCommandsOffcanvas({ title, buildBody }) {
 
 /* ===========================================================
    Commands button wiring + Offcanvas helper
-   (ADD to ui_utilities.js)
+   (ADD to uiUtilities.js)
 =========================================================== */
 
 export function setCommandsButton(label, onClick) {

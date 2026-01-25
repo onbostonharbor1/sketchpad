@@ -26,7 +26,7 @@ window.drawRegistry_cycloid = {
 	    midpoint:       { x: 300, y: 300 },   // converted to Point in init()
 	    radius:         250,
 	    numNodes:       240,
-        numCycloids:    2,
+      numCycloids:    2,
 	    xScale:         1,
 	    yScale:         1,
 	    color:          "blue",
@@ -37,12 +37,12 @@ window.drawRegistry_cycloid = {
   controls: {
     numCycloids:    { widget: "range", min: 1,   max: 12,  step: 1,   label: "Loops:" },
     radius:         { widget: "range", min: 80,  max: 350, step: 5,   label: "Radius:" },
-    numNodes:       { widget: "range", min: 64,  max: 400, step: 10,  label: "Nodes:" },
+    numNodes:       { widget: "range", min: 64,  max: 300, step: 10,  label: "Points:" },
     xScale:         { widget: "range", min: 0.5, max: 2,   step: 0.1, label: "X Scale:" },
     yScale:         { widget: "range", min: 0.5, max: 2,   step: 0.1, label: "Y Scale:" },
     color:          { widget: "colorPicker",                          label: "Color:" },
-    midpoint:       { widget: "pointPicker",                          label: "Midpoint:" },
-    lineWidth:      { widget: "range", min: .5,  max: 3,   step: .5,  label: "Width:" }
+    midpoint:       { widget: "pointPicker",     noReadout: true,        label: "Midpoint:" },
+    lineWidth:      { widget: "range", min: .5,  max: 2.5, step: .5,  label: "Line wid.:" }
   },
 
   // ==========================================================

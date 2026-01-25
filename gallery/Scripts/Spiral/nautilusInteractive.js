@@ -180,9 +180,9 @@ export const scriptInfo = {
 
 
 /* ============================================================
-   runPattern(ctx)
+   runPattern()
 ============================================================ */
-export function runPattern(_ctx) {
+export function runPattern() {
 
   if (!window.ctx) throw new Error("nautilus: window.ctx missing");
 

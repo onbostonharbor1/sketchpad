@@ -1,5 +1,5 @@
 import { Point } from "/classes/classes.js";
-import { drawLine } from "/draw/draw_utilities.js";
+import { drawLine } from "/draw/drawUtilities.js";
 
 /*****************************************************
 Increase T → longer, more dramatic arms

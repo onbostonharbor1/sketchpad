@@ -1,6 +1,6 @@
 import { Point, StringThing } from "/classes/classes.js";
 import { drawRegularPolygonTouch, drawInverseStar } from "/draw/drawRegular.js";
-import { createNodes, createPrintNodes } from "/draw/draw_utilities.js";
+import { createNodes, createPrintNodes } from "/draw/drawUtilities.js";
 
 export function runPattern() {
 	// printTitle("Test 26");

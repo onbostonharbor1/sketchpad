@@ -15,7 +15,7 @@ import { manifest } from "./manifest.js";
 import { showScriptOffcanvas } from "./menuCmds.js";
 import { openEditManifestDialog } from "./menuCmds.js";
 import { archiveItem } from "./menuCmds.js";
-import { buildHelpItem } from "./help.js";
+// import { buildHelpItem } from "./help.js";
 
 import { refreshGalleryFromManifestEdit } from "./gallery.js";
 
@@ -120,10 +120,6 @@ async function editGalleryManifestItem(info) {
 
 } // end editGalleryManifestItem
 
-
-/* ============================================================
-   getGalleryCaptionMenuItems(info)
-=========================================================== */
 /* ============================================================
    getGalleryCaptionMenuItems(info)
 =========================================================== */

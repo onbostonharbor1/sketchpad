@@ -9,7 +9,7 @@
      - Integrate with caption bar + menuManager
      - Provide save/restore for Draw state
    ------------------------------------------------------------ */
-import { formatRebuildReportShared } from "./ui_utilities.js";
+import { formatRebuildReportShared } from "./uiUtilities.js";
 import { setCaptionBar }          from "./caption.js";
 import { renderCategories }       from "./categories.js";
 import { menuManager }            from "./menuManager.js";
@@ -19,7 +19,7 @@ import {
   setCommandsButtonLabel,
   setCommandsButton,
   showCommandsOffcanvas
-}                                from "./ui_utilities.js";
+}                                from "./uiUtilities.js";
 import { nodeRebuildAndValidateManifests } from "./nodeLayer.js";
 import { showScriptOffcanvas } from "./menuCmds.js";
 import { copyActiveDrawObject, resetActiveDrawObject, createPngFromActiveDrawObject, createPatternFromActiveDrawObject }

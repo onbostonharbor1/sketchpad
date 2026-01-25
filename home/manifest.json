@@ -6,10 +6,10 @@
     "status": "favorite"
   },
   {
-    "file": "bezierBlossom",
-    "path": "/gallery/Scripts/Unicorns/bezierBlossom.js",
-    "title": "Bezier Blossum",
-    "status": "favorite"
+    "file": "arcsAndInner",
+    "path": "/gallery/Scripts/Curve Stitch/arcsAndInner.js",
+    "title": "arcsAndInner.js",
+    "status": "new"
   },
   {
     "file": "bird",
@@ -18,16 +18,16 @@
     "status": "new"
   },
   {
-    "file": "bird2",
-    "path": "/gallery/Scripts/Unicorns/bird2.js",
-    "title": "bird2.js",
+    "file": "boat",
+    "path": "/gallery/Scripts/Generative/boat.js",
+    "title": "boat.js",
     "status": "new"
   },
   {
-    "file": "boat",
-    "path": "/gallery/Scripts/Unicorns/boat.js",
-    "title": "boat.js",
-    "status": "new"
+    "file": "bezierBlossom",
+    "path": "/gallery/Scripts/Unicorns/bezierBlossom.js",
+    "title": "Butterfly",
+    "status": "favorite"
   },
   {
     "file": "butterfly",
@@ -36,22 +36,10 @@
     "status": "new"
   },
   {
-    "file": "cardiodFromCircles",
-    "path": "/gallery/Scripts/Named parametric/cardiodFromCircles.js",
-    "title": "cardiodFromCircles.js",
-    "status": "new"
-  },
-  {
-    "file": "parabolasWithinCircles",
-    "path": "/patterns/builds/parabolasWithinCircles.js",
-    "title": "Circular Parabola and Inner Star",
-    "status": "bestfriend"
-  },
-  {
-    "file": "cochleoid",
-    "path": "/gallery/Scripts/Named parametric/cochleoid.js",
-    "title": "cochleoid.js",
-    "status": "new"
+    "file": "complicatedParabolas",
+    "path": "/patterns/figures/complicatedParabolas.js",
+    "title": "Complicated Parabolas",
+    "status": "Broken"
   },
   {
     "file": "concentricCircles",
@@ -60,21 +48,15 @@
     "status": "new"
   },
   {
-    "file": "curveStitch",
-    "path": "/gallery/Scripts/Curve Stitch/curveStitch.js",
-    "title": "curveStitch.js",
+    "file": "curvedArcsInnerStar",
+    "path": "/patterns/curve_stitch/curvedArcsInnerStar.js",
+    "title": "curvedArcsInnerStar.js",
     "status": "new"
   },
   {
     "file": "curveStitchEditor",
     "path": "/gallery/Scripts/Unicorns/curveStitchEditor.js",
     "title": "curveStitchEditor.js",
-    "status": "new"
-  },
-  {
-    "file": "cycloid0119_164221",
-    "path": "/gallery/Patterns/circles/cycloid0119_164221.png",
-    "title": "cycloid0119_164221.png",
     "status": "new"
   },
   {
@@ -126,21 +108,10 @@
     "status": "new"
   },
   {
-    "file": "hypocycloid",
-    "path": "/gallery/Scripts/Named parametric/hypocycloid.js",
-    "title": "hypocycloid.js",
-    "status": "favorite"
-  },
-  {
     "file": "hypotrochoid",
     "path": "/gallery/Scripts/Named parametric/hypotrochoid.js",
-    "title": "hypotrochoid.js",
+    "title": "Hypotrochoid",
     "status": "favorite"
-  },
-  {
-    "file": "IMG_idea",
-    "path": "/gallery/Ideabook/ideas/IMG_idea.PNG",
-    "title": "IMG_idea.PNG"
   },
   {
     "file": "inverseStar.js",
@@ -201,6 +172,18 @@
     "status": "new"
   },
   {
+    "file": "manyJoinedParabs",
+    "path": "/gallery/Scripts/Curve Stitch/manyJoinedParabs.js",
+    "title": "manyJoinedParabs.js",
+    "status": "new"
+  },
+  {
+    "file": "manyJoinedParabs1",
+    "path": "/gallery/Scripts/Curve Stitch/manyJoinedParabs1.js",
+    "title": "manyJoinedParabs1.js",
+    "status": "new"
+  },
+  {
     "file": "manyParametric",
     "path": "/gallery/Scripts/Multiple/manyParametric.js",
     "title": "manyParametric.js",
@@ -227,22 +210,36 @@
     "registryKey": "mysticRoseEllipse"
   },
   {
-    "file": "mysticRose0119_000827",
-    "path": "/gallery/Patterns/unicorns/mysticRose0119_000827.png",
-    "title": "mysticRose0119_000827.png",
-    "status": "new"
-  },
-  {
     "file": "ovalBoat",
     "path": "/gallery/Scripts/Curve Stitch/ovalBoat.js",
     "title": "ovalBoat.js",
     "status": "new"
   },
   {
+    "file": "OVERLAP",
+    "path": "/gallery/Scripts/Curve Stitch/OVERLAP.js",
+    "title": "OVERLAP.js",
+    "status": "new"
+  },
+  {
+    "file": "overlappingStars1",
+    "path": "/gallery/Scripts/Curve Stitch/overlappingStars1.js",
+    "title": "overlappingStars1.js",
+    "status": "working"
+  },
+  {
     "file": "parabolas",
     "path": "/gallery/Scripts/Envelopes/parabolas.js",
     "title": "parabolas.js",
     "status": "new"
+  },
+  {
+    "file": "parametrics.js",
+    "path": "/drawRegistry/parametrics.js",
+    "title": "Parametrics",
+    "status": "broken",
+    "sourceType": "drawRegistry",
+    "registryKey": "parametrics"
   },
   {
     "file": "parametricSketcher",
@@ -341,6 +338,12 @@
     "status": "new"
   },
   {
+    "file": "setCanvasSize",
+    "path": "/utilities/Tools/Stuff/setCanvasSize.js",
+    "title": "setCanvasSize.js",
+    "status": "new"
+  },
+  {
     "file": "strophoid",
     "path": "/gallery/Scripts/General parametric/strophoid.js",
     "title": "strophoid.js",
@@ -353,15 +356,21 @@
     "status": "new"
   },
   {
-    "file": "validateDrawRegistry",
-    "path": "/utilities/Tools/Registry/validateDrawRegistry.js",
-    "title": "Validate Draw Registry",
-    "status": "current"
+    "file": "twoEllipses",
+    "path": "/patterns/circles/twoEllipses.js",
+    "title": "Two Ellipses",
+    "status": "To Gallery"
   },
   {
     "file": "weaving",
     "path": "/gallery/Scripts/Curve Stitch/weaving.js",
     "title": "weaving.js",
     "status": "favorite"
+  },
+  {
+    "file": "whirlsInCircle",
+    "path": "/patterns/circles/whirlsInCircle.js",
+    "title": "Whirls In Circle",
+    "status": "To Gallery"
   }
 ]

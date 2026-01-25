@@ -23,17 +23,17 @@
 import { menuManager } from "./menuManager.js";
 import { getHomeCaptionMenuItems } from "./homeMenuCmds.js";
 import { openHelpHomeOverlay } from "./help.js";
-import { formatRebuildReportShared } from "./ui_utilities.js";
+import { formatRebuildReportShared } from "./uiUtilities.js";
 import { uiState } from "./uiState.js";
-import { clearDivs, setCommandsButtonLabel } from "./ui_utilities.js";
-import { setCommandsButtonHandler, showCommandsOffcanvas } from "./ui_utilities.js";
+import { clearDivs, setCommandsButtonLabel } from "./uiUtilities.js";
+import { setCommandsButtonHandler, showCommandsOffcanvas } from "./uiUtilities.js";
 import { setCaptionBar } from "./caption.js";
 import { manifest } from "./manifest.js";
 import { fileLayer } from "./fileLayer.js";
 import { renderCategories } from "./categories.js";
 import { loadScriptModule, executeScriptToCanvas } from "./scriptRunner.js";
 
-import { setCommandsButton, showOffcanvasPanel, escapeHtml } from "./ui_utilities.js";
+import { setCommandsButton, showOffcanvasPanel, escapeHtml } from "./uiUtilities.js";
 import { nodeRebuildAndValidateManifests } from "./nodeLayer.js";
 
 /* ============================================================

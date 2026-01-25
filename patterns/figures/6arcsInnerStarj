@@ -2,7 +2,7 @@ import { Line, StringThing, Point }                  from "/classes/classes.js";
 import { arcPoints }                                 from "/draw/drawEllipse.js";
 import { drawState }                                 from "/draw/drawState.js";
 import { comparePoints, createPrintNodes, drawLine, ptsOnLine }
-                                                     from "/draw/draw_utilities.js";
+                                                     from "/draw/drawUtilities.js";
 
 function runPattern() {
 	// Figure 158

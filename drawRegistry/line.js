@@ -44,7 +44,7 @@
    ------------------------------------------------------------ */
 
 import { Line, Point, StringThing } from "../classes/classes.js";
-import { drawALine }                from "../draw/draw_utilities.js";
+import { drawALine }                from "../draw/drawUtilities.js";
 
 window.drawRegistry_line = {
   // ----------------------------------------------------------
@@ -95,11 +95,11 @@ window.drawRegistry_line = {
   // The keys here must match keys in params.
   // ----------------------------------------------------------
   controls: {
-    pt1:       { widget: "pointPicker", label: "Start Point:" },
-    pt2:       { widget: "pointPicker", label: "End Point:" },
-    midpoint:  { widget: "pointPicker", label: "Midpoint:" },
+    pt1:       { widget: "pointPicker", label: "Start Point:", noReadout: true},
+    pt2:       { widget: "pointPicker", label: "End Point:",   noReadout: true },
+    midpoint:  { widget: "pointPicker", label: "Midpoint:",    noReadout: true },
     color:     { widget: "colorPicker", label: "Color:" },
-    lineWidth: { widget: "range", min: 0.5, max: 4, step: 0.5, label: "Width:" }
+    lineWidth: { widget: "range", min: 0.5, max: 2.5, step: 0.5, label: "Line wid.:" }
   },
 
   // ==========================================================

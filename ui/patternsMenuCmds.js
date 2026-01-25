@@ -14,7 +14,6 @@ import { showScriptOffcanvas }    from "./menuCmds.js";
 import { archiveItem }            from "./menuCmds.js";
 import { openEditManifestDialog } from "./menuCmds.js";
 import { PatternsController }     from "./patterns.js";
-import { buildHelpItem }          from "./help.js";
 
 /* ============================================================
    archivePatternItem(info)
@@ -54,10 +53,6 @@ export async function archivePatternItem(info) {
   });
 
 } // end archivePatternItem
-
-
-
-
 
 
 /* ============================================================

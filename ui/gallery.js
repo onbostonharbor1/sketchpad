@@ -3,8 +3,8 @@
    Gallery Tab
    ------------------------------------------------------------
 */
-import { formatRebuildReportShared } from "./ui_utilities.js";
-
+import { formatRebuildReportShared }       from "./uiUtilities.js";
+import { drawState }                       from "/draw/drawState.js";
 import { nodeRebuildAndValidateManifests } from "./nodeLayer.js";
 import { renderCategories }       from "./categories.js";
 // import { fileLayer }              from "./fileLayer.js";
@@ -20,7 +20,7 @@ import {
   setCommandsButtonLabel,
   setCommandsButton,
   showCommandsOffcanvas
-} from "./ui_utilities.js";
+} from "./uiUtilities.js";
 import { showScriptOffcanvas } from "./menuCmds.js";
 import { manifest }         from "./manifest.js";
 import { menuManager }      from "./menuManager.js";
@@ -748,6 +748,12 @@ function normalizeGalleryEntryPath(category, entry) {
    category folder:
      /gallery/<Domain>/<Category>/<entry.path>
 ============================================================ */
+/* ------------------------------------------------------------
+   showGalleryImage(domain, category, entry)
+   ------------------------------------------------------------
+   Displays a gallery image constrained by the canvas dimensions
+   defined in drawState.
+------------------------------------------------------------ */
 function showGalleryImage(domain, category, entry) {
   const text = document.getElementById("text");
   if (!text) throw new Error("showGalleryImage: #text not found");
@@ -757,7 +763,7 @@ function showGalleryImage(domain, category, entry) {
   const img = document.createElement("img");
 
   const relPath  = normalizeGalleryEntryPath(category, entry);
-  const fullPath = `./gallery/${domain}/${category}/${relPath}`;
+  const fullPath = `/gallery/${domain}/${category}/${relPath}`;
 
   img.src = fullPath;
   img.alt =
@@ -767,11 +773,15 @@ function showGalleryImage(domain, category, entry) {
     "(image)";
 
   img.style.display   = "block";
-  img.style.maxWidth  = "100%";
-  img.style.maxHeight = "100%";
+
+  // Use the Blue Core canvas dimensions as the ceiling
+  img.style.maxWidth  = drawState.canvasWidth + "px";
+  img.style.maxHeight = drawState.canvasHeight + "px";
+
   img.style.margin    = "0 auto";
 
   text.appendChild(img);
+
 } // end showGalleryImage
 
 
@@ -1081,7 +1091,7 @@ function buildGalleryOffcanvasHtml() {
    formatRebuildReport(report)
    ------------------------------------------------------------
    TAB-LOCAL WRAPPER.
-   Calls the shared implementation in ui_utilities.js.
+   Calls the shared implementation in uiUtilities.js.
 ============================================================ */
 
 export function formatRebuildReport(report) {
