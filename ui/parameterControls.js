@@ -14,6 +14,8 @@
 
    >> step
 
+   >> clearOnAction
+
    def.min / def.max / def.step
      - Numeric range configuration for <input type="range">.
      - Applied in both setRangeControl() and setRangeHeaderControl().
@@ -626,13 +628,13 @@ function buildSingleControl(info, key, def, value, tabId) {
       setRadioControl(field, label, def, value, info, key, tabId);
       break;
 
-    case "pointPicker":
-      setPointPickerControl(field, label, def, value, info, key, tabId);
-      break;
+    // case "pointPicker":
+    //   setPointPickerControl(field, label, def, value, info, key, tabId);
+    //   break;
 
-    case "pointPickerArray":
-      setPointPickerArrayControl(field, label, def, value, info, key, tabId);
-      break;
+    // case "pointPickerArray":
+    //   setPointPickerArrayControl(field, label, def, value, info, key, tabId);
+    //   break;
 
     case "color":
     case "colorPicker":
@@ -1136,7 +1138,7 @@ function removePointPickerDots(container, tabId, key) {
    - Supports 'def.noReadout': If true, the x,y text input is hidden.
    - Preserves draggable dot functionality on the interaction layer.
 ------------------------------------------------------------ */
-function setPointPickerControl(field, label, def, value, info, key, tabId) {
+function setPointPickerControl_old(field, label, def, value, info, key, tabId) {
 
   // ---------------------------------------------------------
   // READOUT (UI)
@@ -1260,7 +1262,7 @@ function setPointPickerControl(field, label, def, value, info, key, tabId) {
 
 } // end setPointPickerControl
 
-function setPointPickerArrayControl(field, label, def, value, info, key, tabId) {
+function setPointPickerArrayControl_old(field, label, def, value, info, key, tabId) {
   if (!Array.isArray(value)) {
     throw new Error("pointPickerArray: value must be an array for key " + key);
   }
@@ -1701,51 +1703,6 @@ function setStaticTextControl(field, label, def, value, info, key, tabId) {
    -------
    Renders a Bootstrap accordion in the Action panel.
 
-   CONTROL SCHEMA (USAGE)
-   ---------------------
-   controls: {
-     uiGroup: {
-       widget: "accordion",
-       label: "Advanced",     // currently unused (accordion has its own headers)
-       sections: [
-         {
-           title: "Geometry",
-           controls: {
-             ellipse_a: { widget:"range", min:50, max:600, step:10, label:"Width:" },
-             ellipse_b: { widget:"range", min:50, max:600, step:10, label:"Height:" }
-           }
-         },
-         {
-           title: "Rendering",
-           controls: {
-             color:     { widget:"colorPicker", label:"Color:" },
-             lineWidth: { widget:"range", min:1, max:5, step:1, label:"Line Width:" }
-           }
-         }
-       ]
-     }
-   }
-
-   NOTES
-   -----
-   - The inner controls are declared exactly like normal controls.
-   - Values are still stored in info.parameters[innerKey].
-   - This is purely a UI grouping mechanism.
-  - BUTTON controls require special handling so action/redraw
-     metadata is preserved (matches existing button path).
-   FAIL-FAST
-   ---------
-   - Requires window.bootstrap to exist (Bootstrap JS loaded).
-   - def.sections must be a non-empty array.
-   - Each section must have a string title and an object controls.
------------------------------------------------------------- */
-/* ------------------------------------------------------------
-   setAccordionControl()
-
-   PURPOSE
-   -------
-   Renders a Bootstrap accordion in the Action panel.
-
    UPDATED
    -------
    - Default is CLOSED (def.startOpen defaults to false)
@@ -1772,39 +1729,7 @@ function setStaticTextControl(field, label, def, value, info, key, tabId) {
    - section.title must be non-empty string
    - section.items (if present) must be array of {label, action}
 ------------------------------------------------------------ */
-/* ------------------------------------------------------------
-   setAccordionControl()
 
-   PURPOSE
-   -------
-   Renders a Bootstrap accordion in the Action panel.
-
-   UPDATED
-   -------
-   - Default is CLOSED (def.startOpen defaults to false)
-   - Supports a simple clickable list, like a categories frame:
-
-       sections: [
-         {
-           title: "Draw Registry",
-           items: [
-             { label: "Linked Circles", action: fn },
-             { label: "Mystic Rose",    action: fn }
-           ]
-         }
-       ]
-
-   - If section.controls exists, it renders nested parameter controls
-     (original behavior). If section.items exists, it renders a list.
-     If both exist, items render first, then controls.
-
-   FAIL-FAST
-   ---------
-   - Requires window.bootstrap
-   - def.sections must be non-empty array
-   - section.title must be non-empty string
-   - section.items (if present) must be array of {label, action}
------------------------------------------------------------- */
 function setAccordionControl(field, label, def, value, info, key, tabId) {
 
   if (!field) throw new Error("setAccordionControl: field missing");
@@ -1923,15 +1848,27 @@ function setAccordionControl(field, label, def, value, info, key, tabId) {
         row.textContent = it.label;
         row.style.cursor = "pointer";
 
+        // CLICK LISTENER WITH SYSTEM-LEVEL CLEARING
         row.addEventListener("click", (e) => {
           e.preventDefault();
           e.stopPropagation();
+
+          // If the accordion definition includes clearOnAction,
+          // handle the canvas housekeeping here.
+          if (def.clearOnAction === true) {
+            const canvas = document.getElementById("sharedCanvas");
+            if (canvas) {
+              const ctx = canvas.getContext("2d");
+              ctx.clearRect(0, 0, canvas.width, canvas.height);
+            }
+          }
+
           it.action();
         });
 
         list.appendChild(row);
 
-        // separator line (matches the screenshot vibe)
+        // separator line
         if (j !== sec.items.length - 1) {
           const hr = document.createElement("hr");
           hr.className = "ctrl-accordion-sep";

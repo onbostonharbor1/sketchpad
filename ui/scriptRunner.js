@@ -66,7 +66,7 @@
    This MUST be a concrete file import (".js") so the browser
    never falls back to index.html.
 */
-import { resetCanvas } from "/draw/drawState.js";
+import { drawState, resetCanvas } from "/draw/drawState.js";
 
 /*
    ParameterControls builder.
@@ -330,9 +330,24 @@ export async function executeScriptToText(mod, title, options = {}) {
 /* ===========================================================
    runScriptByPath(path, mode, options)
 =========================================================== */
+// 1. Add a module-level variable to track the currently running script
+let activeModule = null;
+
 export async function runScriptByPath(path, mode, options = {}) {
 
+  // 2. TEARDOWN: If a script is already running, check if it has a stop() hook
+  if (activeModule && typeof activeModule.stop === "function") {
+    try {
+      activeModule.stop();
+    } catch (err) {
+      console.warn("runScriptByPath: Error stopping previous module", err);
+    }
+  }
+
   const mod = await loadScriptModule(path);
+
+  // 3. Store the new module so we can stop it later
+  activeModule = mod;
 
   if (mode === "canvas") {
     return await executeScriptToCanvas(mod, path, options);

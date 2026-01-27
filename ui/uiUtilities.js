@@ -5,6 +5,8 @@
 // showSharedOffCanvas
 
 import { overlayManager } from "./overlay.js";
+import { manifest } from "./manifest.js";
+import { uiState } from "./uiState.js";
 
 /* ------------------------------------------------------------
    clearDivs(args="")
@@ -32,7 +34,68 @@ function clearDivs(args = "") {
     }
 } // end clearDivs
 
+/**
+ * Global Sync: Wipes the manifest cache and invalidates
+ * all tab states so they perform a cold-start on next visit.
+ * * This is the "Passive" partner to the Node "Active" rebuild.
+ */
+export async function syncSystemStateAfterRebuild() {
+  // 1. Wipe the central ManifestManager memory singleton
+  manifest.clearCache();
 
+  // 2. Invalidate 'saved' states for all tabs.
+  // This ensures setUI.js runs init() instead of restore() on next visit.
+  const allTabs = ["home", "patterns", "gallery", "utilities", "figures"];
+  allTabs.forEach(key => {
+    if (uiState[key]) {
+      delete uiState[key].saved;
+    }
+  });
+
+  console.log("System Sync: Cache cleared. Tab states reset to Cold Start.");
+} // end syncSystemStateAfterRebuild
+
+/**
+ * MASTER REBUILD:
+ * 1. Wipes stale cache.
+ * 2. Parallel re-fetch of ALL manifests from disk.
+ * 3. Resets Home module variables.
+ * 4. Resets all tab 'saved' states to force Cold Start.
+ */
+export async function rebuildAllSystemCaches() {
+  // 1. Wipe memory
+  manifest.clearCache();
+
+  // 2. Proactive Fetch (The "Immaterial Time" parallel approach)
+  const paths = [
+    "home",
+    "patterns",
+    "gallery/Ideabook",
+    "gallery/Patterns",
+    "gallery/Scripts",
+    "utilities/Tools",
+    "utilities/Lab"
+  ];
+
+  // Fire all requests at once
+  await Promise.all(paths.map(p => manifest.get(p)));
+
+  // 3. Clear Home's private grouping logic (Dynamic Import)
+  try {
+    const homeMod = await import("./home.js");
+    if (homeMod && typeof homeMod.clearHomeLocalState === "function") {
+      homeMod.clearHomeLocalState();
+    }
+  } catch (err) {
+    console.warn("rebuildAllSystemCaches: Home state reset skipped", err);
+  }
+
+  // 4. Delete 'saved' states for all tabs
+  const tabKeys = ["home", "patterns", "gallery", "utilities", "figures"];
+  tabKeys.forEach(key => {
+    if (uiState[key]) delete uiState[key].saved;
+  });
+} // end rebuildAllSystemCaches
 
 /* ------------------------------------------------------------
    showOffcanvas(title, text)

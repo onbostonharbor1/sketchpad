@@ -1,13 +1,24 @@
 /* ============================================================
    Overlapping Stars — Interactive (Gallery Script)
 
-   FIX GOAL
+   WHAT THIS DOES
+   --------------
+   - Keeps your drawing logic (grid points + drawParab calls).
+   - Adds parameterControls:
+       • compositeOperation (select)
+       • color + lineWidth + alpha + bg
+       • geometry sliders: xDist, yDist, xLength, yLength, x1, y1
+       • numSteps
+       • pointPickerArray for ALL grid points (pts[1]..pts[20])
+         so you can drag the construction points.
+
+   IMPORTANT
+   ---------
+   - The point pickers require the interaction overlay to be a DIV layer.
+
+   CONTRACT
    --------
-   When you change geometry sliders (xDist, xLength, x1, etc.):
-     - Do NOT “reseeding reset” the dragged edits.
-     - Instead, translate each existing point by the SAME per-point delta
-       implied by the geometry change (baseGrid(old) -> baseGrid(new)).
-     - Also, move the DOM dots to match the updated point positions.
+   - Exports scriptInfo + runPattern().
    ============================================================ */
 
 import { drawState } from "/draw/drawState.js";
@@ -15,6 +26,7 @@ import { drawLine, printCircNum, _m } from "/draw/drawUtilities.js";
 import { StringThing, Point } from "/classes/classes.js";
 import { drawParab } from "/draw/drawRegular.js";
 import { buildParameterControls } from "/ui/parameterControls.js";
+// import { armInteractor } from "/ui/interactor.js";
 
 /* ============================================================
    scriptInfo
@@ -25,7 +37,7 @@ export const scriptInfo = {
   title: "Overlapping Stars (Interactive)",
 
   params: {
-    // --- geometry ---
+    // --- geometry (original constants promoted to params) ---
     xDist: 80,
     yDist: 100,
     xLength: 100,
@@ -42,11 +54,13 @@ export const scriptInfo = {
     compositeOperation: "source-over",
 
     // --- draggable construction points (pts[1]..pts[20]) ---
+    // seeded from geometry the first time (and whenever geometry sliders change)
     points: []  // array of {x,y}
   },
 
   controls: {
 
+    // --- rendering ---
     compositeOperation: {
       widget: "select",
       label: "Composite",
@@ -59,7 +73,10 @@ export const scriptInfo = {
       ]
     },
 
-    color: { widget: "color", label: "Color" },
+    color: {
+      widget: "color",
+      label: "Color"
+    },
 
     lineWidth: {
       widget: "range",
@@ -77,7 +94,10 @@ export const scriptInfo = {
       step: 0.01
     },
 
-    background: { widget: "text", label: "BG (css color)" },
+    background: {
+      widget: "text",
+      label: "BG (css color)"
+    },
 
     numSteps: {
       widget: "range",
@@ -96,11 +116,11 @@ export const scriptInfo = {
     y1:      { widget: "range", label: "y1",      min: 0,  max: 500, step: 1, rebuildControls: false },
 
     // --- draggable points ---
-    points: {
-      widget: "pointPickerArray",
-      label: "Drag Points",
-      noReadout: true
-    }
+    // points: {
+    //   widget: "pointPickerArray",
+    //   label: "Drag Points",
+    //   noReadout: true
+    // }
   },
 
   elements: null
@@ -119,11 +139,12 @@ scriptInfo.onParamChange = function onParamChange() {
 
 
 /* ============================================================
-   Internal bookkeeping
+   Internal bookkeeping:
+   - If geometry sliders change, we reseed the points array from geometry.
+   - If you drag points, we do NOT overwrite them.
 ============================================================ */
 
 let lastGeomSig = "";
-let lastBaseGrid = null;   // array of {x,y} representing the “ideal” grid for lastGeomSig
 
 
 /* ============================================================
@@ -132,8 +153,16 @@ let lastBaseGrid = null;   // array of {x,y} representing the “ideal” grid f
 
 export function runPattern() {
   buildParameterControls(scriptInfo, "tab-scripts", true);
+
+  // 1. You must seed the points first
+  ensurePointsArray(scriptInfo.params);
+
+  // 2. Then arm the interactor
+  armInteractor(scriptInfo);
+
+  // 3. Then do the first draw
   scriptInfo.redrawHandler();
-} // end runPattern
+}
 
 
 /* ============================================================
@@ -143,7 +172,6 @@ export function runPattern() {
 function update(params) {
 
   ensurePointsArray(params);
-
   // Build drawState.pts[1..20] from params.points
   drawState.pts = [];
   for (let i = 0; i < params.points.length; i++) {
@@ -157,6 +185,7 @@ function update(params) {
   // Keep your global counter behavior intact (fail-fast if missing)
   drawState.ctr++;
 
+  // Prepare the StringThing (your original used midpoint = _m(pts[4], pts[15]))
   const s = {
     color: params.color,
     numSteps: params.numSteps,
@@ -168,14 +197,12 @@ function update(params) {
     thing: new StringThing(s)
   };
 
-buildParameterControls(scriptInfo, "tab-scripts", true);
-
-
 } // end update
 
 
 function draw() {
 
+  // Background / clear
   ctx.save();
 
   if (scriptInfo.params.background) {
@@ -189,9 +216,11 @@ function draw() {
     ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
   }
 
+  // Composite + alpha
   ctx.globalCompositeOperation = scriptInfo.params.compositeOperation;
   ctx.globalAlpha = scriptInfo.params.alpha;
 
+  // Construction lines (your originals)
   drawLine(drawState.pts[1],  drawState.pts[4],  scriptInfo.params.color);
   drawLine(drawState.pts[2],  drawState.pts[5],  scriptInfo.params.color);
   drawLine(drawState.pts[3],  drawState.pts[6],  scriptInfo.params.color);
@@ -204,12 +233,13 @@ function draw() {
   drawLine(drawState.pts[15], drawState.pts[18], scriptInfo.params.color);
   drawLine(drawState.pts[16], drawState.pts[19], scriptInfo.params.color);
   drawLine(drawState.pts[17], drawState.pts[20], scriptInfo.params.color);
-
+  // Point labels (your originals)
   ctx.fillStyle = scriptInfo.params.color;
   for (let i = 1; i < drawState.pts.length; i++) {
     if (drawState.pts[i]) printCircNum(drawState.pts[i]);
   }
 
+  // Parab set (your originals, unchanged)
   const thing = scriptInfo.elements.thing;
 
   let parab;
@@ -268,95 +298,36 @@ function draw() {
 
 
 /* ============================================================
-   Points maintenance
+   Points Seeding
 ============================================================ */
 
 function ensurePointsArray(params) {
+  // 1. Initial Seed: If the array is empty, we MUST calculate defaults.
+  if (params.points.length === 0) {
+    const pts = computeGridPoints(params);
+    params.points.length = 0;
+    pts.forEach(p => params.points.push({ x: p.x, y: p.y }));
+    return;
+  }
 
-  const sig =
-    params.xDist + "|" + params.yDist + "|" +
-    params.xLength + "|" + params.yLength + "|" +
-    params.x1 + "|" + params.y1;
+  // 2. Geometry Update:
+  // We only re-calculate if the user moves a GEOMETRY slider.
+  const sig = params.xDist + "|" + params.yDist + "|" + params.xLength + "|" + params.yLength + "|" + params.x1 + "|" + params.y1;
 
-  // First-time init: seed points and base grid.
-  if (params.points.length !== 20) {
-    seedPointsFromGeometry(params);
+  if (sig !== lastGeomSig) {
     lastGeomSig = sig;
-    lastBaseGrid = baseGridFromParams(params);
-    syncPointPickerArrayDots("tab-scripts", "points", params.points);
-    return;
+    const pts = computeGridPoints(params);
+    // CRITICAL: We update the defaults, but we don't necessarily
+    // have to wipe out manual drags if we didn't want to.
+    // However, usually, a geometry change implies a reset.
+    params.points.length = 0;
+    pts.forEach(p => params.points.push({ x: p.x, y: p.y }));
   }
 
-  // No geometry change: do nothing (drag edits remain).
-  if (sig === lastGeomSig) {
-    return;
-  }
-
-  // Geometry changed:
-  // translate each existing point by the delta implied by baseGrid(old)->baseGrid(new)
-  const oldBase = lastBaseGrid;
-  const newBase = baseGridFromParams(params);
-
-  if (!oldBase || oldBase.length !== 20) {
-    // If we cannot compute deltas, fall back to a clean seed (fail-fast-ish path).
-    seedPointsFromGeometry(params);
-    lastGeomSig = sig;
-    lastBaseGrid = newBase;
-    syncPointPickerArrayDots("tab-scripts", "points", params.points);
-    return;
-  }
-
-  for (let i = 0; i < 20; i++) {
-    const dx = newBase[i].x - oldBase[i].x;
-    const dy = newBase[i].y - oldBase[i].y;
-
-    params.points[i].x += dx;
-    params.points[i].y += dy;
-  }
-
-  lastGeomSig = sig;
-  lastBaseGrid = newBase;
-
-  // CRITICAL: move the DOM dots to match the updated point positions
-  syncPointPickerArrayDots("tab-scripts", "points", params.points);
-
-} // end ensurePointsArray
-
-
-function seedPointsFromGeometry(params) {
-  const pts = computeGridPoints(params);
-
-  params.points.length = 0;
-  for (let i = 0; i < pts.length; i++) {
-    params.points.push({ x: pts[i].x, y: pts[i].y });
-  }
-} // end seedPointsFromGeometry
-
-
-function baseGridFromParams(params) {
-  const pts = computeGridPoints(params);
-  const base = [];
-  for (let i = 0; i < pts.length; i++) {
-    base.push({ x: pts[i].x, y: pts[i].y });
-  }
-  return base;
-} // end baseGridFromParams
-
-
-function syncPointPickerArrayDots(tabId, key, points) {
-  // PointPickerArray dots are DOM elements with ids:
-  //   dot-<tabId>-<key>-<i>
-  // They are positioned ONCE when controls are built; if the script
-  // changes points programmatically, we must also move these dots.
-  for (let i = 0; i < points.length; i++) {
-    const dotId = "dot-" + tabId + "-" + key + "-" + i;
-    const dot = document.getElementById(dotId);
-    if (!dot) continue;
-
-    dot.style.left = (points[i].x - 5) + "px";
-    dot.style.top  = (points[i].y - 5) + "px";
-  }
-} // end syncPointPickerArrayDots
+  // 3. The Mouse Drag:
+  // If we are here and nothing changed in the sliders, we do NOTHING.
+  // This allows the interactor to keep its manual coordinates.
+}
 
 
 function computeGridPoints(params) {
@@ -384,6 +355,8 @@ function computeGridPoints(params) {
   const y10 = y9 + yDist / 2;
   const y11 = y10 + yLength;
 
+  // Return an array corresponding to drawState.pts[1..20]
+  // i.e., length 20, index 0 maps to pts[1]
   return [
     new Point(x1, y3),   // 1
     new Point(x1, y6),   // 2

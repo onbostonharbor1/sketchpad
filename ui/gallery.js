@@ -12,7 +12,7 @@ import { setCaptionBar }          from "./caption.js";
 import { getGalleryCaptionMenuItems } from "./galleryMenuCmds.js";
 import { openHelpHomeOverlay } from "./help.js";
 import { runScriptByPath } from "./scriptRunner.js";
-
+import { syncSystemStateAfterRebuild } from "./uiUtilities.js";
 import {
   clearDivs,
   renderThumbnailGrid,
@@ -21,7 +21,7 @@ import {
   setCommandsButton,
   showCommandsOffcanvas
 } from "./uiUtilities.js";
-import { showScriptOffcanvas } from "./menuCmds.js";
+// import { showScriptOffcanvas } from "./menuCmds.js";
 import { manifest }         from "./manifest.js";
 import { menuManager }      from "./menuManager.js";
 
@@ -1292,20 +1292,22 @@ export function wireGalleryCommandsButton() {
         const btn = document.getElementById("galleryRebuildValidateButton");
         if (!btn) throw new Error("wireGalleryCommandsButton: button missing");
 
-        btn.addEventListener("click", async () => {
+btn.addEventListener("click", async () => {
+  out.textContent = "Rebuilding...";
 
-          const out = document.getElementById("galleryRebuildReport");
-          if (!out) throw new Error("wireGalleryCommandsButton: report div missing");
+  // 1. Node updates the disk
+  const report = await nodeRebuildAndValidateManifests();
 
-          out.textContent = "Running...";
+  // 2. Clear the global cache and other tab states
+  await syncSystemStateAfterRebuild();
 
-          const report = await nodeRebuildAndValidateManifests();
+  // 3. Since this specific tab is already open, we manually
+  // trigger its cold-start now so the user sees the update.
+  // Replace 'initGalleryTab' with whatever tab's init you are in.
+  await initGalleryTab(false);
 
-          await refreshGalleryAfterRebuild();
-
-          out.textContent = formatRebuildReport(report);
-
-        }); // end click
+  out.textContent = formatRebuildReport(report);
+}); // end click handler
 
         const helpBtn = document.getElementById("galleryHelpButton");
         if (!helpBtn) throw new Error("wireGalleryCommandsButton: galleryHelpButton missing");

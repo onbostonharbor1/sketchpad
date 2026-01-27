@@ -1,5 +1,5 @@
 /* ===========================================================
-   sketchpadService.js  (Node.js)
+   sketchpadService.mjs  (Node.js)
    -----------------------------------------------------------
    Central background service for Sketchpad.
 

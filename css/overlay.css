@@ -180,3 +180,36 @@
 .tox-tooltip {
   z-index: 20000 !important;
 }
+
+/* ===========================================================
+   overlay.css – Canvas Stack Registration
+   =========================================================== */
+
+#sketchpad-wrapper {
+    position: relative;
+    display: inline-block; /* Or block, depending on your layout */
+    /* Ensure the wrapper matches the canvas dimensions */
+}
+
+/* Base Drawing Canvas */
+#sketchpad canvas {
+    display: block;
+}
+
+/* Overlay Layers (The stack of glass) */
+#canvasOverlayLayers canvas {
+    position: absolute;
+    top: 0;
+    left: 0;
+    pointer-events: none; /* Default to "pass-through" */
+    display: none;        /* Hidden until armed */
+}
+
+/* The Interaction Layer specific logic */
+#interaction-layer {
+    position: absolute;
+    top: 0;
+    left: 0;
+    z-index: 2010;      /* Ensure it's on top */
+    pointer-events: auto; /* CRITICAL: Must be auto to catch the mouse */
+}

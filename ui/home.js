@@ -27,6 +27,7 @@ import { formatRebuildReportShared } from "./uiUtilities.js";
 import { uiState } from "./uiState.js";
 import { clearDivs, setCommandsButtonLabel } from "./uiUtilities.js";
 import { setCommandsButtonHandler, showCommandsOffcanvas } from "./uiUtilities.js";
+import { syncSystemStateAfterRebuild } from "./uiUtilities.js";
 import { setCaptionBar } from "./caption.js";
 import { manifest } from "./manifest.js";
 import { fileLayer } from "./fileLayer.js";
@@ -215,25 +216,32 @@ function deriveHomeOriginFromPath(path) {
      - Clears regions, wires commands, builds minimal UI, then
        enters the saved view and kicks manifest load.
 ------------------------------------------------------------ */
+
 export function initHomeTab(restored = false) {
-  // Clear shared regions (matches your pattern in other tabs)
+  // 1. Wipe local module variables immediately on Cold Start
+  homeManifestLogged = false;
+  homeManifestData = null;
+  homeManifestGrouped = null;
+
+  // 2. Clear shared regions
   clearDivs();
   setCommandsButtonLabel("Home Commands");
   wireHomeCommandsButton();
 
-  // Build minimal UI
+  // 3. Build minimal UI
   setHomeSubtabs();
   setHomeCaption("Home (init)");
   setHomeText("Home tab skeleton: init()");
   setHomeAction();
   setHomeSketchpad();
 
-  // Ensure saved state exists (fail-fast contract for future work)
+  // 4. Ensure saved state exists and enter view
   ensureHomeSavedState();
   switchHomeView(uiState.home.saved.view);
+
+  // 5. Load manifest (will hit disk because central cache was cleared)
   loadHomeManifest();
 } // end initHomeTab
-
 
 /* ------------------------------------------------------------
    restoreHomeTab()
@@ -1293,6 +1301,7 @@ export function formatRebuildReport(report) {
        updates report text.
      - Adds Help button (same behavior as Utilities)
 ------------------------------------------------------------ */
+
 export function wireHomeCommandsButton() {
 
   setCommandsButton("Commands", () => {
@@ -1315,22 +1324,19 @@ export function wireHomeCommandsButton() {
           const out = document.getElementById("homeRebuildReport");
           if (!out) throw new Error("wireHomeCommandsButton: #homeRebuildReport missing");
 
-          out.textContent = "Running...";
+          out.textContent = "Running Global Rebuild...";
 
+          // 1. Tell Node to update disk
           const report = await nodeRebuildAndValidateManifests();
 
-          manifest.clearCache();
+          // 2. Clear global cache and invalidate all tab 'saved' states
+          // This uses the utility we added to uiUtilities.js
+          const { syncSystemStateAfterRebuild } = await import("./uiUtilities.js");
+          await syncSystemStateAfterRebuild();
 
-          // force Home manifest reload
-          homeManifestLogged  = false;
-          homeManifestData    = null;
-          homeManifestGrouped = null;
-
-          homeManifestLogged = true;
-          loadHomeManifest_async(true).catch((err) => {
-            console.error("Home manifest reload FAILED", err);
-            throw err;
-          });
+          // 3. Re-init THIS tab immediately
+          // This call triggers step 1 of initHomeTab above (variable clearing)
+          initHomeTab(false);
 
           out.textContent = formatRebuildReport(report);
 
@@ -1340,21 +1346,11 @@ export function wireHomeCommandsButton() {
         if (!helpBtn) throw new Error("wireHomeCommandsButton: #homeHelpButton missing");
 
         helpBtn.addEventListener("click", () => {
-
-          // Close/dismiss the Commands offcanvas
           const panel = document.getElementById("offcanvasPanel");
           if (!panel) throw new Error("wireHomeCommandsButton: #offcanvasPanel missing");
-
-          if (!window.bootstrap || !window.bootstrap.Offcanvas) {
-            throw new Error("wireHomeCommandsButton: bootstrap.Offcanvas not available");
-          }
-
-          const oc = window.bootstrap.Offcanvas.getOrCreateInstance(panel);
+          const oc = bootstrap.Offcanvas.getOrCreateInstance(panel);
           oc.hide();
-
-          // Open Help overlay (startup page)
           openHelpHomeOverlay();
-
         }); // end click
 
       } // end buildBody
@@ -1418,5 +1414,14 @@ function launchTabViaSetUI(tabKey) {
 
 } // end launchTabViaSetUI
 
+/* ============================================================
+   REBUILD / SYNC HOOKS
+   ============================================================ */
+export function clearHomeLocalState() {
+    homeManifestLogged = false;
+    homeManifestData = null;
+    homeManifestGrouped = null;
+    console.log("Home module: Internal grouping variables cleared.");
+}  // clearHomeLocalState
 
 // end home.js

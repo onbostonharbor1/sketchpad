@@ -15,6 +15,7 @@ import { archiveItem }            from "./menuCmds.js";
 import { openEditManifestDialog } from "./menuCmds.js";
 import { PatternsController }     from "./patterns.js";
 
+
 /* ============================================================
    archivePatternItem(info)
    ------------------------------------------------------------
@@ -113,6 +114,9 @@ export async function editPatternsManifestItem(info) {
     manifest.clearCache();
   }
   if (manifest.cache) delete manifest.cache.patterns;
+
+  // Instead of calling a global setUI, import it dynamically:
+    const { setUI } = await import("./setUI.js");
 
   // Force Patterns tab restore (same role as refreshGalleryFromManifestEdit)
   setUI("patterns");

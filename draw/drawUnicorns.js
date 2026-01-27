@@ -49,17 +49,17 @@ export function drawMysticRose(thing){
 	ctx.save();
 	ctx.strokeStyle = thing.color;
 	ctx.lineWidth   = thing.lineWidth;
-   	beginPath();
+   	ctx.beginPath();
     for (let i=0; i < nodes.length; i++) {
         for (let j=0; j < nodes.length -1; j++) {
 	        if (j != i) {
-	            moveTo(nodes[i].x,nodes[i].y);
-	            lineTo(nodes[j].x,nodes[j].y);
+	            ctx.moveTo(nodes[i].x,nodes[i].y);
+	            ctx.lineTo(nodes[j].x,nodes[j].y);
 	        }
 	    }
 	}
-	stroke();
-    closePath();
+	ctx.stroke();
+    ctx.closePath();
 	ctx.restore();
 } // end drawMysticRose
 

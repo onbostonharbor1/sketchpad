@@ -1,5 +1,11 @@
 [
   {
+    "file": "polar1",
+    "path": "/patterns/polar/polar1.js",
+    "title": "10 Circles",
+    "status": "favorite"
+  },
+  {
     "file": "3Lobed",
     "path": "/gallery/Scripts/General parametric/3Lobed.js",
     "title": "3Lobed.js",
@@ -64,6 +70,12 @@
     "path": "/gallery/Scripts/Envelopes/cycloidLike.js",
     "title": "cycloidLike.js",
     "status": "new"
+  },
+  {
+    "file": "ellipseFull",
+    "path": "/patterns/circles/ellipseFull.js",
+    "title": "Ellipse: FULL",
+    "status": "working"
   },
   {
     "file": "epicycloid",
@@ -142,12 +154,6 @@
     "status": "new"
   },
   {
-    "file": "lissajoius2",
-    "path": "/gallery/Scripts/Named parametric/lissajoius2.js",
-    "title": "lissajoius2.js",
-    "status": "new"
-  },
-  {
     "file": "LISSAJOUS100",
     "path": "/gallery/Scripts/Named parametric/LISSAJOUS100.js",
     "title": "LISSAJOUS100.js",
@@ -222,6 +228,12 @@
     "status": "new"
   },
   {
+    "file": "overlappingStar2",
+    "path": "/gallery/Scripts/Curve Stitch/overlappingStar2.js",
+    "title": "overlappingStar2.js",
+    "status": "new"
+  },
+  {
     "file": "overlappingStars1",
     "path": "/gallery/Scripts/Curve Stitch/overlappingStars1.js",
     "title": "overlappingStars1.js",
@@ -257,6 +269,12 @@
     "file": "polygonalSpiral",
     "path": "/gallery/Scripts/Spiral/polygonalSpiral.js",
     "title": "polygonalSpiral.js",
+    "status": "new"
+  },
+  {
+    "file": "polygonCorner",
+    "path": "/gallery/Scripts/Curve Stitch/polygonCorner.js",
+    "title": "polygonCorner.js",
     "status": "new"
   },
   {
@@ -347,6 +365,12 @@
     "file": "strophoid",
     "path": "/gallery/Scripts/General parametric/strophoid.js",
     "title": "strophoid.js",
+    "status": "new"
+  },
+  {
+    "file": "TEST",
+    "path": "/gallery/Scripts/Curve Stitch/TEST.js",
+    "title": "TEST.js",
     "status": "new"
   },
   {

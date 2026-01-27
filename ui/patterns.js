@@ -15,7 +15,7 @@ import { formatRebuildReportShared } from "./uiUtilities.js";
 import { renderCategories }     from "./categories.js";
 import { setCaptionBar }        from "./caption.js";
 import { menuManager }          from "./menuManager.js";
-
+import { syncSystemStateAfterRebuild } from "./uiUtilities.js";
 import { runScriptByPath } from "./scriptRunner.js";
 import {
   renderThumbnailGrid,
@@ -25,7 +25,6 @@ import {
   setCommandsButton,
   showCommandsOffcanvas
 } from "./uiUtilities.js";
-import { showScriptOffcanvas } from "./menuCmds.js";
 import { manifest }            from "./manifest.js";
 
 /* ============================================================
@@ -122,17 +121,20 @@ export async function initPatternsTab(restored) {
   if (!uiState.patterns) {
     uiState.patterns = {};
   }
+
+  // 1. Static setup
   setCommandsButtonLabel("Patterns Commands");
   wirePatternsCommandsButton();
 
-  // This init is called only on cold start; restored flag is ignored
-  // by design in the new architecture.
+  // 2. Clear local module flags/data if you add any in the future
+  // (Standard practice to ensure Cold Start is truly fresh)
+
+  // 3. Re-load from manifest (will hit disk if cache was cleared)
   await ensurePatternsManifestLoaded();
 
-  // Build the fixed subtabs bar for Patterns
+  // 4. Build UI
   setPatternsSubtabs();
 
-  // Default state is "categories" view
   uiState.patterns.activeCategory = null;
   uiState.patterns.activeItem     = null;
   uiState.patterns.saved = {
@@ -141,7 +143,6 @@ export async function initPatternsTab(restored) {
     activeItem: null
   };
 
-  // Show the list of pattern categories in #text
   await showCategoryList();
 } // end initPatternsTab
 
@@ -651,6 +652,7 @@ export function formatRebuildReport(report) {
   return formatRebuildReportShared(report);
 } // end formatRebuildReport
 
+
 export function wirePatternsCommandsButton() {
 
   setCommandsButton("Commands", () => {
@@ -673,47 +675,33 @@ export function wirePatternsCommandsButton() {
           const out = document.getElementById("patternsRebuildReport");
           if (!out) throw new Error("wirePatternsCommandsButton: report div missing");
 
-          out.textContent = "Running...";
+          out.textContent = "Running Global Rebuild...";
 
+          // 1. Maintain disk via Node service
           const report = await nodeRebuildAndValidateManifests();
 
-          manifest.clearCache();
-          if (manifest.cache) delete manifest.cache.patterns;
+          // 2. Perform the Global Sync (Wipes cache + Invalidates other tab saved-states)
+          // Uses dynamic import to avoid circular dependency with uiUtilities.js
+          const { syncSystemStateAfterRebuild } = await import("./uiUtilities.js");
+          await syncSystemStateAfterRebuild();
 
-          await ensurePatternsManifestLoaded();
-
-          if (uiState.patterns.saved.view === "pattern") {
-            await showSelectedPattern(
-              uiState.patterns.saved.activeCategory,
-              uiState.patterns.saved.activeItem
-            );
-          } else {
-            await showCategoryList();
-          }
+          // 3. Immediately re-init this tab to show the results
+          // Since the global cache is empty, this fetches fresh data from disk
+          await initPatternsTab(false);
 
           out.textContent = formatRebuildReport(report);
 
-        }); // end click
+        }); // end click handler
 
         const helpBtn = document.getElementById("patternsHelpButton");
         if (!helpBtn) throw new Error("wirePatternsCommandsButton: patternsHelpButton missing");
 
         helpBtn.addEventListener("click", () => {
-
-          // Close/dismiss the Commands offcanvas
           const panel = document.getElementById("offcanvasPanel");
           if (!panel) throw new Error("wirePatternsCommandsButton: #offcanvasPanel missing");
-
-          if (!window.bootstrap || !window.bootstrap.Offcanvas) {
-            throw new Error("wirePatternsCommandsButton: bootstrap.Offcanvas not available");
-          }
-
-          const oc = window.bootstrap.Offcanvas.getOrCreateInstance(panel);
+          const oc = bootstrap.Offcanvas.getOrCreateInstance(panel);
           oc.hide();
-
-          // Open Help overlay (startup page)
           openHelpHomeOverlay();
-
         }); // end click
 
       } // end buildBody
@@ -722,7 +710,6 @@ export function wirePatternsCommandsButton() {
   });
 
 } // end wirePatternsCommandsButton
-
 
 
 // end patterns.js

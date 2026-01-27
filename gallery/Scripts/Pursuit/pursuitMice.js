@@ -28,8 +28,6 @@
 
 import { buildParameterControls } from "/ui/parameterControls.js";
 
-let ctx = null;
-
 
 /* ------------------------------------------------------------
    drawMicePursuit(thing)

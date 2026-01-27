@@ -11,7 +11,7 @@ import { runScriptByPath } from "./scriptRunner.js";
 import { formatRebuildReportShared } from "./uiUtilities.js";
 import { getUtilitiesCaptionMenuItems } from "./utilitiesMenuCmds.js";
 import { openHelpHomeOverlay } from "./help.js";
-
+import { syncSystemStateAfterRebuild } from "./uiUtilities.js";
 import { setCaptionBar }    from "./caption.js";
 import { renderCategories } from "./categories.js";
 import { manifest }         from "./manifest.js";
@@ -86,6 +86,9 @@ async function restoreUtilityTab() {
    initUtilityTab()
 ============================================================ */
 export async function initUtilityTab(restored = false) {
+  // 1. Wipe local module cache immediately on Cold Start
+  utilitiesCache = null;
+
   clearDivs();
   setCommandsButtonLabel("Utilities Commands");
   wireUtilitiesCommandsButton();
@@ -98,6 +101,8 @@ export async function initUtilityTab(restored = false) {
     saved: null
   };
 
+  // 2. Fetch from central manifest manager
+  // (These will hit the disk because syncSystemStateAfterRebuild cleared the bucket)
   const toolsRaw = await manifest.get("utilities/Tools");
   const labRaw   = await manifest.get("utilities/Lab");
 
@@ -654,35 +659,33 @@ export function wireUtilitiesCommandsButton() {
           const out = document.getElementById("utilitiesRebuildReport");
           if (!out) throw new Error("wireUtilitiesCommandsButton: report div missing");
 
-          out.textContent = "Running...";
+          out.textContent = "Running Global Rebuild...";
 
+          // 1. Tell Node to fix the files on disk
           const report = await nodeRebuildAndValidateManifests();
 
-          await refreshUtilitiesAfterRebuild();
+          // 2. Perform Global Sync (Wipe cache + Invalidate all tab 'saved' states)
+          // We use the dynamic import pattern you established in home.js
+          const { syncSystemStateAfterRebuild } = await import("./uiUtilities.js");
+          await syncSystemStateAfterRebuild();
+
+          // 3. Since we are IN the Utilities tab, re-init it now
+          // This triggers step 1 of initUtilityTab above (clearing the cache)
+          await initUtilityTab(false);
 
           out.textContent = formatRebuildReport(report);
 
-        }); // end click
+        }); // end click handler
 
         const helpBtn = document.getElementById("utilitiesHelpButton");
         if (!helpBtn) throw new Error("wireUtilitiesCommandsButton: utilitiesHelpButton missing");
 
         helpBtn.addEventListener("click", () => {
-
-          // Close/dismiss the Commands offcanvas
           const panel = document.getElementById("offcanvasPanel");
           if (!panel) throw new Error("wireUtilitiesCommandsButton: #offcanvasPanel missing");
-
-          if (!window.bootstrap || !window.bootstrap.Offcanvas) {
-            throw new Error("wireUtilitiesCommandsButton: bootstrap.Offcanvas not available");
-          }
-
-          const oc = window.bootstrap.Offcanvas.getOrCreateInstance(panel);
+          const oc = bootstrap.Offcanvas.getOrCreateInstance(panel);
           oc.hide();
-
-          // Open Help overlay (startup page)
           openHelpHomeOverlay();
-
         }); // end click
 
       } // end buildBody

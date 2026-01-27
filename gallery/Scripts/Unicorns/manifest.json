@@ -40,10 +40,5 @@
     "path": "ribbonAnimated.js",
     "title": "ribbonAnimated.js",
     "status": "new"
-  },
-  {
-    "filename": "voronoi",
-    "path": "voronoi.js",
-    "title": "Voronoi"
   }
 ]

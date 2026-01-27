@@ -107,7 +107,7 @@ function drawParabs(thing, parabs) {
   }
 }
 
-function displayPoint(pt, color = "yellow") {
+function displayPoint(pt, color = "red") {
   /**
    * Draws a circle on the canvas with a default radius of 2 and a default color of yellow.
    *
@@ -117,8 +117,8 @@ function displayPoint(pt, color = "yellow") {
    */
   const radius = 4;
 
-  beginPath();
-  arc(pt.x, pt.y, radius, 0, 2 * Math.PI);
+  ctx.beginPath();
+  ctx.arc(pt.x, pt.y, radius, 0, 2 * Math.PI);
   ctx.fillStyle = color;
   ctx.fill();
 }

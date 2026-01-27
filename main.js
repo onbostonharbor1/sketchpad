@@ -47,6 +47,7 @@ import "./ui/caption.js";
 import "./ui/categories.js";
 import "./ui/fileLayer.js";
 import "./ui/help.js";
+import "./ui/interactor.js";
 import "./ui/manifest.js";
 import "./ui/menuCmds.js";
 import "./ui/menuManager.js";

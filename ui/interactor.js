@@ -1,121 +1,190 @@
 /* ===========================================================
-   interactor.js – Canvas Side Manager
+   interactor.js – Unified Interaction Manager
    -----------------------------------------------------------
-   Handles mouse events, coordinate mapping, and point dragging.
-   Supports a "Registry" model to allow for future overlays.
+   Handles the Canvas Overlay (interaction-layer) and the
+   Draw-side coordination for "Primary" patterns.
 =========================================================== */
 
 import { drawState } from "/draw/drawState.js";
+import { overlayManager } from "/ui/overlay.js";
 
-let activeLayers = new Map(); // Key: ID, Value: { points, onUpdate }
-let draggedPoint = null;      // { layerId, index }
-const HIT_RADIUS = 15;        // Pick sensitivity in canvas pixels
+const PointPickerPresets = {
+    handleRadius: 3,
+    hitTolerance: 7,
+    idleColor: "#0055BF",   // LEGO Bright Blue
+    activeColor: "#FE8A18"  // LEGO Bright Orange
+};
 
-/* ===========================================================
-   registerLayer(id, points, onUpdate)
-   -----------------------------------------------------------
-   Called by the "Draw Side" (runPattern) to enable dragging.
-=========================================================== */
-export function registerLayer(id, points, onUpdate) {
-  activeLayers.set(id, { points, onUpdate });
-  setupListeners();
-} // end registerLayer
+// Internal state to track the active session
+let deactivateCurrent = null;
 
 /* ===========================================================
-   clearInteractors()
-   -----------------------------------------------------------
-   Resets the engine when switching scripts or tabs.
+   DRAW SIDE: Coordination Logic
 =========================================================== */
-export function clearInteractors() {
-  activeLayers.clear();
-  draggedPoint = null;
-  // We keep listeners attached but they will do nothing if Map is empty
-} // end clearInteractors
 
-/* ------------------------------------------------------------
-   getCanvasCoords(event)
-   Maps screen mouse position to high-res canvas internal pixels.
------------------------------------------------------------- */
-function getCanvasCoords(event) {
-  const canvas = window.drawCanvas;
-  if (!canvas) return { x: 0, y: 0 };
+/**
+ * armInteractor(instance)
+ * Public API to connect a class instance to the overlay.
+ *//**
+ * armInteractor(instance)
+ * Public API to connect a class instance to the overlay.
+ */
+export function armInteractor(instance) {
+    // 1. Clean up existing session
+    disarmInteractor();
 
-  const rect = canvas.getBoundingClientRect();
+    // 2. Fail-fast if instance lacks points
+    const pts = instance?.params?.points;
 
-  // Calculate scale factor between physical display and internal resolution
-  const scaleX = canvas.width / rect.width;
-  const scaleY = canvas.height / rect.height;
-
-  return {
-    x: (event.clientX - rect.left) * scaleX,
-    y: (event.clientY - rect.top) * scaleY
-  };
-} // end getCanvasCoords
-
-/* ------------------------------------------------------------
-   handleMouseDown(e)
------------------------------------------------------------- */
-function handleMouseDown(e) {
-  const mouse = getCanvasCoords(e);
-
-  // Iterate through layers to find a hit
-  for (let [id, layer] of activeLayers) {
-    for (let i = 0; i < layer.points.length; i++) {
-      const pt = layer.points[i];
-      const dist = Math.sqrt((mouse.x - pt.x) ** 2 + (mouse.y - pt.y) ** 2);
-
-      if (dist < HIT_RADIUS) {
-        draggedPoint = { layerId: id, index: i };
+    if (!pts) {
+        console.warn("Interactor: armInteractor was called, but no points array found.");
         return;
-      }
     }
-  }
-} // end handleMouseDown
 
-/* ------------------------------------------------------------
-   handleMouseMove(e)
------------------------------------------------------------- */
-function handleMouseMove(e) {
-  if (!draggedPoint) return;
+    // Temporary fix: disable navigation zones to ensure clicks reach the interaction layer
+    const nav = document.getElementById("next-prev-overlay");
+    if (nav) nav.style.pointerEvents = "none";
 
-  const mouse = getCanvasCoords(e);
-  const layer = activeLayers.get(draggedPoint.layerId);
+    // 3. Attach the picker logic
+    deactivateCurrent = activatePointPicker(instance.params.points, {
+        uiKey: instance.id,
+        onUpdate: () => {
+            /** * THE FIX:
+             * We call the redrawHandler directly. This triggers:
+             * 1. your update(params) which converts coords to Point classes.
+             * 2. your draw() which paints the star on the main canvas.
+             */
+            if (instance.redrawHandler) {
+                instance.redrawHandler();
+            } else {
+                // Fallback for scripts that don't have a handler
+                if (instance.update) instance.update(instance.params);
+                if (instance.draw) instance.draw();
+            }
+        }
+    });
+}
 
-  if (layer) {
-    // Update the "Draw Side" data directly
-    const pt = layer.points[draggedPoint.index];
-    pt.x = mouse.x;
-    pt.y = mouse.y;
-
-    // Trigger the script's redraw logic
-    if (typeof layer.onUpdate === "function") {
-      layer.onUpdate();
+/**
+ * disarmInteractor()
+ * Public API to shut down interaction and clean the overlay.
+ */
+export function disarmInteractor() {
+    if (deactivateCurrent) {
+        deactivateCurrent();
+        deactivateCurrent = null;
     }
-  }
-} // end handleMouseMove
+}
 
-/* ------------------------------------------------------------
-   handleMouseUp()
------------------------------------------------------------- */
-function handleMouseUp() {
-  draggedPoint = null;
-} // end handleMouseUp
+function activatePointPicker(points, config = {}) {
+    const settings = { ...PointPickerPresets, ...config };
+    const canvas = overlayManager.getCanvasLayer("interaction");
+    const ctx = canvas.getContext("2d");
 
-/* ------------------------------------------------------------
-   setupListeners()
-   Ensures listeners are attached once to the window.drawCanvas.
------------------------------------------------------------- */
-let listenersAttached = false;
-function setupListeners() {
-  if (listenersAttached) return;
-  const canvas = window.drawCanvas;
-  if (!canvas) return;
+    // Sync overlay size
+    const mainCanvas = window.drawCanvas;
+    if (mainCanvas) {
+        canvas.width = mainCanvas.width;
+        canvas.height = mainCanvas.height;
+        canvas.style.display = "block";
+    }
 
-  canvas.addEventListener("mousedown", handleMouseDown);
-  window.addEventListener("mousemove", handleMouseMove); // Window-level for smoother dragging
-  window.addEventListener("mouseup", handleMouseUp);
+    let draggedIndex = null;
+    let hoverIndex = null; // <--- Track which point the mouse is over
 
-  listenersAttached = true;
-} // end setupListeners
+    const controller = new AbortController();
+    const { signal } = controller;
 
-// end interactor.js
+    function getCanvasCoords(event) {
+        const rect = canvas.getBoundingClientRect();
+        const scaleX = canvas.width / rect.width;
+        const scaleY = canvas.height / rect.height;
+        return {
+            x: (event.clientX - rect.left) * scaleX,
+            y: (event.clientY - rect.top) * scaleY
+        };
+    }
+
+    function render() {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        points.forEach((pt, i) => {
+            ctx.beginPath();
+            ctx.arc(pt.x, pt.y, settings.handleRadius, 0, Math.PI * 2);
+
+            // Logic: Orange if we are hovering OR dragging
+            const isActive = (i === draggedIndex || i === hoverIndex);
+            ctx.fillStyle = isActive ? settings.activeColor : settings.idleColor;
+
+            ctx.fill();
+        });
+    }
+
+    const handleMouseDown = (e) => {
+        const mouse = getCanvasCoords(e);
+        for (let i = 0; i < points.length; i++) {
+            const pt = points[i];
+            const dist = Math.sqrt((mouse.x - pt.x) ** 2 + (mouse.y - pt.y) ** 2);
+            if (dist < settings.hitTolerance) {
+                draggedIndex = i;
+                render();
+                return;
+            }
+        }
+    };
+
+    const handleMouseMove = (e) => {
+        const mouse = getCanvasCoords(e);
+
+        // 1. Update Hover State
+        let currentHover = null;
+        for (let i = 0; i < points.length; i++) {
+            const pt = points[i];
+            const dist = Math.sqrt((mouse.x - pt.x) ** 2 + (mouse.y - pt.y) ** 2);
+            if (dist < settings.hitTolerance) {
+                currentHover = i;
+                break;
+            }
+        }
+
+        // Only re-render if the hover target changed
+        if (currentHover !== hoverIndex) {
+            hoverIndex = currentHover;
+            render();
+        }
+
+        // 2. Handle Dragging
+        if (draggedIndex === null) return;
+
+        points[draggedIndex].x = mouse.x;
+        points[draggedIndex].y = mouse.y;
+
+        render(); // Update handles
+        if (settings.onUpdate) settings.onUpdate(); // Update the Star
+    };
+
+    const handleMouseUp = () => {
+        if (draggedIndex !== null) {
+            draggedIndex = null;
+            render();
+        }
+    };
+
+    // Using window listeners as we found this bypasses the "shield"
+    window.addEventListener("mousedown", handleMouseDown, { signal });
+    window.addEventListener("mousemove", handleMouseMove, { signal });
+    window.addEventListener("mouseup", handleMouseUp, { signal });
+
+    render();
+
+    return () => {
+        controller.abort();
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        canvas.style.display = "none";
+    };
+}
+/* ===========================================================
+   CANVAS SIDE: Factory Logic
+=========================================================== */
+
+
+window.armInteractor = armInteractor;

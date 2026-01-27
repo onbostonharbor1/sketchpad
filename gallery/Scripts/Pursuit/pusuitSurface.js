@@ -13,11 +13,6 @@
    - Run under Gallery calling runPattern()
    - Use parameterControls.js
    - Match drawRegistry-style lifecycle and naming
-
-   ASSUMPTIONS (FAIL-FAST)
-   -----------------------
-   - global ctx exists
-   - #action exists
 ============================================================ */
 
 import { buildParameterControls } from "/ui/parameterControls.js";

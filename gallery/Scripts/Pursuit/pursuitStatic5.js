@@ -16,7 +16,6 @@
    - window.ctx exists
    ============================================================ */
 
-let ctx = null;
 
 const steps  = 1000;   // number of iterations
 const dt     = 0.1;    // step size

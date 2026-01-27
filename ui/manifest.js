@@ -160,6 +160,9 @@ export class ManifestManager {
   clearCache() {
     this.cache = {};
     this.registryCache = {};
+
+    // Optional: Log to console so you know the "Global Reset" happened
+    console.log("ManifestManager: Global cache cleared.");
   } // end clearCache
 
 } // end class ManifestManager

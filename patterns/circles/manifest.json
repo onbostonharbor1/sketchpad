@@ -22,7 +22,8 @@
   {
     "filename": "ellipseFull",
     "path": "ellipseFull.js",
-    "title": "Ellipse: FULL"
+    "title": "Ellipse: FULL",
+    "status": "working"
   },
   {
     "filename": "ellipseStartEnd",

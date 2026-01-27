@@ -445,6 +445,7 @@ export function runPattern() {
 
   }; // end redrawHandler
 
+
   init();
 
   buildParameterControls(scriptInfo, "tab-scripts", true);
@@ -453,3 +454,11 @@ export function runPattern() {
   scriptInfo.redrawHandler();
 
 } // end runPattern
+
+/* ============================================================
+   TEARDOWN (Crucial for Gallery)
+   ============================================================ */
+export function stop() {
+  stopAnimation();
+  console.log("Ribbon script: Animation loop terminated.");
+} // end stop

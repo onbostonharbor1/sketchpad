@@ -51,15 +51,10 @@
     "status": "new"
   },
   {
-    "filename": "lissajoius2",
-    "path": "lissajoius2.js",
-    "title": "lissajoius2.js",
-    "status": "new"
-  },
-  {
     "filename": "lissajous",
     "path": "lissajous.js",
-    "title": "Lissajous (ineractive)"
+    "title": "Lissajous (interactive)",
+    "status": "working"
   },
   {
     "filename": "LISSAJOUS100",

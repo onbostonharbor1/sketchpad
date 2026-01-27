@@ -35,10 +35,28 @@
     "status": "new"
   },
   {
+    "filename": "overlappingStar2",
+    "path": "overlappingStar2.js",
+    "title": "overlappingStar2.js",
+    "status": "new"
+  },
+  {
     "filename": "overlappingStars1",
     "path": "overlappingStars1.js",
     "title": "overlappingStars1.js",
     "status": "working"
+  },
+  {
+    "filename": "polygonCorner",
+    "path": "polygonCorner.js",
+    "title": "polygonCorner.js",
+    "status": "new"
+  },
+  {
+    "filename": "TEST",
+    "path": "TEST.js",
+    "title": "TEST.js",
+    "status": "new"
   },
   {
     "filename": "tractrix",
