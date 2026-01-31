@@ -1,131 +1,112 @@
-/* drawRegistry/parabola.js
-   ------------------------------------------------------------
-   Parabola formed by two lines with a shared StringThing style.
-   Lifecycle identical to 2lines: init, update, draw.
-   Only the draw() method differs — calls drawAParab().
-   ------------------------------------------------------------ */
+/* drawRegistry/parabola.js */
 import { Line, Point, StringThing } from "../classes/classes.js";
 import { drawAParab }               from "../draw/drawRegular.js";
 
 window.drawRegistry_parabola = {
-  name:        "Parabola",
-  id:          "parabola",
-  version:     0.1,
-  category:    "fundamental",
-  firstOrder:  true,
-  source:      "internal",
-  tags:        ["Geometry", "Curve Stitch"],
-  description: "Draws a stitched parabola using two lines and a shared style.",
-  status:      "",
-  hover:       "",
+  name:         "Parabola",
+  id:           "parabola",
+  version:      1.7,
+  category:     "fundamental",
+  firstOrder:   true,
+  source:       "internal",
+  tags:         ["Geometry", "Curve Stitch"],
+  description:  "Stitched parabola with synchronized lifecycle handles.",
+  status:       "",
 
   background: null,
-  overlays:   [],
+  overlays:   ["interaction"],
   transforms: [],
   elements:   null,
 
-  // --- Core defaults (JSON-safe) ---
+  interactive: true,
   params: {
-    line1_pt1: { x: 20,  y: 20  },
-    line1_pt2: { x: 20,  y: 300 },
-    line1_midpoint: null,
-    line2_pt1: { x: 20,  y: 300 },
-    line2_pt2: { x: 300, y: 300 },
-    line2_midpoint: null,
-    color: "#008800",
-    lineWidth: 2
+    line1_pt1: { x: 50,  y: 50  },
+    line1_pt2: { x: 50,  y: 350 },
+    line2_pt1: { x: 50,  y: 350 },
+    line2_pt2: { x: 350, y: 350 },
+    color:     "#008800",
+    lineWidth: 2,
+    points:    [] // The interaction layer monitors this array
   },
 
-  // --- UI metadata (controls) ---
   controls: {
-    line1_pt1:      { widget: "pointPicker", noReadout: true},
-    line1_pt2:      { widget: "pointPicker", noReadout: true },
-    line1_midpoint: { widget: "pointPicker", noReadout: true},
-    line2_pt1:      { widget: "pointPicker", noReadout: true},
-    line2_pt2:      { widget: "pointPicker", noReadout: true},
-    line2_midpoint: { widget: "pointPicker", noReadout: true},
-    color:          { widget: "colorPicker", label: "Color:" },
-    lineWidth:      { widget: "range", min: 0.5, max: 4, step: 0.5, label: "Width:" }
+    color:     { widget: "colorPicker", label: "Color:" },
+    lineWidth: { widget: "range", min: 0.5, max: 4, step: 0.5, label: "Width:" }
   },
 
-  // ==========================================================
-  // 1. init() – create both lines and shared style
-  // ==========================================================
   init() {
     const p = this.params;
 
-    const l1 = new Line(new Point(p.line1_pt1.x, p.line1_pt1.y),
-                        new Point(p.line1_pt2.x, p.line1_pt2.y));
-    const m1 = l1.midpoint();
-    p.line1_midpoint = new Point(m1.x, m1.y);
+    // 1. LIFECYCLE SYNC: Clear the array to drop old handles
+    // Mutating the existing reference so the interaction layer stays bound.
+    p.points.length = 0;
 
-    const l2 = new Line(new Point(p.line2_pt1.x, p.line2_pt1.y),
-                        new Point(p.line2_pt2.x, p.line2_pt2.y));
-    const m2 = l2.midpoint();
-    p.line2_midpoint = new Point(m2.x, m2.y);
-
+    // 2. Setup definitive geometry
+    const l1 = new Line(new Point(p.line1_pt1.x, p.line1_pt1.y), new Point(p.line1_pt2.x, p.line1_pt2.y));
+    const l2 = new Line(new Point(p.line2_pt1.x, p.line2_pt1.y), new Point(p.line2_pt2.x, p.line2_pt2.y));
     const thing = new StringThing({ color: p.color, lineWidth: p.lineWidth });
-    this.elements = { l1, l2, thing };
-  }, // end init
 
-  // ==========================================================
-  // 2. update(params) – sync geometry and style
-  // ==========================================================
-  update(params) {
+    // 3. Populate handles for the canvas overlay
+    // Line 1: [0]=pt1, [1]=pt2, [2]=mid
+    const m1 = l1.midpoint();
+    p.points.push({ x: p.line1_pt1.x, y: p.line1_pt1.y });
+    p.points.push({ x: p.line1_pt2.x, y: p.line1_pt2.y });
+    p.points.push({ x: m1.x, y: m1.y });
+
+    // Line 2: [3]=pt1, [4]=pt2, [5]=mid
+    const m2 = l2.midpoint();
+    p.points.push({ x: p.line2_pt1.x, y: p.line2_pt1.y });
+    p.points.push({ x: p.line2_pt2.x, y: p.line2_pt2.y });
+    p.points.push({ x: m2.x, y: m2.y });
+
+    this.elements = { l1, l2, thing };
+  },
+
+  update(incoming) {
     const p = this.params;
     const { l1, l2, thing } = this.elements;
 
-    // ---- Line 1 ----
-    const incomingMid1 = new Point(params.line1_midpoint.x, params.line1_midpoint.y);
-    const prevMid1 = l1.midpoint();
+    // Handle interactive drags from the canvas overlay
+    if (incoming.points) {
+      // Line 1 Update (Midpoint-First)
+      const incomingMid1 = new Point(p.points[2].x, p.points[2].y);
+      if (!incomingMid1.isSame(l1.midpoint())) {
+        l1.moveMidpointTo(incomingMid1);
+      } else {
+        l1.setStart(new Point(p.points[0].x, p.points[0].y));
+        l1.setEnd(new Point(p.points[1].x, p.points[1].y));
+      }
 
-    if (!incomingMid1.isSame(prevMid1)) {
-      l1.moveMidpointTo(incomingMid1);
-    } else {
-      l1.setStart(new Point(params.line1_pt1.x, params.line1_pt1.y));
-      l1.setEnd(new Point(params.line1_pt2.x, params.line1_pt2.y));
+      // Line 2 Update (Midpoint-First)
+      const incomingMid2 = new Point(p.points[5].x, p.points[5].y);
+      if (!incomingMid2.isSame(l2.midpoint())) {
+        l2.moveMidpointTo(incomingMid2);
+      } else {
+        l2.setStart(new Point(p.points[3].x, p.points[3].y));
+        l2.setEnd(new Point(p.points[4].x, p.points[4].y));
+      }
+
+      // Sync internal params back to the handles
+      const s1 = l1.startPt(), e1 = l1.endPt(), m1 = l1.midpoint();
+      const s2 = l2.startPt(), e2 = l2.endPt(), m2 = l2.midpoint();
+
+      p.line1_pt1 = { x: s1.x, y: s1.y }; p.line1_pt2 = { x: e1.x, y: e1.y };
+      p.line2_pt1 = { x: s2.x, y: s2.y }; p.line2_pt2 = { x: e2.x, y: e2.y };
+
+      p.points[0] = { ...p.line1_pt1 }; p.points[1] = { ...p.line1_pt2 }; p.points[2] = { x: m1.x, y: m1.y };
+      p.points[3] = { ...p.line2_pt1 }; p.points[4] = { ...p.line2_pt2 }; p.points[5] = { x: m2.x, y: m2.y };
     }
 
-    p.line1_pt1 = l1.startPt();
-    p.line1_pt2 = l1.endPt();
-    p.line1_midpoint = l1.midpoint();
-
-    // ---- Line 2 ----
-    const incomingMid2 = new Point(params.line2_midpoint.x, params.line2_midpoint.y);
-    const prevMid2 = l2.midpoint();
-
-    if (!incomingMid2.isSame(prevMid2)) {
-      l2.moveMidpointTo(incomingMid2);
-    } else {
-      l2.setStart(new Point(params.line2_pt1.x, params.line2_pt1.y));
-      l2.setEnd(new Point(params.line2_pt2.x, params.line2_pt2.y));
+    // Handle style updates
+    if (incoming.color) thing.color = incoming.color;
+    if (incoming.lineWidth) {
+      thing.lineWidth = Number(incoming.lineWidth);
+      p.lineWidth = thing.lineWidth;
     }
+  },
 
-    p.line2_pt1 = l2.startPt();
-    p.line2_pt2 = l2.endPt();
-    p.line2_midpoint = l2.midpoint();
-
-    // ---- Shared style updates ----
-    thing.color = params.color;
-    thing.lineWidth = Number(params.lineWidth);
-    p.color = thing.color;
-    p.lineWidth = thing.lineWidth;
-
-    // ---- Mirror geometry back into shared params (for UI sync) ----
-    params.line1_pt1 = l1.startPt();
-    params.line1_pt2 = l1.endPt();
-    params.line1_midpoint = l1.midpoint();
-
-    params.line2_pt1 = l2.startPt();
-    params.line2_pt2 = l2.endPt();
-    params.line2_midpoint = l2.midpoint();
-  }, // end update
-
-  // ==========================================================
-  // 3. draw() – render the stitched parabola
-  // ==========================================================
   draw() {
     const { l1, l2, thing } = this.elements;
     drawAParab(thing, l1, l2);
-  } // end draw
+  }
 };

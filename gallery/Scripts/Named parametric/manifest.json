@@ -12,26 +12,23 @@
   {
     "filename": "epicycloid",
     "path": "epicycloid.js",
-    "title": "epicycloid.js",
-    "status": "new"
+    "title": "epicycloid.js"
   },
   {
     "filename": "epitrochoid",
     "path": "epitrochoid.js",
     "title": "Epitrochoid",
-    "status": "favorite"
+    "status": "Queue 2"
   },
   {
     "filename": "epitrochoid_good",
     "path": "epitrochoid_good.js",
-    "title": "epitrochoid_good.js",
-    "status": "new"
+    "title": "epitrochoid_good.js"
   },
   {
     "filename": "epitrochoid1",
     "path": "epitrochoid1.js",
-    "title": "epitrochoid1.js",
-    "status": "new"
+    "title": "epitrochoid1.js"
   },
   {
     "filename": "hypocycloid",
@@ -41,20 +38,17 @@
   {
     "filename": "hypotrochoid",
     "path": "hypotrochoid.js",
-    "title": "Hypotrochoid",
-    "status": "favorite"
+    "title": "Hypotrochoid"
   },
   {
     "filename": "lissajois1",
     "path": "lissajois1.js",
-    "title": "lissajois1.js",
-    "status": "new"
+    "title": "lissajois1.js"
   },
   {
     "filename": "lissajous",
     "path": "lissajous.js",
-    "title": "Lissajous (interactive)",
-    "status": "working"
+    "title": "Lissajous (interactive)"
   },
   {
     "filename": "LISSAJOUS100",
@@ -65,25 +59,23 @@
   {
     "filename": "lissajous3",
     "path": "lissajous3.js",
-    "title": "lissajous3.js",
-    "status": "new"
+    "title": "lissajous3.js"
   },
   {
     "filename": "lissajous4",
     "path": "lissajous4.js",
     "title": "lissajous4.js",
-    "status": "new"
+    "status": "favorite"
   },
   {
     "filename": "lissajous5",
     "path": "lissajous5.js",
     "title": "lissajous5.js",
-    "status": "new"
+    "status": "Many"
   },
   {
     "filename": "roseCurve",
     "path": "roseCurve.js",
-    "title": "roseCurve.js",
-    "status": "new"
+    "title": "roseCurve.js"
   }
 ]

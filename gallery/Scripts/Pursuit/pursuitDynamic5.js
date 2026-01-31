@@ -23,9 +23,6 @@
 
 import { buildParameterControls } from "/ui/parameterControls.js";
 
-let ctx = null;
-
-
 /* ------------------------------------------------------------
    setPoints(numNodes, x, y, radius, rotation)
 ------------------------------------------------------------ */
@@ -238,13 +235,7 @@ export const scriptInfo = {
 /* ------------------------------------------------------------
    runPattern() — Gallery entry point
 ------------------------------------------------------------ */
-export function runPattern(_ctx) {
-
-  ctx = _ctx || window.ctx;
-  if (!ctx) throw new Error("pursuitPolygonsInteractive.runPattern: no ctx provided and window.ctx is null");
-
-  console.count("RUN " + scriptInfo.title);
-
+export function runPattern() {
   // parameterControls compatibility
   scriptInfo.parameters = scriptInfo.params;
 

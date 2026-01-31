@@ -2,43 +2,39 @@
   {
     "filename": "bird",
     "path": "bird.js",
-    "title": "bird.js",
-    "status": "new"
+    "title": "bird.js"
   },
   {
     "filename": "bezierBlossom",
     "path": "bezierBlossom.js",
-    "title": "Butterfly",
-    "status": "favorite"
+    "title": "Butterfly"
   },
   {
     "filename": "curveStitchEditor",
     "path": "curveStitchEditor.js",
-    "title": "curveStitchEditor.js",
-    "status": "new"
+    "title": "Curve Stitch Editor",
+    "status": "Many"
   },
   {
     "filename": "radialPetals",
     "path": "radialPetals.js",
-    "title": "radialPetals.js",
-    "status": "new"
+    "title": "Radial Petals",
+    "status": "Queue 2"
   },
   {
     "filename": "ribbon1",
     "path": "ribbon1.js",
-    "title": "ribbon1.js",
-    "status": "new"
+    "title": "ribbon1.js"
   },
   {
     "filename": "ribbon2",
     "path": "ribbon2.js",
     "title": "ribbon2.js",
-    "status": "new"
+    "status": "favorite"
   },
   {
     "filename": "ribbonAnimated",
     "path": "ribbonAnimated.js",
-    "title": "ribbonAnimated.js",
-    "status": "new"
+    "title": "ribbonAnimated.js"
   }
 ]

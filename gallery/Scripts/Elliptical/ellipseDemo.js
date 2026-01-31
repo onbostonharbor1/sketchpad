@@ -103,7 +103,7 @@ scriptInfo.params = scriptInfo.parameters;
 /* ============================================================
    runPattern() — Gallery entry point
 ============================================================ */
-export function runPattern(_ctx) {
+export function runPattern() {
   if (!window.drawCanvas) throw new Error("ellipseDemo: window.drawCanvas missing");
   if (!window.ctx) throw new Error("ellipseDemo: window.ctx missing");
 

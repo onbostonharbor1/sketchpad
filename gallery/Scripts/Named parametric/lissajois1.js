@@ -164,7 +164,7 @@ export const scriptInfo = {
 /* ------------------------------------------------------------
    runPattern() — Gallery entry point
 ------------------------------------------------------------ */
-export function runPattern(_ctx) {
+export function runPattern() {
 
   // Alias for parameterControls
   scriptInfo.parameters = scriptInfo.params;

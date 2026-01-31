@@ -15,7 +15,6 @@ import { formatRebuildReportShared } from "./uiUtilities.js";
 import { renderCategories }     from "./categories.js";
 import { setCaptionBar }        from "./caption.js";
 import { menuManager }          from "./menuManager.js";
-import { syncSystemStateAfterRebuild } from "./uiUtilities.js";
 import { runScriptByPath } from "./scriptRunner.js";
 import {
   renderThumbnailGrid,

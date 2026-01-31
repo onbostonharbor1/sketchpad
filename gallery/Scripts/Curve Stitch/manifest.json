@@ -2,8 +2,8 @@
   {
     "filename": "arcsAndInner",
     "path": "arcsAndInner.js",
-    "title": "arcsAndInner.js",
-    "status": "new"
+    "title": "Fix colors",
+    "status": "Broken"
   },
   {
     "filename": "curveStitch",
@@ -14,55 +14,34 @@
     "filename": "manyJoinedParabs",
     "path": "manyJoinedParabs.js",
     "title": "manyJoinedParabs.js",
-    "status": "new"
-  },
-  {
-    "filename": "manyJoinedParabs1",
-    "path": "manyJoinedParabs1.js",
-    "title": "manyJoinedParabs1.js",
-    "status": "new"
+    "status": "favorite"
   },
   {
     "filename": "ovalBoat",
     "path": "ovalBoat.js",
-    "title": "ovalBoat.js",
-    "status": "new"
-  },
-  {
-    "filename": "OVERLAP",
-    "path": "OVERLAP.js",
-    "title": "OVERLAP.js",
-    "status": "new"
-  },
-  {
-    "filename": "overlappingStar2",
-    "path": "overlappingStar2.js",
-    "title": "overlappingStar2.js",
-    "status": "new"
+    "title": "ovalBoat.js"
   },
   {
     "filename": "overlappingStars1",
     "path": "overlappingStars1.js",
     "title": "overlappingStars1.js",
-    "status": "working"
+    "status": "current"
   },
   {
     "filename": "polygonCorner",
     "path": "polygonCorner.js",
     "title": "polygonCorner.js",
-    "status": "new"
+    "status": "favorite"
   },
   {
     "filename": "TEST",
     "path": "TEST.js",
-    "title": "TEST.js",
-    "status": "new"
+    "title": "TEST.js"
   },
   {
     "filename": "tractrix",
     "path": "tractrix.js",
-    "title": "tractrix.js",
-    "status": "new"
+    "title": "tractrix.js"
   },
   {
     "filename": "weaving",

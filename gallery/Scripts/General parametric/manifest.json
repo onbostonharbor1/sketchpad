@@ -8,13 +8,12 @@
   {
     "filename": "butterfly",
     "path": "butterfly.js",
-    "title": "butterfly.js",
-    "status": "new"
+    "title": "butterfly.js"
   },
   {
     "filename": "strophoid",
     "path": "strophoid.js",
-    "title": "strophoid.js",
-    "status": "new"
+    "title": "Strophoid",
+    "status": "Queue 2"
   }
 ]

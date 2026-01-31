@@ -206,6 +206,8 @@ function clearCanvasBackground(color = "#ffffff") {
    - Controls must be built into a known region. In Sketchpad,
      that is #action by convention for canvas scripts.
 =========================================================== */
+
+
 function buildControlsIfPresent(mod, options) {
 
   if (!mod) throw new Error("buildControlsIfPresent: mod missing");
@@ -250,6 +252,7 @@ function buildControlsIfPresent(mod, options) {
    - Always calls mod.runPattern() with NO arguments.
    - Relies on the global 'ctx' getter defined in drawState.js.
 =========================================================== */
+
 export async function executeScriptToCanvas(mod, title, options = {}) {
 
   if (!mod) throw new Error("executeScriptToCanvas: mod missing");
@@ -259,7 +262,7 @@ export async function executeScriptToCanvas(mod, title, options = {}) {
   // Ensure the physical canvas is in the right place
   attachCanvasToRegion(regionId);
 
-  // Blue Core State Reset (re-triggers your global ctx getter logic)
+  // Blue Core State Reset
   resetCanvas();
 
   const clearBg = (options.clearBackground !== false);
@@ -269,12 +272,22 @@ export async function executeScriptToCanvas(mod, title, options = {}) {
     ctx.fillRect(0, 0, drawState.canvasWidth, drawState.canvasHeight);
   }
 
-  /* DEBUG BREAKPOINT LOCATION:
-     Set your breakpoint here. Step into (F11) to debug the script.
-  */
+  // 1. EXECUTE THE SCRIPT FIRST
+  // This ensures the script's runPattern() populates the points array
   await mod.runPattern();
 
-  // Optional parameter controls
+  // 2. NORMALIZE scriptInfo to check for interactivity
+  const info = normalizeScriptInfo(mod);
+
+  // 3. THE BURIAL: Arm after execution
+  // Now info.params.points will actually have data in it.
+  if (info && info.interactive === true && info.params?.points) {
+    if (window.armInteractor) {
+      window.armInteractor(info);
+    }
+  }
+
+  // 4. Build parameter controls
   buildControlsIfPresent(mod, {
     enableControls: !!options.enableControls,
     controlsRegionId: options.controlsRegionId || "action"
@@ -326,16 +339,19 @@ export async function executeScriptToText(mod, title, options = {}) {
 
 } // end executeScriptToText
 
-
 /* ===========================================================
    runScriptByPath(path, mode, options)
 =========================================================== */
-// 1. Add a module-level variable to track the currently running script
 let activeModule = null;
 
 export async function runScriptByPath(path, mode, options = {}) {
 
-  // 2. TEARDOWN: If a script is already running, check if it has a stop() hook
+  // 1. TEARDOWN: Clear the interaction layer before starting a new script.
+  // This prevents ghost dots from a previous script.
+  if (window.disarmInteractor) {
+      window.disarmInteractor();
+  }
+
   if (activeModule && typeof activeModule.stop === "function") {
     try {
       activeModule.stop();
@@ -346,7 +362,7 @@ export async function runScriptByPath(path, mode, options = {}) {
 
   const mod = await loadScriptModule(path);
 
-  // 3. Store the new module so we can stop it later
+  // Store the new module so we can stop it later
   activeModule = mod;
 
   if (mode === "canvas") {

@@ -1,17 +1,60 @@
-// createArms
-// createLinesFromNodesMiddle
-// createLinesFromNodesOuter
-// createParab
-// createParabs
-// drawManyParabs
-// drawParab
-//
-// drawCircularParabola
-// drawInnerStar
-// drawInverseStar
-// drawRegularPolygon
-// drawRegularPolygonCorner
-// drawRegularPolygonTouch
+/* ====================================================================
+CREATION & DRAWING ROUTINES
+--------------------------------------------------------------------
+createArms(thing, lines)
+- Converts an array of Line objects into "arms" (arrays of Points)
+  by subdividing each line based on numSteps or numNodes.
+
+createLinesFromNodesMiddle(nodes, midpoint)
+- Generates a set of radial Lines connecting a shared central
+  midpoint to each Point in a provided nodes array.
+
+createLinesFromNodesOuter(nodes)
+- Generates a set of boundary Lines by connecting consecutive nodes
+  in a loop (0 to 1, 1 to 2, ... last to 0).
+
+createParab(arm1, arm2) / createParabs(thing, arms1, arms2)
+- High-level wrappers for the stitcher; createParabs iterates
+  through two sets of arms to build a collection of parabolas.
+
+drawManyParabs(thing, parabs)
+- Iterates through an array of pre-stitched parabolas and renders
+  each one using the current style settings.
+
+drawParab(thing, pts)
+- The workhorse for single parabolas. It constructs two arms from
+  input points, applies optional line transforms (like flexing),
+  stitches them, and renders the result.
+
+drawCircularParabola(thing)
+- Generates the complex "Circular Parabola" pattern by stitching
+  radial center-to-perimeter arms with arc-segments along the
+  circumference in both directions.
+
+drawInnerStar(thing)
+- Creates a star-burst pattern by stitching radial arms to their
+  immediate neighbors, reversing the direction of the second arm
+  to create the characteristic star-point pinch.
+
+drawInverseStar(thing)
+- Combines radial center-to-node arms with outer perimeter arms
+  to create an "inside-out" star pattern in both directions.
+
+drawRegularPolygon(thing)
+- Connects consecutive outer boundary arms with curve-stitching
+  to fill the perimeter of a regular polygon with parabolas.
+
+drawRegularPolygonCorner(thing)
+- Creates parabolas anchored at each polygon vertex; it subdivides
+  the outer edges and stitches the two segments meeting at the node.
+
+drawRegularPolygonTouch(thing)
+- A variation of polygon stitching where pairs of adjacent outer
+  boundary arms are stitched together in a sequence.
+====================================================================
+*/
+
+
 import { drawState } from "/draw/drawState.js";
 import { Line, Point, StringThing }       from "../classes/classes.js";
 import { createNodes, drawLines, drawParabs, drawNodes,
@@ -238,25 +281,42 @@ function drawRegularPolygon(thing) {
  *   arms begin at the node and go halfway to to the
  *   next and previous line
  ****************************************************/
+
 function drawRegularPolygonCorner(thing) {
   const nodes = createNodes(thing);
-  let lines = createLinesFromNodesOuter(nodes);
+  const lines = createLinesFromNodesOuter(nodes);
   let shortLines = [];
-  // Divide each connecting line into two parts
+
+  // 1. Break each perimeter edge into two segments: leading-out and leading-in
   for (let i = 0; i < lines.length; i++) {
+    // Segment A: from vertex to midpoint (leading out)
     shortLines.push(new Line(lines[i].start, lines[i].midpoint()));
+    // Segment B: from midpoint to next vertex (leading in)
     shortLines.push(new Line(lines[i].midpoint(), lines[i].end));
   }
-  // For each of these lines, figure out the where
-  // each point it
+
   const arms = createArms(thing, shortLines);
-  // Construct each parabola
   const parabs = [];
-  for (let i = 0; i < arms.length; i += 2) {
-    let armA = arms[i];
-    let armB = arms[getPreviousIndex(i, arms.length)];
-    parabs.push(stitcher(armA, armB));
+
+  // 2. Pair them to center the parabola on the vertex
+  // We want the end of the previous edge and the start of the current edge
+  for (let i = 0; i < nodes.length; i++) {
+    // The "leading in" arm of the previous edge is at index (2*i - 1)
+    // The "leading out" arm of the current edge is at index (2*i)
+
+    let prevInIdx = (2 * i - 1);
+    if (prevInIdx < 0) prevInIdx = arms.length - 1; // Wrap to last "leading in" segment
+
+    let currentOutIdx = 2 * i;
+
+    let armA = arms[prevInIdx];   // This arm ends at the vertex
+    let armB = arms[currentOutIdx]; // This arm starts at the vertex
+
+    // To get a sharp corner, one arm must be reversed so both
+    // "start" their stitching from the vertex point.
+    parabs.push(stitcher(armA.toReversed(), armB));
   }
+
   drawParabs(thing, parabs);
 }
 

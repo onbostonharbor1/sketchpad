@@ -4,6 +4,7 @@ window.drawRegistry = Object.assign(
   {
     bird:               window.drawRegistry_bird,
     circularParabola:   window.drawRegistry_circularParabola,
+    circularParabolaMulti: window.drawRegistry_circularParabolaMulti,
     cycloid:            window.drawRegistry_cycloid,
     inEllipse:          window.drawRegistry_inEllipse,
     inverseStar:        window.drawRegistry_inverseStar,

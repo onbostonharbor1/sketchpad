@@ -169,11 +169,7 @@ export const scriptInfo = {
 /* ============================================================
    runPattern() — Gallery entry point
 ============================================================ */
-export function runPattern(_ctx) {
-
-  const ctx2 = _ctx || window.ctx;
-  if (!ctx2) throw new Error("nautilusInteractive.runPattern: no ctx provided and window.ctx is null");
-
+export function runPattern() {
   scriptInfo.parameters = scriptInfo.params;
 
   scriptInfo.init();

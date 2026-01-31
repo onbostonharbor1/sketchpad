@@ -1,104 +1,108 @@
-/* patternsMenuCmds.js
-   ------------------------------------------------------------
-   Patterns Tab — Menu Commands (Adapter Only)
-   ------------------------------------------------------------
-   Rules:
-     • NO uiState-derived context
-     • ALL commands consume explicit `info`
-     • menuCmds.js remains generic
------------------------------------------------------------- */
+/* ============================================================
+   patternsMenuCmds.js — Patterns Tab Menu Commands
+   ============================================================ */
 
-import { manifest }               from "./manifest.js";
-import { menuManager }            from "./menuManager.js";
-import { showScriptOffcanvas }    from "./menuCmds.js";
-import { archiveItem }            from "./menuCmds.js";
+import { manifest }            from "./manifest.js";
+import { menuManager }         from "./menuManager.js";
+import { showScriptOffcanvas } from "./menuCmds.js";
+import { archiveItem }         from "./menuCmds.js";
 import { openEditManifestDialog } from "./menuCmds.js";
-import { PatternsController }     from "./patterns.js";
+import { PatternsController }  from "./patterns.js";
 
+/* ============================================================
+   createPatternThumbnail(info)
+   ============================================================ */
+/* patternsMenuCmds.js */
+
+export async function createPatternThumbnail(info) {
+  const canvas = document.querySelector("#sketchpad canvas");
+  if (!canvas) {
+    console.error("createPatternThumbnail: No canvas found");
+    return;
+  }
+
+  // 1. Create 50x50 thumbnail
+  const thumbCanvas = document.createElement("canvas");
+  thumbCanvas.width = 50;
+  thumbCanvas.height = 50;
+  const tCtx = thumbCanvas.getContext("2d");
+  tCtx.drawImage(canvas, 0, 0, canvas.width, canvas.height, 0, 0, 50, 50);
+
+  // 2. Prepare payload
+  const dataUrl = thumbCanvas.toDataURL("image/png");
+  const base64Data = dataUrl.split(",")[1];
+  const baseName = info.filename.replace(/\.js$/i, "");
+
+  try {
+    const { nodeDispatch } = await import("./nodeLayer.js");
+
+    const result = await nodeDispatch("writePatternThumbnail", {
+      category: info.category,
+      filename: baseName,
+      pngBase64: base64Data
+    });
+
+    if (result.status === "ok") {
+      console.log("Thumbnail written to disk.");
+
+      // 3. RECREATE THUMBNAIL IN ACTION AREA
+      // We wait 100ms to ensure the OS has flushed the file to disk
+      // so the browser doesn't load a cached or empty version.
+      setTimeout(() => {
+        PatternsController.renderPatternThumbGrid(info.category);
+      }, 100);
+    }
+  } catch (err) {
+    console.error("createPatternThumbnail failed:", err);
+  }
+}
 
 /* ============================================================
    archivePatternItem(info)
-   ------------------------------------------------------------
-   Archive current item, then deterministically return to
-   Patterns Category view (NOT Home).
-=========================================================== */
+   ============================================================ */
 export async function archivePatternItem(info) {
-
   if (!info) throw new Error("archivePatternItem: info missing");
-  if (!info.manifestPath) throw new Error("archivePatternItem: manifestPath missing");
-  if (!info.filename) throw new Error("archivePatternItem: filename missing");
-  if (!info.category) throw new Error("archivePatternItem: category missing");
 
   const payload = {
     manifestPath: info.manifestPath,
     filename: info.filename
   };
 
-  console.log("archivePatternItem → archiveItem payload:", payload);
-
+  // Calls the generic tool in menuCmds.js
   await archiveItem({
     payload,
     showAlert: true,
-
     onSuccess: async () => {
+      // Drop local cache
+      if (manifest.cache) delete manifest.cache.patterns;
 
-      // Ensure we are on the correct top-level tab.
-      // (Use your real tab switch function name if different.)
-      setUI("patterns");
-
-      // Force Patterns to show its Category view (your agreed behavior).
-      // Use the controller method that does "category frame" display.
-      await PatternsController.showCategoryFrame();
-
+      // FIX: Ensure we use showCategoryList as exported in patterns.js
+      await PatternsController.showCategoryList();
     }
   });
-
-} // end archivePatternItem
-
+}
 
 /* ============================================================
    showPatternScript(info)
-=========================================================== */
+   ============================================================ */
 export async function showPatternScript(info) {
-
-  if (!info) throw new Error("showPatternScript: info missing");
-  if (!info.isScript) return;
-
-  const scriptPath = info.scriptPath;
-  const label =
-    info.filename ||
-    info.title ||
-    "(untitled)";
-
-  if (!scriptPath) {
-    throw new Error("showPatternScript: scriptPath missing");
-  }
-
-  showScriptOffcanvas(String(scriptPath), String(label));
-
-} // end showPatternScript
+  if (!info || !info.isScript) return;
+  const label = info.filename || info.title || "(untitled)";
+  showScriptOffcanvas(String(info.scriptPath), String(label));
+}
 
 /* ============================================================
    editPatternsManifestItem(info)
-=========================================================== */
+   ============================================================ */
 export async function editPatternsManifestItem(info) {
-
-  if (!info) throw new Error("editPatternsManifestItem: info missing");
-  if (!info.manifestPath) throw new Error("editPatternsManifestItem: manifestPath missing");
-  if (!info.matchField) throw new Error("editPatternsManifestItem: matchField missing");
-  if (!info.matchValue) throw new Error("editPatternsManifestItem: matchValue missing");
-  if (!info.category) throw new Error("editPatternsManifestItem: category missing");
-
   const ok = await openEditManifestDialog({
     dialogTitle:   "Edit Manifest",
     manifestPath:  info.manifestPath,
     matchField:    info.matchField,
     matchValue:    info.matchValue,
-
     fileLabel:     info.filename || info.matchValue,
     initialTitle:  info.title || "",
     initialStatus: info.status || "",
-
     statusPresets: ["new", "working", "current", "favorite"],
     allowCustomStatus: true,
     allowClearStatus:  true
@@ -106,30 +110,17 @@ export async function editPatternsManifestItem(info) {
 
   if (!ok) return;
 
-  // Match Gallery behavior exactly:
-  // 1) drop cache
-  // 2) rebuild from saved uiState via tab restore
-
-  if (manifest && typeof manifest.clearCache === "function") {
-    manifest.clearCache();
-  }
   if (manifest.cache) delete manifest.cache.patterns;
 
-  // Instead of calling a global setUI, import it dynamically:
-    const { setUI } = await import("./setUI.js");
-
-  // Force Patterns tab restore (same role as refreshGalleryFromManifestEdit)
-  setUI("patterns");
-
-} // end editPatternsManifestItem
-
-
+  // Re-run patterns init to refresh view
+  const { initPatternsTab } = await import("./patterns.js");
+  await initPatternsTab(true);
+}
 
 /* ============================================================
    getPatternsCaptionMenuItems(info)
-=========================================================== */
+   ============================================================ */
 export async function getPatternsCaptionMenuItems(info) {
-
   if (!info) throw new Error("getPatternsCaptionMenuItems: info missing");
 
   const items = [];
@@ -148,6 +139,13 @@ export async function getPatternsCaptionMenuItems(info) {
     onClick: () => showPatternScript(info)
   });
 
+  // Create Thumbnail (Restored Command)
+  items.push({
+    label: "Create Thumbnail",
+    disabled: false,
+    onClick: () => createPatternThumbnail(info)
+  });
+
   // Edit Manifest
   items.push({
     label: "Edit Manifest",
@@ -163,7 +161,4 @@ export async function getPatternsCaptionMenuItems(info) {
   });
 
   return items;
-
-} // end getPatternsCaptionMenuItems
-
-// end patternsMenuCmds.js
+}

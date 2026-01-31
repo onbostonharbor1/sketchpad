@@ -2,8 +2,7 @@
   {
     "filename": "golden",
     "path": "golden.js",
-    "title": "golden.js",
-    "status": "new"
+    "title": "golden.js"
   },
   {
     "filename": "nautilusInteractive",
@@ -18,7 +17,6 @@
   {
     "filename": "polygonalSpiral",
     "path": "polygonalSpiral.js",
-    "title": "polygonalSpiral.js",
-    "status": "new"
+    "title": "polygonalSpiral.js"
   }
 ]

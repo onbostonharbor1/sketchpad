@@ -54,6 +54,7 @@
       "caption",
       "categories",
       "fileLayer",
+      "interactor",
       "manifest",
       "menuManager",
       "nodeLayer",

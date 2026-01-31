@@ -1,20 +1,47 @@
-// createNodes
-// displayPoint
-// drawCircle
-// drawLines
-// drawLine
-// drawALine
-// drawNodes
-// drawParabs
-// getPreviousIndex (obsolete?)
-// inchesToPixels (will move to utilities)
-// numbersToPoints
-// printCircNum
-// printTitle
-// ptsOnLine
-// stitcher
-// toDegrees
-// toRadians
+/* ====================================================================
+DRAWING ROUTINES ("d")
+--------------------------------------------------------------------
+displayPoint(pt, color)
+- Renders a small, filled circle (dot) at a specific Point. Useful
+  for highlighting vertices or interactive handles.
+
+drawCircle(midpoint, radius, color, width)
+- Renders a standard stroked circle based on a center Point and
+  radius. Respects current stroke styling.
+
+drawLines(thing, lines, close)
+- Iterates through an array of Line objects and renders each one.
+  Optionally connects the last point back to the first.
+
+drawLine(arg1, arg2, arg3, arg4)
+- The core polyfilled drawing method. Handles Line objects, Point
+  objects, or numeric indices. Supports "final" mode to draw only
+  endpoints for draft visualization.
+
+drawALine(color, lineWidth, line)
+- A specialized wrapper that renders a single Line object with
+  defensive checks to ensure the Line structure is valid.
+
+drawNodes(thing, nodes)
+- Connects an array of Points in a sequence (0 to 1, 1 to 2, etc.)
+  to visualize the perimeter or "skeleton" of a shape.
+
+drawParabs(thing, parabs)
+- Renders a collection of parabola segments. Can handle both
+  geometric structures and debug numbering for individual points.
+
+drawManyParabs(thing, parabs)
+- An exported wrapper that handles the rendering of multiple
+  stitched parabolas, ensuring proper point-count normalization.
+
+drawManyLines(s) / drawLinesAround / drawLinesWithin
+- High-level pattern generators that connect points in an array
+  using skip-counts, wrapping, and clipping (chop) logic for
+  complex curve-stitching.
+====================================================================
+*/
+
+
 import { Point, Line } from "../classes/classes.js";
 import { drawState }   from "./drawState.js";
 import { drawParab }   from "/draw/drawRegular.js";

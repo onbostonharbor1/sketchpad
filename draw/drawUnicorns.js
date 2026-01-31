@@ -1,5 +1,5 @@
 import { getEllipsePoints }                  from "./drawEllipse.js";
-import { createNodes, drawLine, ptsOnLine }  from "./drawUtilities.js";
+import { createNodes, drawLine, ptsOnLine, drawNodes }  from "./drawUtilities.js";
 import { Line, Point }                               from "/classes/classes.js";
 
 //////////////////////////////////////////////////////////////////
@@ -19,26 +19,33 @@ export function crossHair(points, color="gray") {
 /////////////////////////////////////////////////////////////////
 // drawCycloid
 /////////////////////////////////////////////////////////////////
+
 export function drawCycloid(thing) {
-	let nodes = createNodes(thing);
-	ctx.save();
+    const nodes = createNodes(thing);
+    const { numNodes, numCycloids, color, lineWidth } = thing;
+
+    // 1. Draw the perimeter frame first (optional, but usually desired for context)
+    drawNodes(thing, nodes);
+
+    // 2. Draw the Cycloid Chords
+    ctx.save();
     ctx.beginPath();
- 	ctx.strokeStyle = thing.color;
-	ctx.lineWidth   = thing.lineWidth;
-	ctx.lineCap     = 'round';
-	for (let i=0; i< thing.numNodes -1; i++) {
-	    let j = thing.numCycloids*i % thing.numNodes;
-	    ctx.moveTo(nodes[i].x,nodes[i].y);
-	    ctx.lineTo(nodes[j].x,nodes[j].y);
-	}
-	ctx.moveTo(nodes[0].x,nodes[0].y);
-	for (let i=1; i < thing.numNodes; i++) {
-	    ctx.lineTo(nodes[i].x,nodes[i].y);
-	}
-	ctx.stroke();
-	ctx.closePath();
-	ctx.restore();
-} // end drawCycloid
+    ctx.strokeStyle = color;
+    ctx.lineWidth   = lineWidth;
+    ctx.lineCap     = 'round';
+
+    for (let i = 0; i < numNodes; i++) {
+        // The core cycloid/cardioid math: node i connects to (i * multiplier)
+        let j = (i * numCycloids) % numNodes;
+
+        // Use drawLine or direct canvas calls, but keep them as distinct segments
+        ctx.moveTo(nodes[i].x, nodes[i].y);
+        ctx.lineTo(nodes[j].x, nodes[j].y);
+    }
+
+    ctx.stroke();
+    ctx.restore();
+}
 
 
 /////////////////////////////////////////////////////////////////

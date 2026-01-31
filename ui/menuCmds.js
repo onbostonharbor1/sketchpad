@@ -608,8 +608,8 @@ export async function createGalleryPatternPng(spec = {}) {
   const pngBase64 = parts[1];
 
   const thumbCanvas = document.createElement("canvas");
-  thumbCanvas.width = 36;
-  thumbCanvas.height = 36;
+  thumbCanvas.width = 50;
+  thumbCanvas.height = 50
 
   const tctx = thumbCanvas.getContext("2d");
   if (!tctx) throw new Error("createGalleryPatternPng: thumb 2d context missing");

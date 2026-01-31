@@ -5,13 +5,13 @@ import { drawMysticRose }           from '../draw/drawUnicorns.js';
 window.drawRegistry_mysticRoseEllipse = {
     name:         "Mystic Rose (ellipse)",
     id:           "mysticRoseEllipse",
-    version:      0.1,
+    version:      1.5,
     category:     "unicorns",
     firstOrder:   true,
     source:       "internal",
     tags:         ["circular"],
     description:  "Lines drawn to all nodes from each node in an ellipse",
-    status:      "new",
+    status:       "",
     hover:        "",
 
     // -- visual styling ---
@@ -21,70 +21,67 @@ window.drawRegistry_mysticRoseEllipse = {
 
     // Placeholder for all elements drawn
     elements:   null,
-    // --- Core defaults for drawing (JSON-safe) ---
+
+    interactive:  true,
     params: {
-	    midpoint: { x: 300, y: 200 },   // converted to Point in init()
-	    numNodes: 20,
-        ellipse:  {a: 400, b: 300},
-	    xScale:   1,
-	    yScale:   1,
-	    color:    "blue",
-	    lineWidth: 1
+      midpoint:  { x: 300, y: 200 },
+      numNodes:  20,
+      ellipse:   { a: 400, b: 300 },
+      xScale:    1,
+      yScale:    1,
+      color:     "blue",
+      lineWidth: 1,
+      points:    [] // For the canvas overlay system
     },
 
-  // --- UI metadata (controls) ---
-  controls: {
-    ellipseHeight:  { widget: "range", min: 80,  max: 400, step: 5,   label: "Height:" },
-    ellipseLength:  { widget: "range", min: 80,  max: 500, step: 5,   label: "Length:" },
+    controls: {
+        ellipseLength: { widget: "range", min: 80,  max: 500, step: 5,   label: "Length (a):" },
+        ellipseHeight: { widget: "range", min: 80,  max: 400, step: 5,   label: "Height (b):" },
+        numNodes:      { widget: "range", min: 12,  max: 30,  step: 1,   label: "Nodes:" },
+        xScale:        { widget: "range", min: 0.5, max: 2,   step: 0.1, label: "X Scale:" },
+        yScale:        { widget: "range", min: 0.5, max: 2,   step: 0.1, label: "Y Scale:" },
+        color:         { widget: "colorPicker",                          label: "Color:" },
+        lineWidth:     { widget: "range", min: .5,  max: 3,   step: .5,  label: "Width:" }
+    },
 
-    numNodes:       { widget: "range", min: 12,  max: 30,  step: 1,   label: "Nodes:" },
-    xScale:    { widget: "range", min: 0.5, max: 2,   step: 0.1, label: "X Scale:" },
-    yScale:    { widget: "range", min: 0.5, max: 2,   step: 0.1, label: "Y Scale:" },
-    color:     { widget: "colorPicker",                          label: "Color:" },
-    lineWidth: { widget: "range", min: .5,  max: 2.5, step: .5,  label: "Width:" },
-    midpoint:  { widget: "pointPicker",                          label: "Midpoint:" }
-  },
+    init() {
+        // Initialize points array if empty
+        if (this.params.points.length === 0) {
+            this.params.points.push({ x: this.params.midpoint.x, y: this.params.midpoint.y });
+        }
 
-  // ==========================================================
-  // 1. init() – build the persistent mysticRose
-  // ==========================================================
-  init() {
-    // Ensure midpoint is a Point object
-    const p = this.params.midpoint;
-    if (!(p instanceof Point)) this.params.midpoint = new Point(p.x, p.y);
+        const p = this.params.points[0];
+        this.elements = {
+            thing: new StringThing({
+                ...this.params,
+                midpoint: new Point(p.x, p.y)
+            })
+        };
+    },
 
-    this.elements = { element: new StringThing(this.params) };
-  }, // end init
+    update(incoming) {
+        const s = this.elements.thing;
 
-  // ==========================================================
-  // 2. update(params) – apply new values from controls
-  // ==========================================================
-  update(params) {
-    const e = this.elements.element;
-    for (const key in this.params) {
-      const value = params[key];
-      if (value === undefined) continue;
+        for (const key in incoming) {
+            const value = incoming[key];
+            if (value === undefined) continue;
 
-      if (key === "midpoint") {
-        if (value instanceof Point)
-            e.midpoint = value;
-        else
-            e.midpoint = new Point(value.x, value.y);
-      } else if (key == "ellipseHeight") {
-            e.ellipse.b = value;
-      } else if (key === "ellipseLength") {
-            e.ellipse.a = value;
-      } else {
-            e[key] = value;
-      }
+            if (key === "points") {
+                const p = this.params.points[0];
+                s.midpoint.x = p.x;
+                s.midpoint.y = p.y;
+            } else if (key === "ellipseHeight") {
+                s.ellipse.b = value;
+            } else if (key === "ellipseLength") {
+                s.ellipse.a = value;
+            } else if (Object.hasOwn(s, key)) {
+                s[key] = value;
+            }
+        }
+    },
+
+    draw() {
+        const thing = this.elements.thing;
+        drawMysticRose(thing);
     }
-  }, // end update
-
-  // ==========================================================
-  // 3. draw() – render
-  // ==========================================================
-  draw() {
-    const thing = this.elements.element;
-    drawMysticRose(thing);
-  } // end draw
 };

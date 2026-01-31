@@ -1,0 +1,103 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>interactor.js — Unified Interaction Manager (Description)</title>
+
+  <link rel="stylesheet" href="/help/help_treatise.css" />
+</head>
+
+<body>
+
+  <p>
+    <strong>interactor.js</strong> serves as the bridge between static drawing parameters and user manipulation.
+    It manages a dedicated <strong>interaction-layer</strong> canvas (via <code>overlayManager</code>) that sits atop the main drawing canvas, allowing users to move control points in real-time.
+  </p>
+
+  <p>
+    The module follows a "Subscription" model: a drawing instance (like a Star or Polygon) "arms" the interactor with its coordinate data, and the interactor handles the low-level mouse events, updating the instance's parameters directly.
+  </p>
+
+  <div class="hr"></div>
+
+  <p><strong>Core Configuration: PointPickerPresets</strong></p>
+  <p>The visual and physical behavior of the interaction handles is governed by a central preset object:</p>
+
+  <ul>
+    <li><code>handleRadius: 3</code> – The visible radius of the handle circles.</li>
+    <li><code>hitTolerance: 7</code> – The "invisible" grab radius; clicks within this distance trigger a drag.</li>
+    <li><code>idleColor: "#0055BF"</code> – LEGO Bright Blue; used for handles not currently being interacted with.</li>
+    <li><code>activeColor: "#FE8A18"</code> – LEGO Bright Orange; used for hovered or dragged handles.</li>
+  </ul>
+
+  <div class="hr"></div>
+
+  <p><strong>armInteractor(instance)</strong></p>
+
+  <p>
+    This is the primary public entry point. It connects a drawing class instance to the global interaction layer.
+  </p>
+
+  <p>Sequence of operations:</p>
+  <ol>
+    <li><strong>Cleanup:</strong> Automatically calls <code>disarmInteractor()</code> to ensure no zombie sessions exist.</li>
+    <li><strong>Validation:</strong> Checks for the existence of <code>instance.params.points</code>. If missing, it logs a warning and aborts (Fail-soft).</li>
+    <li><strong>UI Management:</strong> Disables pointer events on <code>#next-prev-overlay</code> to ensure the interaction layer receives all mouse input.</li>
+    <li><strong>Activation:</strong> Initializes the <code>activatePointPicker</code> logic, passing the point references and a specialized <code>onUpdate</code> callback.</li>
+  </ol>
+
+  <p><strong>Redraw Coordination:</strong></p>
+  <p>
+    When a point is moved, the interactor attempts to trigger a refresh in the following priority:
+  </p>
+  <ul>
+    <li><code>instance.redrawHandler()</code> – The preferred unified update method.</li>
+    <li><code>instance.update()</code> + <code>instance.draw()</code> – Fallback for legacy pattern structures.</li>
+  </ul>
+
+  <div class="hr"></div>
+
+  <p><strong>disarmInteractor()</strong></p>
+  <p>
+    Public API to shut down the interaction layer. It executes the cleanup function returned by the active session, clears the <code>deactivateCurrent</code> reference, and hides the interaction canvas.
+  </p>
+
+  <div class="hr"></div>
+
+  <p><strong>Internal Logic: activatePointPicker(points, config)</strong></p>
+  <p>
+    This internal function manages the lifecycle of a single interaction session using an <code>AbortController</code> for clean event listener removal.
+  </p>
+
+  <p><strong>Canvas Synchronization:</strong></p>
+  <p>
+    The interaction canvas is dynamically resized to match <code>window.drawCanvas</code>. This ensures that the coordinate system of the overlay perfectly matches the drawing surface regardless of window scaling.
+  </p>
+
+  <p><strong>State Tracking:</strong></p>
+  <ul>
+    <li><code>draggedIndex</code> – Integer index of the point currently being moved.</li>
+    <li><code>hoverIndex</code> – Integer index of the point currently under the cursor (triggers orange highlight).</li>
+  </ul>
+
+  <p><strong>Event Handling:</strong></p>
+  <p>
+    Listeners are attached to the <code>window</code> object rather than the canvas element. This is a deliberate design choice to "bypass the shield"—preventing other UI overlays from intercepting events while a drag is in progress.
+  </p>
+
+  <ul>
+    <li><strong>mousedown:</strong> Performs a distance check (Pythagorean) against all points using <code>hitTolerance</code>.</li>
+    <li><strong>mousemove:</strong> Updates <code>hoverIndex</code> for visual feedback. If a drag is active, it updates the <code>x</code> and <code>y</code> properties of the point object <strong>by reference</strong> and triggers the update callback.</li>
+    <li><strong>mouseup:</strong> Releases the drag lock and resets state.</li>
+  </ul>
+
+  <div class="hr"></div>
+
+  <p><strong>Architectural Note: Pass-by-Reference</strong></p>
+  <p>
+    The Interactor relies on the fact that <code>instance.params.points</code> is an array of objects. Because it modifies the objects within that array directly, the drawing instance's data is updated "in-place." The Interactor does not need to send data back to the instance; it merely needs to tell the instance <em>when</em> to redraw.
+  </p>
+
+</body>
+</html>

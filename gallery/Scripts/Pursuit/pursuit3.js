@@ -7,10 +7,6 @@
    Converted from standalone HTML demo:
    - N points pursue the next point, leaving a trail.
 
-   ASSUMPTIONS (FAIL-FAST)
-   -----------------------
-   - window.ctx exists
-   - #action exists
    ============================================================ */
 /**
  * John Sharp’s pursuit curves with a triangle.
@@ -19,9 +15,6 @@
 
 import { printTitle } from "/draw/drawUtilities.js";
 import { buildParameterControls } from "/ui/parameterControls.js";
-
-let ctx = null;
-
 
 /* ------------------------------------------------------------
    clearCanvasFull()
@@ -183,10 +176,7 @@ export const scriptInfo = {
 /* ------------------------------------------------------------
    runPattern()
 ------------------------------------------------------------ */
-export function runPattern(_ctx) {
-
-  ctx = _ctx || window.ctx;
-  if (!ctx) throw new Error("pursuitCurvesNgon.runPattern: no ctx provided and window.ctx is null");
+export function runPattern() {
 
   printTitle(scriptInfo.title);
 

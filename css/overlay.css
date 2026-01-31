@@ -212,4 +212,5 @@
     left: 0;
     z-index: 2010;      /* Ensure it's on top */
     pointer-events: auto; /* CRITICAL: Must be auto to catch the mouse */
+    display: block;       /* Ensure it's not hidden */
 }

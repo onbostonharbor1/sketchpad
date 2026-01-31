@@ -45,9 +45,6 @@ look
 
 import { buildParameterControls } from "/ui/parameterControls.js";
 
-let ctx = null;
-
-
 /* ------------------------------------------------------------
    clearCanvasFull()
 ------------------------------------------------------------ */
@@ -245,11 +242,7 @@ export const scriptInfo = {
 /* ------------------------------------------------------------
    runPattern() — Gallery entry point
 ------------------------------------------------------------ */
-export function runPattern(_ctx) {
-
-  ctx = _ctx || window.ctx;
-  if (!ctx) throw new Error("pursuitPolygon.runPattern: no ctx provided and window.ctx is null");
-
+export function runPattern() {
   scriptInfo.parameters = scriptInfo.params;
 
   scriptInfo.init();

@@ -2,31 +2,29 @@
   {
     "filename": "fourParabolicLike",
     "path": "fourParabolicLike.js",
-    "title": "fourParabolicLike.js",
-    "status": "new"
+    "title": "fourParabolicLike.js"
   },
   {
     "filename": "manyParametric",
     "path": "manyParametric.js",
-    "title": "manyParametric.js",
-    "status": "new"
+    "title": "Many Parametric",
+    "status": "Broken"
   },
   {
     "filename": "parametricSketcher",
     "path": "parametricSketcher.js",
     "title": "parametricSketcher.js",
-    "status": "favorite"
+    "status": "Many"
   },
   {
     "filename": "playground",
     "path": "playground.js",
     "title": "playground.js",
-    "status": "new"
+    "status": "Many"
   },
   {
     "filename": "roseAndLissajous",
     "path": "roseAndLissajous.js",
-    "title": "roseAndLissajous.js",
-    "status": "new"
+    "title": "roseAndLissajous.js"
   }
 ]

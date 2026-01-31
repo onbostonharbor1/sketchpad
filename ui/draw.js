@@ -172,26 +172,19 @@ export function initDrawTab(restored = false) {
 
 
 function restoreDrawTab() {
-
+  if (window.disarmInteractor)
+    window.disarmInteractor();
   setCommandsButtonLabel("Draw Commands");
   wireDrawCommandsButton();
   setDrawSubtabs();
 
   // LAUNCH OVERRIDE (wins over restored active tab)
   const intent = consumeLaunchIfForDraw();
-  if (intent && intent.sourceType === "drawRegistry") {
-
-    const reg = window.drawRegistry;
-    if (!reg) throw new Error("Draw launch: window.drawRegistry missing");
-
-    const entry = reg[intent.registryKey];
-    if (!entry) throw new Error("Draw launch: unknown registryKey: " + intent.registryKey);
-
-    // Always open a NEW tab (no dedupe)
-    addDrawSubtab({ name: entry.name || intent.registryKey, entry: entry });
-
+if (intent?.sourceType === "drawRegistry") {
+    const entry = window.drawRegistry[intent.registryKey];
+    addDrawSubtab({ name: entry.name, entry: entry });
     return;
-  }
+}
 
   const activeId = uiState.draw.activeSubtab || DEFAULT_DRAW_SUBTAB;
 
@@ -265,29 +258,63 @@ function setDrawSubtabs() {
    - Clears shared regions
    - Dispatches to Categories or Object renderer
 =========================================================== */
+
+/* ===========================================================
+   switchTab(tabId)
+   -----------------------------------------------------------
+   Switch to a Draw subtab.
+   - Marks it active
+   - Clears shared regions
+   - Dispatches to Categories or Object renderer
+=========================================================== */
+
+/* ===========================================================
+   switchTab(tabId)
+   -----------------------------------------------------------
+   Switch to a Draw subtab.
+   - Marks it active
+   - Clears shared regions
+   - Dispatches to Categories or Object renderer
+=========================================================== */
 function switchTab(tabId) {
   const bar = document.querySelector("#subtabs ul");
   if (!bar) return;
 
-  // Remove "active" from all subtabs
+  // 1. UI: Remove "active" from all subtabs
   bar.querySelectorAll(".nav-link").forEach((btn) =>
     btn.classList.remove("active")
   );
 
-  // Mark this button active
+  // 2. UI: Mark this button active
   const btn = bar.querySelector(`[data-tab-id="${tabId}"]`);
   if (btn) btn.classList.add("active");
 
-  // Track active tab
+  // 3. STATE: Track active tab
   uiState.draw.activeSubtab = tabId;
 
-  // Clear UI regions
+  // ----------------------------------------------------------
+  // 4. THE FIX: Robust Interactor Teardown
+  // ----------------------------------------------------------
+  // disarmInteractor() typically removes event listeners (mousedown/move).
+  if (window.disarmInteractor) {
+    window.disarmInteractor();
+  }
+
+  // CRITICAL: We must nullify the target.
+  // If we don't, the interactor still "owns" the points from the
+  // previous drawing. When a control is touched in the NEW
+  // drawing, the interactor wakes up and draws the OLD points.
+  if (window.interactor) {
+    window.interactor.target = null;
+  }
+
+  // 5. CLEANUP: Clear UI regions (action, caption, text)
   clearDivs();
 
   const info = uiState.draw.tabs[tabId];
   if (!info) return;
 
-  // Dispatch by type
+  // 6. DISPATCH: Render Categories or the Active Drawing
   if (info.type === "categories") {
     renderDrawCategories();
   } else {
@@ -375,7 +402,18 @@ export function markTabClean(tabId) {
      - Categories tab
      - or object tab (with a drawRegistry entry)
 *************************************************************/
+
+/*************************************************************
+   addDrawSubtab(item)
+   -----------------------------------------------------------
+   Create a new Draw subtab:
+     - Categories tab
+     - or object tab (with a drawRegistry entry)
+*************************************************************/
 export function addDrawSubtab(item) {
+  // Clear the UI and the interaction canvas FIRST.
+  clearDivs();
+
   const bar = document.querySelector("#subtabs ul");
   if (!bar) throw new Error("addDrawSubtab: #subtabs ul not found");
 
@@ -426,7 +464,6 @@ export function addDrawSubtab(item) {
   if (item.name === "Categories") {
     uiState.draw.tabs[tabId] = { type: "categories" };
     uiState.draw.activeSubtab = tabId;
-    clearDivs();
     renderDrawCategories();
     return;
   }
@@ -441,8 +478,24 @@ export function addDrawSubtab(item) {
     );
   }
 
-  // Initialize geometry + StringThing + params
+  // 1. Initialize geometry + StringThing + params
+  // This builds the p.points array inside the registry script.
   entry.init();
+
+  // 2. Arm the interactor
+  // This sets up the listeners for the Phase 3 canvas overlay.
+  if (entry.interactive === true && entry.params.points) {
+    if (window.armInteractor) {
+      window.armInteractor(entry);
+    }
+
+    // 3. THE WAKE UP CALL
+    // Force the interaction layer to render the red dots immediately.
+    // Without this, the handles exist in memory but won't paint until a drag begins.
+    if (window.interactor && typeof window.interactor.draw === 'function') {
+        window.interactor.draw();
+    }
+  }
 
   uiState.draw.tabs[tabId] = {
     type: "object",
@@ -452,7 +505,6 @@ export function addDrawSubtab(item) {
   };
 
   uiState.draw.activeSubtab = tabId;
-  clearDivs();
   drawActiveTab();
 } // end addDrawSubtab
 

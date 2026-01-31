@@ -10,7 +10,21 @@ window.drawRegistry_parametrics = {
     name:        "Parametrics",
     id:          "parametrics",
     version:     0.3,
-    // ... metadata stays the same ...
+    category:    "Parametrics",
+    firstOrder:  true,
+    source:      "internal",
+    tags:        ["Parametric", "CurveStitch"],
+    description: "Advanced morphing patterns with thinning and intersection controls",
+    status:      "",
+    hover:       "Two parametric demos with a selector accordion",
+
+    // -- visual styling ---
+    background:  null,   // Future link: will be used to draw background layer
+    overlays:    [],     // Future link: for drawing on top of the math
+    transforms:  [],     // Future link: for post-computation manipulations
+
+    // Placeholder for all elements drawn
+    elements:    null,
 
     params: {
         variant:   "fourCircles",

@@ -17,7 +17,7 @@
   {
     "filename": "pursuitDynamic5",
     "path": "pursuitDynamic5.js",
-    "status": "favorite",
+    "status": "working",
     "title": "Pursuit Dynamic 5"
   },
   {
@@ -34,7 +34,7 @@
     "filename": "pursuit2",
     "path": "pursuit2.js",
     "title": "pursuit2.js",
-    "status": "new"
+    "status": "working"
   },
   {
     "filename": "pursuit",
@@ -44,7 +44,6 @@
   {
     "filename": "pusuitSurface",
     "path": "pusuitSurface.js",
-    "title": "pusuitSurface.js",
-    "status": "new"
+    "title": "pusuitSurface.js"
   }
 ]

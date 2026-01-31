@@ -16,21 +16,34 @@ import { uiState } from "./uiState.js";
      args – optional string id of an extra div to clear in addition
 ------------------------------------------------------------ */
 function clearDivs(args = "") {
-    // Existing regions you already clear
+    // 1. Existing regions
     let ids = ["action", "caption", "text", "sketchpad"];
     if (args !== "")
         ids.push(args);
 
-    // Clear each region
+    // Clear each HTML region
     ids.forEach(id => {
         const el = document.getElementById(id);
         if (el) el.innerHTML = "";
     });
 
-    // Clear all canvas-overlay layers (interaction, bbox, nodes, guides)
+    // 2. THE FIX: Clear canvas pixels, not just innerHTML
     for (const name in overlayManager.canvasLayers) {
         const layer = overlayManager.canvasLayers[name];
+
+        // Clear HTML (for any overlay elements like labels)
         layer.innerHTML = "";
+
+        // Clear Pixels (for the interactor dots)
+        const ctx = layer.getContext("2d");
+        if (ctx) {
+            ctx.clearRect(0, 0, layer.width, layer.height);
+        }
+    }
+
+    // 3. Shut down the interaction logic
+    if (window.disarmInteractor) {
+        window.disarmInteractor();
     }
 } // end clearDivs
 
