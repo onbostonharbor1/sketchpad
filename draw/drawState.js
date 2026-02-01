@@ -1,27 +1,33 @@
 // drawState.js
-
 // ===========================================================
 // Canvas setup and global context getter
 // ===========================================================
+
 export let drawState = {
-  title:           "",
-  canvasWidth:     null,
-  canvasHeight:    null,
-  debug:           false,
-  final:           false,
-  pts:             [],
-  ctr:             0
-}; // end drawState
+  title: "",
+  // Initial defaults; these will be updated by Tools or setup
+  canvasWidth: 800,
+  canvasHeight: 800,
+  debug: false,
+  final: false,
+  pts: [],
+  ctr: 0
+};
 
-
+/**
+ * resetCanvas()
+ * Clears the bitmap and resets the context state.
+ * Uses drawState as the source of truth for dimensions.
+ */
 export function resetCanvas() {
   const canvas = window.drawCanvas;
   if (!canvas) throw new Error("resetCanvas: window.drawCanvas missing");
 
-  const w = canvas.width;
-  const h = canvas.height;
+  // CRITICAL: Pull dimensions from drawState, NOT hardcoded values
+  const w = drawState.canvasWidth;
+  const h = drawState.canvasHeight;
 
-  // Absolute nuke: clears bitmap + resets ALL 2D state (clip, transform, styles)
+  // Resizing the canvas object clears the bitmap and resets state
   canvas.width = w;
   canvas.height = h;
 
@@ -33,32 +39,36 @@ export function resetCanvas() {
   // Known background
   ctx.fillStyle = "#fff";
   ctx.fillRect(0, 0, w, h);
-} // end resetCanvas
+}
 
-
+/**
+ * setupCanvas() - IIFE
+ * Initializes or retrieves the shared canvas.
+ */
 (function setupCanvas() {
-
   const CANVAS_ID = "sharedCanvas";
   const canvasHostId = "sketchpad";
 
   let canvas = document.getElementById(CANVAS_ID);
 
-  // Create the canvas only if it doesn't exist (UI may already have one)
   if (!canvas) {
     canvas = document.createElement("canvas");
     canvas.id = CANVAS_ID;
-    canvas.width = 800;
-    canvas.height =800;
-    drawState.canvasHeight = canvas.height;
-    drawState.canvasWidth  = canvas.width;
 
-    // If Sketchpad UI exists, attach there; otherwise fall back to <body>
+    // Set initial physical size from drawState defaults
+    canvas.width = drawState.canvasWidth;
+    canvas.height = drawState.canvasHeight;
+
     const host = document.getElementById(canvasHostId);
     if (host) {
       host.appendChild(canvas);
     } else {
       document.body.appendChild(canvas);
     }
+  } else {
+    // If canvas already exists, sync drawState to its current reality
+    drawState.canvasWidth = canvas.width;
+    drawState.canvasHeight = canvas.height;
   }
 
   const ctx = canvas.getContext("2d");
@@ -66,22 +76,16 @@ export function resetCanvas() {
 
   window.drawCanvas = canvas;
   window.drawCtx = ctx;
+})();
 
-})(); // end setupCanvas
-
-
+// Global ctx getter logic remains the same
 Object.defineProperty(window, "ctx", {
   get() {
-    // if layer system exists, use it
     const layer = window.CanvasManager?.getLayer?.();
     if (layer?.ctx) return layer.ctx;
-
-    // otherwise fall back to current draw context
     if (window.drawCtx) return window.drawCtx;
     if (typeof gl === "object" && gl.ctx) return gl.ctx;
-
     return null;
   },
   configurable: true
-}); // end global ctx getter
-
+});

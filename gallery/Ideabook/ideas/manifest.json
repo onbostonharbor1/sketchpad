@@ -4,11 +4,6 @@
     "path": "001.jpg"
   },
   {
-    "filename": "002",
-    "path": "002.jpg",
-    "title": "002.jpg"
-  },
-  {
     "filename": "003",
     "path": "003.jpg",
     "title": "003.jpg"
@@ -97,6 +92,11 @@
     "filename": "300",
     "path": "300.JPG",
     "title": "300.JPG"
+  },
+  {
+    "filename": "002",
+    "path": "002.jpg",
+    "title": "Bicycle"
   },
   {
     "filename": "IMG_8130",

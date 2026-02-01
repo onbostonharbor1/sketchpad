@@ -25,8 +25,8 @@ export const uiState = {
   /* =========================================================
      Canvas configuration
   ========================================================= */
-  canvasWidth: 600,
-  canvasHeight: 600,
+  canvasWidth: 800,
+  canvasHeight: 800,
 
   /* =========================================================
      Active tab
@@ -110,26 +110,26 @@ export const uiState = {
      Manifest storage
      (Populated by manifest loader modules)
   ========================================================= */
-  manifests: {
-    gallery: {
-      ideabook: null,
-      patterns: null,
-      scripts: null
-    },
-    draw: {
-      patterns: null,
-      figures: null
-    },
-    utilities: {
-      tools: null
-    }
-  },
+  // manifests: {
+  //   gallery: {
+  //     ideabook: null,
+  //     patterns: null,
+  //     scripts: null
+  //   },
+  //   draw: {
+  //     patterns: null,
+  //     figures: null
+  //   },
+  //   utilities: {
+  //     tools: null
+  //   }
+  // },
 
   /* =========================================================
      Directory / Manifest helper pointers
   ========================================================= */
-  activeManifest: null,
-  activeDirectoryInfo: null,
+  // activeManifest: null,
+  // activeDirectoryInfo: null,
 
   /* =========================================================
      Overlay state

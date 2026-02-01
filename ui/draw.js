@@ -174,34 +174,34 @@ export function initDrawTab(restored = false) {
 function restoreDrawTab() {
   if (window.disarmInteractor)
     window.disarmInteractor();
+
   setCommandsButtonLabel("Draw Commands");
   wireDrawCommandsButton();
   setDrawSubtabs();
 
   // LAUNCH OVERRIDE (wins over restored active tab)
   const intent = consumeLaunchIfForDraw();
-if (intent?.sourceType === "drawRegistry") {
+  if (intent?.sourceType === "drawRegistry") {
     const entry = window.drawRegistry[intent.registryKey];
     addDrawSubtab({ name: entry.name, entry: entry });
     return;
-}
+  }
 
   const activeId = uiState.draw.activeSubtab || DEFAULT_DRAW_SUBTAB;
 
+  // If the activeId doesn't exist in state, default to Categories
   if (!uiState.draw.tabs[activeId]) {
     uiState.draw.activeSubtab = DEFAULT_DRAW_SUBTAB;
     clearDivs();
-    setCommandsButtonLabel("Draw Commands");
-    wireDrawCommandsButton();
     renderDrawCategories();
     return;
   }
 
+  // This triggers the updated switchTab logic, which arms and draws the dots
   switchTab(activeId);
-consumePendingLaunchIntoDraw();
 
+  consumePendingLaunchIntoDraw();
 } // end restoreDrawTab
-
 
 
 
@@ -250,77 +250,6 @@ function setDrawSubtabs() {
   });
 } // end setDrawSubtabs
 
-/* ===========================================================
-   switchTab(tabId)
-   -----------------------------------------------------------
-   Switch to a Draw subtab.
-   - Marks it active
-   - Clears shared regions
-   - Dispatches to Categories or Object renderer
-=========================================================== */
-
-/* ===========================================================
-   switchTab(tabId)
-   -----------------------------------------------------------
-   Switch to a Draw subtab.
-   - Marks it active
-   - Clears shared regions
-   - Dispatches to Categories or Object renderer
-=========================================================== */
-
-/* ===========================================================
-   switchTab(tabId)
-   -----------------------------------------------------------
-   Switch to a Draw subtab.
-   - Marks it active
-   - Clears shared regions
-   - Dispatches to Categories or Object renderer
-=========================================================== */
-function switchTab(tabId) {
-  const bar = document.querySelector("#subtabs ul");
-  if (!bar) return;
-
-  // 1. UI: Remove "active" from all subtabs
-  bar.querySelectorAll(".nav-link").forEach((btn) =>
-    btn.classList.remove("active")
-  );
-
-  // 2. UI: Mark this button active
-  const btn = bar.querySelector(`[data-tab-id="${tabId}"]`);
-  if (btn) btn.classList.add("active");
-
-  // 3. STATE: Track active tab
-  uiState.draw.activeSubtab = tabId;
-
-  // ----------------------------------------------------------
-  // 4. THE FIX: Robust Interactor Teardown
-  // ----------------------------------------------------------
-  // disarmInteractor() typically removes event listeners (mousedown/move).
-  if (window.disarmInteractor) {
-    window.disarmInteractor();
-  }
-
-  // CRITICAL: We must nullify the target.
-  // If we don't, the interactor still "owns" the points from the
-  // previous drawing. When a control is touched in the NEW
-  // drawing, the interactor wakes up and draws the OLD points.
-  if (window.interactor) {
-    window.interactor.target = null;
-  }
-
-  // 5. CLEANUP: Clear UI regions (action, caption, text)
-  clearDivs();
-
-  const info = uiState.draw.tabs[tabId];
-  if (!info) return;
-
-  // 6. DISPATCH: Render Categories or the Active Drawing
-  if (info.type === "categories") {
-    renderDrawCategories();
-  } else {
-    drawActiveTab();
-  }
-} // end switchTab
 
 /* ===========================================================
    deleteTab(tabId)
@@ -395,6 +324,8 @@ export function markTabClean(tabId) {
 } // end markTabClean
 
 
+
+
 /*************************************************************
    addDrawSubtab(item)
    -----------------------------------------------------------
@@ -402,7 +333,6 @@ export function markTabClean(tabId) {
      - Categories tab
      - or object tab (with a drawRegistry entry)
 *************************************************************/
-
 /*************************************************************
    addDrawSubtab(item)
    -----------------------------------------------------------
@@ -479,11 +409,9 @@ export function addDrawSubtab(item) {
   }
 
   // 1. Initialize geometry + StringThing + params
-  // This builds the p.points array inside the registry script.
   entry.init();
 
   // 2. Arm the interactor
-  // This sets up the listeners for the Phase 3 canvas overlay.
   if (entry.interactive === true && entry.params.points) {
     if (window.armInteractor) {
       window.armInteractor(entry);
@@ -491,7 +419,6 @@ export function addDrawSubtab(item) {
 
     // 3. THE WAKE UP CALL
     // Force the interaction layer to render the red dots immediately.
-    // Without this, the handles exist in memory but won't paint until a drag begins.
     if (window.interactor && typeof window.interactor.draw === 'function') {
         window.interactor.draw();
     }
@@ -508,6 +435,64 @@ export function addDrawSubtab(item) {
   drawActiveTab();
 } // end addDrawSubtab
 
+
+/* ===========================================================
+   switchTab(tabId)
+   -----------------------------------------------------------
+   Switch to a Draw subtab.
+   - Marks it active
+   - Clears shared regions
+   - Dispatches to Categories or Object renderer
+=========================================================== */
+function switchTab(tabId) {
+  const bar = document.querySelector("#subtabs ul");
+  if (!bar) return;
+
+  // 1. UI: Remove "active" from all subtabs
+  bar.querySelectorAll(".nav-link").forEach((btn) =>
+    btn.classList.remove("active")
+  );
+
+  // 2. UI: Mark this button active
+  const btn = bar.querySelector(`[data-tab-id="${tabId}"]`);
+  if (btn) btn.classList.add("active");
+
+  // 3. STATE: Track active tab
+  uiState.draw.activeSubtab = tabId;
+
+  // 4. Robust Interactor Teardown
+  if (window.disarmInteractor) {
+    window.disarmInteractor();
+  }
+
+  if (window.interactor) {
+    window.interactor.target = null;
+  }
+
+  // 5. CLEANUP: Clear UI regions (action, caption, text)
+  clearDivs();
+
+  const info = uiState.draw.tabs[tabId];
+  if (!info) return;
+
+  // 6. DISPATCH: Render Categories or the Active Drawing
+  if (info.type === "categories") {
+    renderDrawCategories();
+  } else {
+    const entry = info.drawRegistry;
+    drawActiveTab();
+
+    // 7. THE WAKE UP CALL: Re-arm and draw dots for the switched-to object
+    if (entry && entry.interactive === true && entry.params?.points) {
+      if (window.armInteractor) {
+        window.armInteractor(entry);
+      }
+      if (window.interactor && typeof window.interactor.draw === 'function') {
+        window.interactor.draw();
+      }
+    }
+  }
+} // end switchTab
 /*************************************************************
    setDrawSketchpad(item)
    -----------------------------------------------------------

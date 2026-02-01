@@ -160,8 +160,6 @@ async function archiveUtilitiesItem(info) {
     filename: info.filename   // Utilities canonical identifier is entry.path
   };
 
-  console.log("archiveUtilitiesItem → archiveItem payload:", payload);
-
   await archiveItem({
     payload,
     showAlert: true,

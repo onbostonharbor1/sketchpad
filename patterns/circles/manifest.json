@@ -2,32 +2,20 @@
   {
     "filename": "armsInCircles",
     "path": "armsInCircles.js",
-    "title": "Arms In Circles"
+    "title": "armsInCircles.js",
+    "status": "new"
   },
   {
     "filename": "circle",
     "path": "circle.js",
-    "title": "Circle: FULL"
+    "title": "circle.js",
+    "status": "new"
   },
   {
     "filename": "cycloid",
     "path": "cycloid.js",
-    "title": "Cycloid (one node)"
-  },
-  {
-    "filename": "ellipseEndTaper",
-    "path": "ellipseEndTaper.js",
-    "title": "Ellipse: END_TAPER"
-  },
-  {
-    "filename": "ellipseFull",
-    "path": "ellipseFull.js",
-    "title": "Ellipse: FULL"
-  },
-  {
-    "filename": "ellipseStartEnd",
-    "path": "ellipseStartEnd.js",
-    "title": "Ellipse: START_END"
+    "title": "cycloid.js",
+    "status": "new"
   },
   {
     "filename": "ellipseStartTaper",
@@ -40,6 +28,24 @@
     "title": "Ellipse: TAPER"
   },
   {
+    "filename": "ellipseEndTaper",
+    "path": "ellipseEndTaper.js",
+    "title": "ellipseEndTaper.js",
+    "status": "new"
+  },
+  {
+    "filename": "ellipseFull",
+    "path": "ellipseFull.js",
+    "title": "ellipseFull.js",
+    "status": "new"
+  },
+  {
+    "filename": "ellipseStartEnd",
+    "path": "ellipseStartEnd.js",
+    "title": "ellipseStartEnd.js",
+    "status": "new"
+  },
+  {
     "filename": "gradientCircularParabola",
     "path": "gradientCircularParabola.js",
     "title": "Gradient Circular Parabola"
@@ -47,7 +53,8 @@
   {
     "filename": "linesInThree",
     "path": "linesInThree.js",
-    "title": "Lines In Three Circles"
+    "title": "linesInThree.js",
+    "status": "new"
   },
   {
     "filename": "skippingNegative",

@@ -2,32 +2,8 @@
   {
     "filename": "400",
     "path": "400.jpg",
-    "title": "400.jpg"
-  },
-  {
-    "filename": "401",
-    "path": "401.jpg",
-    "title": "401.jpg"
-  },
-  {
-    "filename": "402",
-    "path": "402.jpg",
-    "title": "402.jpg"
-  },
-  {
-    "filename": "403",
-    "path": "403.jpg",
-    "title": "403.jpg"
-  },
-  {
-    "filename": "404",
-    "path": "404.jpg",
-    "title": "404.jpg"
-  },
-  {
-    "filename": "405",
-    "path": "405.jpg",
-    "title": "405.jpg"
+    "title": "400.jpg",
+    "status": "new"
   },
   {
     "filename": "406",
@@ -40,11 +16,6 @@
     "title": "407.jpg"
   },
   {
-    "filename": "408",
-    "path": "408.jpg",
-    "title": "408.jpg"
-  },
-  {
     "filename": "409",
     "path": "409.jpg",
     "title": "409.jpg"
@@ -52,7 +23,8 @@
   {
     "filename": "410",
     "path": "410.jpg",
-    "title": "410.jpg"
+    "title": "410.jpg",
+    "status": "new"
   },
   {
     "filename": "411",
@@ -67,7 +39,8 @@
   {
     "filename": "413",
     "path": "413.jpg",
-    "title": "413.jpg"
+    "title": "413.jpg",
+    "status": "new"
   },
   {
     "filename": "414",
@@ -78,11 +51,6 @@
     "filename": "416",
     "path": "416.jpg",
     "title": "416.jpg"
-  },
-  {
-    "filename": "417",
-    "path": "417.jpg",
-    "title": "417.jpg"
   },
   {
     "filename": "418",
@@ -97,7 +65,8 @@
   {
     "filename": "420",
     "path": "420.jpg",
-    "title": "420.jpg"
+    "title": "420.jpg",
+    "status": "new"
   },
   {
     "filename": "421",
@@ -112,7 +81,8 @@
   {
     "filename": "422a",
     "path": "422a.jpg",
-    "title": "422a.jpg"
+    "title": "422a.jpg",
+    "status": "new"
   },
   {
     "filename": "422c",
@@ -120,14 +90,10 @@
     "title": "422c.jpg"
   },
   {
-    "filename": "423",
-    "path": "423.jpg",
-    "title": "423.jpg"
-  },
-  {
     "filename": "424",
     "path": "424.jpg",
-    "title": "424.jpg"
+    "title": "424.jpg",
+    "status": "new"
   },
   {
     "filename": "425",
@@ -157,7 +123,8 @@
   {
     "filename": "430",
     "path": "430.jpg",
-    "title": "430.jpg"
+    "title": "430.jpg",
+    "status": "new"
   },
   {
     "filename": "431",
@@ -172,7 +139,8 @@
   {
     "filename": "436",
     "path": "436.JPG",
-    "title": "436.JPG"
+    "title": "436.JPG",
+    "status": "new"
   },
   {
     "filename": "501",
@@ -187,7 +155,8 @@
   {
     "filename": "503",
     "path": "503.jpg",
-    "title": "503.jpg"
+    "title": "503.jpg",
+    "status": "new"
   },
   {
     "filename": "504",

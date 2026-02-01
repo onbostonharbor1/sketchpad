@@ -6,7 +6,7 @@
    ------
    Extracted from standalone "Math-Art Sketchpad" HTML:
    - Keeps ONLY the Modulated Circle shape
-   - Removes dropdown, registry, and localStorage gallery
+   - Removes dropdown, registry, and sessionStorage gallery
 
    GOAL
    ----

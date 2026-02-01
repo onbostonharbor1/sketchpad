@@ -4,30 +4,24 @@
    ------------------------------------------------------------
 */
 
-import { HomeTabSpec }      from "./home.js";
-import { DrawTabSpec }      from "./draw.js";
-import { PatternsTabSpec }  from "./patterns.js";
-import { GalleryTabSpec }   from "./gallery.js";
-import { UtilityTabSpec }   from "./utilities.js";
-import { FiguresTabSpec }   from "./figures.js";
+import { HomeTabSpec }     from "./home.js";
+import { DrawTabSpec }     from "./draw.js";
+import { PatternsTabSpec } from "./patterns.js";
+import { GalleryTabSpec }  from "./gallery.js";
+import { UtilityTabSpec }  from "./utilities.js";
+import { FiguresTabSpec }  from "./figures.js";
 
 import { clearDivs }        from "./uiUtilities.js";
 import { initMenuManager }  from "./menuManager.js";
 import { initOverlay }      from "./overlay.js";
 import { uiState }          from "./uiState.js";
-import { disableAllNextPrevOverlays }  from "./nextPrevOverlay.js";   // NEW: global overlay teardown
+import { disableAllNextPrevOverlays } from "./nextPrevOverlay.js";
 
 const START = "START_APP";
-const LAST_TAB_KEY = "sketchpad.lastActiveTab"; // end LAST_TAB_KEY
-
-/* ============================================================
-   Begin with installing a panic alert box for errors and
-   then checking that the structure of everything is ok.
-=========================================================== */
+const LAST_TAB_KEY = "sketchpad.lastActiveTab";
 
 /* ============================================================
    Tab Registry
-   All TabSpec objects must be registered here.
 =========================================================== */
 const TabRegistry = {
   home:      HomeTabSpec,
@@ -36,33 +30,21 @@ const TabRegistry = {
   gallery:   GalleryTabSpec,
   utilities: UtilityTabSpec,
   figures:   FiguresTabSpec
-}; // end TabRegistry
-
+};
 
 /* ============================================================
-   setActiveTab(tabKey)
-   Cosmetic only — controls tab button highlighting.
+   Helpers
 =========================================================== */
 function setActiveTab(tabKey) {
   const buttons = document.querySelectorAll("#mainTabs .nav-link");
-
   buttons.forEach((btn) => {
     if (!btn.id) return;
     const key = mapTabIdToKey(btn.id);
-
-    if (key === tabKey) {
-      btn.classList.add("active");
-    } else {
-      btn.classList.remove("active");
-    }
+    if (key === tabKey) btn.classList.add("active");
+    else btn.classList.remove("active");
   });
-} // end setActiveTab
+}
 
-
-/* ============================================================
-   mapTabIdToKey(tabId)
-   Maps HTML button id → registry key.
-=========================================================== */
 function mapTabIdToKey(tabId) {
   const map = {
     "home-tab":      "home",
@@ -72,31 +54,19 @@ function mapTabIdToKey(tabId) {
     "figures-tab":   "figures",
     "utilities-tab": "utilities"
   };
-
   return map[tabId] || null;
-} // end mapTabIdToKey
+}
 
-
-/* ============================================================
-   applyTheme(spec)
-   Adds the theme class for the activated tab.
-=========================================================== */
 function applyTheme(tabKey) {
   const wrapper = document.getElementById("wrapper");
   if (!wrapper) throw new Error("applyTheme: #wrapper missing");
 
-  // Remove any existing theme class
   const themeClasses = [
-    "theme-home",
-    "theme-draw",
-    "theme-patterns",
-    "theme-gallery",
-    "theme-figures",
-    "theme-utilities"
+    "theme-home", "theme-draw", "theme-patterns",
+    "theme-gallery", "theme-figures", "theme-utilities"
   ];
   themeClasses.forEach((cls) => wrapper.classList.remove(cls));
 
-  // Map tab key → theme class
   const themeMap = {
     home:      "theme-home",
     draw:      "theme-draw",
@@ -108,48 +78,30 @@ function applyTheme(tabKey) {
 
   const themeClass = themeMap[tabKey];
   if (themeClass) wrapper.classList.add(themeClass);
-} // end applyTheme
-
-
+}
 
 /* ============================================================
-   restoreTab(tabKey)
-   Called only when uiState.<tab>.saved exists.
-   Performs NO clearing. Delegates to TabSpec.restore().
+   Lifecycle: Restore & Init
 =========================================================== */
 function restoreTab(tabKey) {
   const spec = TabRegistry[tabKey];
   if (!spec || !spec.restore) {
     throw new Error("restoreTab: missing TabSpec.restore for " + tabKey);
   }
-
   spec.restore();
-} // end restoreTab
+}
 
-
-/* ============================================================
-   initTab(tabKey)
-   Cold start: clear regions + TabSpec.init(false)
-=========================================================== */
 function initTab(tabKey) {
   const spec = TabRegistry[tabKey];
   if (!spec || !spec.init) {
     throw new Error("initTab: missing TabSpec.init for " + tabKey);
   }
-
-  // 1. Clear main UI regions
   clearDivs();
-
-  // 2. Cold init
   spec.init(false);
-} // end initTab
-
+}
 
 /* ============================================================
    activateTab(tabKey)
-   MASTER LOGIC:
-     - If uiState.<tab>.saved exists → restore
-     - Else → cold init
 =========================================================== */
 function activateTab(tab) {
   let tabKey = tab;
@@ -166,116 +118,98 @@ function activateTab(tab) {
     }
   }
 
-  // --- Common fall-through ---
   uiState.activeTab = tabKey;
   setActiveTab(tabKey);
-} // end activateTab
-
-
+}
 
 /* ============================================================
    setUI(tabName)
-   PUBLIC ENTRY: All tab switches call this.
+   PUBLIC ENTRY
 ============================================================ */
 export function setUI(tab) {
-
-  // Guaranteed teardown on EVERY tab switch attempt.
-  // Prevents stale click-zones from surviving into a new tab.
   disableAllNextPrevOverlays();
-  let tabName;
 
-  if (tab === START) {
-    tabName = START;
-  } else {
-    tabName = tab;
-  }
+  let tabName = (tab === START) ? START : tab;
 
   if (tabName !== START && !TabRegistry[tabName]) {
     throw new Error("setUI: unknown tab " + tabName);
   }
 
-  // ----------------------------------------------------------
-  // Apply theme first (must happen before init/restore)
-  // ----------------------------------------------------------
-  if (tabName === START) {
-    applyTheme("home");
-  } else {
-    applyTheme(tabName);
+  // 1. Persist the tab selection
+  if (tabName !== START) {
+    sessionStorage.setItem(LAST_TAB_KEY, tabName);
   }
 
-  // ----------------------------------------------------------
-  // Activate tab
-  // ----------------------------------------------------------
-  if (tabName === START) {
-    activateTab(START);
-  } else {
-    activateTab(tabName);
-  }
+  // 2. THE CLEANUP
+  // If we are leaving Patterns, forget its bookmark
+  // if (tabName !== "patterns") {
+  //   sessionStorage.removeItem("sketchpad.patterns.saved");
+  // }
 
-  // ----------------------------------------------------------
-  // Consume launch intent (Home → Draw, etc.)
-  // ----------------------------------------------------------
-  if (!uiState.launch) return;
-  if (uiState.launch.pending !== true) return;
+  // // If we are leaving Gallery, forget its bookmark
+  // // (This was the missing logic!)
+  // if (tabName !== "gallery") {
+  //   sessionStorage.removeItem("sketchpad.gallery.saved");
+  // }
 
+  // 3. Apply theme
+  applyTheme(tabName === START ? "home" : tabName);
+
+  // 4. Activate
+  activateTab(tabName);
+
+  // 5. Handle Launch Intents
+  if (!uiState.launch || uiState.launch.pending !== true) return;
   const targetTab = uiState.launch.targetTab;
-  if (!targetTab) {
-    throw new Error("setUI: launch.pending but targetTab missing");
-  }
-
-  // Clear FIRST to avoid recursion loops
   uiState.launch.pending = false;
+  if (uiState.activeTab !== targetTab) setUI(targetTab);
+}
 
-  // If we're already on the target tab, do nothing
-  if (uiState.activeTab === targetTab) return;
-
-  // Jump to the requested tab
-  setUI(targetTab);
-
-} // end setUI
-
-
-
-
-
-/* ============================================================
-   handleTabChange(eventOrId)
-=========================================================== */
+/* --- Tab Handling Logic --- */
 function handleTabChange(eventOrId) {
   const tabId =
     typeof eventOrId === "string"
       ? eventOrId
       : (eventOrId && eventOrId.target && eventOrId.target.id);
 
-  const tabKey = mapTabIdToKey(tabId);
+  // Note: ensure mapTabIdToKey is also available here
+  const tabKey = (typeof mapTabIdToKey === "function") ? mapTabIdToKey(tabId) : tabId;
   if (!tabKey) return;
 
   setUI(tabKey);
-} // end handleTabChange
+}
+/* --------------------------- */
 
-
-/* ============================================================
-   onDomContentLoaded()
-=========================================================== */
-function onDomContentLoaded() {
+async function onDomContentLoaded() {
   initMenuManager();
   initOverlay();
 
+  // 1. Rehydrate all potential stateful tabs from sessionStorage.
+  const { rehydratePatternsState } = await import("./patterns.js");
+  const { rehydrateGalleryState } = await import("./gallery.js");
+
+  rehydratePatternsState();
+  rehydrateGalleryState();
+
+  // 2. Define tabButtons (This was the missing line causing the error!)
   const tabButtons = document.querySelectorAll("#mainTabs .nav-link");
+
+  // 3. Wire up the main tab buttons
   tabButtons.forEach((btn) => {
     btn.addEventListener("click", () => {
       handleTabChange(btn.id);
     });
   });
 
+  // 4. Determine the landing tab
   setUI(START);
+  // const lastTab = sessionStorage.getItem(LAST_TAB_KEY);
+  // if (lastTab && TabRegistry[lastTab]) {
+  //   setUI(lastTab);
+  // } else {
+  //   setUI(START);
+  // }
+}
 
-} // end onDomContentLoaded
 
-
-/* ============================================================
-   DOMContentLoaded wiring
-=========================================================== */
 window.addEventListener("DOMContentLoaded", onDomContentLoaded);
-
-// end setUI.js

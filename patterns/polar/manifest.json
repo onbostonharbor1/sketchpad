@@ -1,14 +1,14 @@
 [
   {
-    "filename": "polar1",
-    "path": "polar1.js",
-    "title": "10 Circles",
-    "status": "working"
-  },
-  {
     "filename": "polar7",
     "path": "polar7.js",
     "title": "10 Circles"
+  },
+  {
+    "filename": "polar1",
+    "path": "polar1.js",
+    "title": "10 Circles: Showing Intercepts",
+    "status": "working"
   },
   {
     "filename": "polar8",

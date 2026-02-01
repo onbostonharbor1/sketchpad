@@ -25,11 +25,6 @@
     "title": "Log Spiral"
   },
   {
-    "filename": "pureSpiralA",
-    "path": "pureSpiralA.js",
-    "title": "Pure Spiral A Filled"
-  },
-  {
     "filename": "pureSpiralB",
     "path": "pureSpiralB.js",
     "title": "Pure Spiral B"

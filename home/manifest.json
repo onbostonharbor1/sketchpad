@@ -2,7 +2,7 @@
   {
     "file": "polar1",
     "path": "/patterns/polar/polar1.js",
-    "title": "10 Circles",
+    "title": "10 Circles: Showing Intercepts",
     "status": "working"
   },
   {
@@ -12,23 +12,76 @@
     "status": "favorite"
   },
   {
-    "file": "arcsAndInner",
-    "path": "/gallery/Scripts/Curve Stitch/arcsAndInner.js",
-    "title": "Fix colors",
-    "status": "Broken"
+    "file": "400",
+    "path": "/gallery/Ideabook/3D/400.jpg",
+    "title": "400.jpg",
+    "status": "new"
   },
   {
-    "file": "bezierBlossom",
-    "path": "/gallery/Scripts/Unicorns/bezierBlossom.js",
-    "title": "Butterfly"
+    "file": "410",
+    "path": "/gallery/Ideabook/3D/410.jpg",
+    "title": "410.jpg",
+    "status": "new"
   },
   {
-    "file": "circularParabolaMulti.js",
-    "path": "/drawRegistry/circularParabolaMulti.js",
-    "title": "Circular Parabola (Multi)",
-    "status": "active",
-    "sourceType": "drawRegistry",
-    "registryKey": "circularParabolaMulti"
+    "file": "413",
+    "path": "/gallery/Ideabook/3D/413.jpg",
+    "title": "413.jpg",
+    "status": "new"
+  },
+  {
+    "file": "420",
+    "path": "/gallery/Ideabook/3D/420.jpg",
+    "title": "420.jpg",
+    "status": "new"
+  },
+  {
+    "file": "422a",
+    "path": "/gallery/Ideabook/3D/422a.jpg",
+    "title": "422a.jpg",
+    "status": "new"
+  },
+  {
+    "file": "424",
+    "path": "/gallery/Ideabook/3D/424.jpg",
+    "title": "424.jpg",
+    "status": "new"
+  },
+  {
+    "file": "430",
+    "path": "/gallery/Ideabook/3D/430.jpg",
+    "title": "430.jpg",
+    "status": "new"
+  },
+  {
+    "file": "436",
+    "path": "/gallery/Ideabook/3D/436.JPG",
+    "title": "436.JPG",
+    "status": "new"
+  },
+  {
+    "file": "503",
+    "path": "/gallery/Ideabook/3D/503.jpg",
+    "title": "503.jpg",
+    "status": "new"
+  },
+  {
+    "file": "butterfly",
+    "path": "/gallery/Scripts/Generative/butterfly.js",
+    "title": "6 lobbed butterfly",
+    "status": "new"
+  },
+  {
+    "file": "armsInCircles",
+    "path": "/patterns/circles/armsInCircles.js",
+    "title": "armsInCircles.js",
+    "status": "new"
+  },
+  {
+    "file": "circle",
+    "path": "/patterns/circles/circle.js",
+    "title": "circle.js",
+    "status": "new"
   },
   {
     "file": "complicatedParabolas",
@@ -43,21 +96,40 @@
     "status": "Examine"
   },
   {
-    "file": "curvedArcsInnerStar",
-    "path": "/patterns/curve_stitch/curvedArcsInnerStar.js",
-    "title": "curvedArcsInnerStar.js",
-    "status": "new"
-  },
-  {
     "file": "curveStitchEditor",
     "path": "/gallery/Scripts/Unicorns/curveStitchEditor.js",
     "title": "Curve Stitch Editor",
     "status": "Many"
   },
   {
+    "file": "curvedArcsInnerStar",
+    "path": "/patterns/curve_stitch/curvedArcsInnerStar.js",
+    "title": "curvedArcsInnerStar.js",
+    "status": "new"
+  },
+  {
+    "file": "cycloid",
+    "path": "/patterns/circles/cycloid.js",
+    "title": "cycloid.js",
+    "status": "new"
+  },
+  {
+    "file": "ellipseEndTaper",
+    "path": "/patterns/circles/ellipseEndTaper.js",
+    "title": "ellipseEndTaper.js",
+    "status": "new"
+  },
+  {
     "file": "ellipseFull",
     "path": "/patterns/circles/ellipseFull.js",
-    "title": "Ellipse: FULL"
+    "title": "ellipseFull.js",
+    "status": "new"
+  },
+  {
+    "file": "ellipseStartEnd",
+    "path": "/patterns/circles/ellipseStartEnd.js",
+    "title": "ellipseStartEnd.js",
+    "status": "new"
   },
   {
     "file": "epitrochoid",
@@ -66,24 +138,22 @@
     "status": "Queue 2"
   },
   {
-    "file": "hypotrochoid",
-    "path": "/gallery/Scripts/Named parametric/hypotrochoid.js",
-    "title": "Hypotrochoid"
+    "file": "arcsAndInner",
+    "path": "/gallery/Scripts/Curve Stitch/arcsAndInner.js",
+    "title": "Fix colors",
+    "status": "Broken"
   },
   {
-    "file": "joiningPoints",
-    "path": "/patterns/stuff/joiningPoints.js",
-    "title": "Joining Points"
+    "file": "generativeModulated",
+    "path": "/gallery/Scripts/Elliptical/generativeModulated.js",
+    "title": "generativeModulated.js",
+    "status": "favorite"
   },
   {
-    "file": "lissajois1",
-    "path": "/gallery/Scripts/Named parametric/lissajois1.js",
-    "title": "lissajois1.js"
-  },
-  {
-    "file": "lissajous",
-    "path": "/gallery/Scripts/Named parametric/lissajous.js",
-    "title": "Lissajous (interactive)"
+    "file": "linesInThree",
+    "path": "/patterns/circles/linesInThree.js",
+    "title": "linesInThree.js",
+    "status": "new"
   },
   {
     "file": "LISSAJOUS100",
@@ -104,16 +174,16 @@
     "status": "Many"
   },
   {
-    "file": "manyJoinedParabs",
-    "path": "/gallery/Scripts/Curve Stitch/manyJoinedParabs.js",
-    "title": "manyJoinedParabs.js",
-    "status": "favorite"
-  },
-  {
     "file": "manyParametric",
     "path": "/gallery/Scripts/Multiple/manyParametric.js",
     "title": "Many Parametric",
     "status": "Broken"
+  },
+  {
+    "file": "manyJoinedParabs",
+    "path": "/gallery/Scripts/Curve Stitch/manyJoinedParabs.js",
+    "title": "manyJoinedParabs.js",
+    "status": "favorite"
   },
   {
     "file": "modulatedCircle",
@@ -152,11 +222,6 @@
     "status": "favorite"
   },
   {
-    "file": "pureSpiralA",
-    "path": "/patterns/spirals/pureSpiralA.js",
-    "title": "Pure Spiral A Filled"
-  },
-  {
     "file": "pursuitDynamic5",
     "path": "/gallery/Scripts/Pursuit/pursuitDynamic5.js",
     "title": "Pursuit Dynamic 5",
@@ -169,30 +234,10 @@
     "status": "working"
   },
   {
-    "file": "pusuitSurface",
-    "path": "/gallery/Scripts/Pursuit/pusuitSurface.js",
-    "title": "pusuitSurface.js"
-  },
-  {
-    "file": "radialLinePetals",
-    "path": "/gallery/Scripts/Experimental/radialLinePetals.js",
-    "title": "radialLinePetals.js"
-  },
-  {
     "file": "radialPetals",
     "path": "/gallery/Scripts/Unicorns/radialPetals.js",
     "title": "Radial Petals",
     "status": "Queue 2"
-  },
-  {
-    "file": "radiateInBlues",
-    "path": "/patterns/fundamental/radiateInBlues.js",
-    "title": "radiateInBlues.js"
-  },
-  {
-    "file": "ribbon1",
-    "path": "/gallery/Scripts/Unicorns/ribbon1.js",
-    "title": "ribbon1.js"
   },
   {
     "file": "ribbon2",
@@ -201,35 +246,10 @@
     "status": "favorite"
   },
   {
-    "file": "ribbonAnimated",
-    "path": "/gallery/Scripts/Unicorns/ribbonAnimated.js",
-    "title": "ribbonAnimated.js"
-  },
-  {
-    "file": "rose",
-    "path": "/gallery/Scripts/Rose/rose.js",
-    "title": "rose.js"
-  },
-  {
-    "file": "roseAndLissajous",
-    "path": "/gallery/Scripts/Multiple/roseAndLissajous.js",
-    "title": "roseAndLissajous.js"
-  },
-  {
-    "file": "roseCurve",
-    "path": "/gallery/Scripts/Named parametric/roseCurve.js",
-    "title": "roseCurve.js"
-  },
-  {
     "file": "strophoid",
     "path": "/gallery/Scripts/General parametric/strophoid.js",
     "title": "Strophoid",
     "status": "Queue 2"
-  },
-  {
-    "file": "TEST",
-    "path": "/gallery/Scripts/Curve Stitch/TEST.js",
-    "title": "TEST.js"
   },
   {
     "file": "twoEllipses",

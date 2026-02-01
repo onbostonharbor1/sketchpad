@@ -1,5 +1,11 @@
 [
   {
+    "filename": "butterfly",
+    "path": "butterfly.js",
+    "title": "6 lobbed butterfly",
+    "status": "new"
+  },
+  {
     "filename": "boat",
     "path": "boat.js",
     "title": "boat.js"

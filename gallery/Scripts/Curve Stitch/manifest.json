@@ -1,14 +1,14 @@
 [
   {
+    "filename": "curveStitch",
+    "path": "curveStitch.js",
+    "title": "curveStitch.js"
+  },
+  {
     "filename": "arcsAndInner",
     "path": "arcsAndInner.js",
     "title": "Fix colors",
     "status": "Broken"
-  },
-  {
-    "filename": "curveStitch",
-    "path": "curveStitch.js",
-    "title": "curveStitch.js"
   },
   {
     "filename": "manyJoinedParabs",

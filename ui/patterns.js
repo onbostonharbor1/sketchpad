@@ -116,24 +116,30 @@ async function ensurePatternsManifestLoaded() {
        category list.
 =========================================================== */
 export async function initPatternsTab(restored) {
-  // defensive: patterns state container
+  // 1. Ensure the state container exists
   if (!uiState.patterns) {
     uiState.patterns = {};
   }
 
-  // 1. Static setup
+  // 2. THE CLEANUP: Remove the "Pattern" subtab if it exists.
+  // We do this here because 'init' always starts fresh at the Categories level.
+  const patternBtn = document.querySelector(`[data-tab-id="patterns-pattern"]`);
+  if (patternBtn) {
+    // We remove the <li> (the parent) so the whole button disappears from the <ul>
+    patternBtn.parentElement.remove();
+  }
+
+  // 3. Static setup
   setCommandsButtonLabel("Patterns Commands");
   wirePatternsCommandsButton();
 
-  // 2. Clear local module flags/data if you add any in the future
-  // (Standard practice to ensure Cold Start is truly fresh)
-
-  // 3. Re-load from manifest (will hit disk if cache was cleared)
+  // 4. Re-load from manifest
   await ensurePatternsManifestLoaded();
 
-  // 4. Build UI
+  // 5. Build UI
   setPatternsSubtabs();
 
+  // 6. Reset state to Categories
   uiState.patterns.activeCategory = null;
   uiState.patterns.activeItem     = null;
   uiState.patterns.saved = {
@@ -143,7 +149,7 @@ export async function initPatternsTab(restored) {
   };
 
   await showCategoryList();
-} // end initPatternsTab
+}
 
 
 /* ============================================================
@@ -218,53 +224,29 @@ function setPatternsSubtabs() {
      • NO static UI building — subtabs already built during init.
      • JUST restore the exact previous view from uiState.
 =========================================================== */
-async function restorePatternsTab() {
-  if (!uiState.patterns || !uiState.patterns.saved) {
-    throw new Error("restorePatternsTab: no saved Patterns state found");
-  }
+export async function restorePatternsTab() {
+  const saved = uiState.patterns?.saved;
+  if (!saved) return initPatternsTab(false);
 
-  const saved = uiState.patterns.saved;
-  const view  = saved.view;
-
+  // 1. Rebuild the static parts (Command button, etc.)
   setCommandsButtonLabel("Patterns Commands");
   wirePatternsCommandsButton();
-
-  // Ensure manifest is loaded before reconstructing
   await ensurePatternsManifestLoaded();
 
-  // Set subtabs (needed after every cold-init)
-  setPatternsSubtabs();
+  // 2. Build the navigation subtabs
+  setPatternsSubtabs(); // This creates the "Categories" button
 
-  if (view === "categories") {
-    // Restore the categories list exactly as it was
-    uiState.patterns.activeCategory = null;
-    uiState.patterns.activeItem     = null;
+  if (saved.view === "pattern") {
+    // 3. THE KEY: Manually add the "Pattern" subtab back
+    // This ensures the Patterns subtab exists and is highlighted
+    addPatternSubtab(saved.activeCategory, saved.activeItem);
+
+    // 4. Show the actual pattern content
+    await showSelectedPattern(saved.activeCategory, saved.activeItem);
+  } else {
     await showCategoryList();
-    return;
   }
-
-  if (view === "pattern") {
-    const cat = saved.activeCategory;
-    const idx = saved.activeItem;
-
-    if (!cat || typeof idx !== "number") {
-      throw new Error("restorePatternsTab: invalid saved pattern state");
-    }
-
-    // NOTE: This does NOT clear #text, #sketchpad, #action.
-    // showSelectedPattern will repopulate regions as needed.
-    uiState.patterns.activeCategory = cat;
-    uiState.patterns.activeItem     = idx;
-
-    await showSelectedPattern(cat, idx);
-    return;
-  }
-
-  // Any unknown view is an error (fail-fast)
-  throw new Error(
-    "restorePatternsTab: unknown saved view type '" + view + "'"
-  );
-} // end restorePatternsTab
+}
 
 
 /* ============================================================
@@ -332,7 +314,10 @@ function updatePatternsCaption(category, item, helpKey) {
 } // end updatePatternsCaption
 
 
-
+function clearPatternsCaption() {
+  const captionDiv = document.getElementById("caption");
+  if (captionDiv) captionDiv.innerHTML = "";
+}
 
 
 
@@ -350,6 +335,8 @@ async function showCategoryList() {
   if (!textDiv || !actionDiv || !padDiv) {
     throw new Error("showCategoryList: required region missing");
   }
+
+  clearPatternsCaption();
 
   // Clear dynamic regions only (subtabs are already built)
   textDiv.innerHTML   = "Loading pattern categories...";
@@ -492,11 +479,20 @@ export function renderPatternThumbGrid(category) {
 async function showSelectedPattern(category, index) {
   uiState.patterns.activeCategory = category;
   uiState.patterns.activeItem     = index;
-  uiState.patterns.saved = {
+
+  const savedState = {
     view: "pattern",
     activeCategory: category,
     activeItem: index
   };
+  uiState.patterns.saved = savedState;
+
+  // --- ADD THIS LINE ---
+  sessionStorage.setItem("sketchpad.patterns.saved", JSON.stringify(savedState));
+  // ---------------------
+
+  await ensurePatternsManifestLoaded();
+  // ... rest of the function ...
 
   await ensurePatternsManifestLoaded();
   const list = manifest.cache.patterns[category] || [];
@@ -695,12 +691,26 @@ export function wirePatternsCommandsButton() {
         const helpBtn = document.getElementById("patternsHelpButton");
         if (!helpBtn) throw new Error("wirePatternsCommandsButton: patternsHelpButton missing");
 
-        helpBtn.addEventListener("click", () => {
-          const panel = document.getElementById("offcanvasPanel");
-          if (!panel) throw new Error("wirePatternsCommandsButton: #offcanvasPanel missing");
-          const oc = bootstrap.Offcanvas.getOrCreateInstance(panel);
-          oc.hide();
-          openHelpHomeOverlay();
+        btn.addEventListener("click", async () => {
+          const out = document.getElementById("patternsRebuildReport");
+          out.textContent = "Rebuilding...";
+
+          // 1. Update the disk
+          const report = await nodeRebuildAndValidateManifests();
+
+          // 2. Clear the global cache
+          const { syncSystemStateAfterRebuild } = await import("./uiUtilities.js");
+          await syncSystemStateAfterRebuild();
+
+          // 3. THE FIX: Re-load the local patterns cache BEFORE restoring
+          // This ensures the "Pattern" view sees the new Title/Sort order
+          await ensurePatternsManifestLoaded();
+
+          // 4. RESTORE instead of INIT
+          // If uiState.patterns.saved.view was "pattern", it stays "pattern"
+          await restorePatternsTab();
+
+          out.textContent = formatRebuildReport(report);
         }); // end click
 
       } // end buildBody
@@ -710,5 +720,26 @@ export function wirePatternsCommandsButton() {
 
 } // end wirePatternsCommandsButton
 
+/* ============================================================
+   rehydratePatternsState()
+   ------------------------------------------------------------
+   Restores state from sessionStorage so it survives page reloads.
+============================================================ */
+export function rehydratePatternsState() {
+  const saved = sessionStorage.getItem("sketchpad.patterns.saved");
+  if (!saved) return;
+
+  if (!uiState.patterns) uiState.patterns = {};
+
+  const parsed = JSON.parse(saved);
+  uiState.patterns.saved = parsed;
+
+  // Sync the active pointers for the current session
+  uiState.patterns.activeCategory = parsed.activeCategory;
+  uiState.patterns.activeItem     = parsed.activeItem;
+}
+
+// At the bottom of patterns.js
+rehydratePatternsState();
 
 // end patterns.js

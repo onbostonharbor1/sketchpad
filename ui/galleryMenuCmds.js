@@ -2,95 +2,76 @@
    ------------------------------------------------------------
    Gallery Tab — Menu Commands (Adapter Layer)
    ------------------------------------------------------------
-   Rules:
-     • Consumes ONLY the `info` object passed from gallery.js
-     • Does NOT derive context from uiState
-     • Delegates generic work to menuCmds.js
-   ------------------------------------------------------------
 */
 
 import { menuManager } from "./menuManager.js";
 import { manifest } from "./manifest.js";
-
 import { showScriptOffcanvas } from "./menuCmds.js";
 import { openEditManifestDialog } from "./menuCmds.js";
-import { archiveItem } from "./menuCmds.js";
-// import { buildHelpItem } from "./help.js";
-
 import { refreshGalleryFromManifestEdit } from "./gallery.js";
 
 /* ============================================================
    archiveGalleryItem(info)
    ------------------------------------------------------------
-   Mirrors archivePatternItem behavior:
-   - build payload { manifestPath, filename }
-   - call archiveItem with showAlert
-   - refresh Gallery deterministically on success
-=========================================================== */
-async function archiveGalleryItem(info) {
+   Matches archivePatternsItem logic exactly:
+   1. Calc Next Index.
+   2. Archive.
+   3. Clear Cache.
+   4. Save "Bookmark" state to sessionStorage.
+============================================================ */
+export async function archiveGalleryItem(info) {
+  if (!window.confirm(`Archive "${info.title || info.filename}"?`)) return;
 
-  if (!info) throw new Error("archiveGalleryItem: info missing");
-  if (!info.manifestPath) throw new Error("archiveGalleryItem: manifestPath missing");
-  if (!info.filename)     throw new Error("archiveGalleryItem: filename missing");
+  const { archiveItem } = await import("./menuCmds.js");
 
-  const payload = {
-    manifestPath: info.manifestPath,
-    filename:     info.filename
-  };
-
-  console.log("archiveGalleryItem → archiveItem payload:", payload);
-
-  await archiveItem({
-    payload,
-    showAlert: true,
-
-    onSuccess: async () => {
-
-      if (manifest && typeof manifest.clearCache === "function") {
-        manifest.clearCache();
-      }
-      if (manifest.cache) delete manifest.cache.gallery;
-
-      await refreshGalleryFromManifestEdit();
-
-    }
+  // 1. Perform server-side work first
+  const result = await archiveItem({
+    payload: { manifestPath: info.manifestPath, filename: info.filename },
+    showAlert: false
   });
 
-} // end archiveGalleryItem
+  if (result?.status === "ok") {
+    const { domain, category } = info;
+    const list = manifest.cache.gallery[domain][category];
+    const currentIndex = uiState.gallery.saved.index;
 
+    // 2. Determine new bookmark
+    if (list.length > 1) {
+      const nextIndex = (currentIndex === list.length - 1) ? currentIndex - 1 : currentIndex;
 
+      sessionStorage.setItem("sketchpad.gallery.saved", JSON.stringify({
+        view: "results",
+        domain,
+        category,
+        index: nextIndex
+      }));
+    } else {
+      // Category is now empty
+      sessionStorage.removeItem("sketchpad.gallery.saved");
+    }
+
+    // 3. Single point of truth: Reload the app to the new bookmark
+    window.location.reload();
+  }
+}
 
 /* ============================================================
    showGalleryScript(info)
 =========================================================== */
 function showGalleryScript(info) {
-
   if (!info) throw new Error("showGalleryScript: info missing");
-
   if (!info.isScript) return;
-
   const scriptPath = info.scriptPath;
-  const label =
-    info.filename ||
-    info.title ||
-    "(untitled)";
-
-  if (!scriptPath) {
-    throw new Error("showGalleryScript: scriptPath missing");
-  }
-
+  const label = info.filename || info.title || "(untitled)";
+  if (!scriptPath) throw new Error("showGalleryScript: scriptPath missing");
   showScriptOffcanvas(String(scriptPath), String(label));
-
-} // end showGalleryScript
-
+}
 
 /* ============================================================
    editGalleryManifestItem(info)
 =========================================================== */
 async function editGalleryManifestItem(info) {
-
   if (!info) throw new Error("editGalleryManifestItem: info missing");
-
   const manifestPath = info.manifestPath;
   const matchField   = info.matchField;
   const matchValue   = info.matchValue;
@@ -104,59 +85,43 @@ async function editGalleryManifestItem(info) {
     manifestPath:  String(manifestPath),
     matchField:    String(matchField),
     matchValue:    String(matchValue),
-
     fileLabel:     String(info.filename || info.title || matchValue),
     initialTitle:  String(info.title  || ""),
     initialStatus: String(info.status || ""),
-
     statusPresets: ["new", "working", "current", "favorite"],
     allowCustomStatus: true,
     allowClearStatus:  true
   });
 
   if (!ok) return;
-
   await refreshGalleryFromManifestEdit();
-
-} // end editGalleryManifestItem
+}
 
 /* ============================================================
    getGalleryCaptionMenuItems(info)
 =========================================================== */
 export async function getGalleryCaptionMenuItems(info) {
-
   if (!info) throw new Error("getGalleryCaptionMenuItems: info missing");
-
   const items = [];
 
-  /* ----------------------------------------------------------
-     Help
-     -------------------------------------------------------- */
+  // Help
   if (info.helpKey) {
-
-    // FIX: pass recursive subdirs so help.js can traverse the help manifest tree
     const helpItem = await menuManager.buildHelpItem("gallery", info.helpKey, {
       subdirs: info.helpSubdirs
     });
-
     items.push(helpItem);
-
   } else {
     items.push({ label: "Help", disabled: true, onClick: () => {} });
   }
 
-  /* ----------------------------------------------------------
-     Show Script
-     -------------------------------------------------------- */
+  // Show Script
   items.push({
     label: "Show Script",
     disabled: !info.isScript,
     onClick: () => showGalleryScript(info)
   });
 
-  /* ----------------------------------------------------------
-     Edit Manifest
-     -------------------------------------------------------- */
+  // Edit Manifest
   items.push({
     label: "Edit Manifest",
     disabled: false,
@@ -165,9 +130,7 @@ export async function getGalleryCaptionMenuItems(info) {
     }
   });
 
-  /* ----------------------------------------------------------
-     Archive
-     -------------------------------------------------------- */
+  // Archive
   items.push({
     label: "Archive",
     disabled: false,
@@ -177,8 +140,4 @@ export async function getGalleryCaptionMenuItems(info) {
   });
 
   return items;
-
-} // end getGalleryCaptionMenuItems
-
-
-// end galleryMenuCmds.js
+}

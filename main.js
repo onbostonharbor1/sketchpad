@@ -18,7 +18,6 @@ import "./draw/drawEllipse.js";
 import "./draw/drawUnicorns.js";
 
 // === drawRegistry items ===
-import "./drawRegistry/2lines.js";
 import "./drawRegistry/circularParabola.js";
 import "./drawRegistry/circularParabolaMulti.js";
 import "./drawRegistry/cycloid.js";

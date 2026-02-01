@@ -12,8 +12,6 @@ import { PatternsController }  from "./patterns.js";
 /* ============================================================
    createPatternThumbnail(info)
    ============================================================ */
-/* patternsMenuCmds.js */
-
 export async function createPatternThumbnail(info) {
   const canvas = document.querySelector("#sketchpad canvas");
   if (!canvas) {
@@ -43,7 +41,7 @@ export async function createPatternThumbnail(info) {
     });
 
     if (result.status === "ok") {
-      console.log("Thumbnail written to disk.");
+
 
       // 3. RECREATE THUMBNAIL IN ACTION AREA
       // We wait 100ms to ensure the OS has flushed the file to disk
@@ -60,26 +58,50 @@ export async function createPatternThumbnail(info) {
 /* ============================================================
    archivePatternItem(info)
    ============================================================ */
-export async function archivePatternItem(info) {
-  if (!info) throw new Error("archivePatternItem: info missing");
+export async function archivePatternsItem(info) {
+  const confirm = window.confirm(`Archive "${info.title || info.filename}"?`);
+  if (!confirm) return;
 
-  const payload = {
-    manifestPath: info.manifestPath,
-    filename: info.filename
-  };
+  const category = info.category;
+  const currentIndex = uiState.patterns.activeItem;
+  const list = manifest.cache.patterns[category];
 
-  // Calls the generic tool in menuCmds.js
+  // 1. Calculate the next item to show
+  let nextIndex = currentIndex;
+  let stayInPatternView = (list.length > 1);
+
+  if (currentIndex === list.length - 1) {
+    nextIndex = currentIndex - 1;
+  }
+
+  // 2. Perform the Archive
+  const { archiveItem } = await import("./menuCmds.js");
   await archiveItem({
-    payload,
-    showAlert: true,
-    onSuccess: async () => {
-      // Drop local cache
-      if (manifest.cache) delete manifest.cache.patterns;
-
-      // FIX: Ensure we use showCategoryList as exported in patterns.js
-      await PatternsController.showCategoryList();
-    }
+    payload: { manifestPath: info.manifestPath, filename: info.filename },
+    showAlert: false
   });
+
+  // 3. Clear the stale cache
+  if (manifest.cache) delete manifest.cache.patterns;
+
+  // 4. THE FIX: Update the "Bookmark" before the reload hits
+  if (stayInPatternView) {
+    const newState = {
+      view: "pattern",
+      activeCategory: category,
+      activeItem: nextIndex
+    };
+    // Save this specifically so the reload puts us back in the SUBTAB
+    sessionStorage.setItem("sketchpad.patterns.saved", JSON.stringify(newState));
+  } else {
+    // If the category is now empty, we HAVE to go back to categories
+    sessionStorage.removeItem("sketchpad.patterns.saved");
+  }
+
+  // The server will now reload the page.
+  // Because of the 'sessionStorage' bookmark above,
+  // setUI will wake up and call restorePatternsTab,
+  // keeping you on the Pattern subtab.
 }
 
 /* ============================================================
@@ -110,11 +132,23 @@ export async function editPatternsManifestItem(info) {
 
   if (!ok) return;
 
+  // 1. Clear the stale cache so the refresh hits the updated disk file
   if (manifest.cache) delete manifest.cache.patterns;
 
-  // Re-run patterns init to refresh view
-  const { initPatternsTab } = await import("./patterns.js");
-  await initPatternsTab(true);
+  // 2. Import the lifecycle hooks
+  const { initPatternsTab, restorePatternsTab } = await import("./patterns.js");
+
+  /**
+   * 3. THE FIX: Selective Refresh
+   * If we are currently looking at a pattern, use 'restore' to stay there
+   * and update the caption/controls with the new title.
+   * Otherwise, use 'init' to refresh the category list.
+   */
+  if (uiState.patterns?.saved?.view === "pattern") {
+    await restorePatternsTab();
+  } else {
+    await initPatternsTab(true);
+  }
 }
 
 /* ============================================================
@@ -157,7 +191,7 @@ export async function getPatternsCaptionMenuItems(info) {
   items.push({
     label: "Archive",
     disabled: false,
-    onClick: () => archivePatternItem(info)
+    onClick: () => archivePatternsItem(info)
   });
 
   return items;

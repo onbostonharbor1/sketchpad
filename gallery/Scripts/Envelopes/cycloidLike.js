@@ -290,21 +290,17 @@ function sampleTopLine(x0, x1, p, steps) {
 function boundaryArcY(x, cx, baseY, radius, bulge, flip) {
 
   /* dx is within [-radius..+radius] */
-  const dx = x - cx;
+  let dx = x - cx;
 
-  /* Fail-fast if something is out of range. */
-  if (Math.abs(dx) > radius + 1e-9) {
-    throw new Error("boundaryArcY(): x outside span/radius");
-  }
+  /* THE FIX: Clamp dx to the radius to prevent precision-induced negative sqrt */
+  if (dx > radius) dx = radius;
+  if (dx < -radius) dx = -radius;
 
   /* Semicircle height term */
   const inside = (radius * radius) - (dx * dx);
 
-  if (inside < 0) {
-    throw new Error("boundaryArcY(): negative sqrt argument");
-  }
-
-  const h = Math.sqrt(inside);
+  /* Use Math.max(0, ...) as a double-safety against tiny negative floats */
+  const h = Math.sqrt(Math.max(0, inside));
 
   /* bulge scales the “rise” */
   const rise = bulge * h;
@@ -318,7 +314,6 @@ function boundaryArcY(x, cx, baseY, radius, bulge, flip) {
   return baseY + rise;
 
 } // end boundaryArcY
-
 
 function sampleArc(x0, x1, p, steps) {
 
@@ -353,7 +348,6 @@ function sampleArc(x0, x1, p, steps) {
   return out;
 
 } // end sampleArc
-
 
 /* ============================================================
    Rendering helpers

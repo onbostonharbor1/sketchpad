@@ -9,7 +9,6 @@ window.drawRegistry = Object.assign(
     inEllipse:          window.drawRegistry_inEllipse,
     inverseStar:        window.drawRegistry_inverseStar,
     drawline:           window.drawRegistry_line,
-    twoLines:            window.drawRegistry_2lines,
     linkedCircles:      window.drawRegistry_linkedCircles,
     mysticRose:         window.drawRegistry_mysticRose,
     mysticRoseEllipse:  window.drawRegistry_mysticRoseEllipse,

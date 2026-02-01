@@ -49,10 +49,8 @@ import { drawParab }   from "/draw/drawRegular.js";
 const toRadians = (deg) => deg * (Math.PI / 180);
 const toDegrees = (rad) => rad * (180 / Math.PI);
 
-/////////////////////////////////////////////////////////////////
-// createNodes
-/////////////////////////////////////////////////////////////////
-function createNodes(thing) {
+
+ function createNodes(thing) {
   const nodes = [];
   let { midpoint, radius, numNodes, rotate, xScale, yScale } = thing;
   rotate = toRadians(rotate);
@@ -74,7 +72,6 @@ function createNodes(thing) {
 
   return nodes;
 }
-
 //////////////////////////////////////////////////////////////////
 // CREATE PRINT NODES
 //////////////////////////////////////////////////////////////////

@@ -65,7 +65,6 @@ export async function syncSystemStateAfterRebuild() {
     }
   });
 
-  console.log("System Sync: Cache cleared. Tab states reset to Cold Start.");
 } // end syncSystemStateAfterRebuild
 
 /**

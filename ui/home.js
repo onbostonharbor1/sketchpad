@@ -32,7 +32,7 @@ import { setCaptionBar } from "./caption.js";
 import { manifest } from "./manifest.js";
 import { fileLayer } from "./fileLayer.js";
 import { renderCategories } from "./categories.js";
-import { loadScriptModule, executeScriptToCanvas } from "./scriptRunner.js";
+import { loadScriptModule, runScriptByPath } from "./scriptRunner.js";
 
 import { setCommandsButton, showOffcanvasPanel, escapeHtml } from "./uiUtilities.js";
 import { nodeRebuildAndValidateManifests } from "./nodeLayer.js";
@@ -785,26 +785,17 @@ async function loadHomeManifest_async(forceReload) {
   homeManifestData = data;
   homeManifestGrouped = groupHomeEntriesByStatus(data);
 
-  // console.group("HOME MANIFEST");
-  // console.log("url:", manifestUrl);
-  // console.log("raw data:", data);
-  // console.log("count:", data.length);
-
   const grouped = homeManifestGrouped;
 
   const statuses = Object.keys(grouped).sort((a, b) =>
     a.toLowerCase().localeCompare(b.toLowerCase())
   );
 
-  // console.log("distinct statuses:", statuses);
-
   const counts = {};
   statuses.forEach((s) => {
     counts[s] = grouped[s].length;
   });
-  // console.log("counts by status:", counts);
 
-  // console.groupEnd();
 
   if (uiState.home.saved && uiState.home.saved.view === HOME_VIEW_CATEGORIES) {
     renderHomeCategories(homeManifestGrouped);
@@ -1204,46 +1195,34 @@ function showHomeResultsError(where, err) {
      - Loads and executes the module at entry.path.
      - Aborts if token is stale after module load.
 ------------------------------------------------------------ */
+
 async function renderHomeJsEntryToCanvas(entry, token) {
-  if (!entry) throw new Error("renderHomeJsEntryToCanvas: entry missing");
-  if (typeof entry.path !== "string") throw new Error("renderHomeJsEntryToCanvas: entry.path missing");
-  if (!isJsPath(entry.path)) throw new Error("renderHomeJsEntryToCanvas: not a .js entry: " + entry.path);
-
-  if (typeof token !== "number") throw new Error("renderHomeJsEntryToCanvas: token missing");
-
   const padDiv = document.getElementById("sketchpad");
-  if (!padDiv) throw new Error("renderHomeJsEntryToCanvas: #sketchpad missing");
+  if (!padDiv) throw new Error("Home Results: #sketchpad missing");
 
-  const canvas = window.drawCanvas;
-  if (!canvas) throw new Error("renderHomeJsEntryToCanvas: window.drawCanvas missing");
-
-  // Attach canvas
-  padDiv.innerHTML = "";
-  padDiv.appendChild(canvas);
-
-  // Clear to known state
-  clearHomeCanvasAndOverlays();
-
-  // Load module
-  let mod = null;
-  try {
-    mod = await loadScriptModule(entry.path);
-  } catch (err) {
-    showHomeResultsError("load", err);
+  // 1. ENSURE THE OVERLAY CONTAINER EXISTS
+  // Without this, armInteractor (called by scriptRunner) has no stage to play on.
+  let overlay = document.getElementById("canvasOverlayLayers");
+  if (!overlay) {
+    overlay = document.createElement("div");
+    overlay.id = "canvasOverlayLayers";
+    // Usually, this should be a sibling or child of the canvas host
+    padDiv.appendChild(overlay);
   }
 
-  // Abort if a newer Results render started while we were importing
-  if (token !== homeResultsRenderToken) return;
-
-  // Execute
+  // 2. RUN THE SCRIPT WITH CONTROLS ENABLED
   try {
     const label = entry.file || entry.title || entry.path;
-    executeScriptToCanvas(mod, label);
+    // We use the unified runner so it hits your 'armInteractor' logic
+    await runScriptByPath(entry.path, "canvas", {
+      canvasRegionId: "sketchpad",
+      enableControls: true,      // This triggers the building of controls
+      controlsRegionId: "action" // Puts sliders in the action area
+    });
   } catch (err) {
     showHomeResultsError("execute", err);
   }
-} // end renderHomeJsEntryToCanvas
-
+}
 
 /* ============================================================
    OFFCANVAS / COMMANDS FUNCTIONS
@@ -1421,7 +1400,6 @@ export function clearHomeLocalState() {
     homeManifestLogged = false;
     homeManifestData = null;
     homeManifestGrouped = null;
-    console.log("Home module: Internal grouping variables cleared.");
 }  // clearHomeLocalState
 
 // end home.js

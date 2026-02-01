@@ -281,42 +281,25 @@ function drawRegularPolygon(thing) {
  *   arms begin at the node and go halfway to to the
  *   next and previous line
  ****************************************************/
-
 function drawRegularPolygonCorner(thing) {
   const nodes = createNodes(thing);
-  const lines = createLinesFromNodesOuter(nodes);
+  let lines = createLinesFromNodesOuter(nodes);
   let shortLines = [];
-
-  // 1. Break each perimeter edge into two segments: leading-out and leading-in
+  // Divide each connecting line into two parts
   for (let i = 0; i < lines.length; i++) {
-    // Segment A: from vertex to midpoint (leading out)
     shortLines.push(new Line(lines[i].start, lines[i].midpoint()));
-    // Segment B: from midpoint to next vertex (leading in)
     shortLines.push(new Line(lines[i].midpoint(), lines[i].end));
   }
-
+  // For each of these lines, figure out the where
+  // each point it
   const arms = createArms(thing, shortLines);
+  // Construct each parabola
   const parabs = [];
-
-  // 2. Pair them to center the parabola on the vertex
-  // We want the end of the previous edge and the start of the current edge
-  for (let i = 0; i < nodes.length; i++) {
-    // The "leading in" arm of the previous edge is at index (2*i - 1)
-    // The "leading out" arm of the current edge is at index (2*i)
-
-    let prevInIdx = (2 * i - 1);
-    if (prevInIdx < 0) prevInIdx = arms.length - 1; // Wrap to last "leading in" segment
-
-    let currentOutIdx = 2 * i;
-
-    let armA = arms[prevInIdx];   // This arm ends at the vertex
-    let armB = arms[currentOutIdx]; // This arm starts at the vertex
-
-    // To get a sharp corner, one arm must be reversed so both
-    // "start" their stitching from the vertex point.
-    parabs.push(stitcher(armA.toReversed(), armB));
+  for (let i = 0; i < arms.length; i += 2) {
+    let armA = arms[i];
+    let armB = arms[getPreviousIndex(i, arms.length)];
+    parabs.push(stitcher(armA, armB));
   }
-
   drawParabs(thing, parabs);
 }
 

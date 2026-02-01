@@ -778,8 +778,6 @@ function onHelpTreeNodeSelected(evt, data) {
   const helpPath = node.data && node.data.helpPath;
   if (!helpPath) return;
 
-  console.log("Help Browser: loading helpPath =", helpPath);
-
   const targetEl = document.getElementById("helpViewer");
   if (!targetEl) throw new Error("onHelpTreeNodeSelected: #helpViewer missing");
 
