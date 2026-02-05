@@ -6,7 +6,7 @@
 ------------------------------------------------------------ */
 
 import { addDrawSubtab } from "./draw.js";
-import { drawActiveTab } from "./draw.js";
+import { drawActiveTab } from "./drawRunner.js";
 import { markTabClean } from "./draw.js";
 import { DrawController } from "./draw.js";
 import { createGalleryPatternPng } from "./menuCmds.js";   // NEW
