@@ -93,6 +93,14 @@ function createParab(arm1, arm2) {
   return parab;
 }
 
+/**
+ * Creates an array of parabolas by stitching together corresponding arms from two arrays.
+ * Ensures the first array is the shorter one before processing.
+ * @param {*} thing - The object or context for which parabolas are being created.
+ * @param {Array} arms1 - First array of arms to stitch together.
+ * @param {Array} arms2 - Second array of arms to stitch together.
+ * @returns {Array} An array of stitched parabolas, one for each arm pair in the shorter array.
+ */
 function createParabs(thing, arms1, arms2) {
   if (arms1.length > arms2.length) {
     [arms1, arms2] = [arms2, arms1];

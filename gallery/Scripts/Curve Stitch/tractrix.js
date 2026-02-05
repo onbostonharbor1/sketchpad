@@ -12,17 +12,6 @@
    so you can move the whole figure down (or anywhere)
    without changing the underlying geometry math.
 
-   ASSUMPTIONS (FAIL-FAST)
-   -----------------------
-   - window.ctx exists (global getter)
-   - buildParameterControls() exists at /ui/parameterControls.js
-   - #action exists (parameterControls uses it)
-
-   IMPORTANT USER RULES
-   --------------------
-   - No local ctx variable is declared in this file.
-   - No ctx is passed into helper functions.
-   - No invented control schema concepts (no 'key').
    ============================================================ */
 
 import { buildParameterControls } from "/ui/parameterControls.js";

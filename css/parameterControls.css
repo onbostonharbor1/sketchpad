@@ -246,12 +246,16 @@ input.ctrl-text[type="text"] {
 }
 
 .ctrl-static-text {
+  display: block;
   width: 100%;
   box-sizing: border-box;
   white-space: pre-wrap;
+  word-break: normal;
   overflow-wrap: break-word;
-  padding: 6px 8px;
-  line-height: 1.25;
+
+  /* Add these two lines */
+  text-align: center;
+  font-weight: bold;
 }
 
 

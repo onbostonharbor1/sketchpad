@@ -15,7 +15,7 @@ import {
 
 export function runPattern() {
   // drawState.final = true;
-  ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+  // ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
 
   ctx.fillStyle = "black";
 
@@ -25,7 +25,7 @@ export function runPattern() {
     numSteps: 20,
     numNodes: 6,
     midpoint: mid,
-    color: "blue",
+    color: "#6c81ef",
     rotate: 30,
     lineWidth: 0.4
   };
@@ -70,7 +70,7 @@ export function runPattern() {
   // // BLUE: first stitching pass
   // // ------------------------------------------------------------
   let startPos = thing.numSteps+2;
-  let color = "blue";
+  let color = "#6b6bff";
 
   for (let i = 0; i < loops.length; i++) {
     for (let j = 0; j < loops[i].length - startPos; j++) {
@@ -82,7 +82,7 @@ export function runPattern() {
   // ------------------------------------------------------------
   // GREEN: second stitching pass (FIXED INDEXING)
   // ------------------------------------------------------------
-  color = "green";
+  color = "#1f8f57";
 
   for (let i = 0; i < loops.length; i++) {
 

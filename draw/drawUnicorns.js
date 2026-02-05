@@ -76,7 +76,7 @@ export function drawRadiate(thing){
 	ctx.lineWidth   = thing.lineWidth;
 	let line = new Line(thing.start, thing.end);
 	thing.nodes  = ptsOnLine(thing,line);
-	for (let i=0; i < thing.nodes.length; i++) {
+	for (let i=0; i < thing.nodes.length-1; i++) {
 	      ctx.moveTo(thing.radialPt.x, thing.radialPt.y);
 	      ctx.lineTo(thing.nodes[i].x, thing.nodes[i].y);
 	  }

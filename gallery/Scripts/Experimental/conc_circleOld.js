@@ -118,7 +118,7 @@ export const scriptInfo = {
     /* Hidden/Static Boilerplate */
     direction: "cw",
     tStart: 0.0,
-    tEnd: 1.0, // Switched to 1.0 for perimeter-based sampling
+    tEnd: (Math.PI * 2),
     lineWidth: 1,
     offsetX: 0,
     offsetY: 0,
@@ -168,8 +168,8 @@ export const scriptInfo = {
     groupMapping:  { widget: "staticText", text: "--- Mapping & Warp  ---" },
     mappingMode: { label: "Mapping Mode", widget: "select", options: ["ratio", "phase", "warp"] },
     ratio: { label: "Ratio (N)", widget: "range", min: -12.0, max: 12.0, step: 0.01 },
-    phase: { label: "Phase", widget: "range", min: -1.0, max: 1.0, step: 0.01 },
-    warpAmp:  { label: "Warp amp", widget: "range", min: 0.0, max: 0.5, step: 0.01 },
+    phase: { label: "Phase", widget: "range", min: -6.28, max: 6.28, step: 0.01 },
+    warpAmp:  { label: "Warp amp", widget: "range", min: 0.0, max: 6.28, step: 0.01 },
     warpFreq: { label: "Warp freq", widget: "range", min: 0.0, max: 24.0, step: 0.01 }
   },
 
@@ -234,21 +234,20 @@ function computeRings(p) {
 }
 
 /**
- * The Stitch Equation: determines target index 'u' from source index 't'.
- * Inputs are normalized to perimeter position (0..1).
+ * The Stitch Equation: determines target angle 'u' from source angle 't'.
  */
 function mapAngle(t, p) {
   const sign = (p.direction === "cw") ? 1 : -1;
   const base = (sign * p.ratio * t);
   if (p.mappingMode === "ratio") return base;
   if (p.mappingMode === "phase") return base + p.phase;
-  // Warp logic adjusted for normalized scale
-  return base + p.phase + (p.warpAmp * Math.sin(p.warpFreq * t * Math.PI * 2));
+  return base + p.phase + (p.warpAmp * Math.sin(p.warpFreq * t));
 }
 
 /**
  * Resolves a polar coordinate to Cartesian {x, y} based on boundary type.
  */
+
 function pointOnBoundary(p, radius, angle) {
   const cx = p.centerX;
   const cy = p.centerY;
@@ -273,44 +272,6 @@ function pointOnBoundary(p, radius, angle) {
 }
 
 /**
- * Perimeter re-parameterization to ensure uniform point distribution.
- */
-
-function getArcLengthPoints(p, radius, count) {
-  const resolution = 1000;
-  let rawPoints = [];
-  let distances = [0];
-  let totalLength = 0;
-
-  for (let i = 0; i <= resolution; i++) {
-    const t = (i / resolution) * Math.PI * 2;
-    const pt = pointOnBoundary(p, radius, t);
-    rawPoints.push(pt);
-    if (i > 0) {
-      const d = Math.hypot(pt.x - rawPoints[i - 1].x, pt.y - rawPoints[i - 1].y);
-      totalLength += d;
-      distances.push(totalLength);
-    }
-  }
-
-  let uniformPoints = [];
-  for (let i = 0; i < count; i++) {
-    const target = (i / count) * totalLength;
-    let idx = distances.findIndex(d => d >= target);
-    if (idx <= 0) {
-      uniformPoints.push(rawPoints[0]);
-    } else {
-      const ratio = (target - distances[idx - 1]) / (distances[idx] - distances[idx - 1]);
-      uniformPoints.push({
-        x: rawPoints[idx - 1].x + ratio * (rawPoints[idx].x - rawPoints[idx - 1].x),
-        y: rawPoints[idx - 1].y + ratio * (rawPoints[idx].y - rawPoints[idx - 1].y)
-      });
-    }
-  }
-  return uniformPoints;
-}
-
-/**
  * Draws the boundary ring path.
  */
 function drawRing(p, radius) {
@@ -319,7 +280,6 @@ function drawRing(p, radius) {
   ctx.lineWidth = p.ringWidth;
   ctx.strokeStyle = p.ringColor;
   ctx.beginPath();
-  // Using higher res for visual ring fidelity
   for (let i = 0; i <= 360; i++) {
     const pt = pointOnBoundary(p, radius, i * (Math.PI / 180));
     if (i === 0) ctx.moveTo(pt.x, pt.y);
@@ -330,23 +290,19 @@ function drawRing(p, radius) {
 }
 
 /**
- * The core stitch drawer: connects points on two radii using perimeter indices.
+ * The core stitch drawer: connects points on two radii.
  */
-function drawStitchPair(p, ptsA, ptsB, stroke) {
+
+function drawStitchPair(p, rA, rB, stroke) {
   ctx.save();
   ctx.lineWidth = p.lineWidth;
   ctx.strokeStyle = stroke;
-  const len = ptsA.length;
-
-  for (let i = 0; i < len; i++) {
-    const t = i / len;
-    const uRaw = mapAngle(t, p);
-    // Perimeter wrap logic
-    const uIdx = Math.floor(((uRaw % 1 + 1) % 1) * len);
-
-    const a = ptsA[i];
-    const b = ptsB[uIdx];
-
+  const dt = (p.tEnd - p.tStart) / (p.steps - 1);
+  for (let i = 0; i < p.steps; i++) {
+    const t = p.tStart + (i * dt);
+    const u = mapAngle(t, p);
+    const a = pointOnBoundary(p, rA, t);
+    const b = pointOnBoundary(p, rB, u);
     ctx.beginPath();
     ctx.moveTo(a.x, a.y);
     ctx.lineTo(b.x, b.y);
@@ -358,12 +314,12 @@ function drawStitchPair(p, ptsA, ptsB, stroke) {
 /**
  * Topology: Every ring connects to every other ring.
  */
-function drawAllPairs(p, ringSets) {
-  const n = ringSets.length;
-  for (let i = 0; i < n; i++) {
-    for (let j = i + 1; j < n; j++) {
-      const color = getRingColor(p, i / (n - 1));
-      drawStitchPair(p, ringSets[i], ringSets[j], color);
+function drawAllPairs(p, rings) {
+  for (let i = 0; i < rings.length; i++) {
+    for (let j = i + 1; j < rings.length; j++) {
+      const factor = i / (rings.length - 1);
+      const color = getRingColor(p, factor);
+      drawStitchPair(p, rings[i], rings[j], color);
     }
   }
 }
@@ -371,24 +327,25 @@ function drawAllPairs(p, ringSets) {
 /**
  * Topology: Rings connect only to their direct neighbor.
  */
-function drawAdjacentPairs(p, ringSets) {
-  const n = ringSets.length;
-  for (let i = 0; i < n - 1; i++) {
-    const color = getRingColor(p, i / (n - 1));
-    drawStitchPair(p, ringSets[i], ringSets[i + 1], color);
+function drawAdjacentPairs(p, rings) {
+  for (let i = 0; i < rings.length - 1; i++) {
+    const factor = i / (rings.length - 1);
+    const color = getRingColor(p, factor);
+    drawStitchPair(p, rings[i], rings[i + 1], color);
   }
 }
 
 /**
  * Topology: Explicit connection between Ring A and Ring B indices.
  */
-function drawSinglePair(p, ringSets) {
-  const n = ringSets.length;
-  const a = clampInt(p.ringA, 0, n - 1);
-  const b = clampInt(p.ringB, 0, n - 1);
+function drawSinglePair(p, rings) {
+  const maxIdx = rings.length - 1;
+  const a = clampInt(p.ringA, 0, maxIdx);
+  const b = clampInt(p.ringB, 0, maxIdx);
   if (a === b) return;
-  const color = getRingColor(p, Math.min(a, b) / (n - 1));
-  drawStitchPair(p, ringSets[a], ringSets[b], color);
+  const factor = Math.min(a, b) / maxIdx;
+  const color = getRingColor(p, factor);
+  drawStitchPair(p, rings[Math.min(a, b)], rings[Math.max(a, b)], color);
 }
 
 /**
@@ -399,17 +356,11 @@ function draw(p) {
   ctx.save();
   applyGlobalOffset(p);
   const rings = computeRings(p);
-
-  // Pre-generate arc-length-parameterized point sets for each ring
-  const ringSets = rings.map(r => getArcLengthPoints(p, r, p.steps));
-
-  // Optional: Draw physical boundary guides
   for (let r of rings) drawRing(p, r);
 
-  if (p.pairingMode === "single") drawSinglePair(p, ringSets);
-  else if (p.pairingMode === "adjacent") drawAdjacentPairs(p, ringSets);
-  else drawAllPairs(p, ringSets);
-
+  if (p.pairingMode === "single") drawSinglePair(p, rings);
+  else if (p.pairingMode === "adjacent") drawAdjacentPairs(p, rings);
+  else drawAllPairs(p, rings);
   ctx.restore();
 }
 

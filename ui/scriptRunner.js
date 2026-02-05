@@ -296,9 +296,28 @@ export async function executeScriptToCanvas(mod, title, options = {}) {
 } // end executeScriptToCanvas
 
 
-/* ===========================================================
-   executeScriptToText(mod, title, options)
-=========================================================== */
+
+/**
+ * Executes a script module and displays its output as text in the DOM.
+ *
+ * Attempts to call either the module's `runPattern()` method (preferred) or
+ * `render()` method (legacy fallback) to generate HTML content. The result is
+ * inserted into a specified DOM element and returned.
+ *
+ * @async
+ * @param {Object} mod - The script module to execute. Must have either a
+ *                       `runPattern()` or `render()` function.
+ * @param {string} title - The title for the script execution (currently unused).
+ * @param {Object} [options={}] - Optional configuration object.
+ * @param {string} [options.textRegionId="text"] - The DOM element ID where
+ *                                                 output will be rendered.
+ *
+ * @returns {Promise<*>} The output from the executed function (typically a
+ *                       string if HTML was generated).
+ *
+ * @throws {Error} If mod is not provided, if the target DOM element is not found,
+ *                 or if the module has neither `runPattern()` nor `render()` methods.
+ */
 export async function executeScriptToText(mod, title, options = {}) {
 
   if (!mod) throw new Error("executeScriptToText: mod missing");

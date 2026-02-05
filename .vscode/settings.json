@@ -13,7 +13,7 @@
   "workbench.colorTheme": "Default Light Modern",
 
   // === Files & saving ===
-  "files.autoSave": "onWindowChange",
+  "files.autoSave": "off",
   "files.trimTrailingWhitespace": true,
   "files.insertFinalNewline": true,
   "files.exclude": {

@@ -41,26 +41,8 @@
    - This script is NOT animated.
    - The drawing is redone from scratch on every parameter change.
    - Background is forced to white each redraw.
-   - Uses ONLY the existing global ctx (never declared or passed).
    ============================================================ */
 
-
-
-/* ============================================================
-   Curve Stitch Oval Band (Static)
-   Gallery Script (ParameterControls-integrated)
-
-   FIXES REQUESTED
-   ---------------
-   1) Ensure an initial display occurs immediately.
-   2) Remove black background (use white).
-
-   RULES
-   -----
-   - Use ONLY the existing global ctx
-   - Never declare ctx
-   - Never pass ctx to any function
-   ============================================================ */
 
 import { buildParameterControls } from "/ui/parameterControls.js";
 

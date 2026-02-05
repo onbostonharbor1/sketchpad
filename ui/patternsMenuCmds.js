@@ -2,58 +2,55 @@
    patternsMenuCmds.js — Patterns Tab Menu Commands
    ============================================================ */
 
-import { manifest }            from "./manifest.js";
-import { menuManager }         from "./menuManager.js";
-import { showScriptOffcanvas } from "./menuCmds.js";
-import { archiveItem }         from "./menuCmds.js";
-import { openEditManifestDialog } from "./menuCmds.js";
-import { PatternsController }  from "./patterns.js";
+import { manifest }                   from "./manifest.js";
+import { menuManager }                from "./menuManager.js";
+import { showScriptOffcanvas }        from "./menuCmds.js";
+import { archiveItem }                from "./menuCmds.js";
+import { openEditManifestDialog }     from "./menuCmds.js";
+import { PatternsController }         from "./patterns.js";
+import { buildCanvasThumbnailBase64 } from "./uiUtilities.js";
 
-/* ============================================================
-   createPatternThumbnail(info)
-   ============================================================ */
-export async function createPatternThumbnail(info) {
-  const canvas = document.querySelector("#sketchpad canvas");
-  if (!canvas) {
-    console.error("createPatternThumbnail: No canvas found");
-    return;
-  }
+   /**
+    * createPatternThumbnail
+    * ------------------------------------------------------------
+    * Captures the current canvas, crops it to the artwork's bounds
+    * while maintaining aspect ratio, and saves it as a thumbnail.
+    */
+   export async function createPatternThumbnail(info) {
+     const canvas = document.querySelector("#sketchpad canvas");
+     if (!canvas) {
+       console.error("createPatternThumbnail: No canvas found");
+       return;
+     }
 
-  // 1. Create 50x50 thumbnail
-  const thumbCanvas = document.createElement("canvas");
-  thumbCanvas.width = 50;
-  thumbCanvas.height = 50;
-  const tCtx = thumbCanvas.getContext("2d");
-  tCtx.drawImage(canvas, 0, 0, canvas.width, canvas.height, 0, 0, 50, 50);
+     try {
+       // 1. Generate the cropped, aspect-ratio-aware base64 data
+       // This now uses the shared logic in uiUtilities.js
+       const base64Data = buildCanvasThumbnailBase64(canvas, 50, 50);
 
-  // 2. Prepare payload
-  const dataUrl = thumbCanvas.toDataURL("image/png");
-  const base64Data = dataUrl.split(",")[1];
-  const baseName = info.filename.replace(/\.js$/i, "");
+       const baseName = info.filename.replace(/\.js$/i, "");
+       const { nodeDispatch } = await import("./nodeLayer.js");
 
-  try {
-    const { nodeDispatch } = await import("./nodeLayer.js");
+       // 2. Prepare payload and send to the service
+       const result = await nodeDispatch("writePatternThumbnail", {
+         category: info.category,
+         filename: baseName,
+         pngBase64: base64Data
+       });
 
-    const result = await nodeDispatch("writePatternThumbnail", {
-      category: info.category,
-      filename: baseName,
-      pngBase64: base64Data
-    });
-
-    if (result.status === "ok") {
-
-
-      // 3. RECREATE THUMBNAIL IN ACTION AREA
-      // We wait 100ms to ensure the OS has flushed the file to disk
-      // so the browser doesn't load a cached or empty version.
-      setTimeout(() => {
-        PatternsController.renderPatternThumbGrid(info.category);
-      }, 100);
-    }
-  } catch (err) {
-    console.error("createPatternThumbnail failed:", err);
-  }
-}
+       if (result.status === "ok") {
+         // 3. Refresh the UI grid
+         // The 100ms delay ensures the OS file system has settled
+         setTimeout(() => {
+           if (window.PatternsController) {
+              PatternsController.renderPatternThumbGrid(info.category);
+           }
+         }, 100);
+       }
+     } catch (err) {
+       console.error("createPatternThumbnail failed:", err);
+     }
+   }
 
 /* ============================================================
    archivePatternItem(info)

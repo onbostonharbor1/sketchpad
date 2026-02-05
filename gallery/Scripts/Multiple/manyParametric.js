@@ -36,7 +36,7 @@ export const scriptInfo = {
     preset: "5a",
 
     // Density plots only
-    samples: 250000,
+    samples: 100,
 
     // Basic alg only
     N: 150,
@@ -88,9 +88,9 @@ export const scriptInfo = {
     samples: {
       widget: "range",
       label: "Samples S (density)",
-      min: 20000,
-      max: 800000,
-      step: 10000
+      min: 100,
+      max: 100000,
+      step: 1000
     },
 
     N: {

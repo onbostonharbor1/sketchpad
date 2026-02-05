@@ -7,17 +7,6 @@
    Converted from standalone HTML demo:
    - Two rotated ellipses cross-weave + intra-ellipse stitch
    - Removed: DOM UI, DPR resize handling, Save PNG button
-
-   GOAL
-   ----
-   - Run under Gallery calling runPattern()
-   - Use parameterControls.js
-   - Match drawRegistry-style lifecycle and naming
-
-   ASSUMPTIONS (FAIL-FAST)
-   -----------------------
-   - global ctx exists
-   - #action exists
 ============================================================ */
 
 import { buildParameterControls } from "/ui/parameterControls.js";

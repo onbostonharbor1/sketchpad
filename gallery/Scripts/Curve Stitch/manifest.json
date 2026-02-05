@@ -1,14 +1,13 @@
 [
   {
+    "filename": "arcsAndInner",
+    "path": "arcsAndInner.js",
+    "title": "Arcs and Inner"
+  },
+  {
     "filename": "curveStitch",
     "path": "curveStitch.js",
     "title": "curveStitch.js"
-  },
-  {
-    "filename": "arcsAndInner",
-    "path": "arcsAndInner.js",
-    "title": "Fix colors",
-    "status": "Broken"
   },
   {
     "filename": "manyJoinedParabs",
@@ -32,11 +31,6 @@
     "path": "polygonCorner.js",
     "title": "polygonCorner.js",
     "status": "favorite"
-  },
-  {
-    "filename": "TEST",
-    "path": "TEST.js",
-    "title": "TEST.js"
   },
   {
     "filename": "tractrix",

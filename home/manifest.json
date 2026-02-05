@@ -12,64 +12,10 @@
     "status": "favorite"
   },
   {
-    "file": "400",
-    "path": "/gallery/Ideabook/3D/400.jpg",
-    "title": "400.jpg",
-    "status": "new"
-  },
-  {
-    "file": "410",
-    "path": "/gallery/Ideabook/3D/410.jpg",
-    "title": "410.jpg",
-    "status": "new"
-  },
-  {
-    "file": "413",
-    "path": "/gallery/Ideabook/3D/413.jpg",
-    "title": "413.jpg",
-    "status": "new"
-  },
-  {
-    "file": "420",
-    "path": "/gallery/Ideabook/3D/420.jpg",
-    "title": "420.jpg",
-    "status": "new"
-  },
-  {
-    "file": "422a",
-    "path": "/gallery/Ideabook/3D/422a.jpg",
-    "title": "422a.jpg",
-    "status": "new"
-  },
-  {
-    "file": "424",
-    "path": "/gallery/Ideabook/3D/424.jpg",
-    "title": "424.jpg",
-    "status": "new"
-  },
-  {
-    "file": "430",
-    "path": "/gallery/Ideabook/3D/430.jpg",
-    "title": "430.jpg",
-    "status": "new"
-  },
-  {
-    "file": "436",
-    "path": "/gallery/Ideabook/3D/436.JPG",
-    "title": "436.JPG",
-    "status": "new"
-  },
-  {
-    "file": "503",
-    "path": "/gallery/Ideabook/3D/503.jpg",
-    "title": "503.jpg",
-    "status": "new"
-  },
-  {
     "file": "butterfly",
     "path": "/gallery/Scripts/Generative/butterfly.js",
     "title": "6 lobbed butterfly",
-    "status": "new"
+    "status": "Queue"
   },
   {
     "file": "armsInCircles",
@@ -78,16 +24,16 @@
     "status": "new"
   },
   {
-    "file": "circle",
-    "path": "/patterns/circles/circle.js",
-    "title": "circle.js",
-    "status": "new"
-  },
-  {
     "file": "complicatedParabolas",
     "path": "/patterns/figures/complicatedParabolas.js",
     "title": "Complicated Parabolas",
     "status": "Broken"
+  },
+  {
+    "file": "conc_circleOld",
+    "path": "/gallery/Scripts/Experimental/conc_circleOld.js",
+    "title": "conc_circleOld.js",
+    "status": "new"
   },
   {
     "file": "concentricCircles",
@@ -108,40 +54,16 @@
     "status": "new"
   },
   {
-    "file": "cycloid",
-    "path": "/patterns/circles/cycloid.js",
-    "title": "cycloid.js",
-    "status": "new"
-  },
-  {
-    "file": "ellipseEndTaper",
-    "path": "/patterns/circles/ellipseEndTaper.js",
-    "title": "ellipseEndTaper.js",
-    "status": "new"
-  },
-  {
-    "file": "ellipseFull",
-    "path": "/patterns/circles/ellipseFull.js",
-    "title": "ellipseFull.js",
-    "status": "new"
-  },
-  {
-    "file": "ellipseStartEnd",
-    "path": "/patterns/circles/ellipseStartEnd.js",
-    "title": "ellipseStartEnd.js",
-    "status": "new"
+    "file": "cycloid0119_164221",
+    "path": "/gallery/Patterns/circles/cycloid0119_164221.png",
+    "title": "cycloid0119_164221.png",
+    "status": "working"
   },
   {
     "file": "epitrochoid",
     "path": "/gallery/Scripts/Named parametric/epitrochoid.js",
     "title": "Epitrochoid",
     "status": "Queue 2"
-  },
-  {
-    "file": "arcsAndInner",
-    "path": "/gallery/Scripts/Curve Stitch/arcsAndInner.js",
-    "title": "Fix colors",
-    "status": "Broken"
   },
   {
     "file": "generativeModulated",
@@ -201,18 +123,12 @@
     "file": "parabolas",
     "path": "/gallery/Scripts/Envelopes/parabolas.js",
     "title": "parabolas.js",
-    "status": "working"
+    "status": "Broken"
   },
   {
     "file": "parametricSketcher",
     "path": "/gallery/Scripts/Multiple/parametricSketcher.js",
     "title": "parametricSketcher.js",
-    "status": "Many"
-  },
-  {
-    "file": "playground",
-    "path": "/gallery/Scripts/Multiple/playground.js",
-    "title": "playground.js",
     "status": "Many"
   },
   {

@@ -8,14 +8,12 @@
   {
     "filename": "circle",
     "path": "circle.js",
-    "title": "circle.js",
-    "status": "new"
+    "title": "circle.js"
   },
   {
     "filename": "cycloid",
     "path": "cycloid.js",
-    "title": "cycloid.js",
-    "status": "new"
+    "title": "cycloid.js"
   },
   {
     "filename": "ellipseStartTaper",
@@ -30,20 +28,17 @@
   {
     "filename": "ellipseEndTaper",
     "path": "ellipseEndTaper.js",
-    "title": "ellipseEndTaper.js",
-    "status": "new"
+    "title": "ellipseEndTaper.js"
   },
   {
     "filename": "ellipseFull",
     "path": "ellipseFull.js",
-    "title": "ellipseFull.js",
-    "status": "new"
+    "title": "ellipseFull.js"
   },
   {
     "filename": "ellipseStartEnd",
     "path": "ellipseStartEnd.js",
-    "title": "ellipseStartEnd.js",
-    "status": "new"
+    "title": "ellipseStartEnd.js"
   },
   {
     "filename": "gradientCircularParabola",

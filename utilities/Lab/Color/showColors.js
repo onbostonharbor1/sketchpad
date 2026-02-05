@@ -1,100 +1,99 @@
 /* ===========================================================
-   showColors.js – Lab script (runPattern version)
+   showColors.js – Lab script (parameterControls version)
    -----------------------------------------------------------
-   Visualizes tints/shades of a base color.
-   One control: a text box for the color name or hex code.
+   Visualizes 8 tints and 8 shades of a base color in
+   two distinct columns.
+
+   Logic:
+   1. Typed text wins over color picker.
+   2. Tints: 8 steps, starting at 0.12, incrementing by 0.1.
+   3. Shades: 8 steps, starting at 0.08, incrementing by 0.04.
 =========================================================== */
 
-export function runPattern() {
-  const params = {
+import { buildParameterControls } from "/ui/parameterControls.js";
+
+export const scriptInfo = {
+  name: "Show Colors",
+  id: "showColors",
+  version: 0.1,
+  category: "Laboratory",
+  description: "Visualizes tints and shades of a base color.",
+
+  // --- Registry Controls ---
+  controls: {
+    colorText: { label: "Color name:", widget: "text", default: "" },
+    colorPicker: { label: "Color picker:", widget: "color", default: "#add8e6" }
+  },
+
+  // --- Live State ---
+  params: {
     colorText: "",
     colorPicker: "#add8e6"
-  };
+  },
 
-  const action = document.getElementById("action");
-  const textDiv = document.getElementById("text");
+  parameters: null,
 
-  action.innerHTML = "";
-  textDiv.innerHTML = ""; // Lab visual output stays empty
+  init() {
+    this.parameters = this.params;
+  },
 
-  // ======================================================
-  // CONTROL 1 — TEXT INPUT (named colors, hex codes)
-  // ======================================================
-  const row1 = document.createElement("div");
-  row1.className = "ctrl-field";
+  draw() {
+    const baseColor = resolveColor(this.params);
+    drawColors(baseColor);
+  },
 
-  const label1 = document.createElement("label");
-  label1.textContent = "Color name:";
+  redrawHandler() {
+    this.draw();
+  }
+};
 
-  const inputText = document.createElement("input");
-  inputText.type = "text";
-  inputText.className = "ctrl-text";
-  inputText.value = params.colorText;
+/* ===========================================================
+   runPattern() — Gallery Entry Point
+=========================================================== */
+export function runPattern() {
+  scriptInfo.init();
 
-  inputText.addEventListener("input", () => {
-    params.colorText = inputText.value.trim();
-    drawColors(resolveColor(params));
-  });
+  buildParameterControls(
+    scriptInfo,
+    "tab-scripts",
+    true
+  );
 
-  row1.appendChild(label1);
-  row1.appendChild(inputText);
-  action.appendChild(row1);
+  scriptInfo.draw();
+}
 
-  // ======================================================
-  // CONTROL 2 — COLOR PICKER
-  // ======================================================
-  const row2 = document.createElement("div");
-  row2.className = "ctrl-field";
-
-  const label2 = document.createElement("label");
-  label2.textContent = "Color picker:";
-
-  const inputPicker = document.createElement("input");
-  inputPicker.type = "color";
-  inputPicker.value = params.colorPicker;
-
-  inputPicker.addEventListener("input", () => {
-    params.colorPicker = inputPicker.value;
-    drawColors(resolveColor(params));
-  });
-
-  row2.appendChild(label2);
-  row2.appendChild(inputPicker);
-  action.appendChild(row2);
-
-  // ======================================================
-  // Initial draw
-  // ======================================================
-  drawColors(resolveColor(params));
-
-  return null;
-} // end runPattern
-
+/**
+ * resolveColor(params)
+ * Logic: Typed text takes precedence. Falls back to picker.
+ */
 function resolveColor(params) {
   const t = params.colorText.trim();
-  if (t !== "") return t;          // typed text wins
-  return params.colorPicker;       // fallback to picker
+  if (t !== "") return t;
+  return params.colorPicker;
 }
 
 /* ===========================================================
    drawColors(baseColor)
-   Draws tints and shades of the given color.
+   Standardized to use the global window.ctx environment.
 =========================================================== */
 function drawColors(col = "", xPos = 0, yPos = 0) {
-  const canvas = document.getElementById("sharedCanvas");
+  const canvas = window.drawCanvas;
+  if (!canvas || !window.ctx) return;
+
   const width = canvas.width;
   const height = canvas.height;
+  const ctx = window.ctx;
 
   ctx.save();
   ctx.fillStyle = "#ffffff";
   ctx.fillRect(0, 0, width, height);
 
-  // convert named color → hex
-    const baseHex = col.startsWith("#")
-	  ? col
-	  : (colourNameToHex(col) || "#add8e6");
+  // Convert named color → hex
+  const baseHex = col.startsWith("#")
+    ? col
+    : (colourNameToHex(col) || "#add8e6");
 
-  // helper label printer
+  // Helper label printer
   function printLabel(text, x, y) {
     const oldFill = ctx.fillStyle;
     const oldFont = ctx.font;
@@ -105,12 +104,11 @@ function drawColors(col = "", xPos = 0, yPos = 0) {
     ctx.font = oldFont;
   }
 
+  // ---------------------------------------------------------
+  // COLUMN 1: TINTS
+  // ---------------------------------------------------------
   let startY = yPos + 30;
   let x = xPos + 10;
-
-  // ---------------------------------------------------------
-  // TINTS
-  // ---------------------------------------------------------
   let tintAmount = 0.12;
 
   for (let i = 0; i < 8; i++) {
@@ -126,11 +124,10 @@ function drawColors(col = "", xPos = 0, yPos = 0) {
   }
 
   // ---------------------------------------------------------
-  // SHADES
+  // COLUMN 2: SHADES
   // ---------------------------------------------------------
   startY = yPos + 30;
   x = x + 300;
-
   let shadeAmount = 0.08;
 
   for (let i = 0; i < 8; i++) {
@@ -146,11 +143,10 @@ function drawColors(col = "", xPos = 0, yPos = 0) {
   }
 
   ctx.restore();
-} // end drawColors
-
+}
 
 /* ===========================================================
-   Helpers (kept EXACTLY as written, now safe inside module)
+   calculateTintAndShade(hexColor, percentage)
 =========================================================== */
 function calculateTintAndShade(hexColor, percentage) {
   const r = parseInt(hexColor.slice(1, 3), 16);
@@ -165,23 +161,24 @@ function calculateTintAndShade(hexColor, percentage) {
   const shadeG = Math.round(Math.max(0, g - g * percentage));
   const shadeB = Math.round(Math.max(0, b - b * percentage));
 
+  const toHex = (val) => val.toString(16).padStart(2, "0");
+
   return {
     tint: {
-      r: tintR,
-      g: tintG,
-      b: tintB,
-      hex: "#" + [tintR, tintG, tintB].map(x => x.toString(16).padStart(2, "0")).join("")
+      r: tintR, g: tintG, b: tintB,
+      hex: "#" + toHex(tintR) + toHex(tintG) + toHex(tintB)
     },
     shade: {
-      r: shadeR,
-      g: shadeG,
-      b: shadeB,
-      hex: "#" + [shadeR, shadeG, shadeB].map(x => x.toString(16).padStart(2, "0")).join("")
+      r: shadeR, g: shadeG, b: shadeB,
+      hex: "#" + toHex(shadeR) + toHex(shadeG) + toHex(shadeB)
     }
   };
-} // end calculateTintAndShade
+}
 
-
+/* ===========================================================
+   colourNameToHex(color)
+   Full CSS color mapping as per original script.
+=========================================================== */
 function colourNameToHex(color) {
   color = color.toLowerCase();
 
@@ -218,4 +215,4 @@ function colourNameToHex(color) {
   };
 
   return colours[color] || null;
-} // end colourNameToHex
+}

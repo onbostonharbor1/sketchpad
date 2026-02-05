@@ -571,7 +571,7 @@ export function showScriptOffcanvas(scriptPath, titleText) {
 
    Responsibilities:
      1) Validate spec + canvas
-     2) Convert canvas to PNG base64 + 36x36 thumb base64
+     2) Convert canvas to PNG base64 + 50x50 thumb base64
      3) Dispatch Node request: writeGalleryPatternPng
      4) Force manifest refresh (same pattern as archive/edit)
      5) Display a clear completion message
@@ -584,43 +584,34 @@ export function showScriptOffcanvas(scriptPath, titleText) {
        /gallery/Patterns/<category>/<id><stamp>.png
 =========================================================== */
 
+/* ============================================================
+   createGalleryPatternPng(spec)
+   ------------------------------------------------------------
+   UI worker for "Create PNG" (Draw tab).
+=========================================================== */
 export async function createGalleryPatternPng(spec = {}) {
 
   const category = spec.category;
   const idName   = spec.idName;
   const canvas   = spec.canvas;
 
+  // 1. Validation
   if (typeof category !== "string" || category.trim() === "") {
     throw new Error("createGalleryPatternPng: category missing/invalid");
   }
-
   if (typeof idName !== "string" || idName.trim() === "") {
     throw new Error("createGalleryPatternPng: idName missing/invalid");
   }
-
   if (!canvas || !canvas.toDataURL) {
     throw new Error("createGalleryPatternPng: canvas missing or invalid");
   }
 
+  // 2. Generate Full PNG Base64 (The complete drawing)
   const dataUrl = canvas.toDataURL("image/png");
-  const parts = dataUrl.split(",");
-  if (parts.length !== 2) throw new Error("createGalleryPatternPng: invalid data URL");
-  const pngBase64 = parts[1];
+  const pngBase64 = dataUrl.split(",")[1];
 
-  const thumbCanvas = document.createElement("canvas");
-  thumbCanvas.width = 50;
-  thumbCanvas.height = 50
-
-  const tctx = thumbCanvas.getContext("2d");
-  if (!tctx) throw new Error("createGalleryPatternPng: thumb 2d context missing");
-
-  tctx.clearRect(0, 0, 36, 36);
-  tctx.drawImage(canvas, 0, 0, 36, 36);
-
-  const thumbUrl = thumbCanvas.toDataURL("image/png");
-  const thumbParts = thumbUrl.split(",");
-  if (thumbParts.length !== 2) throw new Error("createGalleryPatternPng: invalid thumb data URL");
-  const thumbBase64 = thumbParts[1];
+  // 3. Generate Cropped Thumbnail Base64 (Using the shared utility)
+  const thumbBase64 = buildCanvasThumbnailBase64(canvas, 50, 50);
 
   const payload = {
     category: category,
@@ -629,41 +620,30 @@ export async function createGalleryPatternPng(spec = {}) {
     thumbBase64: thumbBase64
   };
 
+  // 4. Dispatch to Node service
   const result = await nodeDispatch("writeGalleryPatternPng", payload);
 
   if (!result || result.status !== "ok") {
     throw new Error("createGalleryPatternPng: service failed: " + JSON.stringify(result));
   }
 
-  // Invalidate manifest cache so Gallery picks up the new entry deterministically
+  // 5. Invalidate manifest cache
   if (manifest && typeof manifest.clearCache === "function") {
     manifest.clearCache();
   }
   if (manifest.cache) delete manifest.cache.gallery;
 
-  // Display what was done (mirrors your edit-manifest style: concrete paths)
+  // 6. User Feedback
   alert(
-    "PNG written:\n" +
+    "PNG and written: " +
     result.pngPath +
-    "\n\nThumbnail:\n" +
+    "\nThumbnail: " +
     result.thumbPath
   );
 
   return result;
 
 } // end createGalleryPatternPng
-
-/* ui/menuCmds.js
-   ------------------------------------------------------------
-   ADD: createPatternScript(spec)
-   ADD: createPatternScriptTextFromDrawRegistry(entry, params)
-   ------------------------------------------------------------
-   NOTE: This is an ADDITIVE PATCH (new code). No existing
-         functions are modified below.
------------------------------------------------------------- */
-
-
-
 
 
 

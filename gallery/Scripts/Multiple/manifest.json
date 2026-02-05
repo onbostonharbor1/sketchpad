@@ -17,12 +17,6 @@
     "status": "Many"
   },
   {
-    "filename": "playground",
-    "path": "playground.js",
-    "title": "playground.js",
-    "status": "Many"
-  },
-  {
     "filename": "roseAndLissajous",
     "path": "roseAndLissajous.js",
     "title": "roseAndLissajous.js"

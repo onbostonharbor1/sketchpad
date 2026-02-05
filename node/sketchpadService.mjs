@@ -19,7 +19,7 @@
    CURRENT TASKS
 
    Implemented:
-     • writePatternThumbnail    (write 36x36 thumb PNG from browser)
+     • writePatternThumbnail    (write 50x50 thumb PNG from browser)
 
    Placeholders (NO-OP, future expansion):
      • deletePackageScript
@@ -742,7 +742,7 @@ export async function addPatternScripts(payload = {}) {
 
    DESCRIPTION
    -----------
-   Writes a 36x36 PNG thumbnail provided by the browser.
+   Writes a 50x50 PNG thumbnail provided by the browser.
 
    Payload:
      {
