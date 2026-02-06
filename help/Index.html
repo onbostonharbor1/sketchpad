@@ -7,7 +7,7 @@
 
   <meta name="viewport" content="width=device-width,initial-scale=1" />
 
-  <title>Help Treatise — Sketchpad Architecture (High-Level + Detailed Map)</title>
+  <title>Help Treatise — Sketchpad Architecture</title>
 
   <link rel="stylesheet" href="/help/help_treatise.css" />
 </head>
@@ -30,21 +30,14 @@
     </li>
   </ul>
 
-  <p>
-    This is a raw help HTML file intended to be dropped directly into the Sketchpad help system.
-  </p>
-
   <hr />
 
   <h2>Part 1 — High-Level Overview (Mental Model)</h2>
 
   <p>
     Sketchpad is not one monolithic application.
-    It is a set of independent tab subsystems that share a common UI shell and a common drawing surface.
-  </p>
-
-  <p>
-    At the highest level, Sketchpad is built around five major “pillars”:
+    It is a set of independent tab subsystems that share a common UI and a common drawing surface.
+    Sketchpad is built around five major “pillars”:
   </p>
 
   <ol>
@@ -60,9 +53,6 @@
   <p>
     Each top-level tab (Draw, Patterns, Gallery, Utilities, Home, Figures, etc.) is its own subsystem.
     It owns its regions and its internal state.
-  </p>
-
-  <p>
     Each tab is activated through a TabSpec that defines:
   </p>
 
@@ -124,7 +114,7 @@
   <h3>4. Node maintenance is separate from UI rendering</h3>
 
   <p>
-    Maintenance tasks (rebuild manifests, archive items, edit manifest titles, generate thumbnails, etc.)
+    Maintenance tasks (rebuild manifests, archive items, edit manifest titles, generate thumbnails, and the like)
     are executed by a Node service layer.
   </p>
 
