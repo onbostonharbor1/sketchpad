@@ -32,7 +32,6 @@ window.drawRegistry_inEllipse = {
     startSkip: 0,
     endSkip: 0,
     withinCirc: TAPER,
-    taperCenter: 0.5, // 0.5 is default center
     rotate: 0,
     points: []
   },
@@ -42,19 +41,12 @@ window.drawRegistry_inEllipse = {
       widget: "select",
       options: [
         { value: START_END,   label: "Start–End" },
-        { value: FULL,        label: "Full" },
+        { value: FULL,         label: "Full" },
         { value: TAPER,       label: "Taper (Both)" },
         { value: START_TAPER, label: "Start Taper" },
         { value: END_TAPER,   label: "End Taper" },
       ],
       label: "Mode:",
-    },
-    taperCenter: {
-      widget: "range",
-      min: 0.1,
-      max: 0.9,
-      step: 0.05,
-      label: "Taper Bias:",
     },
     ellipse_a: { widget: "range", min: 50, max: 600, step: 10, label: "Width:" },
     ellipse_b: { widget: "range", min: 50, max: 600, step: 10, label: "Height:" },

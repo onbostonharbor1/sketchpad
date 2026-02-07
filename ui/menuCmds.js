@@ -1,18 +1,18 @@
 /* ui/menuCmds.js
-   ------------------------------------------------------------
-   Shared Menu Commands — Generic Dialogs
-   ------------------------------------------------------------
-   Purpose:
-     - Provide shared UI dialogs used by multiple tabs.
-     - This file knows nothing about tabs; it only operates on
-       manifestPath + identity + editable fields.
+    ------------------------------------------------------------
+    Shared Menu Commands — Generic Dialogs
+    ------------------------------------------------------------
+    Purpose:
+      - Provide shared UI dialogs used by multiple tabs.
+      - This file knows nothing about tabs; it only operates on
+        manifestPath + identity + editable fields.
 
-   Current dialog:
-     - openEditManifestDialog(spec)
+    Current dialog:
+      - openEditManifestDialog(spec)
 
-   Requirements:
-     - overlayManager exists and has a "forms" layer.
-     - nodeDispatch exists and can run "editManifestEntry".
+    Requirements:
+      - overlayManager exists and has a "forms" layer.
+      - nodeDispatch exists and can run "editManifestEntry".
 */
 
 import { nodeDispatch } from "./nodeLayer.js";
@@ -22,21 +22,21 @@ import { escapeHtml } from "./uiUtilities.js";
 import { manifest } from "./manifest.js";
 
 /* ============================================================
-   archiveItem(specOrPayload)
-   ------------------------------------------------------------
-   Canonical call:
-     await archiveItem({
-       payload: { manifestPath, filename },
-       onSuccess: async (result) => { ... },
-       showAlert: true   // default true
-     });
+    archiveItem(specOrPayload)
+    ------------------------------------------------------------
+    Canonical call:
+      await archiveItem({
+        payload: { manifestPath, filename },
+        onSuccess: async (result) => { ... },
+        showAlert: true   // default true
+      });
 
-   Compatibility:
-     await archiveItem({ manifestPath, filename });
+    Compatibility:
+      await archiveItem({ manifestPath, filename });
 
-   Default behavior:
-     - after successful archive, show alert "Archived: <filename>"
-     - caller may suppress via showAlert: false
+    Default behavior:
+      - after successful archive, show alert "Archived: <filename>"
+      - caller may suppress via showAlert: false
 =========================================================== */
 export async function archiveItem(specOrPayload) {
 
@@ -44,7 +44,7 @@ export async function archiveItem(specOrPayload) {
     throw new Error("archiveItem: spec missing");
 
   // Canonical: { payload: {...}, onSuccess?: fn, showAlert?: bool }
-  // Compat:    { manifestPath, filename }
+  // Compat:     { manifestPath, filename }
   let spec = specOrPayload;
   if (!specOrPayload.payload) {
     spec = { payload: specOrPayload };
@@ -89,32 +89,32 @@ export async function archiveItem(specOrPayload) {
 
 
 /* ============================================================
-   openEditManifestDialog(spec)
-   ------------------------------------------------------------
-   Opens the shared "Edit Manifest" dialog.
+    openEditManifestDialog(spec)
+    ------------------------------------------------------------
+    Opens the shared "Edit Manifest" dialog.
 
-   Args:
-     spec (object) with:
-       dialogTitle (string)
-       manifestPath (string)
-       matchField   (string)
-       matchValue   (string)
-       fileLabel    (string)
-       initialTitle (string)
-       initialStatus (string)
-       statusPresets (array of strings)
-       allowCustomStatus (bool)
-       allowClearStatus  (bool)
+    Args:
+      spec (object) with:
+        dialogTitle (string)
+        manifestPath (string)
+        matchField   (string)
+        matchValue   (string)
+        fileLabel     (string)
+        initialTitle (string)
+        initialStatus (string)
+        statusPresets (array of strings)
+        allowCustomStatus (bool)
+        allowClearStatus  (bool)
 
-   Returns:
-     Promise<boolean>
-       true  => OK applied (manifest rewritten)
-       false => Cancel
+    Returns:
+      Promise<boolean>
+        true  => OK applied (manifest rewritten)
+        false => Cancel
 
-   Side effects:
-     - On OK, updates:
-         spec._resultTitle
-         spec._resultStatus
+    Side effects:
+      - On OK, updates:
+          spec._resultTitle
+          spec._resultStatus
 =========================================================== */
 export function openEditManifestDialog(spec) {
 
@@ -141,7 +141,7 @@ export function openEditManifestDialog(spec) {
 
 
 /* ============================================================
-   validateEditManifestSpec(spec)
+    validateEditManifestSpec(spec)
 =========================================================== */
 function validateEditManifestSpec(spec) {
 
@@ -166,7 +166,7 @@ function validateEditManifestSpec(spec) {
 } // end validateEditManifestSpec
 
 /* ============================================================
-   buildEditManifestHtml — TABLE LAYOUT (REFINED)
+    buildEditManifestHtml — TABLE LAYOUT (REFINED)
 =========================================================== */
 function buildEditManifestHtml(spec) {
 
@@ -258,7 +258,7 @@ function buildEditManifestHtml(spec) {
 
 
 /* ============================================================
-   wireEditManifestHandlers — UPDATED (NO UseCustom BUTTON)
+    wireEditManifestHandlers — UPDATED (NO UseCustom BUTTON)
 =========================================================== */
 function wireEditManifestHandlers(spec, resolve) {
 
@@ -435,7 +435,7 @@ export async function applyEditManifest(spec, resolve) {
 
 
 /* ============================================================
-   preselectStatus(initialStatus, presets)
+    preselectStatus(initialStatus, presets)
 =========================================================== */
 function preselectStatus(initialStatus, presets) {
 
@@ -456,7 +456,7 @@ function preselectStatus(initialStatus, presets) {
 
 
 /* ============================================================
-   clearStatusRadios()
+    clearStatusRadios()
 =========================================================== */
 function clearStatusRadios() {
 
@@ -471,7 +471,7 @@ function clearStatusRadios() {
 
 
 /* ============================================================
-   getPickedRadioValue()
+    getPickedRadioValue()
 =========================================================== */
 function getPickedRadioValue() {
 
@@ -488,7 +488,7 @@ function getPickedRadioValue() {
 
 
 /* ============================================================
-   closeFormsOverlay()
+    closeFormsOverlay()
 =========================================================== */
 function closeFormsOverlay() {
 
@@ -503,10 +503,10 @@ function closeFormsOverlay() {
 
 
 /* ------------------------------------------------------------
-   showScriptOffcanvas(scriptPath, titleText)
-   Fetches script source and displays it inside the Bootstrap
-   offcanvas panel. Offcanvas is appropriate for long, scrollable
-   text that should not block the app.
+    showScriptOffcanvas(scriptPath, titleText)
+    Fetches script source and displays it inside the Bootstrap
+    offcanvas panel. Offcanvas is appropriate for long, scrollable
+    text that should not block the app.
 ------------------------------------------------------------ */
 export function showScriptOffcanvas(scriptPath, titleText) {
 
@@ -551,43 +551,43 @@ export function showScriptOffcanvas(scriptPath, titleText) {
 
 
 /*************************************************************
-   createGalleryPatternPng(spec)
-   -----------------------------------------------------------
-   Worker for creating a PNG + thumbnail from a canvas and
-   writing both under:
-     /gallery/Patterns/<category>/
+    createGalleryPatternPng(spec)
+    -----------------------------------------------------------
+    Worker for creating a PNG + thumbnail from a canvas and
+    writing both under:
+      /gallery/Patterns/<category>/
 
-   Expected spec:
-     {
-       category : "<category>",
-       id       : "<base id>",
-       canvas   : HTMLCanvasElement
-     }
+    Expected spec:
+      {
+        category : "<category>",
+        id       : "<base id>",
+        canvas   : HTMLCanvasElement
+      }
 *************************************************************/
 /* ============================================================
-   createGalleryPatternPng(spec)
-   ------------------------------------------------------------
-   UI worker for "Create PNG" (Draw tab).
+    createGalleryPatternPng(spec)
+    ------------------------------------------------------------
+    UI worker for "Create PNG" (Draw tab).
 
-   Responsibilities:
-     1) Validate spec + canvas
-     2) Convert canvas to PNG base64 + 50x50 thumb base64
-     3) Dispatch Node request: writeGalleryPatternPng
-     4) Force manifest refresh (same pattern as archive/edit)
-     5) Display a clear completion message
+    Responsibilities:
+      1) Validate spec + canvas
+      2) Convert canvas to PNG base64 + 50x50 thumb base64
+      3) Dispatch Node request: writeGalleryPatternPng
+      4) Force manifest refresh (same pattern as archive/edit)
+      5) Display a clear completion message
 
-   NOTE
-   ----
-   - Thumbnail is written under:
-       /gallery/Patterns/<category>/images/thumb_<id><stamp>.png
-   - Full PNG is written under:
-       /gallery/Patterns/<category>/<id><stamp>.png
+    NOTE
+    ----
+    - Thumbnail is written under:
+        /gallery/Patterns/<category>/images/thumb_<id><stamp>.png
+    - Full PNG is written under:
+        /gallery/Patterns/<category>/<id><stamp>.png
 =========================================================== */
 
 /* ============================================================
-   createGalleryPatternPng(spec)
-   ------------------------------------------------------------
-   UI worker for "Create PNG" (Draw tab).
+    createGalleryPatternPng(spec)
+    ------------------------------------------------------------
+    UI worker for "Create PNG" (Draw tab).
 =========================================================== */
 export async function createGalleryPatternPng(spec = {}) {
 
@@ -648,16 +648,16 @@ export async function createGalleryPatternPng(spec = {}) {
 
 
 /* ============================================================
-   createPatternScript(spec)
-   ------------------------------------------------------------
-   UI worker for Draw command "Create Pattern".
+    createPatternScript(spec)
+    ------------------------------------------------------------
+    UI worker for Draw command "Create Pattern".
 
-   Responsibilities:
-     1) Validate spec
-     2) Build pattern .js source text from drawRegistry entry+params
-     3) Dispatch Node request: writePatternScriptFromDraw
-     4) Invalidate manifest cache (patterns)
-     5) Alert what was created
+    Responsibilities:
+      1) Validate spec
+      2) Build pattern .js source text from drawRegistry entry+params
+      3) Dispatch Node request: writePatternScriptFromDraw
+      4) Invalidate manifest cache (patterns)
+      5) Alert what was created
 ============================================================ */
 export async function createPatternScript(spec = {}) {
 
@@ -675,9 +675,9 @@ export async function createPatternScript(spec = {}) {
   // We do NOT send entry/params to the service.
   // We generate the script text here in the UI.
   const scriptText = createPatternScriptTextFromDrawRegistry({
-    category:    category,
-    idName:      idName,
-    parameters:  spec.params
+    category:     category,
+    idName:       idName,
+    parameters:   spec.params
   });
 
   // We DO send thumbBase64 to the service.
@@ -703,9 +703,9 @@ export async function createPatternScript(spec = {}) {
   const thumbBase64 = thumbParts[1];
 
   const payload = {
-    category:    category,
-    idName:      idName,
-    scriptText:  scriptText,
+    category:     category,
+    idName:       idName,
+    scriptText:   scriptText,
     thumbBase64: thumbBase64
   };
 
@@ -740,25 +740,25 @@ export async function createPatternScript(spec = {}) {
 
 
 /* ============================================================
-   createPatternScriptTextFromDrawRegistry(entry, params)
+    createPatternScriptTextFromDrawRegistry(entry, params)
 
-   Produces a Patterns-style script file:
+    Produces a Patterns-style script file:
 
-     export function runPattern() {
-       const s = {...}
-       const thing = new <Shape>(s)
-       <drawFn>(thing)
-     }
+      export function runPattern() {
+        const s = {...}
+        const thing = new <Shape>(s)
+        <drawFn>(thing)
+      }
 
-   This first cut assumes:
-     - entry.elements.thing exists after init()
-     - thing.constructor.name is the class name
-     - entry.draw() can be reproduced by calling the common
-       "drawXxx(thing)" function that already exists for that class
-       (this is true for your ellipse example, and for early tests)
+    This first cut assumes:
+      - entry.elements.thing exists after init()
+      - thing.constructor.name is the class name
+      - entry.draw() can be reproduced by calling the common
+        "drawXxx(thing)" function that already exists for that class
+        (this is true for your ellipse example, and for early tests)
 
-   If your drawRegistry item does not follow this, we will extend
-   the builder with per-id overrides.
+    If your drawRegistry item does not follow this, we will extend
+    the builder with per-id overrides.
 ============================================================ */
 
 export function createPatternScriptTextFromDrawRegistry(spec) {
@@ -830,11 +830,11 @@ export function createPatternScriptTextFromDrawRegistry(spec) {
 
 
 /* ============================================================
-   serializeParamsObject(obj)
+    serializeParamsObject(obj)
 
-   - Converts plain objects to JS object literal text.
-   - Converts {x,y} with numeric fields to "new Point(x,y)"
-   - Numbers/strings/bools/null preserved
+    - Converts plain objects to JS object literal text.
+    - Converts {x,y} with numeric fields to "new Point(x,y)"
+    - Numbers/strings/bools/null preserved
 ============================================================ */
 function serializeParamsObject(obj) {
 
@@ -883,11 +883,35 @@ function serializeParamsObject(obj) {
 
 
 /* ============================================================
-   escapeAttr(s)
+    escapeAttr(s)
 =========================================================== */
 function escapeAttr(s) {
   return escapeHtml(s);
 } // end escapeAttr
 
+/* ============================================================
+    saveSecondaryObject(spec) (Jules)
+    ------------------------------------------------------------
+    Dispatches a save request for a nailing template into
+    the parent object's subdirectory.
+=========================================================== */
+export async function saveSecondaryObject(spec = {}) {
+  const { parentId, secondaryName, params } = spec;
+
+  if (!parentId || !secondaryName) {
+    throw new Error("saveSecondaryObject: Missing parentId or secondaryName");
+  }
+
+  const result = await nodeDispatch("saveSecondaryObject", {
+    parentId,
+    secondaryName,
+    params
+  });
+
+  if (result.status === "ok") {
+    alert("Secondary template saved to: " + result.path);
+  }
+  return result;
+}
 
 // end menuCmds.js

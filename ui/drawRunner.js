@@ -19,6 +19,7 @@ import { syncOverlayToCanvas }    from "./uiUtilities.js";
  * drawActiveTab()
  * Core execution logic for the active Draw object.
  */
+
 export function drawActiveTab() {
   const tabId = uiState.draw.activeSubtab;
   const info = uiState.draw.tabs[tabId];
@@ -91,7 +92,7 @@ export function createPatternScriptTextFromDrawRegistry(entry, params) {
   return `import { resetCanvas } from "/ui/drawState.js";
 
 /* ============================================================
-   PATTERN EXPORT: ${escapeForBlockComment(title)}
+    PATTERN EXPORT: ${escapeForBlockComment(title)}
 ============================================================ */
 
 export const scriptInfo = {

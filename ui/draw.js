@@ -26,8 +26,14 @@ import {
   copyActiveDrawObject,
   resetActiveDrawObject,
   createPngFromActiveDrawObject,
-  createPatternFromActiveDrawObject
+  createPatternFromActiveDrawObject,
+  saveActiveDrawObjectAsSecondary,
+  saveActiveSecondaryObject,
+  archiveActiveSecondaryObject
 }                                    from "./drawMenuCmds.js";
+
+import { getIDsWithSecondaries, listSecondaries, loadSecondary } from "./secondaryObjects.js";
+import { showOffcanvasPanel, renderThumbnailGrid } from "./uiUtilities.js";
 
 // Import moved execution logic
 import {
@@ -37,6 +43,7 @@ import {
 }                                    from "./drawRunner.js";
 
 const DEFAULT_DRAW_SUBTAB = "tab-categories";
+let idsWithSecondaries = new Set();
 const TAB_NAME            = "draw";
 
 /**
@@ -56,7 +63,7 @@ function consumeLaunchIfForDraw() {
 
   clearLaunch();
   return intent;
-}
+} // end consumeLaunchIfForDraw
 
 function clearLaunch() {
   uiState.launch.pending = false;
@@ -64,7 +71,7 @@ function clearLaunch() {
   uiState.launch.targetTab = null;
   uiState.launch.sourceType = null;
   uiState.launch.registryKey = null;
-}
+} // end clearLaunch
 
 /* ===========================================================
    DrawTabSpec
@@ -122,6 +129,11 @@ export const DrawController = {
 export function initDrawTab(restored = false) {
   if (!uiState.draw.tabs) uiState.draw.tabs = {};
 
+  // Discovery
+  updateSecondariesDiscovery().then(() => {
+    if (uiState.draw.activeSubtab === "tab-categories") renderDrawCategories();
+  });
+
   clearDivs();
   setCommandsButtonLabel("Draw Commands");
   wireDrawCommandsButton();
@@ -136,7 +148,7 @@ export function initDrawTab(restored = false) {
 
   const activeId = uiState.draw.activeSubtab || DEFAULT_DRAW_SUBTAB;
   switchTab(activeId);
-}
+} // end initDrawTab
 
 function restoreDrawTab() {
   if (window.disarmInteractor) window.disarmInteractor();
@@ -161,7 +173,7 @@ function restoreDrawTab() {
   }
 
   switchTab(activeId);
-}
+} // end restoreDrawTab
 
 /* ===========================================================
    Subtab Management
@@ -186,7 +198,7 @@ function setDrawSubtabs() {
     let name = (info.type === "categories") ? "Categories" : (info.drawRegistry?.name || id.replace(/^tab-/, ""));
     addDrawSubtab({ name, entry: info.drawRegistry });
   });
-}
+} // end setDrawSubtabs
 
 export function addDrawSubtab(item) {
   clearDivs();
@@ -225,27 +237,31 @@ export function addDrawSubtab(item) {
     uiState.draw.tabs[tabId] = { type: "categories" };
     uiState.draw.activeSubtab = tabId;
     renderDrawCategories();
-    return;
+    clearDrawCaption();
+    setDrawAction();
+  } else {
+    const entry = item.entry;
+    entry.init();
+
+    if (entry.interactive && entry.params.points) {
+      if (window.armInteractor) window.armInteractor(entry);
+      if (window.interactor?.draw) window.interactor.draw();
+    }
+
+    uiState.draw.tabs[tabId] = {
+      type: "object",
+      drawRegistry: entry,
+      dirty: false,
+      parameters: entry.params,
+      showControls: false // NEW: Default to hidden for secondary objects
+    };
+
+    uiState.draw.activeSubtab = tabId;
+    setDrawAction();
+    drawActiveTab();
+    setDrawCaption(entry);
   }
-
-  const entry = item.entry;
-  entry.init();
-
-  if (entry.interactive && entry.params.points) {
-    if (window.armInteractor) window.armInteractor(entry);
-    if (window.interactor?.draw) window.interactor.draw();
-  }
-
-  uiState.draw.tabs[tabId] = {
-    type: "object",
-    drawRegistry: entry,
-    dirty: false,
-    parameters: entry.params
-  };
-
-  uiState.draw.activeSubtab = tabId;
-  drawActiveTab();
-}
+} // end addDrawSubtab
 
 function deleteTab(tabId) {
   const bar = document.querySelector("#subtabs ul");
@@ -258,7 +274,7 @@ function deleteTab(tabId) {
 
   const neighbor = btns[idx + 1] || btns[idx - 1];
   neighbor ? switchTab(neighbor.dataset.tabId) : setDrawSubtabs();
-}
+} // end deleteTab
 
 function switchTab(tabId) {
   const bar = document.querySelector("#subtabs ul");
@@ -278,15 +294,19 @@ function switchTab(tabId) {
 
   if (info.type === "categories") {
     renderDrawCategories();
+    clearDrawCaption();
+    setDrawAction();
   } else {
+    setDrawAction();
     drawActiveTab();
     const entry = info.drawRegistry;
+    setDrawCaption(entry);
     if (entry?.interactive && entry.params?.points) {
       if (window.armInteractor) window.armInteractor(entry);
       if (window.interactor?.draw) window.interactor.draw();
     }
   }
-}
+} // end switchTab
 
 /* ===========================================================
    State / Dirty Tracking
@@ -300,7 +320,7 @@ export function markTabDirty(tabId) {
   if (label && !label.textContent.endsWith(" *")) {
     label.textContent += " *";
   }
-}
+} // end markTabDirty
 
 export function markTabClean(tabId) {
   const info = uiState.draw.tabs[tabId];
@@ -309,7 +329,7 @@ export function markTabClean(tabId) {
   const btn = document.querySelector(`[data-tab-id="${tabId}"]`);
   const label = btn?.querySelector(".tab-label");
   if (label) label.textContent = label.textContent.replace(/\s\*$/, "");
-}
+} // end markTabClean
 
 export function saveDrawState() {
   const shallowTabs = {};
@@ -322,49 +342,188 @@ export function saveDrawState() {
       type: info.type,
       dirty: info.dirty,
       parameters: structuredClone(info.parameters || {}),
-      drawRegistry: key
+      drawRegistry: key,
+      showControls: info.showControls ?? false // NEW: Persist checkbox state
     };
   }
   return {
     activeDrawTab: uiState.draw.activeSubtab || null,
     drawTabs: shallowTabs
   };
-}
+} // end saveDrawState
 
 /* ===========================================================
    Caption / Menu Builders
 =========================================================== */
-function setDrawAction() {
-  const el = document.getElementById("action");
-  if (el) el.innerHTML = "";
+
+export function setDrawAction() {
+  const tabId = uiState.draw.activeSubtab;
+  const state = uiState.draw.tabs[tabId];
+
+  if (state && state.type === "object") {
+    const actionDiv = document.getElementById("action");
+    if (!actionDiv) return;
+
+    const isSecondary = !!(state.secondary);
+
+    // First, call drawActiveTab() to let it create/populate #drawControls normally
+    drawActiveTab();
+
+    if (isSecondary) {
+      // Now find the drawControls that was just created
+      const drawControls = document.getElementById("drawControls");
+      if (!drawControls) return;
+
+      // Check if we already added the checkbox
+      let checkboxRow = document.getElementById("showControlsRow");
+      if (!checkboxRow) {
+        // Create the checkbox row
+        checkboxRow = document.createElement("div");
+        checkboxRow.id = "showControlsRow";
+
+        const checkboxLabel = document.createElement("label");
+        checkboxLabel.textContent = "Show Controls";
+        checkboxLabel.htmlFor = "showControlsToggle";
+
+        const checkbox = document.createElement("input");
+        checkbox.type = "checkbox";
+        checkbox.id = "showControlsToggle";
+        checkbox.checked = state.showControls ?? true;
+
+        checkbox.addEventListener("change", () => {
+          state.showControls = checkbox.checked;
+          toggleControlsVisibility(state.showControls);
+        });
+
+        checkboxRow.appendChild(checkboxLabel);
+        checkboxRow.appendChild(checkbox);
+
+        // Insert at the very beginning of drawControls
+        drawControls.insertBefore(checkboxRow, drawControls.firstChild);
+      } else {
+        // Update existing checkbox state
+        const checkbox = document.getElementById("showControlsToggle");
+        if (checkbox) {
+          checkbox.checked = state.showControls ?? true;
+        }
+      }
+
+      // Set initial visibility
+      toggleControlsVisibility(state.showControls ?? true);
+    }
+  }
 }
+
+function toggleControlsVisibility(show) {
+  const controlsDiv = document.getElementById("drawControls");
+  if (!controlsDiv) return;
+
+  // Hide/show all ctrl-field children (the actual parameter controls)
+  Array.from(controlsDiv.children).forEach(child => {
+    if (child.classList.contains("ctrl-field")) {
+      child.style.display = show ? "" : "none";
+    }
+  });
+}
+
+
+
 
 function clearDrawCaption() {
   const el = document.getElementById("caption");
   if (el) el.innerHTML = "";
-}
+} // end clearDrawCaption
 
 function setDrawCaption(entry) {
+  const tabId = uiState.draw.activeSubtab;
+  const info = uiState.draw.tabs[tabId];
+
+  const isSecondary = !!(info && info.secondary);
+
   const onMenu = async (anchor) => {
-    const registryKey = Object.keys(window.drawRegistry).find(k => window.drawRegistry[k] === entry);
-    const menuContext = { category: entry.category || "uncategorized", id: entry.id || registryKey, registryKey };
-    const items = await buildDrawMenuItems("draw", registryKey, `/drawRegistry/${registryKey}.js`, menuContext);
+    const registryKey = isSecondary
+      ? info.secondary.primaryId
+      : Object.keys(window.drawRegistry).find(k => window.drawRegistry[k] === entry);
+
+    const menuContext = {
+        category: entry.category || "uncategorized",
+        id: entry.id || registryKey,
+        registryKey
+    };
+
+    // Always show full menu access
+    const items = await buildDrawMenuItems("draw", registryKey, `/drawRegistry/${registryKey}.js`, menuContext, isSecondary, true);
     menuManager.open(items, anchor);
   };
 
-  setCaptionBar({ targetId: "caption", title: entry.name || "(untitled)", onPrev: null, onNext: null, onMenu });
-}
+  const config = {
+      targetId: "caption",
+      title: entry.name || "(untitled)",
+      onMenu
+  };
 
-export async function buildDrawMenuItems(tabName, itemName, scriptPath, menuContext) {
-  return [
+  // Standard Secondary Navigation (Prev/Next/Reset)
+  if (isSecondary) {
+      const sec = info.secondary;
+      const list = sec.list || [];
+      const idx = sec.index;
+
+      config.onPrimary = () => {
+          delete info.secondary;
+          resetActiveDrawObject();
+      };
+
+      if (list.length > 1) {
+          config.onPrev = () => {
+              const newIdx = (idx - 1 + list.length) % list.length;
+              loadSecondaryObjectInTab(sec.primaryId, list[newIdx], list, newIdx);
+          };
+          config.onNext = () => {
+              const newIdx = (idx + 1) % list.length;
+              loadSecondaryObjectInTab(sec.primaryId, list[newIdx], list, newIdx);
+          };
+      }
+  }
+
+  setCaptionBar(config);
+} // end setDrawCaption
+
+export async function buildDrawMenuItems(tabName, itemName, scriptPath, menuContext, isSecondary, showControls) {
+  const items = [
     await menuManager.buildHelpItem(tabName, itemName),
-    { label: "Show Script", onClick: () => showScriptOffcanvas(scriptPath, itemName) },
-    { label: "Create Pattern", onClick: () => createPatternFromActiveDrawObject(menuContext) },
-    { label: "Create PNG", onClick: () => createPngFromActiveDrawObject(menuContext) },
-    { label: "Duplicate", onClick: () => copyActiveDrawObject() },
-    { label: "Reset", onClick: () => resetActiveDrawObject() }
+    { label: "Show Script", onClick: () => showScriptOffcanvas(scriptPath, itemName) }
   ];
-}
+
+  if (isSecondary) {
+      items.push({
+          label: "Save",
+          onClick: () => saveActiveSecondaryObject(menuContext),
+          disabled: !showControls
+      });
+      items.push({
+          label: "Save As",
+          onClick: () => saveActiveDrawObjectAsSecondary(menuContext),
+          disabled: !showControls
+      });
+      items.push({
+          label: "Archive",
+          onClick: () => archiveActiveSecondaryObject(menuContext)
+      });
+  } else {
+      items.push({
+          label: "Save As Secondary",
+          onClick: () => saveActiveDrawObjectAsSecondary(menuContext),
+          disabled: !showControls
+      });
+  }
+
+  items.push({ label: "Create Pattern", onClick: () => createPatternFromActiveDrawObject(menuContext) });
+  items.push({ label: "Create PNG", onClick: () => createPngFromActiveDrawObject(menuContext) });
+  items.push({ label: "Duplicate", onClick: () => copyActiveDrawObject() });
+  items.push({ label: "Reset", onClick: () => resetActiveDrawObject() });
+
+  return items;
+} // end buildDrawMenuItems
 
 /* ===========================================================
    Categories & Discovery
@@ -375,7 +534,7 @@ function collectRegistryEntries() {
   return Object.entries(window.drawRegistry || {}).map(([key, entry]) => ({
     key, name: entry.name || key, category: entry.category || "uncategorized", entry
   }));
-}
+} // end collectRegistryEntries
 
 function groupEntriesByCategory(list = []) {
   const grouped = {};
@@ -388,7 +547,7 @@ function groupEntriesByCategory(list = []) {
     sorted[cat] = grouped[cat].sort((a, b) => a.name.localeCompare(b.name));
   });
   return sorted;
-}
+} // end groupEntriesByCategory
 
 function renderDrawCategories() {
   const grouped = groupEntriesByCategory(collectRegistryEntries());
@@ -397,11 +556,84 @@ function renderDrawCategories() {
     items: items.map(it => ({
       name: it.name,
       hasSubitems: false,
-      onClick: () => addDrawSubtab({ name: it.name, entry: it.entry })
+      onClick: () => addDrawSubtab({ name: it.name, entry: it.entry }),
+      secondaryAction: idsWithSecondaries.has(it.key) ? () => showSecondaryOffcanvas(it.key) : null
     }))
   }));
   renderCategories("text", descriptor);
-}
+} // end renderDrawCategories
+
+async function updateSecondariesDiscovery() {
+  try {
+    const list = await getIDsWithSecondaries();
+    idsWithSecondaries = new Set(list);
+  } catch (e) {
+    console.warn("updateSecondariesDiscovery failed", e);
+  }
+} // end updateSecondariesDiscovery
+
+export async function showSecondaryOffcanvas(primaryId) {
+  try {
+    const list = await listSecondaries(primaryId);
+
+    if (!list || list.length === 0) {
+      alert("No secondary objects found.");
+      return;
+    }
+
+    showOffcanvasPanel({
+      title: "Secondary Objects (" + primaryId + ")",
+      bodyHtml: `<div id="secondaryThumbGrid">Loading thumbnails...</div>`
+    });
+
+    const buildSrc = (item) => `/drawRegistry/${primaryId}/${item.thumb}`;
+
+    const onClick = async (item, idx) => {
+      await loadSecondaryObjectInTab(primaryId, item, list, idx);
+
+      const btn = document.querySelector('[data-bs-dismiss="offcanvas"]');
+      if (btn) btn.click();
+    };
+
+    renderThumbnailGrid("secondaryThumbGrid", list, buildSrc, onClick);
+
+  } catch (e) {
+    console.error("showSecondaryOffcanvas error", e);
+    alert("Error loading secondaries.");
+  }
+} // end showSecondaryOffcanvas
+
+export async function loadSecondaryObjectInTab(primaryId, item, list, index) {
+  const content = await loadSecondary(primaryId, item.path);
+
+  if (!content) {
+    alert("Failed to load object data.");
+    return;
+  }
+
+  const primaryEntry = window.drawRegistry[primaryId];
+  if (!primaryEntry) throw new Error("Primary object not found: " + primaryId);
+
+  const mergedEntry = Object.assign({}, primaryEntry);
+  mergedEntry.params = Object.assign({}, primaryEntry.params, content.params);
+  mergedEntry.name = content.name;
+
+  addDrawSubtab({ name: content.name, entry: mergedEntry });
+
+  const activeId = uiState.draw.activeSubtab;
+  const info = uiState.draw.tabs[activeId];
+
+  info.secondary = {
+    primaryId: primaryId,
+    filename: item.path,
+    name: content.name,
+    list: list,
+    index: index
+  };
+
+  setDrawAction();
+  setDrawCaption(mergedEntry);
+} // end loadSecondaryObjectInTab
 
 /* ===========================================================
    Maintenance / Commands
@@ -426,4 +658,4 @@ export function wireDrawCommandsButton() {
       }
     });
   });
-}
+} // end wireDrawCommandsButton

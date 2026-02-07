@@ -410,3 +410,54 @@ input.ctrl-text[type="text"] {
 .ctrl-range {
   flex: 1;
 } /* end .ctrl-range */
+
+
+
+/* Add this to controls.css */
+
+/* Show Controls checkbox header for secondary objects */
+#showControlsRow {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 0 12px 0;
+  margin-bottom: 12px;
+  border-bottom: 1px solid #ccc;
+}
+
+#showControlsRow label {
+  margin: 0;
+  font-weight: 500;
+  color: #000;
+  font-size: 0.9rem;
+}
+
+#showControlsRow input[type="checkbox"] {
+  width: auto;
+  margin: 0;
+}
+
+
+/* ---- Coloris Picker Integration ---- */
+
+/* ---- Coloris Picker Integration ---- */
+
+/* This targets the input and makes it the white "frame" */
+#action .draw-controls .clr-field input.ctrl-color-input {
+  background-color: #ffffff !important;
+  color: transparent !important;
+  width: 36px !important;
+  height: 32px !important;
+  border: 1px solid #888 !important;
+  border-radius: 4px !important;
+  text-indent: -1000px !important; /* Forces text out of sight */
+}
+
+/* This puts the color square inside that frame */
+#action .draw-controls .clr-field button {
+  width: 22px !important;
+  height: 22px !important;
+  left: 7px !important;
+  top: 5px !important;
+}

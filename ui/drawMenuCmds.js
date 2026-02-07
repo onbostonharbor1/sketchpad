@@ -11,6 +11,9 @@ import { markTabClean } from "./draw.js";
 import { DrawController } from "./draw.js";
 import { createGalleryPatternPng } from "./menuCmds.js";   // NEW
 import { createPatternScript } from "./menuCmds.js";   // NEW (next to createGalleryPatternPng)
+import { saveSecondary, archiveSecondary } from "./secondaryObjects.js";
+import { buildCanvasThumbnailBase64 } from "./uiUtilities.js";
+import { uiState } from "./uiState.js";
 
 
 export async function createPatternFromActiveDrawObject(menuContext) {
@@ -175,4 +178,102 @@ export async function createPngFromActiveDrawObject(menuContext) {
 } // end createPngFromActiveDrawObject
 
 
+/* ===========================================================
+   Secondary Object Commands
+=========================================================== */
 
+export async function saveActiveDrawObjectAsSecondary(menuContext) {
+  const tabId = uiState.draw.activeSubtab;
+  const info  = uiState.draw.tabs[tabId];
+  if (!info) return;
+
+  const name = prompt("Name for this variation?");
+  if (!name) return;
+
+  // Primary ID from context (e.g. "bird")
+  // If we are currently on a secondary, we still save as secondary of the SAME primary.
+  const primaryId = menuContext.registryKey || menuContext.id;
+
+  const entry = info.drawRegistry;
+
+  // Construct payload
+  const payload = {
+    name: name,
+    id: primaryId,
+    version: entry.version,
+    category: entry.category,
+    firstOrder: false,
+    source: "secondary",
+    tags: entry.tags || [],
+    description: entry.description || "",
+    params: info.parameters
+  };
+
+  const canvas = window.drawCanvas;
+  if (!canvas) throw new Error("saveActiveDrawObjectAsSecondary: window.drawCanvas missing");
+
+  const thumbBase64 = buildCanvasThumbnailBase64(canvas, 50, 50);
+
+  await saveSecondary(primaryId, name, payload, thumbBase64);
+
+  // If we were primary, we stay primary but now there is a secondary.
+  // If we were secondary, we stay secondary (old one).
+  // Maybe switch to the new one?
+  // For now, just alert.
+  alert("Secondary object created.");
+}
+
+export async function saveActiveSecondaryObject(menuContext) {
+  const tabId = uiState.draw.activeSubtab;
+  const info  = uiState.draw.tabs[tabId];
+
+  // Safety check: must be in secondary mode
+  if (!info || !info.secondary) {
+    alert("Not a secondary object.");
+    return;
+  }
+
+  const sec = info.secondary; // { primaryId, filename, name }
+  const primaryId = sec.primaryId;
+  const name = sec.name;
+
+  const entry = info.drawRegistry;
+
+  const payload = {
+    name: name,
+    id: primaryId,
+    version: entry.version,
+    category: entry.category,
+    firstOrder: false,
+    source: "secondary",
+    tags: entry.tags || [],
+    description: entry.description || "",
+    params: info.parameters
+  };
+
+  const canvas = window.drawCanvas;
+  const thumbBase64 = buildCanvasThumbnailBase64(canvas, 50, 50);
+
+  await saveSecondary(primaryId, name, payload, thumbBase64);
+
+  info.dirty = false;
+  DrawController.markTabClean(tabId);
+
+  alert("Saved.");
+}
+
+export async function archiveActiveSecondaryObject(menuContext) {
+  const tabId = uiState.draw.activeSubtab;
+  const info  = uiState.draw.tabs[tabId];
+  if (!info || !info.secondary) return;
+
+  if (!confirm("Are you sure you want to archive this secondary object?")) return;
+
+  await archiveSecondary(info.secondary.primaryId, info.secondary.filename);
+
+  // Revert to primary
+  delete info.secondary;
+  await resetActiveDrawObject();
+
+  alert("Archived.");
+}

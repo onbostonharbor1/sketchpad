@@ -146,7 +146,8 @@ export function renderCategories(targetId, descriptor) {
 
       const itemEl = buildCategoryItemElement(
         itemDesc.name,
-        itemDesc.hasSubitems
+        itemDesc.hasSubitems,
+        itemDesc.secondaryAction
       );
 
       itemEl.setAttribute("data-key", itemDesc.name);
@@ -235,13 +236,35 @@ function buildCategoryFrameElement(title, count) {
 //   [chevron icon if hasSubitems]
 // </div>
 // ------------------------------------------------------------
-function buildCategoryItemElement(name, hasSubitems) {
+function buildCategoryItemElement(name, hasSubitems, secondaryAction) {
   const itemEl = document.createElement("div");
   itemEl.className = "item";
+  itemEl.style.display = "flex";
+  itemEl.style.alignItems = "center";
+  itemEl.style.justifyContent = "space-between";
 
   const label = document.createElement("span");
   label.textContent = name;
+  label.style.flexGrow = "1";
   itemEl.appendChild(label);
+
+  if (typeof secondaryAction === "function") {
+    const btn = document.createElement("button");
+    btn.textContent = ">";
+    // minimal styling to fit
+    btn.className = "btn btn-sm btn-light secondary-action-btn";
+    btn.style.marginRight = "8px";
+    btn.style.padding = "0px 6px";
+    btn.style.lineHeight = "1.2";
+
+    btn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      e.preventDefault();
+      secondaryAction();
+    });
+
+    itemEl.appendChild(btn);
+  }
 
   if (hasSubitems) {
     const icon = document.createElement("i");

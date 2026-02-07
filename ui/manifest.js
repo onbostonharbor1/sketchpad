@@ -43,29 +43,29 @@ export class ManifestManager {
 
 
   /* ============================================================
-     get(basedir)
-     ------------------------------------------------------------
-     Public entry point.
+      get(basedir)
+      ------------------------------------------------------------
+      Public entry point.
 
-     basedir examples:
-       "patterns"
-       "gallery/Ideabook"
-       "gallery/Patterns"
-       "gallery/Scripts"
-       "utilities/Lab"
-       "utilities/Tools"
-       "help"
+      basedir examples:
+        "patterns"
+        "gallery/Ideabook"
+        "gallery/Patterns"
+        "gallery/Scripts"
+        "utilities/Lab"
+        "utilities/Tools"
+        "help"
 
-     Returns:
-       - If directoryRegistry.json exists:
-           [ [itemA, itemB, ...], [itemC, ...], ... ]
-       - Else if manifest.json exists:
-           [ item1, item2, ... ]
-       - Else:
-           []
+      Returns:
+        - If directoryRegistry.json exists:
+            [ [itemA, itemB, ...], [itemC, ...], ... ]
+        - Else if manifest.json exists:
+            [ item1, item2, ... ]
+        - Else:
+            []
 
-     ALWAYS returns an array.
-  ============================================================ */
+      ALWAYS returns an array.
+   ============================================================ */
   async get(basedir) {
     // 1) Check cache first
     if (Object.prototype.hasOwnProperty.call(this.cache, basedir)) {
@@ -110,6 +110,15 @@ export class ManifestManager {
       return groups;
     }
 
+    /* ------------------------------------------------------------
+       JULES UPDATE: Special handling for drawRegistry discovery
+       ------------------------------------------------------------ */
+    if (basedir === "drawRegistry") {
+        const drawData = await this._discoverDrawRegistryItems();
+        this.cache[basedir] = drawData;
+        return drawData;
+    }
+
     // 3) No directoryRegistry → try flat manifest.json
     const flatPath   = fileLayer.path.flatManifest(basedir);
     const hasFlat    = await fileLayer.exists(flatPath);
@@ -134,29 +143,48 @@ export class ManifestManager {
 
 
   /* ============================================================
-     getRegistry(basedir)
-     ------------------------------------------------------------
-     Optional helper: return directoryRegistry array (if any)
-     previously read when get(basedir) was called.
+      _discoverDrawRegistryItems() (Jules)
+      ------------------------------------------------------------
+      Internal helper to scan the drawRegistry folder for
+      subdirectories and their associated template JSONs.
+   ============================================================ */
+  async _discoverDrawRegistryItems() {
+    try {
+        const items = await fileLayer.listDirectory("drawRegistry");
+        return items.filter(it => it.isDirectory).map(dir => ({
+            parentId: dir.name,
+            path: `drawRegistry/${dir.name}/`,
+            type: "directory"
+        }));
+    } catch (err) {
+        console.warn("ManifestManager: Could not discover drawRegistry items", err);
+        return [];
+    }
+  }
 
-     If no directoryRegistry exists for that basedir, or if
-     get(basedir) hasn't been called yet, returns [].
-  ============================================================ */
+
+  /* ============================================================
+      getRegistry(basedir)
+      ------------------------------------------------------------
+      Optional helper: return directoryRegistry array (if any)
+      previously read when get(basedir) was called.
+
+      If no directoryRegistry exists for that basedir, or if
+      get(basedir) hasn't been called yet, returns [].
+   ============================================================ */
   getRegistry(basedir) {
     const reg = this.registryCache[basedir];
-    if (!reg) return [];
-    if (!Array.isArray(reg)) return [];
-    return reg;
+    return Array.isArray(reg) ? reg : [];
   } // end getRegistry
 
 
   /* ============================================================
-     clearCache()
-     ------------------------------------------------------------
-     Utility: clear all cached manifest data and directory
-     registries. A tab or system utility could call this if it
-     knows manifests have changed on disk.
-  ============================================================ */
+      clearCache()
+      ------------------------------------------------------------
+      Utility: clear all cached manifest data and directory
+      registries. A tab or system utility could call this if it
+      knows manifests have changed on disk.
+   ============================================================ */
   clearCache() {
     this.cache = {};
     this.registryCache = {};

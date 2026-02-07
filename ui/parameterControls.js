@@ -443,31 +443,20 @@ export function renderParameterControls(
   if (!actionDiv) throw new Error("renderParameterControls: #action not found");
 
   // ---------------------------------------------------------
-  // DESTRUCTIVE REBUILD
-  //
-  // We clear the action panel entirely so controls always reflect
-  // the current schema + values.
-  //
-  // EFFECT ON ENVIRONMENT:
-  //   Any previous action-panel content for this tab is discarded.
-  //   (This is intentional and deterministic.)
-  // ---------------------------------------------------------
-  actionDiv.innerHTML = "";
-
-  // ---------------------------------------------------------
   // CONTROLS CONTAINER
   //
-  // We create a dedicated container for the rendered fields.
-  // The id "drawControls" is historical; it currently represents
-  // “parameter controls” even when used outside the Draw tab.
-  //
-  // ENVIRONMENT:
-  //   Appended under #action in the active tab.
+  // We locate or create #drawControls within #action.
+  // We clear ONLY this container, preserving other tools (like checkboxes).
   // ---------------------------------------------------------
-  const controlsDiv = document.createElement("div");
-  controlsDiv.id = "drawControls";
-  controlsDiv.className = "draw-controls";
-  actionDiv.appendChild(controlsDiv);
+  let controlsDiv = document.getElementById("drawControls");
+  if (!controlsDiv) {
+    controlsDiv = document.createElement("div");
+    controlsDiv.id = "drawControls";
+    controlsDiv.className = "draw-controls";
+    actionDiv.appendChild(controlsDiv);
+  }
+
+  controlsDiv.innerHTML = "";
 
   // ---------------------------------------------------------
   // EMPTY STATE
@@ -626,6 +615,10 @@ function buildSingleControl(info, key, def, value, tabId) {
 
     case "radio":
       setRadioControl(field, label, def, value, info, key, tabId);
+      break;
+
+    case "thumbnailGrid":
+      setThumbnailGridControl(field, label, def, value, info, key, tabId);
       break;
 
     // case "pointPicker":
@@ -1028,23 +1021,45 @@ function setSelectControl(field, label, def, value, info, key, tabId) {
 /* ------------------------------------------------------------
    setColorControl()
 ------------------------------------------------------------ */
+// function setColorControl(field, label, def, value, info, key, tabId) {
+//   const input = document.createElement("input");
+//   input.type = "color";
+//   input.value = value || "#000000";
+//   input.id = tabId + "-" + key;
+//   input.className = "ctrl-color";
+
+//   input.addEventListener("input", () => {
+//     info.parameters[key] = input.value;
+//     if (typeof info.onParamChange === "function") info.onParamChange();
+//     info.redrawHandler();
+//   });
+
+//   field.appendChild(label);
+//   field.appendChild(input);
+// } // end setColorControl
+
+
 function setColorControl(field, label, def, value, info, key, tabId) {
   const input = document.createElement("input");
-  input.type = "color";
-  input.value = value || "#000000";
-  input.id = tabId + "-" + key;
-  input.className = "ctrl-color";
 
-  input.addEventListener("input", () => {
-    info.parameters[key] = input.value;
+  // MUST be "text" to support HSL strings
+  input.type = "text";
+  input.value = value || "hsl(0, 0%, 0%)";
+  input.id = tabId + "-" + key;
+
+  // This attribute triggers the Coloris logic you just set up in main.js
+  input.setAttribute("data-coloris", "");
+  input.className = "ctrl-color-input";
+
+  input.addEventListener("input", (e) => {
+    info.parameters[key] = e.target.value; // Saves "hsl(h, s%, l%)"
     if (typeof info.onParamChange === "function") info.onParamChange();
     info.redrawHandler();
   });
 
   field.appendChild(label);
   field.appendChild(input);
-} // end setColorControl
-
+}
 
 /* ------------------------------------------------------------
    setDefaultControl()
@@ -1946,9 +1961,79 @@ function setAccordionControl(field, label, def, value, info, key, tabId) {
 } // end setAccordionControl
 
 
+/* ------------------------------------------------------------
+   setThumbnailGridControl()
 
+   DESCRIPTION
+   -----------
+   Renders a grid of clickable thumbnails.
+   Intended for use in the Offcanvas for Secondary Objects.
 
+   def.options: [ { value, label, src }, ... ]
+------------------------------------------------------------ */
+function setThumbnailGridControl(field, label, def, value, info, key, tabId) {
 
+  const options = def.options || [];
 
+  // Full-width wrapper
+  const wrap = document.createElement("div");
+  wrap.className = "ctrl-thumb-grid-wrap";
+  wrap.style.gridColumn = "1 / -1";
 
+  if (def.label) {
+    const lbl = document.createElement("div");
+    lbl.className = "ctrl-thumb-grid-label";
+    lbl.textContent = def.label;
+    lbl.style.marginBottom = "4px";
+    wrap.appendChild(lbl);
+  }
 
+  const grid = document.createElement("div");
+  grid.className = "ctrl-thumb-grid";
+  grid.style.display = "grid";
+  grid.style.gridTemplateColumns = "repeat(6, 1fr)";
+  grid.style.gap = "4px";
+  grid.style.width = "100%";
+
+  options.forEach((opt) => {
+    const img = document.createElement("img");
+    img.src = opt.src || "";
+    img.title = opt.label || String(opt.value);
+    img.style.width = "100%";
+    img.style.aspectRatio = "1 / 1";
+    img.style.cursor = "pointer";
+    img.style.objectFit = "cover";
+
+    // Selection state
+    const isSelected = (String(value) === String(opt.value));
+    img.style.border = isSelected ? "2px solid #0d6efd" : "1px solid #ccc"; // Bootstrap primary blue
+    if (isSelected) img.style.boxSizing = "border-box";
+
+    img.addEventListener("click", () => {
+      // Update value
+      info.parameters[key] = opt.value;
+
+      if (typeof info.onParamChange === "function") info.onParamChange();
+
+      // Update UI selection immediately (if no rebuild)
+      Array.from(grid.children).forEach(c => {
+        c.style.border = "1px solid #ccc";
+      });
+      img.style.border = "2px solid #0d6efd";
+
+      // Trigger redraw/action
+      info.redrawHandler();
+
+      if (def.rebuildControls) {
+        const data = buildDrawParameterData(info);
+        renderParameterControls(info, data, tabId);
+      }
+    });
+
+    grid.appendChild(img);
+  });
+
+  wrap.appendChild(grid);
+  field.appendChild(wrap);
+
+} // end setThumbnailGridControl
