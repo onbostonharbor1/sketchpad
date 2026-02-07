@@ -22,7 +22,7 @@ export const scriptInfo = {
   // --- Registry Controls ---
   controls: {
     colorText: { label: "Color name:", widget: "text", default: "" },
-    colorPicker: { label: "Color picker:", widget: "color", default: "#add8e6" }
+    colorPicker: { label: "Color picker:", widget: "colorPicker", default: "#add8e6" }
   },
 
   // --- Live State ---

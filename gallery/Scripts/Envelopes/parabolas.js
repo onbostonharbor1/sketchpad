@@ -204,7 +204,7 @@ export const scriptInfo = {
 
     stitchColor: {
       label: "Stitch color",
-      widget: "color"
+      widget: "colorPicker"
     },
 
     boundaryWidth: {
@@ -217,7 +217,7 @@ export const scriptInfo = {
 
     boundaryColor: {
       label: "Boundary color",
-      widget: "color"
+      widget: "colorPicker"
     },
 
     sampleRadius: {
@@ -230,7 +230,7 @@ export const scriptInfo = {
 
     sampleColor: {
       label: "Sample color",
-      widget: "color"
+      widget: "colorPicker"
     }
 
   },

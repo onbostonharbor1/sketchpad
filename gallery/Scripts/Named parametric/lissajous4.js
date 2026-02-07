@@ -148,7 +148,7 @@ export const scriptInfo = {
     },
 
     strokeStyle: {
-      widget: "color",
+      widget: "colorPicker",
       label: "Stroke"
     },
 

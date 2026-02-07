@@ -8,7 +8,7 @@ window.drawRegistry = Object.assign(
     cycloid:            window.drawRegistry_cycloid,
     inEllipse:          window.drawRegistry_inEllipse,
     inverseStar:        window.drawRegistry_inverseStar,
-    drawline:           window.drawRegistry_line,
+    drawLine:           window.drawRegistry_line,
     linkedCircles:      window.drawRegistry_linkedCircles,
     mysticRose:         window.drawRegistry_mysticRose,
     mysticRoseEllipse:  window.drawRegistry_mysticRoseEllipse,

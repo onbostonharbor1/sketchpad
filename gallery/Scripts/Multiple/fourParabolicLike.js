@@ -112,13 +112,13 @@ export const scriptInfo = {
     showCurve:   { label: "Show curve",   widget: "checkbox" },
 
     guideWidth:  { label: "Guide width", widget: "range", min: 1, max: 10, step: 1 },
-    guideColor:  { label: "Guide color", widget: "color" },
+    guideColor:  { label: "Guide color", widget: "colorPicker" },
 
     tetherWidth: { label: "Tether width", widget: "range", min: 1, max: 10, step: 1 },
-    tetherColor: { label: "Tether color", widget: "color" },
+    tetherColor: { label: "Tether color", widget: "colorPicker" },
 
     curveWidth:  { label: "Curve width", widget: "range", min: 1, max: 10, step: 1 },
-    curveColor:  { label: "Curve color", widget: "color" },
+    curveColor:  { label: "Curve color", widget: "colorPicker" },
 
     tractrixTmax:     { label: "Tractrix tMax", widget: "range", min: 1.0, max: 10.0, step: 0.01 },
     tractrixSamples:  { label: "Tractrix samples", widget: "range", min: 50, max: 2000, step: 1 }

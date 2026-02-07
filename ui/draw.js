@@ -129,9 +129,17 @@ export const DrawController = {
 export function initDrawTab(restored = false) {
   if (!uiState.draw.tabs) uiState.draw.tabs = {};
 
-  // Discovery
+  // Discovery (this updates idsWithSecondaries async)
   updateSecondariesDiscovery().then(() => {
-    if (uiState.draw.activeSubtab === "tab-categories") renderDrawCategories();
+    // If we're on Categories, refresh the list
+    if (uiState.draw.activeSubtab === "tab-categories") {
+      renderDrawCategories();
+    }
+
+    // If restored (Refresh & Restore), validate all open secondary tabs
+    if (restored) {
+      validateOpenSecondaryTabs();
+    }
   });
 
   clearDivs();
@@ -147,8 +155,64 @@ export function initDrawTab(restored = false) {
   }
 
   const activeId = uiState.draw.activeSubtab || DEFAULT_DRAW_SUBTAB;
-  switchTab(activeId);
+
+  // Safety check: if active tab was removed during validation, fallback to categories
+  if (!uiState.draw.tabs[activeId]) {
+    uiState.draw.activeSubtab = DEFAULT_DRAW_SUBTAB;
+    switchTab(DEFAULT_DRAW_SUBTAB);
+  } else {
+    switchTab(activeId);
+  }
 } // end initDrawTab
+
+async function validateOpenSecondaryTabs() {
+  const tabs = uiState.draw.tabs;
+  const tabIds = Object.keys(tabs);
+
+  for (const tabId of tabIds) {
+    const info = tabs[tabId];
+    if (info.secondary) {
+      // Check if primary still has secondaries
+      // Note: idsWithSecondaries is a Set populated by updateSecondariesDiscovery
+      // We must await updateSecondariesDiscovery above before running this check?
+      // Yes, validateOpenSecondaryTabs is called inside the .then() block.
+
+      const primaryId = info.secondary.primaryId;
+      const filename = info.secondary.filename;
+
+      // 1. Check if primary still listed as having secondaries
+      if (!idsWithSecondaries.has(primaryId)) {
+        console.log(`Closing tab ${tabId}: Primary ${primaryId} has no secondaries.`);
+        deleteTab(tabId);
+        continue;
+      }
+
+      // 2. Check if the specific secondary file still exists
+      try {
+        const list = await listSecondaries(primaryId);
+        const exists = list.some(item => item.path === filename);
+        if (!exists) {
+           console.log(`Closing tab ${tabId}: Secondary ${filename} not found.`);
+           deleteTab(tabId);
+        } else {
+           // Update the list and index in the tab info
+           info.secondary.list = list;
+           info.secondary.index = list.findIndex(item => item.path === filename);
+        }
+      } catch (e) {
+        console.warn(`Error verifying secondary tab ${tabId}`, e);
+      }
+    }
+  }
+
+  // Refresh subtabs UI after potential deletions
+  setDrawSubtabs();
+
+  // If active tab was deleted, switch to default
+  if (!uiState.draw.tabs[uiState.draw.activeSubtab]) {
+      switchTab(DEFAULT_DRAW_SUBTAB);
+  }
+}
 
 function restoreDrawTab() {
   if (window.disarmInteractor) window.disarmInteractor();

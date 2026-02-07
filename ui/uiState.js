@@ -39,6 +39,7 @@ export const uiState = {
   home: {
     // Minimal “restore contract” object for Home.
     // null means “cold start”.
+    needsUpdate: false,
     saved: {
       view: "categories",     // "categories" | "results"
       activeStatus: null,     // status string (or null)
@@ -49,18 +50,21 @@ export const uiState = {
 
 
   draw: {
+    needsUpdate: false,
     activeSubtab: null,     // e.g., "ellipse", "categories"
     tabs: {},               // keyed by subtab-id
     saved: null             // last saved state from DrawSpec.restore contract
   },
 
   patterns: {
+    needsUpdate: false,
     activeCategory: null,
     activeItem: null,
     saved: null
   },
 
   gallery: {
+    needsUpdate: false,
     /* -------------------------------------------------------
        Explicit members used by gallery.js (Architectural Change 1)
     ------------------------------------------------------- */
@@ -95,41 +99,19 @@ export const uiState = {
   },
 
   figures: {
+    needsUpdate: false,
     activeCategory: null,
     activeItem: null,
     saved: null
   },
 
   utilities: {
+    needsUpdate: false,
     activeCategory: null,
     activeItem: null,
     saved: null
   },
 
-  /* =========================================================
-     Manifest storage
-     (Populated by manifest loader modules)
-  ========================================================= */
-  // manifests: {
-  //   gallery: {
-  //     ideabook: null,
-  //     patterns: null,
-  //     scripts: null
-  //   },
-  //   draw: {
-  //     patterns: null,
-  //     figures: null
-  //   },
-  //   utilities: {
-  //     tools: null
-  //   }
-  // },
-
-  /* =========================================================
-     Directory / Manifest helper pointers
-  ========================================================= */
-  // activeManifest: null,
-  // activeDirectoryInfo: null,
 
   /* =========================================================
      Overlay state

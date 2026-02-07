@@ -1,6 +1,6 @@
 /* drawRegistry/line.js */
-import { Line, Point, StringThing } from "../classes/classes.js";
-import { drawALine }                from "../draw/drawUtilities.js";
+import { Line, Point, StringThing } from "/classes/classes.js";
+import { drawALine }                from "/draw/drawUtilities.js";
 
 window.drawRegistry_line = {
   name:        "Line",

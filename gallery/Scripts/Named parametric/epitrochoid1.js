@@ -280,17 +280,17 @@ export const scriptInfo = {
     },
 
     strokeColor: {
-      widget: "color",
+      widget: "colorPicker",
       label: "Curve Color"
     },
 
     stitchColor: {
-      widget: "color",
+      widget: "colorPicker",
       label: "Stitch Color"
     },
 
     dotColor: {
-      widget: "color",
+      widget: "colorPicker",
       label: "Dot Color"
     }
 

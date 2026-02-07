@@ -1040,25 +1040,47 @@ function setSelectControl(field, label, def, value, info, key, tabId) {
 
 
 function setColorControl(field, label, def, value, info, key, tabId) {
+  const current = value || "hsl(0, 0%, 0%)";
+
+  // Label stays in column 1
+  field.appendChild(label);
+
+  // Wrapper for swatch + hidden Coloris input
+  const wrap = document.createElement("div");
+  wrap.className = "ctrl-color-wrap";
+
+  // Hidden Coloris input (still text, still HSL)
   const input = document.createElement("input");
-
-  // MUST be "text" to support HSL strings
-  input.type = "text";
-  input.value = value || "hsl(0, 0%, 0%)";
+  input.type = "text";                    // must stay "text" for HSL
+  input.value = current;
   input.id = tabId + "-" + key;
-
-  // This attribute triggers the Coloris logic you just set up in main.js
-  input.setAttribute("data-coloris", "");
+  input.setAttribute("data-coloris", ""); // activates Coloris
   input.className = "ctrl-color-input";
 
+  // Visible swatch button
+  const swatch = document.createElement("button");
+  swatch.type = "button";
+  swatch.className = "ctrl-color-swatch";
+  swatch.style.backgroundColor = current;
+
+  // Keep model + swatch in sync when Coloris changes the input
   input.addEventListener("input", (e) => {
-    info.parameters[key] = e.target.value; // Saves "hsl(h, s%, l%)"
+    const newVal = e.target.value;
+    info.parameters[key] = newVal;
+    swatch.style.backgroundColor = newVal;
     if (typeof info.onParamChange === "function") info.onParamChange();
     info.redrawHandler();
   });
 
-  field.appendChild(label);
-  field.appendChild(input);
+  // Clicking the swatch opens the Coloris picker
+  swatch.addEventListener("click", () => {
+    input.focus();
+    input.click();
+  });
+
+  wrap.appendChild(swatch);
+  wrap.appendChild(input);
+  field.appendChild(wrap);
 }
 
 /* ------------------------------------------------------------

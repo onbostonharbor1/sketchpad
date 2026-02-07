@@ -134,10 +134,17 @@ export async function initPatternsTab(restored) {
   wirePatternsCommandsButton();
 
   // 4. Re-load from manifest
+  // If restored=true (Refresh & Restore), this will hit the disk
+  // because manifest.clearCache() was called by syncSystemStateAfterRebuild.
   await ensurePatternsManifestLoaded();
 
   // 5. Build UI
   setPatternsSubtabs();
+
+  if (restored && uiState.patterns.saved) {
+    await restorePatternsTab();
+    return;
+  }
 
   // 6. Reset state to Categories
   uiState.patterns.activeCategory = null;
@@ -237,12 +244,31 @@ export async function restorePatternsTab() {
   setPatternsSubtabs(); // This creates the "Categories" button
 
   if (saved.view === "pattern") {
+    // Verify category/item still exist (Refresh & Restore scenario)
+    const cat = saved.activeCategory;
+    const list = manifest.cache.patterns?.[cat] || [];
+
+    if (list.length === 0) {
+      // Fallback if category empty/gone
+      await showCategoryList();
+      return;
+    }
+
+    // Clamp index
+    let idx = saved.activeItem;
+    if (typeof idx !== "number" || idx < 0) idx = 0;
+    if (idx >= list.length) idx = list.length - 1;
+
+    // Update state if clamped
+    uiState.patterns.activeItem = idx;
+    uiState.patterns.saved.activeItem = idx;
+
     // 3. THE KEY: Manually add the "Pattern" subtab back
     // This ensures the Patterns subtab exists and is highlighted
-    addPatternSubtab(saved.activeCategory, saved.activeItem);
+    addPatternSubtab(cat);
 
     // 4. Show the actual pattern content
-    await showSelectedPattern(saved.activeCategory, saved.activeItem);
+    await showSelectedPattern(cat, idx);
   } else {
     await showCategoryList();
   }

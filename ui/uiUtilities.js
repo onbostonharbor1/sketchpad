@@ -48,20 +48,19 @@ function clearDivs(args = "") {
 } // end clearDivs
 
 /**
- * Global Sync: Wipes the manifest cache and invalidates
- * all tab states so they perform a cold-start on next visit.
+ * Global Sync: Wipes the manifest cache and sets needsUpdate for all tabs.
  * * This is the "Passive" partner to the Node "Active" rebuild.
  */
 export async function syncSystemStateAfterRebuild() {
   // 1. Wipe the central ManifestManager memory singleton
   manifest.clearCache();
 
-  // 2. Invalidate 'saved' states for all tabs.
-  // This ensures setUI.js runs init() instead of restore() on next visit.
-  const allTabs = ["home", "patterns", "gallery", "utilities", "figures"];
+  // 2. Mark 'needsUpdate' for all tabs.
+  // This ensures setUI.js runs init() with restored=true on next visit.
+  const allTabs = ["home", "draw", "patterns", "gallery", "utilities", "figures"];
   allTabs.forEach(key => {
     if (uiState[key]) {
-      delete uiState[key].saved;
+      uiState[key].needsUpdate = true;
     }
   });
 
@@ -573,4 +572,3 @@ export function escapeHtml(text) {
     .replaceAll('"', "&quot;")
     .replaceAll("'", "&#39;");
 } // end escapeHtml
-

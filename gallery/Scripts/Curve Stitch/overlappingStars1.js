@@ -25,7 +25,7 @@ export const scriptInfo = {
   },
 
   controls: {
-    color: { widget: "color", label: "Color" },
+    color: { widget: "colorPicker", label: "Color" },
     lineWidth: { widget: "range", label: "Line", min: 0.25, max: 6, step: 0.25 },
     alpha: { widget: "range", label: "Alpha", min: 0.05, max: 1.0, step: 0.01 },
     numSteps: { widget: "range", label: "Steps", min: 3, max: 80, step: 1 },

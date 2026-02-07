@@ -131,13 +131,14 @@ export async function initGalleryTab(restored) {
   currentIndex    = 0;
   galleryCache    = null;
 
+  // 1. Force reload from disk if cache was cleared (Refresh & Restore)
   await ensureGalleryCacheLoaded();
 
   buildGallerySubtabs();
   setCommandsButtonLabel(GALLERY_COMMAND);
   wireGalleryCommandsButton();
 
-  if (restored) {
+  if (restored && uiState.gallery.saved) {
     await restoreGalleryTab();
     return;
   }

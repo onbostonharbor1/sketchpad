@@ -75,7 +75,7 @@ export const scriptInfo = {
     },
 
     color: {
-      widget: "color",
+      widget: "colorPicker",
       label: "Color"
     },
 

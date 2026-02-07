@@ -135,11 +135,11 @@ export const scriptInfo = {
 
     /* Rendering */
     stitchWidth: { label: "Stitch width", widget: "range", min: 1, max: 8, step: 1 },
-    stitchColor: { label: "Stitch color", widget: "color" },
+    stitchColor: { label: "Stitch color", widget: "colorPicker" },
 
     showOutline:  { label: "Show outline", widget: "checkbox" },
     outlineWidth: { label: "Outline width", widget: "range", min: 1, max: 8, step: 1 },
-    outlineColor: { label: "Outline color", widget: "color" },
+    outlineColor: { label: "Outline color", widget: "colorPicker" },
 
     /* Generative controls */
     seed:       { label: "Seed", widget: "range", min: 0, max: 1000, step: 1 },

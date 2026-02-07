@@ -136,7 +136,7 @@ export const scriptInfo = {
 
     tetherColor: {
       label: "Tether color",
-      widget: "color"
+      widget: "colorPicker"
     },
 
     curveWidth: {
@@ -149,7 +149,7 @@ export const scriptInfo = {
 
     curveColor: {
       label: "Curve color",
-      widget: "color"
+      widget: "colorPicker"
     },
 
     showGuides: {
@@ -167,7 +167,7 @@ export const scriptInfo = {
 
     guideColor: {
       label: "Guide color",
-      widget: "color"
+      widget: "colorPicker"
     }
 
   },

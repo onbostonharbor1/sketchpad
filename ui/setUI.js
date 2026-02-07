@@ -91,13 +91,13 @@ function restoreTab(tabKey) {
   spec.restore();
 }
 
-function initTab(tabKey) {
+function initTab(tabKey, restored = false) {
   const spec = TabRegistry[tabKey];
   if (!spec || !spec.init) {
     throw new Error("initTab: missing TabSpec.init for " + tabKey);
   }
   clearDivs();
-  spec.init(false);
+  spec.init(restored);
 }
 
 /* ============================================================
@@ -108,13 +108,25 @@ function activateTab(tab) {
 
   if (tab === START) {
     tabKey = "home";
-    initTab(tabKey);
-  } else {
-    const saved = uiState[tabKey] && uiState[tabKey].saved;
-    if (saved) {
-      restoreTab(tabKey);
+    // Check pending updates for Home as well
+    if (uiState.home && uiState.home.needsUpdate) {
+      uiState.home.needsUpdate = false;
+      initTab(tabKey, true);
     } else {
-      initTab(tabKey);
+      initTab(tabKey, false);
+    }
+  } else {
+    // Check if the tab needs a refresh due to global manifest update
+    if (uiState[tabKey] && uiState[tabKey].needsUpdate) {
+      uiState[tabKey].needsUpdate = false;
+      initTab(tabKey, true); // init(restored=true) implies "Refresh & Restore"
+    } else {
+      const saved = uiState[tabKey] && uiState[tabKey].saved;
+      if (saved) {
+        restoreTab(tabKey);
+      } else {
+        initTab(tabKey, false);
+      }
     }
   }
 

@@ -183,7 +183,7 @@ export const scriptInfo = {
 
     stitchColor: {
       label: "Stitch color",
-      widget: "color"
+      widget: "colorPicker"
     },
 
     guideWidth: {
@@ -196,7 +196,7 @@ export const scriptInfo = {
 
     guideColor: {
       label: "Guide color",
-      widget: "color"
+      widget: "colorPicker"
     },
 
     sampleRadius: {
@@ -209,7 +209,7 @@ export const scriptInfo = {
 
     sampleColor: {
       label: "Sample color",
-      widget: "color"
+      widget: "colorPicker"
     }
 
   },

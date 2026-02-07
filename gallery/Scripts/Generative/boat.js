@@ -62,12 +62,12 @@ export const scriptInfo = {
     },
 
     background: {
-      widget: "color",
+      widget: "colorPicker",
       label: "Background"
     },
 
     stroke: {
-      widget: "color",
+      widget: "colorPicker",
       label: "Stroke"
     },
 

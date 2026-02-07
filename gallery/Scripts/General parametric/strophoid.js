@@ -245,7 +245,7 @@ export const scriptInfo = {
 
     stitchColor: {
       label: "Stitch color",
-      widget: "color"
+      widget: "colorPicker"
     },
 
     showAxes: {
@@ -263,7 +263,7 @@ export const scriptInfo = {
 
     axisColor: {
       label: "Axis color",
-      widget: "color"
+      widget: "colorPicker"
     },
 
     showNode: {
@@ -281,7 +281,7 @@ export const scriptInfo = {
 
     nodeColor: {
       label: "Node color",
-      widget: "color"
+      widget: "colorPicker"
     },
 
     showOutline: {
@@ -299,7 +299,7 @@ export const scriptInfo = {
 
     outlineColor: {
       label: "Outline color",
-      widget: "color"
+      widget: "colorPicker"
     }
 
   },

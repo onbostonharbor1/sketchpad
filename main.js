@@ -30,7 +30,7 @@ import "./drawRegistry/circularParabolaMulti.js";
 import "./drawRegistry/cycloid.js";
 import "./drawRegistry/inEllipse.js";
 import "./drawRegistry/inverseStar.js";
-import "./drawRegistry/line.js";
+import "./drawRegistry/drawLine.js";
 import "./drawRegistry/linkedCircles.js";
 import "./drawRegistry/mysticRose.js";
 import "./drawRegistry/mysticRoseEllipse.js";
@@ -91,6 +91,7 @@ import "./ui/setUI.js";
    document.addEventListener('DOMContentLoaded', () => {
     if (window.Coloris) {
       // We target the class directly so it doesn't try to auto-init
+      window.Coloris.init();
       window.Coloris({
         el: '.ctrl-color-input',
         format: 'hsl',

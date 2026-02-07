@@ -180,13 +180,13 @@ export const scriptInfo = {
 
     /* Style */
     strokeWidth:   { label: "Stroke width",           widget: "range", min: 1,    max: 6,    step: 1 },
-    strokeColor:   { label: "Stroke color",           widget: "color" },
+    strokeColor:   { label: "Stroke color",           widget: "colorPicker" },
 
     /* Intersections */
     showIntersections: { label: "Show intersections", widget: "checkbox" },
     tolPx:             { label: "Intersection tol",   widget: "range", min: 0.25, max: 6,    step: 0.25 },
     markerRadius:      { label: "Marker radius",      widget: "range", min: 1,    max: 12,   step: 1 },
-    markerColor:       { label: "Marker color",       widget: "color" },
+    markerColor:       { label: "Marker color",       widget: "colorPicker" },
 
     /* Advanced */
     adjacencyWindow: { label: "Adjacency skip (0=auto)", widget: "range", min: 0, max: 100, step: 1 }

@@ -121,6 +121,34 @@ export async function initUtilityTab(restored = false) {
   if (restored && uiState.utilities.saved) {
     const s = uiState.utilities.saved.activeUtilityTabId;
     if (s) tabId = s;
+
+    // Refresh active item if we're in Result
+    if (tabId === "tab-result") {
+      const subtab   = uiState.utilities.lastUtilitySubtab;
+      const category = uiState.utilities.activeUtilityCategory;
+      const entry    = uiState.utilities.activeUtilityItem;
+
+      if (subtab && category && entry && entry.path) {
+        // Find updated entry in cache
+        const domain = (subtab === "Tools") ? utilitiesCache.Tools
+                     : (subtab === "Lab")   ? utilitiesCache.Lab
+                     : null;
+
+        let found = null;
+        if (domain && domain[category]) {
+            found = domain[category].find(e => e.path === entry.path);
+        }
+
+        if (found) {
+            uiState.utilities.activeUtilityItem = found;
+        } else {
+            // Fallback: active item gone, switch to Tools
+            console.warn("Utility item not found after restore/refresh:", entry.path);
+            tabId = "tab-tools";
+            uiState.utilities.activeUtilityTabId = tabId;
+        }
+      }
+    }
   }
 
   uiState.utilities.activeUtilityTabId = tabId;

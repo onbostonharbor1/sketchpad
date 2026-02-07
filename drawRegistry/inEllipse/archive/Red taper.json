@@ -1,0 +1,39 @@
+{
+  "name": "Red taper",
+  "id": "inEllipse",
+  "version": 1.6,
+  "category": "circles",
+  "firstOrder": false,
+  "source": "secondary",
+  "tags": [
+    "Ellipse",
+    "Curve Stitch"
+  ],
+  "description": "Draws chord patterns with adjustable center tapering.",
+  "params": {
+    "midpoint": {
+      "x": 305,
+      "y": 279.3666687011719
+    },
+    "color": "hsl(322, 100%, 50%)",
+    "lineWidth": 1,
+    "ellipse": {
+      "a": 590,
+      "b": 470
+    },
+    "numNodes": 110,
+    "chordLength": 41,
+    "startSkip": 0,
+    "endSkip": 0,
+    "withinCirc": 0,
+    "rotate": 135,
+    "points": [
+      {
+        "x": 305,
+        "y": 279.3666687011719
+      }
+    ],
+    "ellipse_b": 470,
+    "ellipse_a": 590
+  }
+}

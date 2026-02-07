@@ -42,7 +42,7 @@ export const scriptInfo = {
     rotate:    { widget: "range", label: "Rotate", min: 0, max: 360, step: 1 },
     numSteps:  { widget: "range", label: "Steps",  min: 7,  max: 80,  step: 1 },
     lineWidth: { widget: "range", label: "Line",   min: 0.25, max: 6, step: 0.25 },
-    color:     { widget: "color", label: "Color" }
+    color:     { widget: "colorPicker", label: "Color" }
   },
 
   _state: { lastVariant: null, seeded: false },

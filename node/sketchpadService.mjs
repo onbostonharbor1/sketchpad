@@ -1254,6 +1254,7 @@ export async function rebuildAndValidateManifests(payload = {}) {
   await scanGalleryScriptsAddNew({ addedMap, log });
   await scanGalleryImagesAddNew({ addedMap, log });
   await scanUtilitiesAddNew({ addedMap, log });
+  await scanDrawRegistryAndValidate({ addedMap, brokenMap, log });
 
   // ------------------------------------------------------------
   // 2) Validate (all manifests) -> broken virtual home items
@@ -1705,6 +1706,58 @@ async function scanUtilitiesAddNew({ addedMap, log }) {
   }
 
 } // end scanUtilitiesAddNew
+
+
+async function scanDrawRegistryAndValidate({ addedMap, brokenMap, log }) {
+  const registryRoot = path.resolve("./drawRegistry");
+  if (!fs.existsSync(registryRoot)) return;
+
+  const entries = fs.readdirSync(registryRoot, { withFileTypes: true });
+
+  for (const ent of entries) {
+    if (!ent.isDirectory()) continue;
+
+    const primaryId = ent.name;
+    const primaryDir = path.join(registryRoot, primaryId);
+    const manifestPath = path.join(primaryDir, "manifest.json");
+
+    if (!fs.existsSync(manifestPath)) continue;
+
+    let manifest = [];
+    try {
+      manifest = readJsonFileSync(manifestPath);
+    } catch (e) {
+      log.push("[DRAW REGISTRY ERROR] " + primaryId + ": manifest read failed");
+      continue;
+    }
+
+    if (!Array.isArray(manifest)) {
+      log.push("[DRAW REGISTRY ERROR] " + primaryId + ": manifest is not an array");
+      continue;
+    }
+
+    let changed = false;
+    const newManifest = [];
+
+    for (const entry of manifest) {
+      const filePath = path.join(primaryDir, entry.path);
+
+      if (fs.existsSync(filePath)) {
+        newManifest.push(entry);
+      } else {
+        changed = true;
+        log.push("[DRAW REGISTRY REMOVED] " + primaryId + "/" + entry.path);
+        const label = `drawRegistry/${primaryId}/${entry.path}`;
+        addGrouped(brokenMap, "drawRegistry", label);
+      }
+    }
+
+    if (changed) {
+      writeJsonFileSync(manifestPath, newManifest);
+      log.push("[DRAW REGISTRY UPDATED] " + primaryId + "/manifest.json");
+    }
+  }
+} // end scanDrawRegistryAndValidate
 
 
 async function scanAllManifestsForHomeAndBroken({ homeOut, brokenMap, log }) {

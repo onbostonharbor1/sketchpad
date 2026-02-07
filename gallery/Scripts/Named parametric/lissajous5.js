@@ -145,7 +145,7 @@ export const scriptInfo = {
 
     strokeColor: {
       label: "Stroke color",
-      widget: "color"
+      widget: "colorPicker"
     },
 
     /* Intersections */
@@ -172,7 +172,7 @@ export const scriptInfo = {
 
     markerColor: {
       label: "Marker color",
-      widget: "color"
+      widget: "colorPicker"
     },
 
     /* Rose */
