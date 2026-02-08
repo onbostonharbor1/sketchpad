@@ -1,0 +1,12 @@
+{
+    "testFigure1": {
+      "name": "Test Figure 1",
+      "description": "A combination of regularPolygon, linkedCircles, and nautilus",
+      "status": "draft"
+    },
+    "testFigure2": {
+      "name": "Test Figure 2",
+      "description": "A combination of bird, boxes, and cycloid",
+      "status": "draft"
+    }
+  }

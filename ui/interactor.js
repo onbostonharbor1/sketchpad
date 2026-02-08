@@ -2,6 +2,7 @@
    interactor.js – Unified Interaction Manager
    =========================================================== */
 import { overlayManager } from "/ui/overlay.js";
+import { uiState } from "./uiState.js";
 
 const PointPickerPresets = {
     handleRadius: 5,        // Normal size
@@ -22,7 +23,7 @@ export function armInteractor(instance) {
 
     const pts = instance?.params?.points;
     if (!pts) {
-        console.warn("Interactor: armInteractor called, but no points array found.");
+        // Not all objects have points, this is fine.
         return;
     }
 
@@ -42,14 +43,23 @@ export function armInteractor(instance) {
                 instance.update(instance.params);
             }
 
-            // Trigger engine redraw via uiState bridge
-            const activeTabId = uiState.draw.activeSubtab;
-            const activeTab = uiState.draw.tabs[activeTabId];
+            // Trigger engine redraw via uiState bridge OR instance callback
+            // Priority:
+            // 1. instance.redrawHandler (e.g. Figures tab)
+            // 2. uiState.draw (Legacy Draw tab)
+            // 3. instance.draw() (Fallback)
 
-            if (activeTab && activeTab.redrawHandler) {
-                activeTab.redrawHandler();
-            } else if (instance.draw) {
-                instance.draw();
+            if (typeof instance.redrawHandler === "function") {
+                instance.redrawHandler();
+            } else {
+                const activeTabId = uiState.draw.activeSubtab;
+                const activeTab = uiState.draw.tabs[activeTabId];
+
+                if (activeTab && activeTab.redrawHandler) {
+                    activeTab.redrawHandler();
+                } else if (instance.draw) {
+                    instance.draw();
+                }
             }
         }
     });

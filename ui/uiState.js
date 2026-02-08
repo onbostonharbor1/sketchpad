@@ -33,6 +33,10 @@ export const uiState = {
   ========================================================= */
   activeTab: "home",
 
+  // Undocumented/Legacy members found in usage (uiCallbacks.js)
+  activeDrawTab: null, // added
+  drawTabs: null, // added
+
   /* =========================================================
      Per-tab state containers
   ========================================================= */
@@ -100,8 +104,14 @@ export const uiState = {
 
   figures: {
     needsUpdate: false,
-    activeCategory: null,
-    activeItem: null,
+    // Tracks the currently active subtab (e.g., "tab-categories" or a figure ID)
+    activeSubtab: "tab-categories", // added
+
+    // Stores state for each open subtab (categories or figure instances)
+    tabs: {
+        "tab-categories": { type: "categories" }
+    }, // added
+
     saved: null
   },
 
@@ -109,6 +119,14 @@ export const uiState = {
     needsUpdate: false,
     activeCategory: null,
     activeItem: null,
+
+    // Undocumented members found in usage:
+    activeUtilityTabId: null, // added
+    lastUtilitySubtab: null,  // added
+    activeUtilityCategory: null, // added
+    activeUtilityItem: null, // added
+    lastResult: null, // added
+
     saved: null
   },
 
