@@ -16,72 +16,46 @@ import { uiState } from "./uiState.js";
      args – optional string id of an extra div to clear in addition
 ------------------------------------------------------------ */
 function clearDivs(args = "") {
-    // 1. Rescue Global Canvas Layers (if they were moved into a cleared region)
-    // We check if #canvasOverlayLayers is currently inside #sketchpad (or any other cleared region)
-    // and move it back to #sketchpad-wrapper (its original home) before clearing.
-    const layers = document.getElementById("canvasOverlayLayers");
-    const wrapper = document.getElementById("sketchpad-wrapper");
-    const sketchpad = document.getElementById("sketchpad");
-
-    if (layers && wrapper && sketchpad && sketchpad.contains(layers)) {
-        // Move it back to wrapper (preserving it)
-        wrapper.appendChild(layers);
-        // Reset styles to default (absolute, top-left of wrapper)
-        // This ensures other tabs (like Draw) find it where they expect it.
-        layers.style.position = "absolute";
-        layers.style.top = "0px";
-        layers.style.left = "0px";
-        layers.style.width = "";   // Let it autosize or be sized by children
-        layers.style.height = "";
-    }
-
-    const canvas = window.drawCanvas;
-    if (canvas) {
-        // Clear global canvas pixels to prevent ghosting on other tabs
-        const ctx = canvas.getContext("2d");
-        if (ctx) ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-        // Rescue canvas if it was inside a cleared region
-        if (wrapper && sketchpad && sketchpad.contains(canvas)) {
-            wrapper.appendChild(canvas);
-            canvas.style.position = "absolute";
-            canvas.style.top = "0px";
-            canvas.style.left = "0px";
-            canvas.style.width = "";
-            canvas.style.height = "";
-        }
-    }
-
-    // 2. Existing regions
+    // 1. Clear standard regions
     let ids = ["action", "caption", "text", "sketchpad"];
-    if (args !== "")
+    if (args !== "") {
         ids.push(args);
+    }
 
-    // Clear each HTML region
     ids.forEach(id => {
         const el = document.getElementById(id);
         if (el) el.innerHTML = "";
     });
 
-    // 3. THE FIX: Clear canvas pixels, not just innerHTML
+    // 2. Clear canvas overlay layers (pixels + HTML)
     for (const name in overlayManager.canvasLayers) {
         const layer = overlayManager.canvasLayers[name];
 
-        // Clear HTML (for any overlay elements like labels)
+        // Clear HTML elements
         layer.innerHTML = "";
 
-        // Clear Pixels (for the interactor dots)
+        // Clear canvas pixels
         const ctx = layer.getContext("2d");
         if (ctx) {
             ctx.clearRect(0, 0, layer.width, layer.height);
         }
     }
 
-    // 3. Shut down the interaction logic
+    // 3. Clear main canvas pixels (prevent ghosting)
+    const canvas = window.drawCanvas;
+    if (canvas) {
+        const ctx = canvas.getContext("2d");
+        if (ctx) {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+        }
+    }
+
+    // 4. Disarm interactor
     if (window.disarmInteractor) {
         window.disarmInteractor();
     }
 } // end clearDivs
+
 
 /**
  * Global Sync: Wipes the manifest cache and sets needsUpdate for all tabs.

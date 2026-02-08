@@ -221,71 +221,55 @@ function setFiguresText() {
 }
 
 function setFiguresSketchpad() {
-  const el = document.getElementById("sketchpad");
-  if (el) {
+    const el = document.getElementById("sketchpad");
+    if (!el) return;
+
     el.innerHTML = "";
-    // Create Flex Layout
+
+    // Add class for Figures-specific layout
+    el.classList.add("figures-layout");
+
+    // Flex container (row layout)
     el.style.display = "flex";
     el.style.flexDirection = "row";
-    // el.style.height = "100%"; // Assumed managed by CSS
 
-    // Sidebar for buttons
+    // LEFT: Sidebar for overlay buttons
     const sidebar = document.createElement("div");
     sidebar.id = "figure-sidebar";
-    sidebar.style.width = "50px";
-    sidebar.style.flexShrink = "0";
-    sidebar.style.backgroundColor = "var(--bg-color-secondary, #f0f0f0)";
-    sidebar.style.borderRight = "1px solid var(--border-color, #ccc)";
-    sidebar.style.display = "flex";
-    sidebar.style.flexDirection = "column";
-    sidebar.style.alignItems = "center";
-    sidebar.style.paddingTop = "10px";
-    sidebar.style.gap = "8px";
-    sidebar.style.overflowY = "auto";
     el.appendChild(sidebar);
 
-    // Canvas Container
+    // RIGHT: Canvas container
     const container = document.createElement("div");
-    container.id = "figure-canvas-wrapper";
-    container.style.flexGrow = "1";
-    container.style.position = "relative";
-    container.style.overflow = "hidden";
-    container.style.display = "flex";
-    container.style.justifyContent = "center";
-    container.style.alignItems = "center";
+    container.id = "canvas-container";
     el.appendChild(container);
 
-    // Create a stack to align canvas and overlays
+    // Stack for canvas + overlay layers
     const stack = document.createElement("div");
     stack.style.position = "relative";
-    stack.style.display = "inline-block"; // Fit to canvas size
+    stack.style.display = "inline-block";
     container.appendChild(stack);
 
-    // Move Draw Canvas
+    // Add canvas to stack
     const canvas = window.drawCanvas;
-    stack.appendChild(canvas);
-
-    // Ensure canvas contributes to stack size (fix for blank display)
-    // clearDivs forces absolute, we need relative/static here so stack expands
-    canvas.style.position = "relative";
-    canvas.style.display = "block";
-
-    // Move Overlay Layers (Interaction, BBox, etc.)
-    const overlayLayers = document.getElementById("canvasOverlayLayers");
-    if (overlayLayers) {
-        stack.appendChild(overlayLayers);
-        overlayLayers.style.position = "absolute";
-        overlayLayers.style.top = "0px";
-        overlayLayers.style.left = "0px";
-        overlayLayers.style.width = "100%";
-        overlayLayers.style.height = "100%";
-        overlayLayers.style.pointerEvents = "none"; // wrapper passes events
+    if (canvas) {
+      canvas.style.position = "relative";
+      canvas.style.display = "block";
+      stack.appendChild(canvas);
+      // Canvas already cleared by clearDivs()
     }
 
-    const ctx = canvas.getContext("2d");
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    // Add interaction layers to stack
+    const overlayLayers = document.getElementById("canvasOverlayLayers");
+    if (overlayLayers) {
+      stack.appendChild(overlayLayers);
+      overlayLayers.style.position = "absolute";
+      overlayLayers.style.top = "0";
+      overlayLayers.style.left = "0";
+      overlayLayers.style.width = "100%";
+      overlayLayers.style.height = "100%";
+      overlayLayers.style.pointerEvents = "none";
+    }
   }
-}
 
 
 /* ============================================================

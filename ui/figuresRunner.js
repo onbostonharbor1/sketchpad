@@ -355,12 +355,9 @@ function performHitTest(x, y, tabState) {
     const hCtx = hitCanvas.getContext("2d", { willReadFrequently: true });
     hCtx.clearRect(0, 0, hitCanvas.width, hitCanvas.height);
 
-    // Override both window.ctx and window.drawCtx to catch all drawing methods
+    // Override window.drawCtx (the backing store for the ctx getter)
     const originalDrawCtx = window.drawCtx;
-    const originalCtx = window.ctx;
-
     window.drawCtx = hCtx;
-    window.ctx = hCtx;
 
     const drawForHit = (overlay, index) => {
         const idColor = `rgb(${index + 1}, 0, 0)`;
@@ -386,7 +383,7 @@ function performHitTest(x, y, tabState) {
             overlay.update(overlay.params);
             overlay.draw();
         } catch (e) {
-            // ignore
+            // Silently ignore drawing errors during hit test
         }
 
         hCtx.stroke = originalStroke;
@@ -402,17 +399,18 @@ function performHitTest(x, y, tabState) {
         : null;
     const others = overlaysToDraw.filter((item, i) => i !== activeIndex);
 
+    // Draw all overlays with unique colors
     others.forEach(({ o, i }) => drawForHit(o, i));
     if (activeItem) drawForHit(activeItem.o, activeItem.i);
 
-    // Restore original contexts
+    // Restore original context
     window.drawCtx = originalDrawCtx;
-    window.ctx = originalCtx;
 
+    // Sample the pixel at click location
     const p = hCtx.getImageData(x, y, 1, 1).data;
-    if (p[3] > 0) {
-        return p[0] - 1;
+    if (p[3] > 0) {  // If there's alpha (something was drawn)
+        return p[0] - 1;  // Return overlay index from red channel
     }
 
-    return -1;
+    return -1;  // No hit
 }
