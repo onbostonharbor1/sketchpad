@@ -3,9 +3,9 @@
    Patterns Tab
    ------------------------------------------------------------
    New structure:
-     • initPatternsTab(restoredFlag)  → cold-start only
-     • restorePatternsTab()           → rebuild from uiState
-     • PatternsController             → pure action functions
+     â€¢ initPatternsTab(restoredFlag)  â†’ cold-start only
+     â€¢ restorePatternsTab()           â†’ rebuild from uiState
+     â€¢ PatternsController             â†’ pure action functions
    ------------------------------------------------------------
 */
 import { nodeRebuildAndValidateManifests } from "./nodeLayer.js";
@@ -27,13 +27,18 @@ import {
 import { manifest }            from "./manifest.js";
 
 /* ============================================================
-   Constants — permanent subtab IDs
+   Constants â€” permanent subtab IDs
 =========================================================== */
 const CATEGORIES_ID = "patterns-categories";
 const PATTERN_ID    = "patterns-pattern";
 
 /* ============================================================
-   PatternsTabSpec — used by setUI.js
+   Module-level cache for patterns manifest data
+=========================================================== */
+let patternsCache = null;
+
+/* ============================================================
+   PatternsTabSpec â€” used by setUI.js
    ------------------------------------------------------------
    Must implement:
      init(restoredFlag)
@@ -56,7 +61,7 @@ export const PatternsTabSpec = {
 }; // end PatternsTabSpec
 
 /* ============================================================
-   PatternsController — pure action functions
+   PatternsController â€” pure action functions
 =========================================================== */
 export const PatternsController = {
   initPatternsTab,
@@ -71,14 +76,18 @@ export const PatternsController = {
    ensurePatternsManifestLoaded()
    ------------------------------------------------------------
    Loads the patterns manifest once and caches it into
-   manifest.cache.patterns as:
+   patternsCache as:
      {
        categoryName: [ entry, entry, ... ],
        ...
      }
 =========================================================== */
 async function ensurePatternsManifestLoaded() {
-  if (manifest.cache && manifest.cache.patterns) {
+  console.time('ensurePatternsManifestLoaded');
+  
+  if (patternsCache && Object.keys(patternsCache).length > 0) {
+    console.timeEnd('ensurePatternsManifestLoaded');
+    console.log('  └─ Patterns cache already loaded');
     return;
   }
 
@@ -95,11 +104,8 @@ async function ensurePatternsManifestLoaded() {
     map[categoryName] = raw[i] || [];
   }
 
-  if (!manifest.cache) {
-    manifest.cache = {};
-  }
-
-  manifest.cache.patterns = map;
+  patternsCache = map;
+  console.timeEnd('ensurePatternsManifestLoaded');
 } // end ensurePatternsManifestLoaded
 
 
@@ -109,10 +115,10 @@ async function ensurePatternsManifestLoaded() {
    Cold-start initializer for the Patterns tab.
 
    NOTE:
-     • setUI / setUI.initTab() has already cleared regions
+     â€¢ setUI / setUI.initTab() has already cleared regions
        and applied the theme.
-     • This function MUST NOT do any restore logic.
-     • It sets up static UI (subtabs) and shows default
+     â€¢ This function MUST NOT do any restore logic.
+     â€¢ It sets up static UI (subtabs) and shows default
        category list.
 =========================================================== */
 export async function initPatternsTab(restored) {
@@ -164,8 +170,8 @@ export async function initPatternsTab(restored) {
    ------------------------------------------------------------
    Builds the Patterns subtab bar inside #subtabs.
 
-   • "Categories" tab is always present and active by default.
-   • "Pattern" tab is added later by addPatternSubtab() when
+   â€¢ "Categories" tab is always present and active by default.
+   â€¢ "Pattern" tab is added later by addPatternSubtab() when
      a specific pattern is selected.
 =========================================================== */
 function setPatternsSubtabs() {
@@ -227,9 +233,9 @@ function setPatternsSubtabs() {
    Called ONLY when uiState.patterns.saved exists.
 
    Rules:
-     • NO clearing — setUI/initTab already handled that.
-     • NO static UI building — subtabs already built during init.
-     • JUST restore the exact previous view from uiState.
+     â€¢ NO clearing â€” setUI/initTab already handled that.
+     â€¢ NO static UI building â€” subtabs already built during init.
+     â€¢ JUST restore the exact previous view from uiState.
 =========================================================== */
 export async function restorePatternsTab() {
   const saved = uiState.patterns?.saved;
@@ -246,7 +252,7 @@ export async function restorePatternsTab() {
   if (saved.view === "pattern") {
     // Verify category/item still exist (Refresh & Restore scenario)
     const cat = saved.activeCategory;
-    const list = manifest.cache.patterns?.[cat] || [];
+    const list = patternsCache?.[cat] || [];
 
     if (list.length === 0) {
       // Fallback if category empty/gone
@@ -351,9 +357,10 @@ function clearPatternsCaption() {
    showCategoryList()
    ------------------------------------------------------------
    Shows category frames inside #text.
-   Uses manifest.cache.patterns exclusively.
+   Uses patternsCache exclusively.
 =========================================================== */
 async function showCategoryList() {
+  console.time('patterns.showCategoryList');
   const textDiv   = document.getElementById("text");
   const actionDiv = document.getElementById("action");
   const padDiv    = document.getElementById("sketchpad");
@@ -370,10 +377,10 @@ async function showCategoryList() {
   padDiv.innerHTML    = "";
 
   await ensurePatternsManifestLoaded();
-  const groups = manifest.cache.patterns;
+  const groups = patternsCache;
 
   if (!groups) {
-    throw new Error("showCategoryList: manifest.cache.patterns missing");
+    throw new Error("showCategoryList: patternsCache missing");
   }
 
   const descriptor = buildCategoryDescriptor(
@@ -395,6 +402,7 @@ async function showCategoryList() {
 
   textDiv.innerHTML = "";
   renderCategories("text", descriptor);
+  console.timeEnd('patterns.showCategoryList');
 } // end showCategoryList
 
 
@@ -466,7 +474,7 @@ export function renderPatternThumbGrid(category) {
 
   if (!category) throw new Error("renderPatternThumbGrid: category missing");
 
-  const list = manifest.cache.patterns[category];
+  const list = patternsCache[category];
   if (!Array.isArray(list)) {
     throw new Error("renderPatternThumbGrid: list missing for category: " + category);
   }
@@ -521,7 +529,7 @@ async function showSelectedPattern(category, index) {
   // ... rest of the function ...
 
   await ensurePatternsManifestLoaded();
-  const list = manifest.cache.patterns[category] || [];
+  const list = patternsCache[category] || [];
   const item = list[index];
 
   const textDiv   = document.getElementById("text");
@@ -580,13 +588,13 @@ async function showSelectedPattern(category, index) {
 /* ============================================================
    onPrev() / onNext()
    ------------------------------------------------------------
-   Simple index cycling — fail-fast if manifest missing.
+   Simple index cycling â€” fail-fast if manifest missing.
 =========================================================== */
 function onPrev() {
   const category = uiState.patterns.activeCategory;
   const index    = uiState.patterns.activeItem;
 
-  const list = manifest.cache.patterns?.[category] || [];
+  const list = patternsCache?.[category] || [];
   if (!list.length) return;
 
   const newIndex = index > 0 ? index - 1 : list.length - 1;
@@ -606,7 +614,7 @@ function onNext() {
   const category = uiState.patterns.activeCategory;
   const index    = uiState.patterns.activeItem;
 
-  const list = manifest.cache.patterns?.[category] || [];
+  const list = patternsCache?.[category] || [];
   if (!list.length) return;
 
   const newIndex = index < list.length - 1 ? index + 1 : 0;

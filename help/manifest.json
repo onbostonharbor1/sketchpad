@@ -60,6 +60,7 @@
       "nodeLayer",
       "overlay",
       "parameterControls",
+      "parameterControls2",
       "scriptRunner",
       "setUI",
       "ui_callbacks",

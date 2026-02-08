@@ -79,44 +79,41 @@ export const GalleryController = {
    Keeps timestamp to be safe against aggressive image/json caching.
 ============================================================ */
 async function ensureGalleryCacheLoaded() {
+  console.time('ensureGalleryCacheLoaded');
+  
   // 1. Return existing cache if present
-  if (manifest.cache?.gallery) {
-    galleryCache = manifest.cache.gallery;
+  if (galleryCache && Object.keys(galleryCache).length > 0) {
+    console.timeEnd('ensureGalleryCacheLoaded');
+    console.log('  └─ Gallery cache already loaded');
     return;
   }
 
-  const loadJSON = async (url) => {
-    // Keep cache buster if your browser is stubborn, otherwise url is fine
-    const resp = await fetch(`${url}?t=${Date.now()}`);
-    if (!resp.ok) throw new Error(`Gallery cache failure: ${url}`);
-    return resp.json();
-  };
-
-  const loadDomain = async (domain) => {
-    const registry = await loadJSON(`/gallery/${domain}/directoryRegistry.json`);
-    const domainData = {};
-
-    // Parallel load: much faster than the sequential loop
-    await Promise.all(registry.map(async (cat) => {
-      domainData[cat] = await loadJSON(`/gallery/${domain}/${cat}/manifest.json`);
-    }));
-
-    return domainData;
-  };
-
-  // 2. Build the full gallery structure
+  // 2. Build the full gallery structure from ManifestManager
   const domains = ["Ideabook", "Patterns", "Scripts"];
   const gallery = {};
 
-  await Promise.all(domains.map(async (dom) => {
-    gallery[dom] = await loadDomain(dom);
-  }));
+  for (const dom of domains) {
+    const basedir = `gallery/${dom}`;
+    console.time(`  load gallery/${dom}`);
+    
+    const raw = await manifest.get(basedir);
+    const registry = manifest.getRegistry(basedir);
+    
+    // Transform array-of-arrays into category map
+    const domainData = {};
+    for (let i = 0; i < registry.length; i++) {
+      const categoryName = registry[i];
+      domainData[categoryName] = raw[i] || [];
+    }
+    
+    gallery[dom] = domainData;
+    console.timeEnd(`  load gallery/${dom}`);
+  }
 
-  // 3. Persist to memory
-  if (!manifest.cache) manifest.cache = {};
-  manifest.cache.gallery = gallery;
   galleryCache = gallery;
+  console.timeEnd('ensureGalleryCacheLoaded');
 }
+
 /* ============================================================
    initGalleryTab(restored)
 ============================================================ */
@@ -334,6 +331,7 @@ function clearCaption() {
    Categories Helpers
 ============================================================ */
 async function showIdeabookCategories() {
+  console.time('showIdeabookCategories');
   clearDivs();
   await ensureGalleryCacheLoaded();
   const domainMap = galleryCache.Ideabook;
@@ -359,6 +357,7 @@ async function showIdeabookCategories() {
 }
 
 async function showPatternsCategories() {
+  console.time('showPatternsCategories (gallery)');
   clearDivs();
   await ensureGalleryCacheLoaded();
   const domainMap = galleryCache.Patterns;
@@ -381,6 +380,7 @@ async function showPatternsCategories() {
     };
   });
   renderCategories("text", frames);
+  console.timeEnd('showPatternsCategories (gallery)');
 }
 
 async function showScriptsCategories() {
@@ -685,7 +685,6 @@ export async function refreshGalleryFromManifestEdit() {
   if (manifest && typeof manifest.clearCache === "function") {
     manifest.clearCache();
   }
-  if (manifest.cache) delete manifest.cache.gallery;
 
   galleryCache = null;
   await ensureGalleryCacheLoaded();
@@ -762,8 +761,7 @@ export function wireGalleryCommandsButton() {
           const report = await nodeRebuildAndValidateManifests();
 
           // 2. Clear caches so the UI sees the new manifests
-          if (manifest.cache) delete manifest.cache.gallery;
-
+        
           // 3. Refresh the UI state without a full reload if possible,
           // or just re-init the current tab.
           await initGalleryTab(false);

@@ -1,3 +1,4 @@
+
 /* ===========================================================
    wrapper.css
    -----------------------------------------------------------
@@ -104,13 +105,35 @@ body {
 /* ---- Sketchpad anchoring ---- */
 #sketchpad-wrapper {
   position: relative;
+  flex: 1;              /* Fill available vertical space in #main */
+  display: flex;        /* Row layout for sidebar + canvas */
+  flex-direction: row;
+  min-height: 0;        /* Allow shrinking */
+  overflow: hidden;
 }
 
-/* Unified sketchpad definition */
-#sketchpad {
-  position: relative;   /* coordinate system for overlays */
+/* Container for Canvas + Overlays */
+#sketchpad-container {
   flex: 1;
+  position: relative;
   background: white;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  overflow: hidden;
+}
+
+/* Alignment wrapper for canvas + overlays */
+#sketchpad-stack {
+  position: relative;
+  display: inline-block;
+  /* Will be sized by the canvas inside #sketchpad */
+}
+
+/* The actual canvas target div */
+#sketchpad {
+  /* Canvas often appended here. */
+  display: block;
 }
 
 /* Legacy placeholders (kept for reference) */
@@ -136,6 +159,8 @@ body {
   position: absolute;
   top: 0;
   left: 0;
+  width: 100%;
+  height: 100%;
   pointer-events: none;
 }
 
@@ -309,49 +334,8 @@ body {
 } /* end inactive subtab */
 
 /* ============================================================
-   ADD TO wrapper.css
-   Figures Tab: Sidebar for overlay buttons
+   FIGURES SIDEBAR
    ============================================================ */
-
-#figure-sidebar {
-  width: 50px;
-  flex-shrink: 0;
-  background-color: var(--bg-color-secondary, #f5f5f5);
-  border-right: 1px solid var(--border-color, #dee2e6);
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-h  overflow-y: auto;
-}
-
-#canvas-container {
-  flex: 1;
-  position: relative;
-  overflow: hidden;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-}
-
-/* When sketchpad is in flex mode (Figures tab) */
-#sketchpad.figures-layout {
-  display: flex;
-  flex-direction: row;
-  height: 100%;
-}
-
-/* ============================================================
-   ADD TO END OF wrapper.css
-   Figures Tab: Sidebar for overlay buttons
-   ============================================================ */
-
-/* When sketchpad is in flex mode (Figures tab only) */
-#sketchpad.figures-layout {
-  display: flex;
-  flex-direction: row;
-  height: 100%;
-  width: 100%;
-}
 
 #figure-sidebar {
   width: 50px;
@@ -366,13 +350,17 @@ h  overflow-y: auto;
   overflow-y: auto;
 }
 
-#canvas-container {
-  flex: 1;
-  position: relative;
-  overflow: hidden;
-  display: flex;
-  justify-content: center;
-  align-items: center;
+/* Interface Controls (Above Action Panel) */
+#interface-controls {
+  border-bottom: 1px solid var(--border-color, #ccc);
+  margin-bottom: 8px;
+  padding-bottom: 8px;
+  /* hidden if empty? handled by content */
+}
+
+/* If empty, hide border/margin */
+#interface-controls:empty {
+  display: none;
 }
 
 /* Overlay buttons styling */

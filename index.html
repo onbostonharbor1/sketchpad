@@ -12,14 +12,17 @@
          └── content
               ├── control
               │     └── button
+              │     └── interface-controls (NEW)
               │     └── action
               └── main
               |     ├── subtabs
               |     ├── caption
               |     ├── text
-              |     └── sketchpad
-              |           ├── figure-sidebar (Figures tab only)
-              |           └── canvas-container
+              |     └── sketchpad-wrapper
+              |           ├── figure-sidebar (NEW)
+              |           └── sketchpad-container (NEW)
+              |                 ├── sketchpad (canvas)
+              |                 └── canvasOverlayLayers
               └── offcanvasPanel
                     ├── offcanvas-header
                     └── offcanvas-body
@@ -100,6 +103,8 @@
 
           <div id="buttonSeparator"></div>
 
+          <div id="interface-controls"></div>
+
           <div id="action">TBD</div>
         </div>
 
@@ -109,14 +114,22 @@
           <div id="text">TBD</div>
           <div id="sketchpad-wrapper">
 
-            <div id="sketchpad">TBD</div>
+            <div id="figure-sidebar" style="display: none;"></div>
 
-            <div id="canvasOverlayLayers">
-              <canvas id="interaction-layer" style="display: none;"></canvas>
-              <canvas id="bbox-layer" style="display: none;"></canvas>
-              <canvas id="nodes-layer" style="display: none;"></canvas>
-              <canvas id="guides-layer" style="display: none;"></canvas>
+            <div id="sketchpad-container">
+              <div id="sketchpad-stack">
+                <div id="sketchpad">TBD</div>
+
+                <div id="canvasOverlayLayers">
+                  <canvas id="interaction-layer" style="display: none;"></canvas>
+                  <canvas id="bbox-layer" style="display: none;"></canvas>
+                  <canvas id="nodes-layer" style="display: none;"></canvas>
+                  <canvas id="guides-layer" style="display: none;"></canvas>
+                </div>
+              </div>
             </div>
+
+          </div>
 
 </div>
 

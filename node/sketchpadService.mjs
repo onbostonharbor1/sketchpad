@@ -2436,8 +2436,16 @@ function makeTimestampForFilename() {
 
 
 /* ===========================================================
-   TASK: saveSecondaryObject
+   FIXED: saveSecondaryObject
+
+   This is the replacement for the saveSecondaryObject function
+   in sketchpadService.mjs (around line 2441)
+
+   Changes:
+   - Now updates drawRegistry/directoryRegistry.json when creating
+     a new primaryId directory for the first time
 =========================================================== */
+
 export async function saveSecondaryObject(payload = {}) {
   const primaryId   = payload.primaryId;
   const name        = payload.name;
@@ -2451,8 +2459,11 @@ export async function saveSecondaryObject(payload = {}) {
 
   const registryRoot = path.resolve("./drawRegistry");
 
+  // Check if this is a new primaryId (directory doesn't exist yet)
   const primaryDir = path.join(registryRoot, primaryId);
-  if (!fs.existsSync(primaryDir)) {
+  const isNewPrimaryId = !fs.existsSync(primaryDir);
+
+  if (isNewPrimaryId) {
     fs.mkdirSync(primaryDir, { recursive: true });
   }
 
@@ -2497,13 +2508,44 @@ export async function saveSecondaryObject(payload = {}) {
 
   writeJsonFileSync(manifestPath, manifest);
 
+  // *** NEW: Update directoryRegistry.json if this is a new primaryId ***
+  if (isNewPrimaryId) {
+    const directoryRegistryPath = path.join(registryRoot, "directoryRegistry.json");
+    let directoryRegistry = [];
+
+    // Load existing registry if it exists
+    if (fs.existsSync(directoryRegistryPath)) {
+      try {
+        directoryRegistry = readJsonFileSync(directoryRegistryPath);
+        if (!Array.isArray(directoryRegistry)) {
+          console.warn("directoryRegistry.json is not an array, creating new one");
+          directoryRegistry = [];
+        }
+      } catch (e) {
+        console.warn("Error reading directoryRegistry.json, creating new one:", e.message);
+        directoryRegistry = [];
+      }
+    }
+
+    // Add primaryId if not already present
+    if (!directoryRegistry.includes(primaryId)) {
+      directoryRegistry.push(primaryId);
+      // Sort alphabetically for consistency
+      directoryRegistry.sort();
+      writeJsonFileSync(directoryRegistryPath, directoryRegistry);
+      console.log(`Added '${primaryId}' to directoryRegistry.json`);
+    }
+  }
+
   return {
     request: "saveSecondaryObject",
     status: "ok",
     primaryId,
-    name
+    name,
+    isNewPrimaryId // Include this info in response for debugging
   };
 }
+
 
 /* ===========================================================
    TASK: archiveSecondaryObject

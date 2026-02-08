@@ -1,0 +1,31 @@
+{
+  "name": "Green with 4 lobes",
+  "id": "cycloid",
+  "version": 1.4,
+  "category": "circles",
+  "firstOrder": false,
+  "source": "secondary",
+  "tags": [
+    "cycloid"
+  ],
+  "description": "Interactive cycloid generated via modular multiplication",
+  "params": {
+    "midpoint": {
+      "x": 300,
+      "y": 300
+    },
+    "radius": 250,
+    "numNodes": 244,
+    "numCycloids": 5,
+    "xScale": 1,
+    "yScale": 0.9,
+    "color": "hsl(118, 100%, 50%)",
+    "lineWidth": 1,
+    "points": [
+      {
+        "x": 300,
+        "y": 300
+      }
+    ]
+  }
+}

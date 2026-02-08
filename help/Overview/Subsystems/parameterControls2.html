@@ -1,0 +1,252 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>parameterControls.js — Control Schema Flags & Rendering Rules</title>
+
+  <link rel="stylesheet" href="/help/help_treatise.css" />
+</head>
+
+<body>
+
+  <h1>parameterControls.js — Control Schema Flags & Rendering Rules</h1>
+
+  <p>
+    This document summarizes all control-schema flags and behavioral rules used by
+    <strong>parameterControls.js</strong>.
+    These flags determine how controls are interpreted, normalized, and rendered
+    across the Draw and Scripts tabs of the Sketchpad UI.
+  </p>
+
+  <hr />
+
+  <h2>1. Range Controls (<code>widget: "range"</code>)</h2>
+
+  <h3>1.1 Numeric Range Configuration</h3>
+  <ul>
+    <li><code>def.min</code>, <code>def.max</code>, <code>def.step</code></li>
+    <li>Applied by both <code>setRangeControl()</code> and <code>setRangeHeaderControl()</code>.</li>
+  </ul>
+
+  <h3>1.2 <code>def.noButtons === true</code></h3>
+  <ul>
+    <li>Suppresses the small step buttons (&lt; and &gt;) normally placed beside the slider.</li>
+    <li>Used by both range styles.</li>
+  </ul>
+
+  <h3>1.3 <code>def.rangeHeader === true</code></h3>
+  <ul>
+    <li>Selects the alternate “header-style” range UI.</li>
+    <li>Handled by <code>setRangeControlUnified()</code>:
+      <ul>
+        <li><code>true</code> → <code>setRangeHeaderControl()</code></li>
+        <li><code>false</code> → <code>setRangeControl()</code></li>
+      </ul>
+    </li>
+    <li>Makes <code>range</code> and <code>rangeHeader</code> interchangeable via schema flag.</li>
+  </ul>
+
+  <h3>1.4 <code>def.rebuildControls === true</code></h3>
+  <ul>
+    <li>After a control changes value, the Action panel is rebuilt.</li>
+    <li>Triggers:
+      <ul>
+        <li><code>buildDrawParameterData(info)</code></li>
+        <li><code>renderParameterControls(info, data, tabId)</code></li>
+      </ul>
+    </li>
+    <li>Supported by:
+      <ul>
+        <li><code>setRangeControl()</code></li>
+        <li><code>setRangeHeaderControl()</code></li>
+        <li><code>setRadioControl()</code></li>
+      </ul>
+    </li>
+  </ul>
+
+  <hr />
+
+  <h2>2. Hidden Controls (<code>widget: "hidden"</code>)</h2>
+  <ul>
+    <li>Control is not rendered and consumes no space.</li>
+    <li>Implemented via <code>setHiddenControl()</code>.</li>
+  </ul>
+
+  <hr />
+
+  <h2>3. Static Text (<code>widget: "staticText"</code>)</h2>
+
+  <h3>3.1 Conditional Visibility</h3>
+  <ul>
+    <li><code>def.showKey = "&lt;boolean-parameter-key&gt;"</code></li>
+    <li>If the referenced parameter is not <code>true</code>, the control is skipped.</li>
+    <li>Implemented in <code>buildSingleControl()</code>.</li>
+  </ul>
+
+  <hr />
+
+  <h2>4. Button Controls (<code>widget: "button"</code>)</h2>
+
+  <h3>4.1 <code>def.fullRow === true</code></h3>
+  <ul>
+    <li>Button spans both grid columns.</li>
+    <li>Otherwise it appears in the control column only.</li>
+  </ul>
+
+  <h3>4.2 <code>def.redraw === true</code></h3>
+  <ul>
+    <li>After the button action runs, <code>info.redrawHandler()</code> is invoked.</li>
+  </ul>
+
+  <hr />
+
+  <h2>5. Accordion Controls (<code>widget: "accordion"</code>)</h2>
+
+  <h3>5.1 <code>def.startOpen === true</code></h3>
+  <ul>
+    <li>Accordion section begins expanded.</li>
+  </ul>
+
+  <h3>5.2 <code>def.redrawOnToggle === true</code></h3>
+  <ul>
+    <li>Calls <code>info.redrawHandler()</code> when the accordion is opened or closed.</li>
+  </ul>
+
+  <h3>5.3 Optional CSS Overrides</h3>
+  <ul>
+    <li><code>sec.listClass</code> and <code>sec.itemClass</code></li>
+    <li>Used when rendering accordion item lists.</li>
+  </ul>
+
+  <hr />
+
+  <h2>6. Select & Radio Controls</h2>
+
+  <h3>6.1 <code>def.options</code></h3>
+  <ul>
+    <li>Array of enumerated options.</li>
+    <li>Used by <code>setSelectControl()</code> and <code>setRadioControl()</code>.</li>
+  </ul>
+
+  <hr />
+
+  <h2>7. <code>info.onParamChange</code> (Optional)</h2>
+  <ul>
+    <li>If present, it is called after parameter updates.</li>
+    <li>No longer required by <code>setRangeHeaderControl()</code>.</li>
+  </ul>
+
+  <hr />
+
+  <h2>8. Interface Controls (<code>def.control</code>)</h2>
+
+  <p>
+    Interface Controls affect UI state but are <strong>not saved</strong> with drawing parameters.
+    They are rendered into <code>#interface-controls</code> instead of the main Action panel.
+  </p>
+
+  <h3>8.1 How to Define</h3>
+
+<pre><code>controls: {
+  radius: {
+    widget: "range",
+    min: 10, max: 100,
+    label: "Radius"
+  },
+
+  showGrid: {
+    control: "checkbox",
+    label: "Show Grid Overlay",
+    default: false
+  }
+}
+</code></pre>
+
+  <h3>8.2 Behavior</h3>
+  <ul>
+    <li>Rendered separately from drawing parameters.</li>
+    <li>Automatically excluded from saved JSON.</li>
+    <li>Accessed via <code>this.params.showGrid</code> like any other parameter.</li>
+  </ul>
+
+  <hr />
+
+  <h2>9. Rendering Pipeline Overview</h2>
+
+  <h3>9.1 <code>buildParameterControls()</code></h3>
+  <ul>
+    <li>Normalizes schema into a control-data array.</li>
+    <li>Auto-detects environment (Draw vs Scripts).</li>
+    <li>Delegates to:
+      <ul>
+        <li><code>buildDrawParameterData()</code></li>
+        <li><code>buildScriptParameterData()</code></li>
+      </ul>
+    </li>
+  </ul>
+
+  <h3>9.2 <code>renderParameterControls()</code></h3>
+  <ul>
+    <li>Writes into the active tab’s <code>#action</code> area.</li>
+    <li>Clears and rebuilds <code>#drawControls</code>.</li>
+    <li>Routes interface controls to <code>#interface-controls</code>.</li>
+    <li>Skips hidden controls (null fields).</li>
+  </ul>
+
+  <h3>9.3 <code>buildSingleControl()</code></h3>
+  <ul>
+    <li>Dispatches to the appropriate <code>setXControl()</code> function.</li>
+    <li>Handles conditional suppression for <code>staticText</code>.</li>
+    <li>Preserves button metadata (<code>action</code>, <code>redraw</code>).</li>
+  </ul>
+
+  <hr />
+
+  <h2>10. Range Header UI Notes</h2>
+
+  <p>
+    The header-style range control uses a two-row layout:
+  </p>
+
+  <ul>
+    <li>Row 1: label + live value</li>
+    <li>Row 2: full-width slider</li>
+  </ul>
+
+  <p>
+    It requires:
+  </p>
+
+  <ul>
+    <li><code>info.parameters</code></li>
+    <li><code>info.redrawHandler()</code></li>
+    <li><code>tabId</code> and <code>key</code></li>
+  </ul>
+
+  <hr />
+
+  <h2>11. Notes on Environment Detection</h2>
+
+  <p>
+    <code>buildParameterControls()</code> distinguishes Draw vs Scripts by inspecting
+    the shape of <code>sourceInfo</code>:
+  </p>
+
+  <ul>
+    <li><strong>Scripts</strong>: <code>sourceInfo.controls</code> exists.</li>
+    <li><strong>Draw</strong>: <code>sourceInfo.drawRegistry</code> exists.</li>
+  </ul>
+
+  <p>
+    This allows the same renderer to support multiple tab types without hard-coding.
+  </p>
+
+  <hr />
+
+  <p>
+    End of documentation.
+  </p>
+
+</body>
+</html>

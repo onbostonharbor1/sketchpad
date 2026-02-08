@@ -1,9 +1,3 @@
-// clearDivs(args)              – clear core divs (optionally one more)
-// initOffCanvasHandler
-// loadJSON
-// showOffCanvas
-// showSharedOffCanvas
-
 import { overlayManager } from "./overlay.js";
 import { manifest } from "./manifest.js";
 import { uiState } from "./uiState.js";
@@ -13,7 +7,7 @@ import { uiState } from "./uiState.js";
    Empties the core divs shared by all tabs.
 
    Arguments:
-     args – optional string id of an extra div to clear in addition
+     args â€“ optional string id of an extra div to clear in addition
 ------------------------------------------------------------ */
 function clearDivs(args = "") {
     // 1. Clear standard regions
@@ -24,8 +18,30 @@ function clearDivs(args = "") {
 
     ids.forEach(id => {
         const el = document.getElementById(id);
-        if (el) el.innerHTML = "";
+        if (el) {
+            el.innerHTML = "";
+            // Reset inline display style to allow CSS to control visibility
+            el.style.display = "";
+        }
     });
+
+    // 1b. Hide/Clear Layout-specific Elements
+    const sidebar = document.getElementById("figure-sidebar");
+    if (sidebar) {
+        sidebar.innerHTML = "";
+        sidebar.style.display = "none";
+    }
+
+    const ifc = document.getElementById("interface-controls");
+    if (ifc) {
+        ifc.innerHTML = "";
+        // CSS :empty rule handles display:none, or we can force it:
+        // ifc.style.display = "none";
+    }
+
+    // Hide sketchpad wrapper by default (tabs must explicitly show it)
+    const wrapper = document.getElementById("sketchpad-wrapper");
+    if (wrapper) wrapper.style.display = "none";
 
     // 2. Clear canvas overlay layers (pixels + HTML)
     for (const name in overlayManager.canvasLayers) {
@@ -259,6 +275,9 @@ export function markSelectedThumbnail(actionDivId, selectedIndex) {
 
 
 export function renderThumbnailGrid(targetId, items, buildSrc, onClick) {
+  const startTime = performance.now();
+  console.time('renderThumbnailGrid (DOM creation)');
+  
   const target = document.getElementById(targetId);
   if (!target)
     throw new Error("renderThumbnailGrid: targetId not found: " + targetId);
@@ -277,6 +296,11 @@ export function renderThumbnailGrid(targetId, items, buildSrc, onClick) {
   const panel = document.createElement("div");
   panel.className = "thumb-panel";
 
+  // Track image loading
+  let loadedCount = 0;
+  const totalImages = items.length;
+  const imageLoadStart = performance.now();
+
   items.forEach((item, idx) => {
     const box = document.createElement("div");
     box.className = "thumb-box";
@@ -286,6 +310,26 @@ export function renderThumbnailGrid(targetId, items, buildSrc, onClick) {
     img.alt = item.title || item.filename;
     img.src = buildSrc(item, idx);
 
+    // Measure actual image loading time
+    img.addEventListener("load", () => {
+      loadedCount++;
+      if (loadedCount === 1) {
+        const firstImageTime = performance.now() - imageLoadStart;
+        console.log(`  └─ First image loaded in ${firstImageTime.toFixed(1)}ms`);
+      }
+      if (loadedCount === totalImages) {
+        const allImagesTime = performance.now() - imageLoadStart;
+        console.log(`  └─ All ${totalImages} images loaded in ${allImagesTime.toFixed(1)}ms`);
+        const totalTime = performance.now() - startTime;
+        console.log(`  └─ Total time (DOM + images): ${totalTime.toFixed(1)}ms`);
+      }
+    });
+
+    img.addEventListener("error", () => {
+      console.warn(`  └─ Failed to load image: ${img.src}`);
+      loadedCount++;
+    });
+
     img.addEventListener("click", () => onClick(item, idx));
 
     box.appendChild(img);
@@ -293,6 +337,10 @@ export function renderThumbnailGrid(targetId, items, buildSrc, onClick) {
   });
 
   target.appendChild(panel);
+  
+  console.timeEnd('renderThumbnailGrid (DOM creation)');
+  console.log(`  └─ ${items.length} thumbnail DOM elements created`);
+  console.log(`  └─ Waiting for images to load...`);
 }
 
 export function buildCategoryDescriptor(groups, itemLabelFn, onClickFn) {
@@ -447,7 +495,7 @@ export function formatRebuildReportShared(report) {
   if (addedFiles.length) {
     lines.push("Added files:");
     for (const p of addedFiles) {
-      lines.push("• " + p);
+      lines.push("â€¢ " + p);
     }
     lines.push("");
   }
@@ -460,7 +508,7 @@ export function formatRebuildReportShared(report) {
   if (brokenFiles.length) {
     lines.push("Broken files:");
     for (const p of brokenFiles) {
-      lines.push("• " + p);
+      lines.push("â€¢ " + p);
     }
     lines.push("");
   }
@@ -581,3 +629,205 @@ export function escapeHtml(text) {
     .replaceAll('"', "&quot;")
     .replaceAll("'", "&#39;");
 } // end escapeHtml
+
+/* ============================================================
+   escapeAttr(text)
+   ------------------------------------------------------------
+   Escape text for safe use in HTML attributes
+============================================================ */
+export function escapeAttr(text) {
+  return String(text)
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#39;");
+} // end escapeAttr
+
+
+/* ============================================================
+   DIALOG UTILITIES
+   ============================================================
+   Simple, reusable dialog helpers using the overlay system.
+============================================================ */
+
+/* ============================================================
+   openInputDialog(title, label, defaultValue)
+   ------------------------------------------------------------
+   Simple input dialog - returns a Promise that resolves with
+   the input value (or null if cancelled).
+   
+   Usage:
+     const name = await openInputDialog(
+       "Save Secondary Object",
+       "Name for this variation:",
+       ""
+     );
+     if (name) { ... }
+============================================================ */
+export function openInputDialog(title, label, defaultValue = "") {
+  
+  return new Promise((resolve) => {
+    
+    const container = document.getElementById("overlayContainer");
+    if (!container) throw new Error("openInputDialog: overlayContainer missing");
+    
+    const titleEl = document.getElementById("overlayTitle");
+    if (!titleEl) throw new Error("openInputDialog: overlayTitle missing");
+    
+    container.style.display = "block";
+    titleEl.textContent = title || "Input";
+    
+    const html = `
+      <div style="padding: 20px;">
+        <label style="display: block; margin-bottom: 8px; font-weight: bold;">
+          ${escapeHtml(label)}
+        </label>
+        <input id="inputDialogValue" 
+               type="text" 
+               value="${escapeAttr(defaultValue)}"
+               style="width: 100%; padding: 6px; font-size: 14px; border: 1px solid #ccc; border-radius: 4px;" />
+        <div style="margin-top: 20px; text-align: right;">
+          <button id="inputDialogCancel" type="button" style="margin-right: 8px; padding: 6px 16px;">Cancel</button>
+          <button id="inputDialogOk" type="button" style="padding: 6px 16px; background: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer;">OK</button>
+        </div>
+      </div>
+    `;
+    
+    overlayManager.show("forms", html);
+    
+    const inputEl = document.getElementById("inputDialogValue");
+    const okBtn = document.getElementById("inputDialogOk");
+    const cancelBtn = document.getElementById("inputDialogCancel");
+    
+    if (!inputEl || !okBtn || !cancelBtn) {
+      throw new Error("openInputDialog: form elements missing");
+    }
+    
+    // Focus the input
+    setTimeout(() => inputEl.focus(), 50);
+    
+    // Enter key submits
+    inputEl.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") {
+        e.preventDefault();
+        okBtn.click();
+      }
+    });
+    
+    okBtn.addEventListener("click", () => {
+      const value = inputEl.value.trim();
+      closeOverlay();
+      resolve(value || null);
+    });
+    
+    cancelBtn.addEventListener("click", () => {
+      closeOverlay();
+      resolve(null);
+    });
+    
+    // Close button
+    const closeBtn = document.getElementById("overlayClose");
+    if (closeBtn) {
+      closeBtn.onclick = () => {
+        closeOverlay();
+        resolve(null);
+      };
+    }
+    
+    // Background click
+    const bg = document.getElementById("overlayBackground");
+    if (bg) {
+      bg.onclick = () => {
+        closeOverlay();
+        resolve(null);
+      };
+    }
+    
+  }); // end Promise
+  
+} // end openInputDialog
+
+
+/* ============================================================
+   showMessageDialog(title, message)
+   ------------------------------------------------------------
+   Simple message dialog - returns a Promise that resolves
+   when user clicks OK.
+   
+   Usage:
+     await showMessageDialog(
+       "Success",
+       "Secondary object 'Variation 1' created."
+     );
+============================================================ */
+export function showMessageDialog(title, message) {
+  
+  return new Promise((resolve) => {
+    
+    const container = document.getElementById("overlayContainer");
+    if (!container) throw new Error("showMessageDialog: overlayContainer missing");
+    
+    const titleEl = document.getElementById("overlayTitle");
+    if (!titleEl) throw new Error("showMessageDialog: overlayTitle missing");
+    
+    container.style.display = "block";
+    titleEl.textContent = title || "Message";
+    
+    const html = `
+      <div style="padding: 20px;">
+        <p style="margin: 0 0 20px 0; font-size: 14px;">
+          ${escapeHtml(message)}
+        </p>
+        <div style="text-align: right;">
+          <button id="messageDialogOk" type="button" style="padding: 6px 16px; background: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer;">OK</button>
+        </div>
+      </div>
+    `;
+    
+    overlayManager.show("forms", html);
+    
+    const okBtn = document.getElementById("messageDialogOk");
+    if (!okBtn) throw new Error("showMessageDialog: OK button missing");
+    
+    okBtn.addEventListener("click", () => {
+      closeOverlay();
+      resolve();
+    });
+    
+    // Close button
+    const closeBtn = document.getElementById("overlayClose");
+    if (closeBtn) {
+      closeBtn.onclick = () => {
+        closeOverlay();
+        resolve();
+      };
+    }
+    
+    // Background click
+    const bg = document.getElementById("overlayBackground");
+    if (bg) {
+      bg.onclick = () => {
+        closeOverlay();
+        resolve();
+      };
+    }
+    
+  }); // end Promise
+  
+} // end showMessageDialog
+
+
+/* ============================================================
+   closeOverlay()
+   ------------------------------------------------------------
+   Helper to close the overlay container
+============================================================ */
+function closeOverlay() {
+  const container = document.getElementById("overlayContainer");
+  if (container) {
+    container.style.display = "none";
+  }
+  overlayManager.clearAll();
+} // end closeOverlay
+

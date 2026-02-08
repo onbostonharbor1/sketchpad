@@ -127,6 +127,53 @@
    (setRangeHeaderControl used to require it; it no longer does.)
    ============================================================ */
 
+   /* ============================================================
+   INTERFACE CONTROLS (def.control)
+   ------------------------------------------------------------
+   In addition to standard parameter controls (which modify the
+   drawing itself), you can define "Interface Controls". These
+   controls affect the UI or application state but are NOT
+   considered part of the drawing's saved parameters.
+
+   HOW TO DEFINE:
+   --------------
+   In your drawRegistry file (e.g., `drawRegistry/myShape.js`),
+   add a property to the `controls` (or `params`) object with
+   the `control` key instead of `widget`.
+
+   EXAMPLE:
+   --------
+   controls: {
+     // Standard parameter (saved with drawing)
+     radius: {
+       widget: "range",
+       min: 10, max: 100,
+       label: "Radius"
+     },
+
+     // Interface control (NOT saved, affects UI only)
+     showGrid: {
+       control: "checkbox",   // <--- Use 'control' instead of 'widget'
+       label: "Show Grid Overlay",
+       default: false
+     }
+   }
+
+   BEHAVIOR:
+   ---------
+   1. Rendering: Items with `control` are rendered into the
+      #interface-controls container (typically above the main
+      action panel), separating them from drawing parameters.
+
+   2. Persistence: When saving a drawing (e.g., `saveDrawState`
+      or `saveFigureState`), these keys are automatically
+      EXCLUDED from the saved JSON.
+
+   3. Usage: You access the value in `this.params.showGrid` just
+      like any other parameter, but you can rely on it being
+      transient.
+   ============================================================ */
+
 import { overlayManager } from "./overlay.js";
 
 /* ===========================================================
@@ -281,10 +328,15 @@ function buildDrawParameterData(tabState) {
     // -----------------------------------------------------
     const value = tabState.parameters?.[key] ?? def.default ?? "";
 
+    // Detect Interface Control vs Standard Control
+    const isInterface = !!def.control;
+    const widgetType = isInterface ? def.control : (def.widget || def.type || "text");
+
     return {
       key: key,                         // parameter identifier
       label: def.label || key,          // UI label text
-      widget: def.widget || def.type || "text",
+      widget: widgetType,
+      isInterface: isInterface,         // FLAG: Render in interface area
       min: def.min ?? null,             // numeric constraints
       max: def.max ?? null,
       step: def.step ?? null,
@@ -342,10 +394,14 @@ export function buildScriptParameterData(sourceInfo) {
 
     const value = sourceInfo.parameters?.[key] ?? def.default ?? "";
 
+    const isInterface = !!def.control;
+    const widgetType = isInterface ? def.control : (def.widget || def.type || "text");
+
     const item = {
       key: key,                         // parameter identifier
       label: def.label || key,          // UI label
-      widget: def.widget || def.type || "text",
+      widget: widgetType,
+      isInterface: isInterface,
       min: def.min ?? null,
       max: def.max ?? null,
       step: def.step ?? null,
@@ -456,7 +512,12 @@ export function renderParameterControls(
     actionDiv.appendChild(controlsDiv);
   }
 
+  // Also locate Interface Controls container (added to index.html in layout refactor)
+  // If not present, we can't render interface controls (or could create it).
+  const interfaceDiv = document.getElementById("interface-controls");
+
   controlsDiv.innerHTML = "";
+  if (interfaceDiv) interfaceDiv.innerHTML = "";
 
   // ---------------------------------------------------------
   // EMPTY STATE
@@ -533,10 +594,23 @@ export function renderParameterControls(
     );
 
     // -------------------------------------------------------
-    // HIDDEN CONTROL RULE
+    // HIDDEN CONTROL RULE & TARGETING
     // -------------------------------------------------------
-    if (field) controlsDiv.appendChild(field);
+    if (field) {
+        if (item.isInterface && interfaceDiv) {
+            interfaceDiv.appendChild(field);
+            interfaceDiv.style.display = "block"; // Ensure visible if it has content
+        } else {
+            controlsDiv.appendChild(field);
+        }
+    }
   });
+
+  // Hide interface div if empty (handled by CSS :empty but explicit doesn't hurt)
+  // if (interfaceDiv && interfaceDiv.children.length === 0) {
+  //     interfaceDiv.style.display = "none";
+  // }
+
 } // end renderParameterControls
 
 
@@ -2059,3 +2133,4 @@ function setThumbnailGridControl(field, label, def, value, info, key, tabId) {
   field.appendChild(wrap);
 
 } // end setThumbnailGridControl
+

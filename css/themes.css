@@ -4,9 +4,9 @@
    Theme Color Variables (HSL-based families)
    -----------------------------------------------------------
    Anchors you selected (or confirmed):
-     Home     = Indigo  #4B0082   (H≈275 S=100 L≈25)
+     Home     = Indigo  #4B0082   (Hâ‰ˆ275 S=100 Lâ‰ˆ25)
      Draw     = Blue    #0000FF   (H=240 S=100 L=50)
-     Figures  = Green   #008000   (H=120 S=100 L≈25)
+     Figures  = Green   #008000   (H=120 S=100 Lâ‰ˆ25)
      Patterns = MediumTurquoise
      Gallery  = Terracotta
      Utilities = Brown (deepened)
@@ -14,7 +14,7 @@
 
 
 /* ===========================================================
-   FIXED TAB COLORS — top-level tab background washes
+   FIXED TAB COLORS â€” top-level tab background washes
    =========================================================== */
 #home-tab      { background: linear-gradient(to bottom, var(--home-tint) 0%, #ffffff 100%); }
 #draw-tab      { background: linear-gradient(to bottom, var(--draw-tint) 0%, #ffffff 100%); }
@@ -30,7 +30,7 @@
   --outline: rgba(0,0,0,0.45);
 
 /* =========================================================
-   HOME (Indigo) — anchor ≈ #4B0082
+   HOME (Indigo) â€” anchor â‰ˆ #4B0082
    Replace the HOME block only
    ========================================================= */
   --home-hue: 275;
@@ -44,7 +44,7 @@
 
 
   /* =========================================================
-     DRAW (Blue) — anchor #0000FF
+     DRAW (Blue) â€” anchor #0000FF
      ========================================================= */
   --draw-hue: 240;
   --draw-sat: 100%;
@@ -57,8 +57,8 @@
 
   /* =========================================================
      PATTERNS (MediumTurquoise-anchored)
-     Anchor ≈ #48D1CC
-     Hue ≈ 172°, saturation slightly reduced for seriousness
+     Anchor â‰ˆ #48D1CC
+     Hue â‰ˆ 172Â°, saturation slightly reduced for seriousness
      ========================================================= */
   --patterns-hue: 172;
   --patterns-sat: 62%;
@@ -71,7 +71,7 @@
 
 
   /* =========================================================
-     FIGURES (Green) — anchor #008000 (brighter ladder)
+     FIGURES (Green) â€” anchor #008000 (brighter ladder)
      ========================================================= */
   --figures-hue: 120;
   --figures-sat: 100%;
@@ -83,7 +83,7 @@
 
 
   /* =========================================================
-     GALLERY (Terracotta) — anchor ≈ #C65D3B
+     GALLERY (Terracotta) â€” anchor â‰ˆ #C65D3B
      ========================================================= */
   --gallery-hue: 14.7;
   --gallery-sat: 55%;
@@ -95,7 +95,7 @@
 
 
   /* =========================================================
-     UTILITIES (Brown) — deepened
+     UTILITIES (Brown) â€” deepened
      ========================================================= */
   --utilities-hue: 29.4;
   --utilities-sat: 53%;
@@ -156,7 +156,7 @@
 
 
 /* ===========================================================
-   UI ALIASES — component-level knobs
+   UI ALIASES â€” component-level knobs
    =========================================================== */
 
 .theme-home,
@@ -177,6 +177,14 @@
   --ui-action-bg:              var(--theme-tint);
   --ui-caption-bg:             var(--theme-mid);
   --ui-control-bg:             var(--theme-tint);
+
+  /* Figure overlay button colors */
+  --theme-figures-btn-border:        var(--theme-base);
+  --theme-figures-btn-bg:            var(--theme-tint);
+  --theme-figures-btn-text:          var(--theme-base);
+  --theme-figures-btn-hover:         var(--theme-mid);
+  --theme-figures-btn-active-border: var(--theme-base);
+  --theme-figures-btn-active-bg:     var(--theme-base);
 }
 
 /* ===========================================================

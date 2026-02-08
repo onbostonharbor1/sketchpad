@@ -105,7 +105,7 @@ export const HomeTabSpec = {
    ------------------------------------------------------------
    Role:
      - Pure state guarantees / invariants
-     - Simple utilities that do not “belong” to a single div
+     - Simple utilities that do not â€œbelongâ€ to a single div
 ============================================================ */
 
 /* ------------------------------------------------------------
@@ -225,7 +225,7 @@ export function initHomeTab(restored = false) {
 
   // 2. Clear shared regions
   clearDivs();
-  setCommandsButtonLabel("Home Commands");
+  setCommandsButtonLabel("Commands");
   wireHomeCommandsButton();
 
   // 3. Build minimal UI
@@ -255,7 +255,7 @@ export function initHomeTab(restored = false) {
 ------------------------------------------------------------ */
 function restoreHomeTab() {
   clearDivs();
-  setCommandsButtonLabel("Home Commands");
+  setCommandsButtonLabel("Commands");
 
   // Ensure the saved object exists (fail-fast contract)
   ensureHomeSavedState();
@@ -866,13 +866,13 @@ export async function refreshHomeCategoriesFromManifestEdit() {
   }
 
   // Case 3: Status changed but is still non-empty.
-  // Requirement: stay in Results and do NOT redraw — but DO sync the saved entry
+  // Requirement: stay in Results and do NOT redraw â€” but DO sync the saved entry
   // so subsequent Edit Manifest shows the correct current values.
   if (typeof match.title === "string") active.title = match.title;
   if (typeof match.file  === "string") active.file  = match.file;
   active.status = String(match.status);
 
-  // Keep activeStatus consistent with the entry’s current status (used by UI state).
+  // Keep activeStatus consistent with the entryâ€™s current status (used by UI state).
   uiState.home.saved.activeStatus = active.status;
 
   return;
@@ -1271,7 +1271,7 @@ export function formatRebuildReport(report) {
 
 /* ------------------------------------------------------------
    wireHomeCommandsButton()
-  Ắruments:
+  áº®ruments:
      - None
    ------------------------------------------------------------
    Role:
@@ -1290,7 +1290,7 @@ export function wireHomeCommandsButton() {
       buildBody(offcanvasBodyEl) {
 
         if (!offcanvasBodyEl) {
-          throw new Error("Home Commands: offcanvasBodyEl missing");
+          throw new Error("Commands: offcanvasBodyEl missing");
         }
 
         offcanvasBodyEl.innerHTML = buildHomeOffcanvasHtml();

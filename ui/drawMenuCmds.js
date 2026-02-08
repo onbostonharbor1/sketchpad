@@ -12,7 +12,7 @@ import { DrawController } from "./draw.js";
 import { createGalleryPatternPng } from "./menuCmds.js";   // NEW
 import { createPatternScript } from "./menuCmds.js";   // NEW (next to createGalleryPatternPng)
 import { saveSecondary, archiveSecondary } from "./secondaryObjects.js";
-import { buildCanvasThumbnailBase64 } from "./uiUtilities.js";
+import { buildCanvasThumbnailBase64, openInputDialog, showMessageDialog } from "./uiUtilities.js";
 import { uiState } from "./uiState.js";
 
 
@@ -135,7 +135,7 @@ export async function resetActiveDrawObject() {
   if (!newEntry)
     throw new Error("Reset: module reimport did not recreate entry");
 
-  // 🔥 GUARANTEED FIX: ensure correct registry key
+  // ðŸ”¥ GUARANTEED FIX: ensure correct registry key
   window.drawRegistry[key] = newEntry;
 
   // Update UI state
@@ -187,7 +187,11 @@ export async function saveActiveDrawObjectAsSecondary(menuContext) {
   const info  = uiState.draw.tabs[tabId];
   if (!info) return;
 
-  const name = prompt("Name for this variation?");
+  const name = await openInputDialog(
+    "Save Secondary Object",
+    "Name for this variation:",
+    ""
+  );
   if (!name) return;
 
   // Primary ID from context (e.g. "bird")
@@ -216,11 +220,16 @@ export async function saveActiveDrawObjectAsSecondary(menuContext) {
 
   await saveSecondary(primaryId, name, payload, thumbBase64);
 
+  // Signal Figures tab to reload categories (for ">" indicator)
+  if (uiState.figures) {
+    uiState.figures.needsUpdate = true;
+  }
+
   // If we were primary, we stay primary but now there is a secondary.
   // If we were secondary, we stay secondary (old one).
   // Maybe switch to the new one?
   // For now, just alert.
-  alert("Secondary object created.");
+  await showMessageDialog("Success", `Secondary object "${name}" created.`);
 }
 
 export async function saveActiveSecondaryObject(menuContext) {

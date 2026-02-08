@@ -1,3 +1,4 @@
+
 /* drawRunner.js
    ------------------------------------------------------------
    Drawing Execution & Transformation Engine
@@ -27,6 +28,11 @@ export function drawActiveTab() {
   if (!info || info.type !== "object" || !info.drawRegistry) return;
 
   const entry = info.drawRegistry;
+
+  // Ensure wrapper is visible
+  const wrapper = document.getElementById("sketchpad-wrapper");
+  if (wrapper) wrapper.style.display = "flex";
+
   const sketchpad = document.getElementById("sketchpad");
   if (!sketchpad) throw new Error("drawActiveTab: #sketchpad not found");
 

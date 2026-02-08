@@ -259,6 +259,12 @@ export async function executeScriptToCanvas(mod, title, options = {}) {
 
   const regionId = options.canvasRegionId || "sketchpad";
 
+  // If targeting the main sketchpad, ensure the wrapper is visible
+  if (regionId === "sketchpad") {
+    const wrapper = document.getElementById("sketchpad-wrapper");
+    if (wrapper) wrapper.style.display = "flex";
+  }
+
   // Ensure the physical canvas is in the right place
   attachCanvasToRegion(regionId);
 
@@ -395,3 +401,4 @@ export async function runScriptByPath(path, mode, options = {}) {
   throw new Error("runScriptByPath: invalid mode '" + String(mode) + "'");
 
 } // end runScriptByPath
+

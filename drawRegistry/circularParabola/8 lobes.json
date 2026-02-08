@@ -1,0 +1,32 @@
+{
+  "name": "8 lobes",
+  "id": "circularParabola",
+  "version": 1.5,
+  "category": "curve_stitch",
+  "firstOrder": false,
+  "source": "secondary",
+  "tags": [
+    "Curve Stitch"
+  ],
+  "description": "Parabola with arm on defining circle",
+  "params": {
+    "midpoint": {
+      "x": 300,
+      "y": 300
+    },
+    "radius": 150,
+    "numNodes": 8,
+    "numSteps": 20,
+    "rotate": 165,
+    "xScale": 1,
+    "yScale": 1,
+    "color": "blue",
+    "lineWidth": 1,
+    "points": [
+      {
+        "x": 300,
+        "y": 300
+      }
+    ]
+  }
+}

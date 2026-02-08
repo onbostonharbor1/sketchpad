@@ -1,0 +1,37 @@
+{
+  "name": "Rotated",
+  "id": "inEllipse",
+  "version": 1.6,
+  "category": "circles",
+  "firstOrder": false,
+  "source": "secondary",
+  "tags": [
+    "Ellipse",
+    "Curve Stitch"
+  ],
+  "description": "Draws chord patterns with adjustable center tapering.",
+  "params": {
+    "midpoint": {
+      "x": 301.4666748046875,
+      "y": 372.06666564941406
+    },
+    "color": "blue",
+    "lineWidth": 1,
+    "ellipse": {
+      "a": 500,
+      "b": 250
+    },
+    "numNodes": 120,
+    "chordLength": 20,
+    "startSkip": 0,
+    "endSkip": 0,
+    "withinCirc": 1,
+    "rotate": 220,
+    "points": [
+      {
+        "x": 301.4666748046875,
+        "y": 372.06666564941406
+      }
+    ]
+  }
+}

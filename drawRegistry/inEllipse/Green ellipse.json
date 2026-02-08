@@ -1,0 +1,38 @@
+{
+  "name": "Green ellipse",
+  "id": "inEllipse",
+  "version": 1.6,
+  "category": "circles",
+  "firstOrder": false,
+  "source": "secondary",
+  "tags": [
+    "Ellipse",
+    "Curve Stitch"
+  ],
+  "description": "Draws chord patterns with adjustable center tapering.",
+  "params": {
+    "midpoint": {
+      "x": 311.4666748046875,
+      "y": 262.06666564941406
+    },
+    "color": "hsl(137, 100%, 43%)",
+    "lineWidth": 1,
+    "ellipse": {
+      "a": 500,
+      "b": 390
+    },
+    "numNodes": 120,
+    "chordLength": 20,
+    "startSkip": 0,
+    "endSkip": 0,
+    "withinCirc": 1,
+    "rotate": 0,
+    "points": [
+      {
+        "x": 311.4666748046875,
+        "y": 262.06666564941406
+      }
+    ],
+    "ellipse_b": 390
+  }
+}

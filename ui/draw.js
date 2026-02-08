@@ -285,7 +285,7 @@ export function addDrawSubtab(item) {
 
   if (item.name !== "Categories") {
     const closeBtn = document.createElement("span");
-    closeBtn.textContent = "×";
+    closeBtn.textContent = "Ã—";
     closeBtn.className = "tab-close";
     closeBtn.addEventListener("click", (ev) => {
       ev.stopPropagation();
@@ -399,13 +399,28 @@ export function saveDrawState() {
   const shallowTabs = {};
   for (const [id, info] of Object.entries(uiState.draw.tabs || {})) {
     let key = null;
+    let savedParams = {};
+
     if (info.drawRegistry) {
       key = Object.keys(window.drawRegistry).find(k => window.drawRegistry[k] === info.drawRegistry);
+
+      // Filter out interface controls (marked by 'control' property in schema)
+      const allParams = info.parameters || {};
+      const controls = info.drawRegistry.controls || {};
+
+      for (const pKey in allParams) {
+          const def = controls[pKey];
+          if (def && def.control) continue;
+          savedParams[pKey] = allParams[pKey];
+      }
+    } else {
+        savedParams = info.parameters || {};
     }
+
     shallowTabs[id] = {
       type: info.type,
       dirty: info.dirty,
-      parameters: structuredClone(info.parameters || {}),
+      parameters: structuredClone(savedParams),
       drawRegistry: key,
       showControls: info.showControls ?? false // NEW: Persist checkbox state
     };

@@ -1,25 +1,25 @@
 /* ui/manifest.js
    ------------------------------------------------------------
-   ManifestManager — New Architecture (Generic Loader)
+   ManifestManager â€” New Architecture (Generic Loader)
    ------------------------------------------------------------
    Responsibilities:
-     • Given a basedir string (e.g. "patterns", "gallery/Ideabook"),
+     â€¢ Given a basedir string (e.g. "patterns", "gallery/Ideabook"),
        load manifest data using fileLayer.path helpers.
 
-     • If ../<basedir>/directoryRegistry.json exists:
+     â€¢ If ../<basedir>/directoryRegistry.json exists:
          - Load it as an array of category names.
          - For each category, load:
              ../<basedir>/<category>/manifest.json
          - Return an array-of-arrays:
              [ itemsForCat0, itemsForCat1, ... ]
 
-     • Else if ../<basedir>/manifest.json exists:
+     â€¢ Else if ../<basedir>/manifest.json exists:
          - Load it as a flat array and return that array.
 
-     • Else:
+     â€¢ Else:
          - Return [].
 
-     • All results are cached per basedir.
+     â€¢ All results are cached per basedir.
 
    This module knows NOTHING about:
      - tabs
@@ -34,7 +34,7 @@ import { fileLayer } from "./fileLayer.js";
 export class ManifestManager {
 
   constructor() {
-    // Cache: basedir → data (array or array-of-arrays)
+    // Cache: basedir â†’ data (array or array-of-arrays)
     this.cache = {};
 
     // Optional: store directoryRegistry arrays per basedir
@@ -67,10 +67,16 @@ export class ManifestManager {
       ALWAYS returns an array.
    ============================================================ */
   async get(basedir) {
+    console.time(`ManifestManager.get(${basedir})`);
+    
     // 1) Check cache first
     if (Object.prototype.hasOwnProperty.call(this.cache, basedir)) {
+      console.timeEnd(`ManifestManager.get(${basedir})`);
+      console.log(`  └─ Cache HIT for '${basedir}'`);
       return this.cache[basedir];
     }
+    
+    console.log(`  └─ Cache MISS for '${basedir}' - loading from disk...`);
 
     // 2) Try directoryRegistry.json
     const dirRegPath = fileLayer.path.directoryRegistry(basedir);
@@ -119,7 +125,7 @@ export class ManifestManager {
         return drawData;
     }
 
-    // 3) No directoryRegistry → try flat manifest.json
+    // 3) No directoryRegistry â†’ try flat manifest.json
     const flatPath   = fileLayer.path.flatManifest(basedir);
     const hasFlat    = await fileLayer.exists(flatPath);
 
@@ -136,7 +142,8 @@ export class ManifestManager {
       return data;
     }
 
-    // 4) Nothing exists → empty
+    // 4) Nothing exists â†’ empty
+    console.timeEnd(`ManifestManager.get(${basedir})`);
     this.cache[basedir] = [];
     return [];
   } // end get

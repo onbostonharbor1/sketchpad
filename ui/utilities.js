@@ -1,6 +1,6 @@
 /* utilities.js
    ------------------------------------------------------------
-   Utilities Tab Controller — NEW ARCHITECTURE (Patterns/Gallery model)
+   Utilities Tab Controller â€” NEW ARCHITECTURE (Patterns/Gallery model)
    ------------------------------------------------------------
 */
 
@@ -160,7 +160,7 @@ export async function initUtilityTab(restored = false) {
 /* ============================================================
    updateUtilitiesCaption()
    ------------------------------------------------------------
-   ROLE (MULTI-RESPONSIBILITY — BY DESIGN)
+   ROLE (MULTI-RESPONSIBILITY â€” BY DESIGN)
    ------------------------------------------------------------
    This function does MORE than send data to utilitiesMenuCmds.
    It performs three distinct jobs:
@@ -176,9 +176,9 @@ export async function initUtilityTab(restored = false) {
    3) Menu-context bundling (CRITICAL)
       - Builds a canonical `info` object for utilitiesMenuCmds.
       - This MUST mirror the Gallery/Patterns contract:
-        • one canonical identifier
-        • no display-derived fallbacks
-        • no filename/path guessing
+        â€¢ one canonical identifier
+        â€¢ no display-derived fallbacks
+        â€¢ no filename/path guessing
 ============================================================ */
 function updateUtilitiesCaption({ title, path, subtab, category, manifestPath, entryPath, status }) {
 
@@ -248,6 +248,34 @@ function updateUtilitiesCaption({ title, path, subtab, category, manifestPath, e
 } // end updateUtilitiesCaption
 
 
+
+
+/* ============================================================
+   ensureResultTab()
+   ------------------------------------------------------------
+   Creates the Result tab if it doesn't exist yet.
+============================================================ */
+function ensureResultTab() {
+  // Check if Result tab already exists
+  const existingTab = document.querySelector('[data-tab-id="tab-result"]');
+  if (existingTab) return;
+
+  // Create the Result tab using the same structure as setUtilitySubtabs
+  const bar = document.querySelector("#subtabs ul");
+  if (!bar) throw new Error("ensureResultTab: #subtabs ul not found");
+
+  const li = document.createElement("li");
+  li.className = "nav-item";
+
+  const btn = document.createElement("button");
+  btn.className = "nav-link";
+  btn.textContent = "Result";
+  btn.setAttribute("data-tab-id", "tab-result");
+  btn.onclick = () => switchUtilityTab("tab-result");
+
+  li.appendChild(btn);
+  bar.appendChild(li);
+} // end ensureResultTab
 
 
 function displayUtilityResult(html) {

@@ -1,4 +1,4 @@
-// main.js — Vite entry point
+// main.js â€” Vite entry point
 
 
 import '@melloware/coloris/dist/coloris.css';
@@ -71,6 +71,7 @@ import "./ui/tinyMceConfig.js";
 import "./ui/draw.js";
 import "./ui/drawMenuCmds.js";
 import "./ui/figures.js";
+import "./ui/figuresMenuCmds.js";
 import "./ui/gallery.js";
 import "./ui/galleryMenuCmds.js";
 import "./ui/home.js";

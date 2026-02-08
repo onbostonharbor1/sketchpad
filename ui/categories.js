@@ -3,11 +3,11 @@
    Category Rendering System (Final Architecture)
    ------------------------------------------------------------
    Responsibilities:
-     • Render category frames using a single universal descriptor
+     â€¢ Render category frames using a single universal descriptor
        format supplied by tabs.
-     • ZERO knowledge of manifests, tabs, patterns, gallery, etc.
-     • Fail-fast on invalid descriptor structure.
-     • Purely a DOM builder.
+     â€¢ ZERO knowledge of manifests, tabs, patterns, gallery, etc.
+     â€¢ Fail-fast on invalid descriptor structure.
+     â€¢ Purely a DOM builder.
 
    Descriptor Format (required):
      [
@@ -37,12 +37,13 @@
    Render an array of category frames into the specified target
    container.
 
-   targetId   – DOM id of the container (e.g., "text")
-   descriptor – array of category frames, each containing:
+   targetId   â€“ DOM id of the container (e.g., "text")
+   descriptor â€“ array of category frames, each containing:
                   title: string
                   items: [ { name, onClick, hasSubitems? }, ... ]
 ============================================================ */
 export function renderCategories(targetId, descriptor) {
+  console.time(`renderCategories(${targetId})`);
 
   // Fail-fast container check
   const container = document.getElementById(targetId);
@@ -162,6 +163,7 @@ export function renderCategories(targetId, descriptor) {
 
     outer.appendChild(frame);
   });
+  console.timeEnd(`renderCategories(${targetId})`);
 } // end renderCategories
 
 
@@ -295,7 +297,7 @@ export function clearCategoryFrame(targetId) {
    buildCategoryFrame(targetId)
    ------------------------------------------------------------
    Utility: create outer #categories wrapper manually.
-   Rarely used — included for completeness.
+   Rarely used â€” included for completeness.
 ============================================================ */
 export function buildCategoryFrame(targetId) {
   const container = document.getElementById(targetId);

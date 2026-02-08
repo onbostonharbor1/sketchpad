@@ -11,6 +11,7 @@ import { runFigureScript, drawFigures, initFiguresInteraction, getActiveOverlays
 import { initFigureOverlays, updateFigureOverlayButtons } from "./figuresUI.js";
 import { setCaptionBar } from "./caption.js";
 import { menuManager } from "./menuManager.js";
+import { getFiguresCaptionMenuItems } from "./figuresMenuCmds.js";
 
 /* ============================================================
    initFiguresTab
@@ -65,7 +66,7 @@ export function initFiguresTab(restored = false) {
 ============================================================ */
 function setFiguresAction() {
   const el = document.getElementById("action");
-  if (el) el.innerHTML = "Select a figure to view controls.";
+  if (el) el.innerHTML = "Select an overlay to view controls. ";
 }
 
 function setFiguresSubtabs() {
@@ -115,7 +116,7 @@ function renderSubtabs() {
         btn.appendChild(label);
 
         const close = document.createElement("span");
-        close.textContent = " ×";
+        close.textContent = " Ã—";
         close.style.cursor = "pointer";
         close.style.marginLeft = "5px";
         close.onclick = (e) => {
@@ -136,13 +137,26 @@ function switchToCategories() {
     renderSubtabs();
 
     document.getElementById("text").style.display = "block";
-    document.getElementById("sketchpad").style.display = "none";
+
+    // Hide sketchpad wrapper (contains sidebar + canvas)
+    const wrapper = document.getElementById("sketchpad-wrapper");
+    if (wrapper) wrapper.style.display = "none";
+
     document.getElementById("action").style.display = "none";
     setFiguresCaption();
 
-    // Clear overlay buttons
+    // Clear overlay buttons and hide sidebar
     const btnContainer = document.getElementById("figure-sidebar");
-    if (btnContainer) btnContainer.innerHTML = "";
+    if (btnContainer) {
+        btnContainer.innerHTML = "";
+        btnContainer.style.display = "none";
+    }
+
+    // Reload categories if needsUpdate flag is set (e.g., after saving secondary)
+    if (uiState.figures.needsUpdate) {
+        uiState.figures.needsUpdate = false;
+        loadFiguresCategories();
+    }
 }
 
 function switchToFigureTab(tabId) {
@@ -153,7 +167,15 @@ function switchToFigureTab(tabId) {
     renderSubtabs();
 
     document.getElementById("text").style.display = "none";
-    document.getElementById("sketchpad").style.display = "block";
+
+    // Show sketchpad wrapper
+    const wrapper = document.getElementById("sketchpad-wrapper");
+    if (wrapper) wrapper.style.display = "flex";
+
+    // Show sidebar
+    const sidebar = document.getElementById("figure-sidebar");
+    if (sidebar) sidebar.style.display = "flex";
+
     document.getElementById("action").style.display = "block";
 
     // Redraw using stored state
@@ -178,7 +200,10 @@ function setFiguresCaption(name = "Figures", context = null) {
     const config = {
         targetId: "caption",
         title: name,
-        onMenu: context ? (anchor) => showFiguresMenu(anchor, context) : null
+        onMenu: context ? async (anchor) => {
+            const items = await getFiguresCaptionMenuItems(context);
+            menuManager.open(items, anchor);
+        } : null
     };
     setCaptionBar(config);
 }
@@ -193,15 +218,24 @@ function showFiguresMenu(anchor, context) {
     menuManager.open(items, anchor);
 }
 
+/* OLD CODE - Moved to figuresMenuCmds.js
 function saveFigureState(context) {
     const overlays = getActiveOverlays();
     const saveData = {
         figureId: context.figureId,
         timestamp: Date.now(),
-        overlays: overlays.map(o => ({
-            id: o.figureId,
-            params: o.params
-        }))
+        overlays: overlays.map(o => {
+            const safeParams = {};
+            const controls = o.controls || {};
+            for (const key in o.params) {
+                if (controls[key] && controls[key].control) continue;
+                safeParams[key] = o.params[key];
+            }
+            return {
+                id: o.figureId,
+                params: safeParams
+            };
+        })
     };
 
     const json = JSON.stringify(saveData, null, 2);
@@ -214,6 +248,7 @@ function saveFigureState(context) {
     a.click();
     document.body.removeChild(a);
 }
+*/
 
 function setFiguresText() {
   const el = document.getElementById("text");
@@ -221,55 +256,21 @@ function setFiguresText() {
 }
 
 function setFiguresSketchpad() {
-    const el = document.getElementById("sketchpad");
-    if (!el) return;
+    // The structure is now permanent in index.html.
+    // We just need to ensure the canvas is in the correct place if it was moved.
 
-    el.innerHTML = "";
-
-    // Add class for Figures-specific layout
-    el.classList.add("figures-layout");
-
-    // Flex container (row layout)
-    el.style.display = "flex";
-    el.style.flexDirection = "row";
-
-    // LEFT: Sidebar for overlay buttons
-    const sidebar = document.createElement("div");
-    sidebar.id = "figure-sidebar";
-    el.appendChild(sidebar);
-
-    // RIGHT: Canvas container
-    const container = document.createElement("div");
-    container.id = "canvas-container";
-    el.appendChild(container);
-
-    // Stack for canvas + overlay layers
-    const stack = document.createElement("div");
-    stack.style.position = "relative";
-    stack.style.display = "inline-block";
-    container.appendChild(stack);
-
-    // Add canvas to stack
+    const sketchpad = document.getElementById("sketchpad");
     const canvas = window.drawCanvas;
-    if (canvas) {
-      canvas.style.position = "relative";
-      canvas.style.display = "block";
-      stack.appendChild(canvas);
-      // Canvas already cleared by clearDivs()
+
+    if (sketchpad && canvas && !sketchpad.contains(canvas)) {
+        sketchpad.appendChild(canvas);
+        canvas.style.display = "block";
     }
 
-    // Add interaction layers to stack
-    const overlayLayers = document.getElementById("canvasOverlayLayers");
-    if (overlayLayers) {
-      stack.appendChild(overlayLayers);
-      overlayLayers.style.position = "absolute";
-      overlayLayers.style.top = "0";
-      overlayLayers.style.left = "0";
-      overlayLayers.style.width = "100%";
-      overlayLayers.style.height = "100%";
-      overlayLayers.style.pointerEvents = "none";
-    }
-  }
+    // Ensure wrapper is visible if we are in figures tab (handled by switchTo...)
+    // But initially, setFiguresSketchpad is called during init.
+    // Layout logic is mostly in switch functions now.
+}
 
 
 /* ============================================================
