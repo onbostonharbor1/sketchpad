@@ -1,5 +1,5 @@
 /* ============================================================
-   ParameterControls — Control Schema Flags (def.*)
+   ParameterControls â€” Control Schema Flags (def.*)
    ------------------------------------------------------------
    This file consumes per-control schema objects ("def") from:
      - drawRegistry.controls (Draw tab)
@@ -193,13 +193,13 @@ import { overlayManager } from "./overlay.js";
        when renderParameterControls() is invoked.
 
    Typical environments:
-     - Draw tab      → #tab-draw → action panel
-     - Scripts tab   → #tab-scripts → action panel
-     - Other tabs    → future extensions
+     - Draw tab      â†’ #tab-draw â†’ action panel
+     - Scripts tab   â†’ #tab-scripts â†’ action panel
+     - Other tabs    â†’ future extensions
 
    This function is intentionally generic and delegates:
-     - data extraction → tab-specific builders
-     - DOM rendering   → renderParameterControls()
+     - data extraction â†’ tab-specific builders
+     - DOM rendering   â†’ renderParameterControls()
 
 =========================================================== */
 export function buildParameterControls(
@@ -294,15 +294,15 @@ function buildDrawParameterData(tabState) {
   // is active, there are no parameters to expose.
   //
   // Resulting environment effect:
-  //   → Action panel remains empty.
+  //   â†’ Action panel remains empty.
   // ---------------------------------------------------------
   if (!tabState || !tabState.drawRegistry) return [];
 
   // ---------------------------------------------------------
   // The drawRegistry entry defines the parameter schema.
   //
-  // controls → preferred modern name
-  // params   → legacy / fallback
+  // controls â†’ preferred modern name
+  // params   â†’ legacy / fallback
   // ---------------------------------------------------------
   const registry = tabState.drawRegistry;
   const schema = registry.controls || registry.params || {};
@@ -386,7 +386,7 @@ export function buildScriptParameterData(sourceInfo) {
   // IMPORTANT:
   // Button controls require def.action (function or string).
   // The normalized item MUST preserve it, because it is not a
-  // “value” field and it may not be JSON-safe.
+  // â€œvalueâ€ field and it may not be JSON-safe.
   // ---------------------------------------------------------
   return keys.map((key) => {
 
@@ -431,7 +431,7 @@ export function buildScriptParameterData(sourceInfo) {
 
    WHAT THIS FUNCTION DOES
    -----------------------
-   1. Locates the active tab’s Action Area container: #action
+   1. Locates the active tabâ€™s Action Area container: #action
    2. Clears that area (destructive rebuild)
    3. Creates a new controls container (#drawControls)
    4. Renders each control in controlData using buildSingleControl()
@@ -446,30 +446,30 @@ export function buildScriptParameterData(sourceInfo) {
 
    The meaning of #action depends on which top-level tab is active.
 
-   • Draw tab:
+   â€¢ Draw tab:
        - #action is the left-side controls panel for the Draw tab
        - Controls typically drive live redraw to #sketchpad canvas
 
-   • Scripts/Tools tab:
+   â€¢ Scripts/Tools tab:
        - #action is the controls panel for script parameters
        - Controls configure scripts; script output usually goes to #text
 
-   • Other/future tabs:
-       - #action is still the designated “Action Area”
+   â€¢ Other/future tabs:
+       - #action is still the designated â€œAction Areaâ€
        - This renderer is tab-agnostic; behavior depends on handlers
 
    IMPORTANT ARCHITECTURAL CONTRACT
    --------------------------------
-   • #action MUST exist for the active tab layout.
-   • This function assumes that the UI shell for the active tab
-     has already been created by that tab’s init/restore logic.
-   • This function does NOT create tab structure; it only fills #action.
-   • This function is destructive: it clears #action and rebuilds
+   â€¢ #action MUST exist for the active tab layout.
+   â€¢ This function assumes that the UI shell for the active tab
+     has already been created by that tabâ€™s init/restore logic.
+   â€¢ This function does NOT create tab structure; it only fills #action.
+   â€¢ This function is destructive: it clears #action and rebuilds
      controls every time it runs.
-   • This function does NOT update uiState directly.
+   â€¢ This function does NOT update uiState directly.
      It only creates DOM controls; event wiring is inside
      buildSingleControl() (or helpers called by it).
-   • targetTabId is passed through to buildSingleControl() so that
+   â€¢ targetTabId is passed through to buildSingleControl() so that
      control builders can vary behavior per tab (e.g., change handlers).
 
    NOTE ABOUT THE "MINIMAL EDIT"
@@ -490,10 +490,10 @@ export function renderParameterControls(
   // DOM TARGET RESOLUTION: ACTION AREA
   //
   // This is the ONLY required DOM anchor for this renderer.
-  // If it does not exist, the active tab’s layout is broken.
+  // If it does not exist, the active tabâ€™s layout is broken.
   //
   // ENVIRONMENT:
-  //   Writes into the active tab’s #action area.
+  //   Writes into the active tabâ€™s #action area.
   // ---------------------------------------------------------
   const actionDiv = document.getElementById("action");
   if (!actionDiv) throw new Error("renderParameterControls: #action not found");
@@ -525,7 +525,7 @@ export function renderParameterControls(
   // If no controls exist, we render a friendly placeholder.
   //
   // ENVIRONMENT:
-  //   Writes text into #action → #drawControls.
+  //   Writes text into #action â†’ #drawControls.
   // ---------------------------------------------------------
   if (!controlData || controlData.length === 0) {
     controlsDiv.textContent = "(no parameters)";
@@ -546,7 +546,7 @@ export function renderParameterControls(
   //
   // ENVIRONMENT:
   //   Each field becomes a child element of:
-  //     #action → #drawControls → <field>
+  //     #action â†’ #drawControls â†’ <field>
   // ---------------------------------------------------------
   controlData.forEach((item) => {
 
@@ -617,13 +617,18 @@ export function renderParameterControls(
 
 
 /* ------------------------------------------------------------
-   buildSingleControl() — UPDATE
+   buildSingleControl() â€” UPDATE
    - Add a new case: "radio"
 ------------------------------------------------------------ */
 function buildSingleControl(info, key, def, value, tabId) {
 
+  // Determine the actual widget type
+  // For interface controls, def.control contains the widget type
+  // For standard controls, def.widget contains the widget type
+  const widgetType = def.control || def.widget || def.type || "text";
+
   // Hidden controls do not render a field at all.
-  if (def.widget === "hidden") {
+  if (widgetType === "hidden") {
     return setHiddenControl(info, key, def, value, tabId);
   }
 
@@ -634,7 +639,7 @@ function buildSingleControl(info, key, def, value, tabId) {
   // If def.showKey exists and the corresponding parameter is false,
   // we return null so renderParameterControls() skips it.
   // ----------------------------------------------------------
-  if (def.widget === "staticText") {
+  if (widgetType === "staticText") {
     if (def.showKey) {
       if (info.parameters[def.showKey] !== true) return null;
     }
@@ -648,7 +653,7 @@ function buildSingleControl(info, key, def, value, tabId) {
   label.textContent = def.label || key;
   label.htmlFor = tabId + "-" + key;
 
-  switch (def.widget) {
+  switch (widgetType) {
     case "range":
       setRangeControlUnified(field, label, def, value, info, key, tabId);
       break;
@@ -754,7 +759,7 @@ function setRangeControlUnified(field, label, def, value, info, key, tabId) {
 
    PURPOSE
    -------
-   Match the “black-background” style UI shown in your reference.
+   Match the â€œblack-backgroundâ€ style UI shown in your reference.
 
    REQUIRED
    --------
@@ -1046,6 +1051,26 @@ function setCheckboxControl(field, label, def, value, info, key, tabId) {
 
   input.addEventListener("change", () => {
     info.parameters[key] = input.checked;
+    
+    // Special handling for showControls checkbox in secondary objects
+    if (key === "showControls" && tabId.startsWith("tab-draw")) {
+      // Store the state
+      const tabState = info; // info is the Draw tab state
+      if (tabState.secondary) {
+        tabState.showControls = input.checked;
+      }
+      
+      // Toggle visibility of parameter controls
+      const controlsDiv = document.getElementById("drawControls");
+      if (controlsDiv) {
+        Array.from(controlsDiv.children).forEach(child => {
+          if (child.classList.contains("ctrl-field")) {
+            child.style.display = input.checked ? "" : "none";
+          }
+        });
+      }
+    }
+    
     if (typeof info.onParamChange === "function") info.onParamChange();
     info.redrawHandler();
   });
@@ -1217,7 +1242,7 @@ function removePointPickerDots(container, tabId, key) {
 
    IMPORTANT DESIGN NOTES
    ----------------------
-   This version intentionally preserves your “old” drag model:
+   This version intentionally preserves your â€œoldâ€ drag model:
      - mousedown starts drag
      - window mousemove updates dot position + parameter
      - window mouseup ends drag
@@ -1531,34 +1556,34 @@ function setPointPickerArrayControl_old(field, label, def, value, info, key, tab
    OPTIONS FORMAT
    --------------
    def.options may be:
-     • ["A", "B", "C"]
-     • [
+     â€¢ ["A", "B", "C"]
+     â€¢ [
          { value: "A", label: "Option A" },
          { value: "B", label: "Option B" }
        ]
 
    VALUE RULES
    -----------
-   • Stored in info.parameters[key]
-   • Stored value is:
+   â€¢ Stored in info.parameters[key]
+   â€¢ Stored value is:
        - the string itself (for string options)
        - opt.value (for object options)
-   • DOM radio values are strings; matching is done as strings,
+   â€¢ DOM radio values are strings; matching is done as strings,
      but stored values preserve original typing where possible.
 
    RUNTIME BEHAVIOR
    ----------------
-   • Selecting a radio updates info.parameters[key]
-   • Calls info.onParamChange() if defined
-   • Calls info.redrawHandler()
-   • If def.rebuildControls === true:
+   â€¢ Selecting a radio updates info.parameters[key]
+   â€¢ Calls info.onParamChange() if defined
+   â€¢ Calls info.redrawHandler()
+   â€¢ If def.rebuildControls === true:
        - control panel is rebuilt after change
 
    FAIL-FAST CONDITIONS
    --------------------
-   • def.options missing or not an array
-   • def.options empty
-   • option value missing or undefined
+   â€¢ def.options missing or not an array
+   â€¢ def.options empty
+   â€¢ option value missing or undefined
 ------------------------------------------------------------ */
 
 
@@ -1761,10 +1786,10 @@ function setStaticTextControl(field, label, def, value, info, key, tabId) {
   //
   // Display-only block of text in the Action panel.
   //
-  // • No label
-  // • No parameter storage
-  // • No redraw
-  // • Text must be provided in-memory
+  // â€¢ No label
+  // â€¢ No parameter storage
+  // â€¢ No redraw
+  // â€¢ Text must be provided in-memory
   //
   // Text source:
   //   - def.text     : string
@@ -1790,7 +1815,7 @@ function setStaticTextControl(field, label, def, value, info, key, tabId) {
   box.className = "ctrl-static-text";
   box.id = tabId + "-" + key;
 
-  // Make it expand to full available width (fixes the “one word per line” collapse).
+  // Make it expand to full available width (fixes the â€œone word per lineâ€ collapse).
   box.style.display = "block";
   box.style.width = "100%";
   box.style.boxSizing = "border-box";

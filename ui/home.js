@@ -225,7 +225,7 @@ export function initHomeTab(restored = false) {
 
   // 2. Clear shared regions
   clearDivs();
-  setCommandsButtonLabel("Commands");
+  setCommandsButtonLabel("Home Commands");
   wireHomeCommandsButton();
 
   // 3. Build minimal UI
@@ -255,7 +255,7 @@ export function initHomeTab(restored = false) {
 ------------------------------------------------------------ */
 function restoreHomeTab() {
   clearDivs();
-  setCommandsButtonLabel("Commands");
+  setCommandsButtonLabel("Home Commands");
 
   // Ensure the saved object exists (fail-fast contract)
   ensureHomeSavedState();
@@ -667,66 +667,81 @@ function setHomeSketchpad() {
   const el = document.getElementById("sketchpad");
   if (!el) throw new Error("setHomeSketchpad: #sketchpad not found");
   el.innerHTML = "";
+  
+  // Make the sketchpad wrapper visible (clearDivs hides it by default)
+  const wrapper = document.getElementById("sketchpad-wrapper");
+  if (wrapper) wrapper.style.display = "block";
 } // end setHomeSketchpad
 
 
 /* ------------------------------------------------------------
-   renderHomeImageEntryToSketchpad(entry, myToken)
+   renderHomeImageEntryToText(entry, myToken)
    Arguments:
      - entry (object): activeEntry (must include .path)
      - myToken (number): render token for stale async prevention
    ------------------------------------------------------------
    Role:
-     - Loads an image from entry.path and displays it in #sketchpad.
+     - Loads an image from entry.path and displays it in #text.
      - Uses token check to avoid stale async updates.
+     - Matches Gallery's image display behavior.
 ------------------------------------------------------------ */
-async function renderHomeImageEntryToSketchpad(entry, myToken) {
-
-  const padDiv = document.getElementById("sketchpad");
-  if (!padDiv) throw new Error("Home Results: #sketchpad missing");
+async function renderHomeImageEntryToText(entry, myToken) {
+  
+  console.log("renderHomeImageEntryToText called", entry.path);
 
   const textDiv = document.getElementById("text");
   if (!textDiv) throw new Error("Home Results: #text missing");
 
-  // Clear sketchpad and show a minimal loading marker
-  padDiv.innerHTML = "<p>(Loading image...)</p>";
+  // Clear text div and show a minimal loading marker
+  textDiv.innerHTML = "<p>(Loading image...)</p>";
 
   const img = new Image();
 
   const loaded = await new Promise(function (resolve) {
 
-    img.onload = function () { resolve({ ok: true }); };   // end onload
-    img.onerror = function () { resolve({ ok: false }); }; // end onerror
+    img.onload = function () { 
+      console.log("Image loaded successfully");
+      resolve({ ok: true }); 
+    };   // end onload
+    img.onerror = function () { 
+      console.error("Image failed to load");
+      resolve({ ok: false }); 
+    }; // end onerror
 
     // Rooted path is used directly
+    console.log("Setting img.src to:", entry.path);
     img.src = entry.path;
 
   }); // end Promise
 
   // Stale render: do nothing (newer click already took over)
-  if (myToken !== homeResultsRenderToken) return;
+  if (myToken !== homeResultsRenderToken) {
+    console.warn("Stale render detected, aborting");
+    return;
+  }
 
   if (!loaded.ok) {
-    padDiv.innerHTML =
+    textDiv.innerHTML =
       "<p><b>Home:</b> Image failed to load.</p>" +
       "<p>Path: " + entry.path + "</p>";
-
-    textDiv.innerHTML =
-      "<p><b>Home:</b> Image failed to load: " + entry.path + "</p>";
 
     throw new Error("Home Results: image failed to load: " + entry.path);
   }
 
-  // Fit behavior: preserve aspect, contain within region
-  img.style.maxWidth = "100%";
-  img.style.maxHeight = "100%";
-  img.style.objectFit = "contain";
-  img.style.display = "block";
+  console.log("Appending image to text div");
 
-  padDiv.innerHTML = "";
-  padDiv.appendChild(img);
+  // Fit behavior: match Gallery's styling
+  img.style.display   = "block";
+  img.style.maxWidth  = "800px";
+  img.style.maxHeight = "800px";
+  img.style.margin    = "0px auto";
 
-} // end renderHomeImageEntryToSketchpad
+  textDiv.innerHTML = "";
+  textDiv.appendChild(img);
+  
+  console.log("Image appended successfully");
+
+} // end renderHomeImageEntryToText
 
 
 /* ============================================================
@@ -1108,7 +1123,7 @@ async function renderHomeResults() {
   }
 
   if (isImagePath(entry.path)) {
-    await renderHomeImageEntryToSketchpad(entry, myToken);
+    await renderHomeImageEntryToText(entry, myToken);
     return;
   }
 
@@ -1290,7 +1305,7 @@ export function wireHomeCommandsButton() {
       buildBody(offcanvasBodyEl) {
 
         if (!offcanvasBodyEl) {
-          throw new Error("Commands: offcanvasBodyEl missing");
+          throw new Error("Home Commands: offcanvasBodyEl missing");
         }
 
         offcanvasBodyEl.innerHTML = buildHomeOffcanvasHtml();

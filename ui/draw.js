@@ -285,7 +285,7 @@ export function addDrawSubtab(item) {
 
   if (item.name !== "Categories") {
     const closeBtn = document.createElement("span");
-    closeBtn.textContent = "×";
+    closeBtn.textContent = "Ã—";
     closeBtn.className = "tab-close";
     closeBtn.addEventListener("click", (ev) => {
       ev.stopPropagation();
@@ -317,7 +317,7 @@ export function addDrawSubtab(item) {
       drawRegistry: entry,
       dirty: false,
       parameters: entry.params,
-      showControls: false // NEW: Default to hidden for secondary objects
+      showControls: false // Default to hidden controls
     };
 
     uiState.draw.activeSubtab = tabId;
@@ -467,7 +467,7 @@ export function setDrawAction() {
         const checkbox = document.createElement("input");
         checkbox.type = "checkbox";
         checkbox.id = "showControlsToggle";
-        checkbox.checked = state.showControls ?? true;
+        checkbox.checked = state.showControls ?? false;
 
         checkbox.addEventListener("change", () => {
           state.showControls = checkbox.checked;
@@ -483,12 +483,12 @@ export function setDrawAction() {
         // Update existing checkbox state
         const checkbox = document.getElementById("showControlsToggle");
         if (checkbox) {
-          checkbox.checked = state.showControls ?? true;
+          checkbox.checked = state.showControls ?? false;
         }
       }
 
       // Set initial visibility
-      toggleControlsVisibility(state.showControls ?? true);
+      toggleControlsVisibility(state.showControls ?? false);
     }
   }
 }
@@ -524,15 +524,9 @@ function setDrawCaption(entry) {
       ? info.secondary.primaryId
       : Object.keys(window.drawRegistry).find(k => window.drawRegistry[k] === entry);
 
-    // For secondary objects, use the secondary's name as the ID (for file naming)
-    // For primary objects, use the entry ID or registry key as before
-    const effectiveId = isSecondary
-      ? info.secondary.name
-      : (entry.id || registryKey);
-
     const menuContext = {
         category: entry.category || "uncategorized",
-        id: effectiveId,
+        id: entry.id || registryKey,
         registryKey
     };
 
