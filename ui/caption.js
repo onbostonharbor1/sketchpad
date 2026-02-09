@@ -55,6 +55,7 @@ export function setCaptionBar(config) {
     title,
     onPrev,
     onNext,
+    onPrimary,
     onMenu,
     overlayTargetId
   } = config;
@@ -120,6 +121,14 @@ export function setCaptionBar(config) {
     bNext.textContent = "Next";
     bNext.onclick = onNext;
     btnRow.appendChild(bNext);
+  }
+
+  // Reset button (for secondary objects)
+  if (typeof onPrimary === "function") {
+    const bReset = document.createElement("button");
+    bReset.textContent = "Reset";
+    bReset.onclick = onPrimary;
+    btnRow.appendChild(bReset);
   }
 
   // ----------------------------------------------------------

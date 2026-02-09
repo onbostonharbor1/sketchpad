@@ -34,6 +34,7 @@ export async function getFiguresCaptionMenuItems(info) {
   items.push({
     label: "Reset Order",
     disabled: !info.path,
+    tooltip: "Reload figure and reset all overlays to default order",
     onClick: () => {
       if (info.path && info.figureId) {
         runFigureScript(info.path, info.figureId);
@@ -47,6 +48,7 @@ export async function getFiguresCaptionMenuItems(info) {
   items.push({
     label: "Save",
     disabled: false,
+    tooltip: "Save current overlay configuration (not yet implemented)",
     onClick: () => {
       saveFigureState(info);
     }

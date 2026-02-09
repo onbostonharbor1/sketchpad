@@ -82,9 +82,8 @@ export function runPattern() {
     true
   );
 
-  textDiv.textContent = "Open the accordion, then click a drawRegistry item to validate it.";
-
-  return null;
+  // Return the initial message as HTML so it displays in the Result tab
+  return "Open the accordion, then click a drawRegistry item to validate it.";
 
 } // end runPattern
 
@@ -228,7 +227,7 @@ function validate(key, textDiv) {
   addSection("Optional: Missing", optionalMissing);
 
   // ---------------------------------------------------------
-  // Divider + pretty print (keep, because it’s still useful)
+  // Divider + pretty print (keep, because it's still useful)
   // ---------------------------------------------------------
   textDiv.appendChild(document.createElement("hr"));
 
@@ -238,4 +237,3 @@ function validate(key, textDiv) {
   textDiv.appendChild(pre);
 
 } // end validate
-

@@ -103,6 +103,11 @@ function open(items, anchor) {
     el.className = "caption-menu-item";
     el.textContent = item.label;
 
+    // Add tooltip if provided
+    if (item.tooltip) {
+      el.title = item.tooltip;
+    }
+
     if (item.disabled) {
       el.classList.add("disabled");
     } else {

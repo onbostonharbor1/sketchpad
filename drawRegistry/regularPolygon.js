@@ -16,7 +16,7 @@ window.drawRegistry_regularPolygon = {
   hover:        "",
 
   background: null,
-  overlays:   ["interaction"],
+  overlays:   [],
   transforms: [],
   elements:   null,
 

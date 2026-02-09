@@ -1,11 +1,11 @@
 /* ui/utilitiesMenuCmds.js
    ------------------------------------------------------------
-   Utilities Tab — Menu Commands (Adapter Layer)
+   Utilities Tab â€” Menu Commands (Adapter Layer)
    ------------------------------------------------------------
    Rules:
-     • Consumes ONLY the `info` object passed from utilities.js
-     • Does NOT derive context from uiState
-     • Delegates generic work to menuCmds.js
+     â€¢ Consumes ONLY the `info` object passed from utilities.js
+     â€¢ Does NOT derive context from uiState
+     â€¢ Delegates generic work to menuCmds.js
    ------------------------------------------------------------
 */
 
@@ -107,6 +107,7 @@ export async function getUtilitiesCaptionMenuItems(info) {
   items.push({
     label: "Show Script",
     disabled: !scriptPath,
+    tooltip: "View the source code for this utility",
     onClick: () => {
       if (!scriptPath) return;
       showScriptOffcanvas(scriptPath, label);
@@ -119,6 +120,7 @@ export async function getUtilitiesCaptionMenuItems(info) {
   items.push({
     label: "Edit Manifest",
     disabled: false,
+    tooltip: "Edit title, status, and other metadata",
     onClick: async () => {
       await editUtilitiesManifestItem(info);
     } // end onClick
@@ -130,6 +132,7 @@ export async function getUtilitiesCaptionMenuItems(info) {
   items.push({
     label: "Archive",
     disabled: false,
+    tooltip: "Move this utility to archive folder",
     onClick: async () => {
       await archiveUtilitiesItem(info);
     } // end onClick

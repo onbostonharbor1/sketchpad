@@ -1,0 +1,23 @@
+{
+  "name": "Four Ended",
+  "id": "parametrics",
+  "version": 0.3,
+  "category": "Parametrics",
+  "firstOrder": false,
+  "source": "secondary",
+  "tags": [
+    "Parametric",
+    "CurveStitch"
+  ],
+  "description": "Advanced morphing patterns with thinning and intersection controls",
+  "params": {
+    "variant": "fourEnded",
+    "color": "#0000ff",
+    "lineWidth": 1,
+    "depth": 0.9,
+    "sharpness": 5,
+    "phase": 0.48,
+    "complexity": 64,
+    "showIntersections": false
+  }
+}

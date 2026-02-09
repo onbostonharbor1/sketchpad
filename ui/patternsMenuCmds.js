@@ -1,5 +1,5 @@
 /* ============================================================
-   patternsMenuCmds.js — Patterns Tab Menu Commands
+   patternsMenuCmds.js â€” Patterns Tab Menu Commands
    ============================================================ */
 
 import { manifest }                   from "./manifest.js";
@@ -39,6 +39,9 @@ import { buildCanvasThumbnailBase64 } from "./uiUtilities.js";
        });
 
        if (result.status === "ok") {
+         // Show success message
+         alert("Thumbnail created successfully.");
+         
          // 3. Refresh the UI grid
          // The 100ms delay ensures the OS file system has settled
          setTimeout(() => {

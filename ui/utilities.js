@@ -33,6 +33,10 @@ let currentCategory = null;
 let currentList     = [];
 let currentIndex    = 0;
 
+// Track whether any utility has been run in this session
+// This controls whether the Result subtab is displayed
+let hasRunUtility = false;
+
 /* ============================================================
    Domain constants
 ============================================================ */
@@ -69,6 +73,9 @@ async function restoreUtilityTab() {
     await initUtilityTab(false);
     return;
   }
+
+  // Restore the hasRunUtility flag from saved state
+  hasRunUtility = saved.hasRunUtility || false;
 
   await setUtilitySubtabs();
 
@@ -113,6 +120,13 @@ export async function initUtilityTab(restored = false) {
 
   toolsRegistry.forEach((cat, i) => utilitiesCache.Tools[cat] = toolsRaw[i] || []);
   labRegistry.forEach((cat, i) => utilitiesCache.Lab[cat] = labRaw[i] || []);
+
+  // Restore hasRunUtility flag if we have saved state
+  if (restored && uiState.utilities.saved) {
+    hasRunUtility = uiState.utilities.saved.hasRunUtility || false;
+  } else {
+    hasRunUtility = false;
+  }
 
   await setUtilitySubtabs();
 
@@ -250,34 +264,6 @@ function updateUtilitiesCaption({ title, path, subtab, category, manifestPath, e
 
 
 
-/* ============================================================
-   ensureResultTab()
-   ------------------------------------------------------------
-   Creates the Result tab if it doesn't exist yet.
-============================================================ */
-function ensureResultTab() {
-  // Check if Result tab already exists
-  const existingTab = document.querySelector('[data-tab-id="tab-result"]');
-  if (existingTab) return;
-
-  // Create the Result tab using the same structure as setUtilitySubtabs
-  const bar = document.querySelector("#subtabs ul");
-  if (!bar) throw new Error("ensureResultTab: #subtabs ul not found");
-
-  const li = document.createElement("li");
-  li.className = "nav-item";
-
-  const btn = document.createElement("button");
-  btn.className = "nav-link";
-  btn.textContent = "Result";
-  btn.setAttribute("data-tab-id", "tab-result");
-  btn.onclick = () => switchUtilityTab("tab-result");
-
-  li.appendChild(btn);
-  bar.appendChild(li);
-} // end ensureResultTab
-
-
 function displayUtilityResult(html) {
   const textDiv = document.getElementById("text");
   if (!textDiv) throw new Error("displayUtilityResult: #text not found");
@@ -299,6 +285,7 @@ function displayUtilityResult(html) {
    2) Use data-tab-id consistently (dataset.tabId => attribute data-tab-id)
    3) Fail-fast if #subtabs missing
    4) Click handler correctly awaits async tab switch
+   5) Only create Result tab if hasRunUtility is true
 ============================================================ */
 async function setUtilitySubtabs() {
   const el = document.getElementById("subtabs");
@@ -333,7 +320,11 @@ async function setUtilitySubtabs() {
 
   makeSubtab("Tools",  "tab-tools");
   makeSubtab("Lab",    "tab-lab");
-  makeSubtab("Result", "tab-result");
+  
+  // Only create Result tab if a utility has been run
+  if (hasRunUtility) {
+    makeSubtab("Result", "tab-result");
+  }
 } // end setUtilitySubtabs
 
 
@@ -489,6 +480,9 @@ async function runUtilityEntry(subtab, category, entry) {
    ------------------------------------------------------------
    FIX: runUtilityEntry now requires category so it can build:
         /utilities/<subtab>/<category>/<entry.path>
+   
+   When a utility is run for the first time, set hasRunUtility
+   flag and rebuild the subtabs to show the Result tab
 ============================================================ */
 async function onUtilityItemClick(item) {
 
@@ -501,6 +495,14 @@ async function onUtilityItemClick(item) {
   uiState.utilities.activeUtilityItem  = item.entry;
   uiState.utilities.activeUtilityCategory = item.category;
   uiState.utilities.activeUtilityTabId = "tab-result";
+
+  // If this is the first utility run, rebuild subtabs to show Result tab
+  const wasFirstRun = !hasRunUtility;
+  hasRunUtility = true;
+  
+  if (wasFirstRun) {
+    await setUtilitySubtabs();
+  }
 
   activateUtilitySubtab("tab-result");
 
@@ -552,6 +554,7 @@ async function setUtilityCategories(which) {
    FIX:
    - Persist category as well as subtab + entry
    - Keeps Result reload deterministic
+   - Save hasRunUtility flag to persist Result tab visibility
 ============================================================ */
 export function saveUtilityState() {
 
@@ -560,7 +563,8 @@ export function saveUtilityState() {
     lastUtilitySubtab:  uiState.utilities.lastUtilitySubtab || null,
     lastUtilityCategory: uiState.utilities.activeUtilityCategory || null,
     lastUtilityItem:    uiState.utilities.activeUtilityItem || null,
-    lastResult:         uiState.utilities.lastResult || ""
+    lastResult:         uiState.utilities.lastResult || "",
+    hasRunUtility:      hasRunUtility
   };
 
   uiState.utilities.saved = s;

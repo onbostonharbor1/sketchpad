@@ -460,5 +460,4 @@ export function runPattern() {
    ============================================================ */
 export function stop() {
   stopAnimation();
-  console.log("Ribbon script: Animation loop terminated.");
 } // end stop

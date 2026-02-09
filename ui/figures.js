@@ -116,7 +116,7 @@ function renderSubtabs() {
         btn.appendChild(label);
 
         const close = document.createElement("span");
-        close.textContent = " Ã—";
+        close.textContent = " ×";
         close.style.cursor = "pointer";
         close.style.marginLeft = "5px";
         close.onclick = (e) => {

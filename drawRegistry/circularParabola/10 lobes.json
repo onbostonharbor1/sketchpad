@@ -1,5 +1,5 @@
 {
-  "name": "8 lobes",
+  "name": "10 lobes",
   "id": "circularParabola",
   "version": 1.5,
   "category": "curve_stitch",
@@ -15,9 +15,9 @@
       "y": 300
     },
     "radius": 150,
-    "numNodes": 8,
+    "numNodes": 10,
     "numSteps": 20,
-    "rotate": 165,
+    "rotate": 0,
     "xScale": 1,
     "yScale": 1,
     "color": "blue",

@@ -13,7 +13,86 @@ import { createGalleryPatternPng } from "./menuCmds.js";   // NEW
 import { createPatternScript } from "./menuCmds.js";   // NEW (next to createGalleryPatternPng)
 import { saveSecondary, archiveSecondary } from "./secondaryObjects.js";
 import { buildCanvasThumbnailBase64, openInputDialog, showMessageDialog } from "./uiUtilities.js";
+import { showScriptOffcanvas } from "./menuCmds.js";
+import { menuManager } from "./menuManager.js";
 import { uiState } from "./uiState.js";
+
+
+
+/* ============================================================
+   getDrawCaptionMenuItems(info)
+   ------------------------------------------------------------
+   Returns menu items for the draw caption menu.
+   
+   Arguments:
+     info = {
+       tabName: "draw",
+       itemName: <string>,        // registry key
+       scriptPath: <string>,      // path to script
+       menuContext: <object>,     // context for commands
+       isSecondary: <boolean>,    // is this a secondary object?
+       showControls: <boolean>    // are controls enabled?
+     }
+============================================================ */
+export async function getDrawCaptionMenuItems(info) {
+  
+  if (!info) throw new Error("getDrawCaptionMenuItems: info missing");
+  
+  const items = [
+    await menuManager.buildHelpItem(info.tabName, info.itemName),
+    { 
+      label: "Show Script", 
+      onClick: () => showScriptOffcanvas(info.scriptPath, info.itemName),
+      tooltip: "View the source code for this figure"
+    }
+  ];
+
+  if (info.isSecondary) {
+      items.push({
+          label: "Save",
+          onClick: () => saveActiveSecondaryObject(info.menuContext),
+          disabled: !info.showControls,
+          tooltip: "Save changes to this secondary object"
+      });
+      items.push({
+          label: "Save As",
+          onClick: () => saveActiveDrawObjectAsSecondary(info.menuContext),
+          disabled: !info.showControls,
+          tooltip: "Save current parameters as a new secondary object"
+      });
+      items.push({
+          label: "Archive",
+          onClick: () => archiveActiveSecondaryObject(info.menuContext),
+          tooltip: "Move this secondary object to archive folder"
+      });
+  } else {
+      items.push({
+          label: "Save As Secondary",
+          onClick: () => saveActiveDrawObjectAsSecondary(info.menuContext),
+          disabled: !info.showControls,
+          tooltip: "Save current parameters as a new variation"
+      });
+  }
+
+  items.push({ 
+    label: "Create Pattern", 
+    onClick: () => createPatternFromActiveDrawObject(info.menuContext),
+    tooltip: "Save current figure to Patterns tab with thumbnail"
+  });
+  items.push({ 
+    label: "Create PNG", 
+    onClick: () => createPngFromActiveDrawObject(info.menuContext),
+    tooltip: "Save PNG to Gallery/Patterns directory with thumbnail"
+  });
+  items.push({ 
+    label: "Duplicate", 
+    onClick: () => copyActiveDrawObject(),
+    tooltip: "Open a copy of this figure in a new tab"
+  });
+
+  return items;
+  
+} // end getDrawCaptionMenuItems
 
 
 export async function createPatternFromActiveDrawObject(menuContext) {
@@ -223,6 +302,11 @@ export async function saveActiveDrawObjectAsSecondary(menuContext) {
   // Signal Figures tab to reload categories (for ">" indicator)
   if (uiState.figures) {
     uiState.figures.needsUpdate = true;
+  }
+
+  // Signal Draw tab to update secondaries indicator
+  if (uiState.draw) {
+    uiState.draw.needsUpdate = true;
   }
 
   // If we were primary, we stay primary but now there is a secondary.

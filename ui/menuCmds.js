@@ -1,6 +1,6 @@
 /* ui/menuCmds.js
     ------------------------------------------------------------
-    Shared Menu Commands — Generic Dialogs
+    Shared Menu Commands â€” Generic Dialogs
     ------------------------------------------------------------
     Purpose:
       - Provide shared UI dialogs used by multiple tabs.
@@ -67,7 +67,7 @@ export async function archiveItem(specOrPayload) {
     { manifestPath, filename }
   );
 
-  // Default success alert (restores yesterday’s behavior)
+  // Default success alert (restores yesterdayâ€™s behavior)
   const showAlert = (spec.showAlert !== false);
   if (showAlert) {
     alert("Archived: " + filename);
@@ -166,7 +166,7 @@ function validateEditManifestSpec(spec) {
 } // end validateEditManifestSpec
 
 /* ============================================================
-    buildEditManifestHtml — TABLE LAYOUT (REFINED)
+    buildEditManifestHtml â€” TABLE LAYOUT (REFINED)
 =========================================================== */
 function buildEditManifestHtml(spec) {
 
@@ -258,7 +258,7 @@ function buildEditManifestHtml(spec) {
 
 
 /* ============================================================
-    wireEditManifestHandlers — UPDATED (NO UseCustom BUTTON)
+    wireEditManifestHandlers â€” UPDATED (NO UseCustom BUTTON)
 =========================================================== */
 function wireEditManifestHandlers(spec, resolve) {
 
@@ -634,12 +634,7 @@ export async function createGalleryPatternPng(spec = {}) {
   if (manifest.cache) delete manifest.cache.gallery;
 
   // 6. User Feedback
-  alert(
-    "PNG and written: " +
-    result.pngPath +
-    "\nThumbnail: " +
-    result.thumbPath
-  );
+  alert("Gallery image saved successfully.");
 
   return result;
 
@@ -721,14 +716,7 @@ export async function createPatternScript(spec = {}) {
   }
   if (manifest.cache) delete manifest.cache.patterns;
 
-  alert(
-    "Pattern created:\n" +
-    result.scriptPath +
-    "\n\nThumbnail:\n" +
-    result.thumbPath +
-    "\n\nManifest:\n" +
-    result.manifestPath
-  );
+  alert("Pattern created successfully.");
 
   return result;
 
@@ -909,7 +897,7 @@ export async function saveSecondaryObject(spec = {}) {
   });
 
   if (result.status === "ok") {
-    alert("Secondary template saved to: " + result.path);
+    alert("Secondary object saved successfully.");
   }
   return result;
 }

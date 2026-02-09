@@ -68,14 +68,14 @@ export class ManifestManager {
    ============================================================ */
   async get(basedir) {
     console.time(`ManifestManager.get(${basedir})`);
-    
+
     // 1) Check cache first
     if (Object.prototype.hasOwnProperty.call(this.cache, basedir)) {
       console.timeEnd(`ManifestManager.get(${basedir})`);
       console.log(`  └─ Cache HIT for '${basedir}'`);
       return this.cache[basedir];
     }
-    
+
     console.log(`  └─ Cache MISS for '${basedir}' - loading from disk...`);
 
     // 2) Try directoryRegistry.json

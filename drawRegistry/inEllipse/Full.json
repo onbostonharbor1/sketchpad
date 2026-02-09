@@ -1,0 +1,37 @@
+{
+  "name": "Full",
+  "id": "inEllipse",
+  "version": 1.6,
+  "category": "circles",
+  "firstOrder": false,
+  "source": "secondary",
+  "tags": [
+    "Ellipse",
+    "Curve Stitch"
+  ],
+  "description": "Draws chord patterns with adjustable center tapering.",
+  "params": {
+    "midpoint": {
+      "x": 300,
+      "y": 150
+    },
+    "color": "blue",
+    "lineWidth": 1,
+    "ellipse": {
+      "a": 500,
+      "b": 250
+    },
+    "numNodes": 120,
+    "chordLength": 20,
+    "startSkip": 0,
+    "endSkip": 0,
+    "withinCirc": 0,
+    "rotate": 0,
+    "points": [
+      {
+        "x": 300,
+        "y": 150
+      }
+    ]
+  }
+}

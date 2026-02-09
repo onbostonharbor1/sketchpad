@@ -16,5 +16,11 @@
     "path": "Rotated.json",
     "title": "Rotated",
     "thumb": "images/thumb_Rotated.png"
+  },
+  {
+    "filename": "Full",
+    "path": "Full.json",
+    "title": "Full",
+    "thumb": "images/thumb_Full.png"
   }
 ]

@@ -14,7 +14,7 @@ window.drawRegistry_nautilus = {
   status:       "",
 
   background: null,
-  overlays:   ["interaction"],
+  overlays:   [],
   transforms: [],
   elements:   null,
 

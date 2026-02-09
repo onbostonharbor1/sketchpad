@@ -98,6 +98,11 @@ export function renderCategories(targetId, descriptor) {
       );
     }
 
+    // Skip empty categories
+    if (items.length === 0) {
+      return;
+    }
+
     const { frame, header, content } =
       buildCategoryFrameElement(frameDesc.title, items.length);
 

@@ -360,7 +360,7 @@ export function updateActionPanel() {
     // If no active overlay, show placeholder
     const tabState = getActiveTabState();
     if (!tabState) {
-         actionDiv.innerHTML = "<p class='p-2'>Select an overlay. </p>";
+         actionDiv.innerHTML = "<p class='p-2'>Select an overlay</p>";
          return;
     }
 

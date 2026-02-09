@@ -15,7 +15,7 @@ window.drawRegistry_linkedCircles = {
   status:       "",
 
   background: null,
-  overlays:   ["interaction"],
+  overlays:   [],
   elements:   null,
 
   interactive: true,

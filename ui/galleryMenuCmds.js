@@ -1,6 +1,6 @@
 /* galleryMenuCmds.js
    ------------------------------------------------------------
-   Gallery Tab — Menu Commands (Adapter Layer)
+   Gallery Tab â€” Menu Commands (Adapter Layer)
    ------------------------------------------------------------
 */
 
@@ -118,6 +118,7 @@ export async function getGalleryCaptionMenuItems(info) {
   items.push({
     label: "Show Script",
     disabled: !info.isScript,
+    tooltip: "View the source code for this gallery item",
     onClick: () => showGalleryScript(info)
   });
 
@@ -125,6 +126,7 @@ export async function getGalleryCaptionMenuItems(info) {
   items.push({
     label: "Edit Manifest",
     disabled: false,
+    tooltip: "Edit title, status, and other metadata",
     onClick: async () => {
       await editGalleryManifestItem(info);
     }
@@ -134,6 +136,7 @@ export async function getGalleryCaptionMenuItems(info) {
   items.push({
     label: "Archive",
     disabled: false,
+    tooltip: "Move this item to archive folder",
     onClick: async () => {
       await archiveGalleryItem(info);
     }

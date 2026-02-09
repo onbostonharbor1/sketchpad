@@ -16,7 +16,7 @@ window.drawRegistry_radiate = {
   status:       "",
 
   background: null,
-  overlays:   ["interaction"],
+  overlays:   [],
   transforms: [],
   elements:   null,
 

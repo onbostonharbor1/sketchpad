@@ -1,6 +1,6 @@
 /* ui/homeMenuCmds.js
    ------------------------------------------------------------
-   Home Tab — Caption Menu Commands
+   Home Tab â€” Caption Menu Commands
    ------------------------------------------------------------
 */
 
@@ -33,6 +33,7 @@ export async function getHomeCaptionMenuItems(info) {
   items.push({
     label: "Show Script",
     disabled: !isScript,
+    tooltip: "View the source code for this script",
     onClick: () => {
       if (!isScript) return;
       showScriptOffcanvas(scriptPath, label);
@@ -45,6 +46,7 @@ export async function getHomeCaptionMenuItems(info) {
   items.push({
     label: "Edit Manifest",
     disabled: false,
+    tooltip: "Edit title, status, and other metadata",
     onClick: async () => {
       await editHomeManifestItem(info);
     } // end onClick
@@ -60,8 +62,8 @@ export async function getHomeCaptionMenuItems(info) {
    editHomeManifestItem(homeItem)
    ------------------------------------------------------------
    Behavior rule:
-     - If status cleared ("") → exit Results (Categories view)
-     - Else → stay in Results
+     - If status cleared ("") â†’ exit Results (Categories view)
+     - Else â†’ stay in Results
 ============================================================ */
 export async function editHomeManifestItem(homeItem) {
 
@@ -102,18 +104,18 @@ export async function editHomeManifestItem(homeItem) {
   // NOTE: openEditManifestDialog currently returns only ok=true/false,
   // so we must re-read the manifest to know the new status.
   // The simplest rule here is:
-  //   - if oldStatus was already "" → nothing to do
+  //   - if oldStatus was already "" â†’ nothing to do
   //   - otherwise we assume status might have been cleared and we must re-check
   //
   // Since refreshHomeCategoriesFromManifestEdit() reloads the manifest,
   // the safest behavior without extra return data is:
   //   - If oldStatus was non-empty, and the item is now missing from grouping,
-  //     then it was cleared → exit Results.
+  //     then it was cleared â†’ exit Results.
   //
   // But we do not have direct access to the refreshed grouped map here.
   // Therefore: for NOW we will use a conservative rule:
-  //   - If oldStatus was "" → stay (already not categorized)
-  //   - Else → stay (status changed)  [no forced switch]
+  //   - If oldStatus was "" â†’ stay (already not categorized)
+  //   - Else â†’ stay (status changed)  [no forced switch]
   //
   // To implement the exact rule, openEditManifestDialog must return the new status.
 
