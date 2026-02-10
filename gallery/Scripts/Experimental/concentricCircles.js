@@ -17,60 +17,15 @@
 
    Straight segments produce emergent curves, envelopes, and moiré patterns.
 
-   CONTROL DICTIONARY
-   ------------------
-   PLACEMENT & SHIFT:
-   - centerX / centerY: The origin (0,0) for all polar math.
-   - offsetX / offsetY: A final translation applied to the entire rendering.
-
-   RING GEOMETRY:
-   - innerR / outerR: The radius bounds for the concentric system.
-   - ringCount: The number of nested boundaries (rings) to generate.
-
-   PAIRING LOGIC:
-   - pairingMode:
-     * 'single'   : Connects only two specific rings (ringA and ringB).
-     * 'adjacent' : Connects neighbors (0-1, 1-2, 2-3).
-     * 'all'      : Connects every ring to every other ring (high complexity).
-   - ringA / ringB: The specific indices used when in 'single' mode.
-
-   BOUNDARY TYPES:
-   - boundaryType:
-     * 'circle'    : Standard uniform radius.
-     * 'ellipse'   : Uses ellipseRatio to squash/stretch the Y-axis.
-     * 'modulated' : Varies the radius using a sine wave (modAmp/Freq/Phase).
-     * 'polygon'   : Uses a polar equation to force points onto flat edges (sides 3-8).
-
-   MAPPING MODES:
-   - direction: Clockwise (cw) or Counter-clockwise (ccw) point sampling.
-   - mappingMode:
-     * 'ratio' : Simple linear multiplier (u = N * t).
-     * 'phase' : Adds a constant rotation offset (u = N * t + phase).
-     * * 'warp'  : Adds a secondary sine-wave distortion for organic fluid effects.
-
-   COLOR MODES & INTERPOLATION (HSL Edition):
-   - hStart, sStart, lStart: HSL components for the innermost ring (Index 0).
-   - hEnd, sEnd, lEnd: HSL components for the outermost ring.
-   - Interpolation: The engine calculates the specific color for each ring
-     by blending HSL values based on the ring's index.
-
-   CORE LOGIC HUBS (Study Guide)
-   -----------------------------
-   1. MECHANICAL MATH (pointOnBoundary): Resolves polar (r, t) to Cartesian (x, y).
-   2. THE STITCH EQUATION (mapAngle): Determines the interference by defining
-      the relationship between source angle 't' and target angle 'u'.
-   3. TOPOLOGY LOGIC (drawSingle/Adjacent/All): Orchestrates the layering
-      of the atomic "Stitch Pair" into a complex network.
    ============================================================================ */
 
 import { buildParameterControls } from "/ui/parameterControls.js";
 
 export const scriptInfo = {
-  title: "Concentric Stitch Engine — HSL Chromatic Version",
+  title: "Concentric Stitch Engine — Chromatic Version",
 
   params: {
-    /* Group 1: Global */
-    groupGlobal: "UNIVERSAL SETTINGS", // Static Header
+    /* Global */
     centerX: 350,
     centerY: 380,
     innerR: 120,
@@ -81,44 +36,35 @@ export const scriptInfo = {
     ringB: 2,
     steps: 220,
 
-    /* Inner Color Anchor */
-    hStart: 10,
-    sStart: 80,
-    lStart: 50,
+    /* Colors */
+    innerColor: "hsl(10, 80%, 50%)",
+    outerColor: "hsl(210, 60%, 30%)",
 
-    /* Outer Color Anchor */
-    hEnd: 210,
-    sEnd: 60,
-    lEnd: 30,
-
-    boundaryType: "circle",
-
-    /* Group 2: Polygon */
-    groupPolygon: "POLYGON MODULE", // Static Header
-    sides: 4,
-
-    /* Group 3: Ellipse */
-    groupEllipse: "ELLIPSE MODULE", // Static Header
-    ellipseRatio: 0.70,
-
-    /* Group 4: Modulated */
-    groupModulated: "MODULATED MODULE", // Static Header
-    modAmp: 0.25,
-    modFreq: 6,
-    modPhase: 0.0,
-
-    /* Group 5: Mapping & Warp */
-    groupMapping: "RELATIONSHIP & WARP", // Static Header
+    /* Mapping & Warp */
     mappingMode: "ratio",
     ratio: 3.0,
     phase: 0.0,
     warpAmp: 0.0,
     warpFreq: 3.0,
 
+    /* Shape selector */
+    boundaryType: "circle",
+
+    /* Polygon */
+    sides: 4,
+
+    /* Ellipse */
+    ellipseRatio: 0.70,
+
+    /* Modulated */
+    modAmp: 0.25,
+    modFreq: 6,
+    modPhase: 0.0,
+
     /* Hidden/Static Boilerplate */
     direction: "cw",
     tStart: 0.0,
-    tEnd: 1.0, // Switched to 1.0 for perimeter-based sampling
+    tEnd: 1.0,
     lineWidth: 1,
     offsetX: 0,
     offsetY: 0,
@@ -130,8 +76,8 @@ export const scriptInfo = {
   parameters: null,
 
   controls: {
-    /* --- GROUP 1: GLOBAL --- */
-    groupGlobal: { widget: "staticText", text: "--- Used By All ---" },
+    /* --- GLOBAL --- */
+    groupGlobal: { widget: "staticText", text: "--- UNIVERSAL SETTINGS ---" },
     centerX: { label: "Center X", widget: "range", min: 0, max: 700, step: 10 },
     centerY: { label: "Center Y", widget: "range", min: 0, max: 700, step: 10 },
     innerR:  { label: "Inner R",  widget: "range", min: 5, max: 300, step: 10 },
@@ -140,37 +86,70 @@ export const scriptInfo = {
     pairingMode: { label: "Pairing mode", widget: "select", options: ["single", "adjacent", "all"] },
     steps:    { label: "Steps (Density)", widget: "range", min: 20, max: 400, step: 1 },
 
-    /* HSL Sliders */
-    hStart: { label: "Inner Hue", widget: "range", min: 0, max: 360 },
-    sStart: { label: "Inner Sat", widget: "range", min: 0, max: 100 },
-    lStart: { label: "Inner Light", widget: "range", min: 0, max: 100 },
-    hEnd:   { label: "Outer Hue", widget: "range", min: 0, max: 360 },
-    sEnd:   { label: "Outer Sat", widget: "range", min: 0, max: 100 },
-    lEnd:   { label: "Outer Light", widget: "range", min: 0, max: 100 },
+    /* Colors */
+    innerColor: { label: "Inner Color", widget: "color" },
+    outerColor: { label: "Outer Color", widget: "color" },
 
-    boundaryType: { label: "SHAPE TYPE", widget: "select", options: ["circle", "ellipse", "modulated", "polygon"] },
+    /* --- MAPPING & WARP (Accordion) --- */
+    mappingAccordion: {
+      widget: "accordion",
+      sections: [
+        {
+          title: "Mapping & Warp",
+          controls: {
+            mappingMode: { label: "Mapping Mode", widget: "select", options: ["ratio", "phase", "warp"] },
+            ratio: { label: "Ratio (N)", widget: "range", min: -12.0, max: 12.0, step: 0.01 },
+            phase: { label: "Phase", widget: "range", min: -1.0, max: 1.0, step: 0.01 },
+            warpAmp:  { label: "Warp amp", widget: "range", min: 0.0, max: 0.5, step: 0.01 },
+            warpFreq: { label: "Warp freq", widget: "range", min: 0.0, max: 24.0, step: 0.01 }
+          }
+        }
+      ]
+    },
 
-    /* --- GROUP 2: POLYGON --- */
-    groupPolygon: { widget: "staticText", text: "--- Polygon ---" },
-    sides: { label: "Polygon Sides", widget: "range", min: 3, max: 8, step: 1 },
+    /* --- SHAPE TYPE SELECTOR (with grouping trigger) --- */
+    boundaryType: {
+      label: "SHAPE TYPE",
+      widget: "select",
+      options: ["circle", "ellipse", "modulated", "polygon"],
+      showsGroup: true
+    },
 
-    /* --- GROUP 3: ELLIPSE --- */
-    groupEllipse: { widget: "staticText", text: "--- Ellipse ---" },
-    ellipseRatio: { label: "Ellipse ratio", widget: "range", min: 0.1, max: 1.0, step: 0.01 },
+    /* --- POLYGON --- */
+    sides: {
+      label: "Polygon Sides",
+      widget: "range",
+      min: 3, max: 8, step: 1,
+      belongsToGroup: "polygon"
+    },
 
-    /* --- GROUP 4: MODULATED --- */
-    groupModulated: { widget: "staticText", text: "--- Modulated ---" },
-    modAmp:   { label: "Mod amp", widget: "range", min: 0.0, max: 0.9, step: 0.01 },
-    modFreq:  { label: "Mod freq", widget: "range", min: 1, max: 24, step: 1 },
-    modPhase: { label: "Mod phase", widget: "range", min: -6.28, max: 6.28, step: 0.01 },
+    /* --- ELLIPSE --- */
+    ellipseRatio: {
+      label: "Ellipse ratio",
+      widget: "range",
+      min: 0.1, max: 1.0, step: 0.01,
+      belongsToGroup: "ellipse"
+    },
 
-    /* --- GROUP 5: MAPPING & WARP --- */
-    groupMapping:  { widget: "staticText", text: "--- Mapping & Warp  ---" },
-    mappingMode: { label: "Mapping Mode", widget: "select", options: ["ratio", "phase", "warp"] },
-    ratio: { label: "Ratio (N)", widget: "range", min: -12.0, max: 12.0, step: 0.01 },
-    phase: { label: "Phase", widget: "range", min: -1.0, max: 1.0, step: 0.01 },
-    warpAmp:  { label: "Warp amp", widget: "range", min: 0.0, max: 0.5, step: 0.01 },
-    warpFreq: { label: "Warp freq", widget: "range", min: 0.0, max: 24.0, step: 0.01 }
+    /* --- MODULATED --- */
+    modAmp: {
+      label: "Mod amp",
+      widget: "range",
+      min: 0.0, max: 0.9, step: 0.01,
+      belongsToGroup: "modulated"
+    },
+    modFreq: {
+      label: "Mod freq",
+      widget: "range",
+      min: 1, max: 24, step: 1,
+      belongsToGroup: "modulated"
+    },
+    modPhase: {
+      label: "Mod phase",
+      widget: "range",
+      min: -6.28, max: 6.28, step: 0.01,
+      belongsToGroup: "modulated"
+    }
   },
 
   onParamChange() {},
@@ -182,15 +161,32 @@ export const scriptInfo = {
 ============================================================ */
 
 /**
- * Utility: Linear interpolation between two HSL states.
- * @param {Object} p - The current script parameters.
- * @param {number} factor - 0.0 to 1.0 blend.
- * @returns {string} hsl css string.
+ * Parse HSL string and return components
+ */
+function parseHSL(hslString) {
+  const match = hslString.match(/hsl\((\d+),\s*(\d+)%,\s*(\d+)%\)/);
+  if (match) {
+    return {
+      h: parseInt(match[1]),
+      s: parseInt(match[2]),
+      l: parseInt(match[3])
+    };
+  }
+  // Default fallback
+  return { h: 0, s: 0, l: 0 };
+}
+
+/**
+ * Utility: Linear interpolation between two HSL colors.
  */
 function getRingColor(p, factor) {
-  const h = p.hStart + factor * (p.hEnd - p.hStart);
-  const s = p.sStart + factor * (p.sEnd - p.sStart);
-  const l = p.lStart + factor * (p.lEnd - p.lStart);
+  const inner = parseHSL(p.innerColor);
+  const outer = parseHSL(p.outerColor);
+
+  const h = inner.h + factor * (outer.h - inner.h);
+  const s = inner.s + factor * (outer.s - inner.s);
+  const l = inner.l + factor * (outer.l - inner.l);
+
   return `hsl(${h}, ${s}%, ${l}%)`;
 }
 
@@ -204,7 +200,6 @@ function clearCanvas() {
 
 /**
  * Translates the entire rendering based on offsetX/offsetY.
- * @param {Object} p - The current script parameters.
  */
 function applyGlobalOffset(p) {
   ctx.translate(p.offsetX, p.offsetY);
@@ -235,14 +230,12 @@ function computeRings(p) {
 
 /**
  * The Stitch Equation: determines target index 'u' from source index 't'.
- * Inputs are normalized to perimeter position (0..1).
  */
 function mapAngle(t, p) {
   const sign = (p.direction === "cw") ? 1 : -1;
   const base = (sign * p.ratio * t);
   if (p.mappingMode === "ratio") return base;
   if (p.mappingMode === "phase") return base + p.phase;
-  // Warp logic adjusted for normalized scale
   return base + p.phase + (p.warpAmp * Math.sin(p.warpFreq * t * Math.PI * 2));
 }
 
@@ -275,7 +268,6 @@ function pointOnBoundary(p, radius, angle) {
 /**
  * Perimeter re-parameterization to ensure uniform point distribution.
  */
-
 function getArcLengthPoints(p, radius, count) {
   const resolution = 1000;
   let rawPoints = [];
@@ -319,7 +311,6 @@ function drawRing(p, radius) {
   ctx.lineWidth = p.ringWidth;
   ctx.strokeStyle = p.ringColor;
   ctx.beginPath();
-  // Using higher res for visual ring fidelity
   for (let i = 0; i <= 360; i++) {
     const pt = pointOnBoundary(p, radius, i * (Math.PI / 180));
     if (i === 0) ctx.moveTo(pt.x, pt.y);
@@ -341,7 +332,6 @@ function drawStitchPair(p, ptsA, ptsB, stroke) {
   for (let i = 0; i < len; i++) {
     const t = i / len;
     const uRaw = mapAngle(t, p);
-    // Perimeter wrap logic
     const uIdx = Math.floor(((uRaw % 1 + 1) % 1) * len);
 
     const a = ptsA[i];
@@ -400,10 +390,8 @@ function draw(p) {
   applyGlobalOffset(p);
   const rings = computeRings(p);
 
-  // Pre-generate arc-length-parameterized point sets for each ring
   const ringSets = rings.map(r => getArcLengthPoints(p, r, p.steps));
 
-  // Optional: Draw physical boundary guides
   for (let r of rings) drawRing(p, r);
 
   if (p.pairingMode === "single") drawSinglePair(p, ringSets);
