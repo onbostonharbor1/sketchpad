@@ -60,6 +60,12 @@
     "status": "working"
   },
   {
+    "file": "cycloid0209_152200",
+    "path": "/patterns/circles/cycloid0209_152200.js",
+    "title": "cycloid0209_152200.js",
+    "status": "new"
+  },
+  {
     "file": "epitrochoid",
     "path": "/gallery/Scripts/Named parametric/epitrochoid.js",
     "title": "Epitrochoid",
@@ -70,6 +76,12 @@
     "path": "/gallery/Scripts/Elliptical/generativeModulated.js",
     "title": "generativeModulated.js",
     "status": "favorite"
+  },
+  {
+    "file": "Green ellipse0209_150016",
+    "path": "/patterns/circles/Green ellipse0209_150016.js",
+    "title": "Green ellipse0209_150016.js",
+    "status": "new"
   },
   {
     "file": "inEllipse0209_125426",
@@ -87,6 +99,12 @@
     "file": "inEllipse0209_145236",
     "path": "/patterns/circles/inEllipse0209_145236.js",
     "title": "inEllipse0209_145236.js",
+    "status": "new"
+  },
+  {
+    "file": "inEllipse0209_145550",
+    "path": "/patterns/circles/inEllipse0209_145550.js",
+    "title": "inEllipse0209_145550.js",
     "status": "new"
   },
   {
@@ -190,6 +208,12 @@
     "path": "/patterns/circles/twoEllipses.js",
     "title": "Two Ellipses",
     "status": "To Gallery"
+  },
+  {
+    "file": "variedEllipse",
+    "path": "/gallery/Scripts/Experimental/variedEllipse.js",
+    "title": "variedEllipse.js",
+    "status": "Examine"
   },
   {
     "file": "weaving",

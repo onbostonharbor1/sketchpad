@@ -139,11 +139,9 @@ export class Ellipse {
        as inputs that the drawing code may adjust and test.
      ---------------------------------------------------------- */
   constructor(s = {}) {
+
     // --------------------------------------------------------
     // Defaults
-    // --------------------------------------------------------
-    // These are used when caller does not supply overrides.
-    // Note: midpoint default is a NEW Point instance.
     // --------------------------------------------------------
     const defaults = {
       // Stroke / appearance
@@ -151,8 +149,6 @@ export class Ellipse {
       lineWidth: 1,
 
       // Ellipse geometry (semi-axes)
-      // By default, we treat s.radius as a convenient way to set both
-      // semi-axes equally (i.e., a circle-like ellipse).
       ellipse: {
         a: s.radius || 200,
         b: s.radius || 200,
@@ -161,56 +157,45 @@ export class Ellipse {
       // Center point
       midpoint: new Point(200, 200),
 
-      // Sampling density: number of nodes around the perimeter
+      // Sampling density
       numNodes: 150,
 
-          // Used when tapering or drawing partial arcs.
+      // Skip logic
       startSkip: 0,
       endSkip:   0,
 
-      // Convenience radius value
-      radius:     200,
+      // Convenience radius
+      radius: 200,
 
-      // Rotation (units depend on draw code; typically radians)
-      rotate:     0,
+      // Rotation
+      rotate: 0,
 
-      // Constraint or tuning parameter for chord-based drawing
+      // Chord constraint
       chordLength: 10,
 
-      // withinCirc mode constant (FULL by default)
-      withinCirc:  FULL,
+      // withinCirc mode
+      withinCirc: FULL,
 
-      // Additional scaling multipliers
-      xScale:      1,
-      yScale:      1,
+      // Scaling
+      xScale: 1,
+      yScale: 1,
 
-      // Adding arms to a circle
-      arm1:        null,
-	  arm2:        null
+      // Arms
+      arm1: null,
+      arm2: null,
+
+      // --------------------------------------------------------
+      // NEW EXPERIMENTAL PARAMETERS
+      // --------------------------------------------------------
+      spacingBias: 0.0,     // -1 → +1 (non-uniform spacing)
+      jitter:      0.0,     // pixel jitter amount
+      jitterMode:  "radial" // "radial", "tangent", "xy"
     };
 
-    // --------------------------------------------------------
-    // Merge defaults with overrides (shallow merge)
-    // --------------------------------------------------------
-    // Object.assign({}, defaults, s) produces:
-    //   - a NEW object that starts with defaults
-    //   - then overwrites with any properties in s
-    //
-    // Because this is shallow:
-    //   - if s.ellipse is provided, it replaces defaults.ellipse entirely
-    //   - same for any other nested object member
-    // --------------------------------------------------------
+    // Shallow merge
     const merged = Object.assign({}, defaults, s);
 
-    // --------------------------------------------------------
-    // Assign merged values onto this instance
-    // --------------------------------------------------------
-    // After this call, the instance has members:
-    //   this.color, this.lineWidth, this.ellipse, this.midpoint, ...
-    //
-    // Again: shallow assignment. If merged.ellipse is an object, it becomes
-    // the instance ellipse object directly.
-    // --------------------------------------------------------
+    // Assign to instance
     Object.assign(this, merged);
-  } // end constructor
-} // end Ellipse
+  }
+}

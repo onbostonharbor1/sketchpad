@@ -1,6 +1,6 @@
 import { Ellipse, START_END, FULL, TAPER, START_TAPER, END_TAPER }
-                               from "../classes/ellipseClass.js";
-import { Line, Point }         from "../classes/classes.js";
+                               from "/classes/ellipseClass.js";
+import { Line, Point }         from "/classes/classes.js";
 import { drawLine, drawNodes, toRadians } from "./drawUtilities.js";
 
 const CLOSE     = true;
@@ -649,5 +649,284 @@ export function arcCurvature(pt1, pt2, curve, numPoints = 32) {
 	pts.push(new Point(x,y));
     }
     return pts;
+}
+
+// VARIED ELLIPSE
+// NEW FUNCTION
+
+
+// ------------------------------------------------------------
+// getVariedEllipsePoints(thing)
+// ------------------------------------------------------------
+export function getVariedEllipsePoints(thing) {
+
+  const {
+    ellipse, midpoint, numNodes,
+    rotate, xScale, yScale,
+    spacingBias, jitter, jitterMode
+  } = thing;
+
+  const a = ellipse.a * xScale;
+  const b = ellipse.b * yScale;
+
+  const cx = midpoint.x;
+  const cy = midpoint.y;
+
+  const rot = rotate * (Math.PI / 180);
+  const cosR = Math.cos(rot);
+  const sinR = Math.sin(rot);
+
+  const pts = new Array(numNodes);
+
+  function remap(t) {
+    if (spacingBias === 0) return t;
+    const p = 1 + 4 * spacingBias;
+    return Math.pow(t, p);
+  }
+
+  function jitterXY(pt) {
+    return {
+      x: pt.x + (Math.random() * 2 - 1) * jitter,
+      y: pt.y + (Math.random() * 2 - 1) * jitter
+    };
+  }
+
+  function jitterRadial(pt, theta) {
+    const jr = jitter * (Math.random() * 2 - 1);
+    return {
+      x: pt.x + jr * Math.cos(theta),
+      y: pt.y + jr * Math.sin(theta)
+    };
+  }
+
+  function jitterTangent(pt, theta) {
+    const jt = jitter * (Math.random() * 2 - 1);
+    const tx = -Math.sin(theta);
+    const ty =  Math.cos(theta);
+    return {
+      x: pt.x + jt * tx,
+      y: pt.y + jt * ty
+    };
+  }
+
+  for (let i = 0; i < numNodes; i++) {
+
+    const t  = i / numNodes;
+    const t2 = remap(t);
+    const theta = t2 * Math.PI * 2;
+
+    const ex = a * Math.cos(theta);
+    const ey = b * Math.sin(theta);
+
+    let px = cx + ex * cosR - ey * sinR;
+    let py = cy + ex * sinR + ey * cosR;
+
+    let pt = { x: px, y: py };
+
+    if (jitter > 0) {
+      if (jitterMode === "xy") pt = jitterXY(pt);
+      else if (jitterMode === "tangent") pt = jitterTangent(pt, theta);
+      else pt = jitterRadial(pt, theta);
+    }
+
+    pts[i] = pt;
+  }
+
+  return pts;
+}
+
+export function drawInVariedEllipse(thing) {
+  function drawStart(nodes, chordLength, thing, start, dist = 4) {
+    // dist: initial chord length
+    // chordLength: target (full) chord length
+    // returns: index of first unused node after taper
+
+    const len = nodes.length;
+    const numLines = chordLength - dist; // taper length directly tied to dist
+    let inc = dist;
+    let j = start;
+    let color = thing.color;
+    let lineWidth = thing.lineWidth;
+
+    for (let i = 0; i < numLines; i++) {
+      j = (start + i) % len;
+      const k = (j + inc) % len;
+      drawLine(nodes[j], nodes[k], color, lineWidth);
+      inc++;
+    }
+
+    // Return the next start index for drawWithin
+    return (j + 1) % len;
+  } // end drawStart
+
+  // length = how many nodes to cover starting at `start` (not an index).
+  // wrap=false (default) means: stop at length - chordLength so End can finish.
+  // wrap=true means: draw the full length, allowing wraparound (used for FULL).
+  function drawWithin(
+    nodes,
+    chordLength,
+    thing,
+    start,
+    length,
+    { wrap = false } = {}
+  ) {
+    const len = nodes.length;
+    const numLines = wrap ? length : Math.max(0, length - chordLength);
+    let j = start;
+    let color = thing.color;
+    let lineWidth = thing.lineWidth;
+
+    for (let i = 0; i < numLines; i++) {
+      j = (start + i) % len;
+      const k = (j + chordLength) % len;
+      drawLine(nodes[j], nodes[k], color, lineWidth);
+    }
+
+    // First unused node after the last chord start
+    return (j + 1) % len;
+  } // end drawWithin
+
+  function drawEnd(nodes, chordLength, thing, start, length, dist = 4) {
+    // Draws the taper-down phase at the end of the pattern.
+    // Restores the original behavior: index increments by 2
+    // so the lines thin and taper smoothly rather than abruptly.
+
+    const len       = nodes.length;
+    let color       = thing.color;
+    let lineWidth   = thing.lineWidth;
+    let currentSkip = chordLength;
+    const numLines  = Math.max(0, currentSkip - dist);
+    let j, k;
+
+    for (
+      let i = start, lineCount = 0;
+      lineCount < numLines;
+      i += 2, lineCount++
+    ) {
+      currentSkip--; // shorten chord
+      j = i % len;
+      k = (i + currentSkip + 1) % len;
+      drawLine(nodes[j], nodes[k], color, lineWidth);
+    }
+
+    return (j + 1) % len;
+  } // end drawEnd
+
+  // ------------------------------------------------------------
+  // Helper: optionally extend ellipse with attached arms
+  // ------------------------------------------------------------
+  function extendWithArms(nodes, arm1, arm2) {
+    // If arm1 shares first circle point, remove overlap before concat
+    if (Array.isArray(arm1)) {
+      const sharesStart =
+        arm1.length &&
+        arm1[arm1.length - 1].x === nodes[0].x &&
+        arm1[arm1.length - 1].y === nodes[0].y;
+      if (sharesStart) nodes.shift();
+      nodes = arm1.concat(nodes);
+    }
+
+    // Append arm2 directly
+    if (Array.isArray(arm2)) {
+      nodes = nodes.concat(arm2);
+    }
+
+    return nodes;
+  } // end extendWithArms
+
+  function adjustStartEnd(nodes, thing, start, end, length) {
+    if (thing.startSkip > 0) {
+      start   = thing.startSkip;
+      length -= thing.startSkip;
+    } else if (thing.startSkip < 0) {
+      start   = nodes.length + thing.startSkip;
+      length -= thing.startSkip;
+    }
+
+    if (thing.endSkip > 0) {
+      end    = nodes.length - thing.endSkip;
+      length -= thing.endSkip;
+    } else if (thing.endSkip < 0) {
+      end     = -thing.endSkip;
+      length -= thing.endSkip;
+    }
+
+    return { start, end, length };
+  } // end adjustStartEnd
+
+  const DISTANCE = 4;
+  let chordLength = thing.chordLength;
+  let nodes       = getVariedEllipsePoints(thing);
+  let start       = 0;
+  let end         = nodes.length;
+  // length = total of nodes to be done
+  // it will be greater than nodes.length
+  // if startSkip or endSkip is negative
+  let length      = end;
+
+  // ------------------------------------------------------------
+  // COMPLETE CIRCLE
+  // ------------------------------------------------------------
+  if (thing.withinCirc === FULL) {
+    drawWithin(nodes, chordLength, thing, start, length, { wrap: true });
+    drawNodes(thing, nodes);
+    return;
+  }
+
+  // ------------------------------------------------------------
+  // ADD ARMS (START_END mode)
+  // ------------------------------------------------------------
+  if (Array.isArray(thing.arm1) || Array.isArray(thing.arm2)) {
+    thing.withinCirc = START_END; // enforce mode
+    nodes = extendWithArms(nodes, thing.arm1, thing.arm2);
+    drawWithin(nodes, chordLength, thing, start, length);
+    return;
+  }
+
+  ({ start, end, length } = adjustStartEnd(nodes, thing, start, end, length));
+
+  // DRAW OUTLINE OF ELLIPSE SEGMENT
+  // This draws the visible outer arc of the ellipse based on startSkip/endSkip.
+  // If both skips are zero, the full ellipse is drawn. Otherwise, only the
+  // partial segment between the adjusted start and end indices is shown.
+
+  for (let i = start; i < start + length - 1; i++) {
+    const j = i % nodes.length;          // current point index (wraps)
+    const k = (i + 1) % nodes.length;    // next point index (wraps)
+    drawLine(nodes[j], nodes[k], thing);
+  } // end outline loop
+
+  // START_END: no taper, draw full within segment
+  if (thing.withinCirc == START_END) {
+    drawWithin(nodes, chordLength, thing, start, length);
+    return;
+  }
+
+  // START_TAPER: gradual ramp-in at beginning
+  if (thing.withinCirc == START_TAPER) {
+    start = drawStart(nodes, chordLength, thing, start, DISTANCE);
+    drawWithin(
+      nodes,
+      chordLength,
+      thing,
+      start,
+      length - start + thing.startSkip
+    );
+    return;
+  }
+
+  // END_TAPER: gradual ramp-out at end
+  if (thing.withinCirc == END_TAPER) {
+    end = length - chordLength + DISTANCE;
+    start = drawWithin(nodes, chordLength, thing, start, end);
+    drawEnd(nodes, chordLength, thing, start, length - thing.startSkip);
+    return;
+  }
+
+  // TAPER: both ramp-in and ramp-out
+  start = drawStart(nodes, chordLength, thing, start, DISTANCE); // fade in
+  end   = length - chordLength + DISTANCE - start + thing.startSkip; // middle section
+  start = drawWithin(nodes, chordLength, thing, start, end); // steady section
+  drawEnd(nodes, chordLength, thing, start, length); // fade out
 }
 

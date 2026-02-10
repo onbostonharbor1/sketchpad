@@ -10,5 +10,11 @@
     "path": "concentricCircles.js",
     "title": "concentricCircles.js",
     "status": "Examine"
+  },
+  {
+    "filename": "variedEllipse",
+    "path": "variedEllipse.js",
+    "title": "variedEllipse.js",
+    "status": "Examine"
   }
 ]
