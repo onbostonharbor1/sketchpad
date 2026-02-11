@@ -1,0 +1,2 @@
+sketchpad is a hobbyist project. Its purpose is to create templates into whicj i can pound naiks into wood to create curvw stitch projects. It has grown in scope because i cant help myself, and it has been twenty years since I've coded anything. It is February 2026, and I'm about to start the hardest part, which is creating figures. This requires the merging and linking of drawing primitives. At least this project keeos me busy.
+it is pretty much a node.js / vite application using a few libraries. if anyone ever discovers this, please ket me know.
