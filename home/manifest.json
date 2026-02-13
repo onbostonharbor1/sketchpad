@@ -24,16 +24,22 @@
     "status": "new"
   },
   {
+    "file": "cissoidDiocles",
+    "path": "/gallery/Scripts/Curves/cissoidDiocles.js",
+    "title": "cissoidDiocles.js",
+    "status": "new"
+  },
+  {
+    "file": "cissoidSimplified",
+    "path": "/gallery/Scripts/Curves/cissoidSimplified.js",
+    "title": "cissoidSimplified.js",
+    "status": "new"
+  },
+  {
     "file": "complicatedParabolas",
     "path": "/patterns/figures/complicatedParabolas.js",
     "title": "Complicated Parabolas",
     "status": "Broken"
-  },
-  {
-    "file": "conc_circleOld",
-    "path": "/gallery/Scripts/Experimental/conc_circleOld.js",
-    "title": "conc_circleOld.js",
-    "status": "new"
   },
   {
     "file": "concentricCircles",
@@ -48,22 +54,10 @@
     "status": "Many"
   },
   {
-    "file": "curvedArcsInnerStar",
-    "path": "/patterns/curve_stitch/curvedArcsInnerStar.js",
-    "title": "curvedArcsInnerStar.js",
-    "status": "new"
-  },
-  {
     "file": "cycloid0119_164221",
     "path": "/gallery/Patterns/circles/cycloid0119_164221.png",
     "title": "cycloid0119_164221.png",
     "status": "working"
-  },
-  {
-    "file": "cycloid0209_152200",
-    "path": "/patterns/circles/cycloid0209_152200.js",
-    "title": "cycloid0209_152200.js",
-    "status": "new"
   },
   {
     "file": "epitrochoid",
@@ -78,40 +72,9 @@
     "status": "favorite"
   },
   {
-    "file": "Green ellipse0209_150016",
-    "path": "/patterns/circles/Green ellipse0209_150016.js",
-    "title": "Green ellipse0209_150016.js",
-    "status": "new"
-  },
-  {
-    "file": "inEllipse0209_125426",
-    "path": "/patterns/circles/inEllipse0209_125426.js",
-    "title": "inEllipse0209_125426.js",
-    "status": "new"
-  },
-  {
-    "file": "inEllipse0209_144740",
-    "path": "/patterns/circles/inEllipse0209_144740.js",
-    "title": "inEllipse0209_144740.js",
-    "status": "new"
-  },
-  {
-    "file": "inEllipse0209_145236",
-    "path": "/patterns/circles/inEllipse0209_145236.js",
-    "title": "inEllipse0209_145236.js",
-    "status": "new"
-  },
-  {
-    "file": "inEllipse0209_145550",
-    "path": "/patterns/circles/inEllipse0209_145550.js",
-    "title": "inEllipse0209_145550.js",
-    "status": "new"
-  },
-  {
     "file": "linesInThree",
     "path": "/patterns/circles/linesInThree.js",
-    "title": "linesInThree.js",
-    "status": "new"
+    "title": "linesInThree.js"
   },
   {
     "file": "LISSAJOUS100",
