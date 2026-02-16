@@ -46,6 +46,14 @@ let currentList     = [];
 let currentIndex    = 0;
 let galleryCache    = null;
 
+// Exported getter so external modules can read the cache
+// after ensureGalleryCacheLoaded() has been called.
+export function getGalleryCache() { return galleryCache; }
+
+// Exported so external modules can invalidate the cache
+// before calling ensureGalleryCacheLoaded() to force a reload.
+export function clearGalleryCache() { galleryCache = null; }
+
 /* ============================================================
    GalleryTabSpec
 ============================================================ */
@@ -78,13 +86,13 @@ export const GalleryController = {
    ------------------------------------------------------------
    Keeps timestamp to be safe against aggressive image/json caching.
 ============================================================ */
-async function ensureGalleryCacheLoaded() {
+export async function ensureGalleryCacheLoaded() {
   console.time('ensureGalleryCacheLoaded');
   
   // 1. Return existing cache if present
   if (galleryCache && Object.keys(galleryCache).length > 0) {
     console.timeEnd('ensureGalleryCacheLoaded');
-    console.log('  └─ Gallery cache already loaded');
+    console.log('  â””â”€ Gallery cache already loaded');
     return;
   }
 
@@ -173,7 +181,7 @@ export function saveGalleryState() {
 ============================================================ */
 /* gallery.js */
 
-async function restoreGalleryTab() {
+export async function restoreGalleryTab() {
   if (!uiState.gallery?.saved) {
     // If state is missing, fallback to home-level init
     return initGalleryTab(false);

@@ -6,6 +6,11 @@
     "status": "Examine"
   },
   {
+    "filename": "maurer",
+    "path": "maurer.js",
+    "title": "maurer.js"
+  },
+  {
     "filename": "variedEllipse",
     "path": "variedEllipse.js",
     "title": "variedEllipse.js",

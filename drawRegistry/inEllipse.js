@@ -40,7 +40,7 @@ window.drawRegistry_inEllipse = {
     withinCirc: {
       widget: "select",
       options: [
-        { value: START_END,   label: "Start–End" },
+        { value: START_END,   label: "Startâ€“End" },
         { value: FULL,         label: "Full" },
         { value: TAPER,       label: "Taper (Both)" },
         { value: START_TAPER, label: "Start Taper" },
@@ -53,6 +53,8 @@ window.drawRegistry_inEllipse = {
     chordLength: { widget: "range", min: 10, max: 50, step: 1, label: "Chord len:" },
     numNodes: { widget: "range", min: 50, max: 400, step: 5, label: "# Nodes:" },
     rotate: { widget: "range", min: 0, max: 360, step: 5, label: "Rotation:" },
+    startSkip: { widget: "range", min: -30, max: 30, step: 1, label: "Start Skip:" },
+    endSkip:   { widget: "range", min: -30, max: 30, step: 1, label: "End Skip:" },
     color: { widget: "colorPicker", label: "Color:" },
     lineWidth: { widget: "range", min: 1, max: 5, step: 1, label: "Line wid.:" },
   },

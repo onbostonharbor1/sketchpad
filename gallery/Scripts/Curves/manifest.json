@@ -3,12 +3,18 @@
     "filename": "cissoidDiocles",
     "path": "cissoidDiocles.js",
     "title": "cissoidDiocles.js",
-    "status": "new"
+    "status": ""
   },
   {
     "filename": "cissoidSimplified",
     "path": "cissoidSimplified.js",
     "title": "cissoidSimplified.js",
-    "status": "new"
+    "status": ""
+  },
+  {
+    "filename": "nicodemus",
+    "path": "nicodemus.js",
+    "title": "nicodemus.js",
+    "status": ""
   }
 ]

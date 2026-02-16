@@ -1,5 +1,15 @@
 [
   {
+    "filename": "copilot1",
+    "path": "copilot1.js",
+    "title": "copilot1.js"
+  },
+  {
+    "filename": "copilotAnimation",
+    "path": "copilotAnimation.js",
+    "title": "copilotAnimation.js"
+  },
+  {
     "filename": "pursuit4",
     "path": "pursuit4.js",
     "title": "Polygon Edge Weaving"

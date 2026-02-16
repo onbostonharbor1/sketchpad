@@ -1,14 +1,26 @@
 /* ============================================================
-   Modulated Circle Explorer (Waveforms)
+   Modulated Circle Explorer + Lobe Curve Stitching
    Gallery Script (ParameterControls-integrated)
 
    SOURCE
    ------
-   Converted from standalone HTML demo:
-   - r(θ) = R + A * w(nθ + φ)
-   - Multiple waveforms + harmonic sum + noise
-   - Samples control
-   - Removed: DOM UI, labels, resize/DPR handling, PNG export, animation loop
+   Extended from standalone modulated circle demo:
+     r(θ) = R + A · w(nθ + φ)
+
+   EXTENSIONS ADDED
+   ----------------
+   - Per-lobe curve stitching on the outer circle.
+     Each lobe is a contiguous slice of pts[]. Stitch line i
+     connects pts[i] to pts[i + half], producing a parabolic
+     curve-stitch effect contained entirely within that lobe.
+   - A "skip" control thins the stitch density.
+   - An inner modulated circle with n/2 lobes, R/2 base radius,
+     its own amplitude control, and its own curve stitching.
+     The inner circle is phase-adjusted so its lobe tips align
+     with alternate lobe tips of the outer circle.
+   - Waveform simplified to Sine / Cosine select only.
+   - Lobe count (frequency) constrained to even numbers (4-18)
+     so the outer/inner lobe relationship is always clean.
 
    GOAL
    ----
@@ -16,282 +28,121 @@
    - Use parameterControls.js
    - Match drawRegistry-style lifecycle and naming
 
+   ALIGNMENT MATH
+   --------------
+   Outer peak angles: nθ + ph = π/2  →  θ_out = (π/2 - ph) / n
+   Inner peak angles: (n/2)θ + ph_in = π/2  →  θ_in = (π/2 - ph_in) / (n/2)
+
+   Setting θ_in = θ_out and solving for ph_in:
+     (π/2 - ph_in) / (n/2) = (π/2 - ph) / n
+     2(π/2 - ph_in)        = (π/2 - ph)
+     π - 2·ph_in           = π/2 - ph
+     ph_in                 = (π/2 + ph) / 2
+                           = π/4 + ph/2
+
+   This guarantees every inner lobe tip lies on the radial line
+   from the origin through a corresponding outer lobe tip.
+
    ASSUMPTIONS (FAIL-FAST)
    -----------------------
    - global ctx exists
    - #action exists
 ============================================================ */
+
 /* ============================================================
-   Explaining a modulated circle
-
-   A modulated circle in math or graphics refers to a circle whose radius
-   changes based on the angle, expressed as r(θ) = R + f(θ). This can be
-   illustrated with the polar equation r = R + A sin(nθ), used in
-   applications like spirographs, gear teeth, or wavetable synthesis.
-
-   Types of modulation include radial, angular, and amplitude modulation.
-   While the user didn't ask for visualizations, a simple parametric
-   equation could always help clarify the concept.
-
-   ------------------------------------------------------------
-   Definition
-   ------------------------------------------------------------
-   A modulated circle is a circle whose radius (or shape) is varied
-   according to a periodic function of the angle. Instead of a constant
-   radius R, the radius becomes a function r(θ) so the curve is traced in
-   polar coordinates by r = r(θ). That angular-dependent variation
-   “modulates” the circle and produces petal-like, wavy, or scalloped
-   outlines.
-
-   ------------------------------------------------------------
-   Mathematical form
-   ------------------------------------------------------------
-
-   • Basic modulated circle (sinusoidal radial modulation):
-
-       r(θ) = R + A · sin(nθ)
-
-     where:
-       R = base radius
-       A = modulation amplitude
-       n = modulation frequency (number of lobes)
-       θ ∈ [0, 2π]
-
-   • More general:
-
-       r(θ) = R + Σk Ak · fk(kθ + φk)
-
-     where:
-       - you can combine harmonics
-       - phases φk
-       - different wave shapes fk (sine, cosine, triangle, noise)
-
-   • Parametric (Cartesian) coordinates:
-
-       x(θ) = r(θ) · cos θ
-       y(θ) = r(θ) · sin θ
-
-   ------------------------------------------------------------
-   Common special cases / names
-   ------------------------------------------------------------
-
-   • Rose curves:
-       r = a · sin(nθ)   or   r = a · cos(nθ)
-     produce n (or 2n) symmetric petals.
-
-   • Sinusoidally modulated circle:
-       R + A sin(nθ)
-     scalloped circle with n lobes.
-
-   • Spirograph / hypotrochoid / epitrochoid:
-     different mechanism (rolling circles) but visually related to
-     modulated-radius shapes.
-
-   • Radial noise modulation:
-     use random or fractal signals for organic outlines.
-
-   ------------------------------------------------------------
-   Visual / behavior intuition
-   ------------------------------------------------------------
-
-   • Increasing A (amplitude) makes lobes deeper; when A ≥ R the curve can
-     self-intersect or loop.
-
-   • Increasing n increases the number of repeated features (petals/lobes)
-     around the circle.
-
-   • Phase shifts move lobes around the circle. Combining harmonics creates
-     richer, non-symmetric patterns.
-
-   ------------------------------------------------------------
-   Applications
-   ------------------------------------------------------------
-
-   • Generating floral or mandala patterns in generative art.
-   • Procedural shapes in graphics, textures, and modeling (gear-like
-     wheels, scalloped borders).
-   • Signal/physics analogies: ring modulation, FM where a carrier (angle)
-     is modulated by another waveform.
-   • Mathematical demonstrations of symmetry, Fourier synthesis, and polar
-     geometry.
-
-   ------------------------------------------------------------
-   Quick examples you can try mentally or in code
-   ------------------------------------------------------------
-
-   • Simple 8-lobed scallop:
-       r(θ) = 100 + 30·sin(8θ)
-
-   • Rose curve with 7 petals:
-       r(θ) = 80·sin(7θ)
-
-   • Two-harmonic modulation:
-       r(θ) = 90 + 25·sin(5θ) + 10·sin(11θ + 0.3)
-
-   If you’d like, I can produce a tiny HTML+canvas snippet that visualizes
-   a modulated circle and exposes R, A, n, and waveform controls. Which
-   waveform or visual style do you prefer (sinusoidal, triangle,
-   multi-harmonic, or noisy)?
-
-   ------------------------------------------------------------
    Overview
-   ------------------------------------------------------------
+   --------
    This program draws:
 
        r(θ) = R + A · w(nθ + φ)
 
-   and lets you explore how base radius, amplitude, frequency, phase,
-   waveform and sampling affect the resulting shape.
+   for an outer circle with n lobes, and an inner circle with
+   n/2 lobes at R/2 base radius, phase-aligned so inner tips
+   point toward alternate outer tips.
 
-   ------------------------------------------------------------
-   Quick start (one-minute)
-   ------------------------------------------------------------
-
-   1. Open the HTML file in a browser.
-   2. Move the Base Radius and Amplitude sliders to set the overall size
-      and lobe depth.
-   3. Set Frequency (n) to choose how many repeating features appear.
-   4. Pick a Waveform from the menu (Sine, Triangle, Saw, Square,
-      Harmonic sum, Noise).
-   5. Adjust Samples for resolution; increase it for smoother outlines.
-   6. Toggle Animate to see continuous rotation/phase change; adjust Speed.
-   7. Use Export PNG to save a high-resolution image.
-
-   ------------------------------------------------------------
    Controls and what they change
-   ------------------------------------------------------------
+   -----------------------------
 
    • Base Radius:
-     sets the circle’s base radius R. Larger = bigger shape.
+     Sets R for the outer circle. Inner R is always R/2.
 
    • Amplitude:
-     sets A, the modulation depth. Positive increases lobes; if A ≈ R the
-     curve can self-intersect.
+     Sets A for the outer circle — the lobe depth. When A ≥ R
+     the curve can self-intersect.
 
-   • Frequency (n):
-     integer multiplier inside the waveform. Higher n = more lobes /
-     oscillations around the circle.
+   • Lobes (n):
+     Number of lobes on the outer circle. Always even (4-18)
+     so inner has a whole number of lobes (n/2).
 
    • Phase (deg):
-     angular offset φ; shifts lobes around the circle. When animated, phase
-     advances.
+     Angular offset φ; rotates all lobes. Both circles rotate
+     together, preserving alignment.
 
    • Waveform:
-     chooses w(·).
-       - Sine / Cos produce smooth rose-like lobes.
-       - Triangle / Saw / Square create sharper, faceted lobes.
-       - Harmonic sum stacks harmonics for richer detail.
-       - Noise makes organic, irregular outlines.
-
-   • Harmonic Amp:
-     when waveform = Harmonic sum, scales the contribution of the harmonic
-     series.
+     Sine or Cosine. Cosine starts at its peak at θ = 0;
+     sine starts at zero crossing.
 
    • Samples:
-     number of θ samples used to draw the outline. Low = faceted; high =
-     smooth. Increase when amplitude or curvature is high.
+     Number of θ samples around the full circle. More = smoother.
 
-   • Stroke Color and Line Width:
-     visual styling of the outline.
+   • Stroke Color / Line Width:
+     Visual styling applied to both circle outlines.
 
-   • Animate & Speed:
-     toggles continuous motion; speed controls how quickly phase/rotation
-     changes.
+   Curve Stitch section
+   --------------------
 
-   • Export PNG:
-     renders a higher-resolution image and downloads it.
+   • Show Lobe Stitching:
+     Toggles stitch lines on all outer lobes.
 
-   • Reset:
-     restores defaults.
+   • Stitch Skip:
+     1 = every point stitched (dense). N = every Nth point.
 
-   • Info / coordinates:
-     shows current formula and pointer coordinates over the canvas.
+   • Stitch Color / Stitch Line Width:
+     Visual styling of the outer stitch lines.
 
-   ------------------------------------------------------------
-   Practical recipes
-   ------------------------------------------------------------
+   Inner Circle section
+   --------------------
 
-   • Classic rose curve:
-     set Waveform = Sine
-     Base Radius ≈ 0
-     Amplitude = desired radius
-     Frequency = k
-     (r = A·sin(kθ))
+   • Show Inner Circle:
+     Toggles the inner modulated circle and its stitching.
 
-   • Scalloped circle:
-     Base Radius > 0
-     Waveform = Sine
-     small n (4–12)
-     modest Amplitude for shallow scallops
+   • Inner Lobe Height:
+     Amplitude of the inner lobes, independent of outer.
 
-   • Sharp petals:
-     Waveform = Triangle or Saw
-     raise Amplitude
-     reduce Samples for a faceted look
+   • Inner Stitch Skip:
+     Skip control for the inner lobe stitching.
 
-   • Rich organic shapes:
-     Waveform = Harmonic sum
-     n around 6–12
-     Harmonic Amp ≈ 0.4–0.8
-     raise Samples
+   • Inner Circle Color:
+     Color for both the inner outline and its stitch lines.
 
-   • Natural outlines:
-     Waveform = Noise
-     moderate amplitude
-     high samples for smooth randomness
+   Performance tips
+   ----------------
+   • Increase Samples when amplitude or frequency is high to
+     avoid visible straight-segment artifacts.
+   • Stitch Skip is the fastest way to reduce line count
+     without changing the curve geometry.
 
-   ------------------------------------------------------------
-   Performance and quality tips
-   ------------------------------------------------------------
+   Stepper section
+   ---------------
+   Purpose: quickly walk through a range of values for one
+   parameter to survey how it changes the drawing — not
+   animation, but manual variation exploration.
 
-   • Increase Samples when amplitude or frequency is high to avoid visible
-     straight-segment artifacts.
+   • Step Parameter:
+     Selects which parameter the stepper controls:
+     "Amplitude" or "Lobes".
 
-   • If animation stutters, lower Samples or line width; modern CPUs handle
-     several hundred samples easily.
+   • Change (checkbox):
+     When checked, immediately resets the selected parameter
+     to its minimum value and arms the Next button.
+     Unchecking does not change the current value.
+     Checking again resets to minimum again.
 
-   • For crisp exports, use Export PNG (it renders at higher internal
-     resolution).
-
-   • If petals overlap undesirably, reduce Amplitude or Frequency.
-
-   ------------------------------------------------------------
-   Explorations to try
-   ------------------------------------------------------------
-
-   • Sweep Frequency from 1 to 24 while holding Amplitude fixed and watch
-     symmetry change.
-
-   • Use Harmonic sum and vary Harmonic Amp to observe how higher harmonics
-     add small detail without changing major lobes.
-
-   • Combine small Base Radius with large Amplitude to produce looping rose
-     curves and study self-intersections.
-
-   • Turn on Animate and slowly increase Speed; observe phase relationships
-     and traveling lobes.
-
-   ------------------------------------------------------------
-   Debug and learning notes
-   ------------------------------------------------------------
-
-   • The program computes each sample point at θ and converts
-     polar → Cartesian. The waveform result is scaled by A then added to R.
-
-   • Harmonic sum approximates a Fourier-like series; its visual richness
-     increases with n but needs more Samples.
-
-   • Noise is a cheap smooth approximator (sum of sines) rather than a full
-     Perlin implementation; for finer-controlled randomness consider
-     replacing noise1 with a seeded Perlin function.
-
-   ------------------------------------------------------------
-   Next steps I can add
-   ------------------------------------------------------------
-
-   • Arc-length parameterization for uniform segment lengths.
-   • Per-petal coloring, multi-ring layers, or filled petals.
-   • Export SVG for vector output.
+   • Next (button):
+     Advances the selected parameter by one step.
+     At maximum, wraps back to minimum.
+     Does nothing if Change is not checked.
+     The corresponding slider updates to match.
 ============================================================ */
 
 import { buildParameterControls } from "/ui/parameterControls.js";
@@ -304,93 +155,196 @@ export const scriptInfo = {
   title: "Modulated Circle (Waveforms)",
 
   params: {
-    baseRadius: 180,
-    amplitude: 60,
-    frequency: 7,
-    phaseDeg: 0,
-    waveform: "sine",
-    harmonicAmp: 0.6,
-    samples: 720,
+    baseRadius:      180,
+    amplitude:       60,
+    frequency:       6,
+    phaseDeg:        0,
+    waveform:        "sine",
+    samples:         720,
 
-    strokeStyle: "#ff4fa3",
-    lineWidth: 1
+    strokeStyle:     "#ff4fa3",
+    lineWidth:       1,
+
+    // --- Outer curve stitch ---
+    showStitch:      true,
+    stitchSkip:      1,
+    stitchColor:     "#2277ff",
+    stitchWidth:     1,
+
+    // --- Inner circle ---
+    showInner:       true,
+    innerAmplitude:  30,
+    innerStitchSkip: 1,
+    innerColor:      "#ff4fa3",
+
+    // --- Stepper ---
+    stepTarget:      "amplitude",   // which param to step: "amplitude" | "frequency"
+    changeArmed:     false          // when true, Next advances the target param
   },
 
   controls: {
 
     baseRadius: {
       widget: "range",
-      label: "Base Radius",
-      min: 10,
-      max: 600,
-      step: 1
+      label:  "Base Radius",
+      min:    10,
+      max:    600,
+      step:   1
     },
 
     amplitude: {
       widget: "range",
-      label: "Amplitude",
-      min: 0,
-      max: 400,
-      step: 1
+      label:  "Amplitude",
+      min:    0,
+      max:    400,
+      step:   1
     },
 
     frequency: {
       widget: "range",
-      label: "Frequency (n)",
-      min: 0,
-      max: 24,
-      step: 1
+      label:  "Lobes (n)",
+      min:    4,
+      max:    18,
+      step:   2
     },
 
     phaseDeg: {
       widget: "range",
-      label: "Phase (deg)",
-      min: 0,
-      max: 360,
-      step: 1
+      label:  "Phase (deg)",
+      min:    0,
+      max:    360,
+      step:   1
     },
 
     waveform: {
-      widget: "selectSegment",
-      label: "Waveform",
+      widget:  "selectSegment",
+      label:   "Waveform",
       options: [
-        { value: "sine",     label: "Sine" },
-        { value: "cos",      label: "Cosine" },
-        { value: "triangle", label: "Triangle" },
-        { value: "square",   label: "Square" },
-        { value: "saw",      label: "Sawtooth" },
-        { value: "sum",      label: "Harmonic sum (1..n)" },
-        { value: "noise",    label: "Noise" }
+        { value: "sine", label: "Sine"   },
+        { value: "cos",  label: "Cosine" }
       ]
-    },
-
-    harmonicAmp: {
-      widget: "range",
-      label: "Harmonic Amp",
-      min: 0,
-      max: 1,
-      step: 0.01
     },
 
     samples: {
       widget: "range",
-      label: "Samples",
-      min: 32,
-      max: 2048,
-      step: 1
+      label:  "Samples",
+      min:    32,
+      max:    2048,
+      step:   1
     },
 
     strokeStyle: {
       widget: "colorPicker",
-      label: "Stroke Color"
+      label:  "Stroke Color"
     },
 
     lineWidth: {
       widget: "range",
-      label: "Line Width",
-      min: 0.2,
-      max: 6,
-      step: 0.1
+      label:  "Line Width",
+      min:    0.2,
+      max:    6,
+      step:   0.1
+    },
+
+    // --- Outer curve stitch ---
+    showStitch: {
+      widget: "checkbox",
+      label:  "Show Lobe Stitching"
+    },
+
+    stitchSkip: {
+      widget: "range",
+      label:  "Stitch Skip",
+      min:    1,
+      max:    20,
+      step:   1
+    },
+
+    stitchColor: {
+      widget: "colorPicker",
+      label:  "Stitch Color"
+    },
+
+    stitchWidth: {
+      widget: "range",
+      label:  "Stitch Line Width",
+      min:    0.2,
+      max:    4,
+      step:   0.1
+    },
+
+    // --- Inner circle ---
+    showInner: {
+      widget: "checkbox",
+      label:  "Show Inner Circle"
+    },
+
+    innerAmplitude: {
+      widget: "range",
+      label:  "Inner Lobe Height",
+      min:    0,
+      max:    200,
+      step:   1
+    },
+
+    innerStitchSkip: {
+      widget: "range",
+      label:  "Inner Stitch Skip",
+      min:    1,
+      max:    20,
+      step:   1
+    },
+
+    innerColor: {
+      widget: "colorPicker",
+      label:  "Inner Circle Color"
+    },
+
+    // --- Stepper ---
+    // stepTarget: which parameter the stepper advances.
+    // changeArmed: when checked, resets target to min and arms Next.
+    // nextStep: button that advances target by one step, wrapping at max.
+    stepTarget: {
+      widget:  "select",
+      label:   "Step Parameter",
+      options: [
+        { value: "amplitude", label: "Amplitude" },
+        { value: "frequency", label: "Lobes"     }
+      ]
+    },
+
+    changeArmed: {
+      widget: "checkbox",
+      label:  "Change"
+    },
+
+    nextStep: {
+      widget:   "button",
+      label:    "Next",
+      fullRow:  false,
+      action:   function advanceStep(info) {
+        const p      = info.params;
+        if (!p.changeArmed) return;
+
+        const target  = p.stepTarget;                  // "amplitude" or "frequency"
+        const ctl     = info.controls[target];         // get min/max/step from control def
+        const min     = Number(ctl.min);
+        const max     = Number(ctl.max);
+        const step    = Number(ctl.step);
+
+        const current = Number(p[target]);
+        const next    = current + step > max ? min : current + step;
+
+        p[target] = next;
+
+        // Sync the DOM slider so it reflects the new value visually
+        const sliderId = "tab-scripts-" + target;
+        const slider   = document.getElementById(sliderId);
+        if (slider) slider.value = next;
+
+        // Redraw is handled by def.redraw below
+      },
+      redraw: true
     }
 
   },
@@ -402,8 +356,12 @@ export const scriptInfo = {
 }; // end scriptInfo
 
 
-// Compatibility aliases (per your Gallery conversion rules)
+// Compatibility aliases (per Gallery conversion rules)
 scriptInfo.parameters = scriptInfo.params;
+
+// Tracks previous armed state so we can detect the moment
+// "Change" is checked — that transition resets the target to min.
+let prevArmed = false;
 
 scriptInfo.redrawHandler = function redrawHandler() {
   update(scriptInfo.params);
@@ -411,7 +369,23 @@ scriptInfo.redrawHandler = function redrawHandler() {
 }; // end redrawHandler
 
 scriptInfo.onParamChange = function onParamChange() {
-  // Compatibility no-op
+  const p = scriptInfo.params;
+
+  // Detect rising edge: changeArmed just became true
+  if (p.changeArmed && !prevArmed) {
+    const target  = p.stepTarget;
+    const ctl     = scriptInfo.controls[target];
+    const min     = Number(ctl.min);
+
+    p[target] = min;
+
+    // Sync the DOM slider
+    const sliderId = "tab-scripts-" + target;
+    const slider   = document.getElementById(sliderId);
+    if (slider) slider.value = min;
+  }
+
+  prevArmed = p.changeArmed;
 }; // end onParamChange
 
 
@@ -424,9 +398,7 @@ scriptInfo.onParamChange = function onParamChange() {
 export function runPattern() {
 
   init();
-
   buildParameterControls(scriptInfo, "tab-scripts", true);
-
   scriptInfo.redrawHandler();
 
 } // end runPattern
@@ -440,11 +412,15 @@ export function runPattern() {
 function init() {
 
   scriptInfo.elements.element = {
-    W: 0,
-    H: 0,
-    cx: 0,
-    cy: 0,
-    pts: []
+    W:          0,
+    H:          0,
+    cx:         0,
+    cy:         0,
+    pts:        [],   // outer circle Cartesian points
+    radii:      [],   // outer circle radius values (parallel to pts)
+    lobes:      [],   // outer lobe descriptors { start, end, count }
+    innerPts:   [],   // inner circle Cartesian points
+    innerLobes: []    // inner lobe descriptors
   };
 
 } // end init
@@ -455,152 +431,257 @@ function init() {
 ============================================================ */
 function update(params) {
 
-  const e = scriptInfo.elements.element;
+  const e  = scriptInfo.elements.element;
 
-  e.W = ctx.canvas.width;
-  e.H = ctx.canvas.height;
-
+  e.W  = ctx.canvas.width;
+  e.H  = ctx.canvas.height;
   e.cx = e.W / 2;
   e.cy = e.H / 2;
 
-  e.pts = buildPoints(params);
+  const ph = toRad(Number(params.phaseDeg));
+
+  // --- Build outer circle ---
+  const outer  = buildModulatedCircle(params, {
+    R:  Number(params.baseRadius),
+    A:  Number(params.amplitude),
+    n:  Number(params.frequency),
+    ph: ph
+  });
+  e.pts   = outer.pts;
+  e.radii = outer.radii;
+  e.lobes = detectLobes(outer.radii);
+
+  // --- Build inner circle ---
+  // Phase correction: ph_inner = π/4 + ph/2
+  // Derived so inner lobe tips align with outer lobe tips.
+  // See ALIGNMENT MATH in header comment.
+  const phInner = Math.PI / 4 + ph / 2;
+
+  const inner  = buildModulatedCircle(params, {
+    R:  Number(params.baseRadius) / 2,
+    A:  Number(params.innerAmplitude),
+    n:  Number(params.frequency) / 2,
+    ph: phInner
+  });
+  e.innerPts   = inner.pts;
+  e.innerLobes = detectLobes(inner.radii);
 
 } // end update
 
 
 /* ============================================================
-   buildPoints(params)
-============================================================ */
-function buildPoints(params) {
+   buildModulatedCircle(params, overrides)
+   ------------------------------------------------------------
+   Samples r(θ) = R + A · w(nθ + ph) around [0, 2π].
 
-  const pts = [];
+   'overrides' lets the caller supply different R, A, n, ph
+   values — used to build the inner circle without duplicating
+   all the sampling logic.
+
+   Returns { pts, radii }:
+     pts   — array of { x, y } Cartesian points
+     radii — parallel array of radius values at each θ
+============================================================ */
+function buildModulatedCircle(params, overrides = {}) {
+
+  const pts   = [];
+  const radii = [];
 
   const TAU = Math.PI * 2;
-
-  const R = Number(params.baseRadius);
-  const A = Number(params.amplitude);
-  const n = Number(params.frequency);
-  const ph = toRad(Number(params.phaseDeg));
+  const R   = overrides.R  !== undefined ? overrides.R  : Number(params.baseRadius);
+  const A   = overrides.A  !== undefined ? overrides.A  : Number(params.amplitude);
+  const n   = overrides.n  !== undefined ? overrides.n  : Number(params.frequency);
+  const ph  = overrides.ph !== undefined ? overrides.ph : toRad(Number(params.phaseDeg));
 
   const samp = clampInt(params.samples, 32, 1000000);
-
-  const wname = String(params.waveform);
-  const harmAmp = Number(params.harmonicAmp);
-
-  const dt = TAU / samp;
+  const dt   = TAU / samp;
 
   for (let i = 0; i <= samp; i++) {
-
     const theta = i * dt;
+    const wv    = waveformValue(String(params.waveform), n * theta + ph);
+    const r     = R + A * wv;
 
-    const x = n * theta + ph;
-
-    let wv;
-
-    if (wname === "sum") {
-      wv = harmonicSum(x, Math.max(1, n), harmAmp);
-    } else if (wname === "noise") {
-      wv = noise1(x) * harmAmp;
-    } else {
-      wv = waveformValue(wname, x);
-    }
-
-    const r = R + A * wv;
-
+    radii.push(r);
     pts.push({
       x: r * Math.cos(theta),
       y: r * Math.sin(theta)
     });
-
   }
 
-  return pts;
+  return { pts, radii };
 
-} // end buildPoints
-
-
-/* ============================================================
-   waveformValue(name, x)
-   Returns value in [-1, 1]
-============================================================ */
-function waveformValue(name, x) {
-
-  if (name === "sine") return Math.sin(x);
-  if (name === "cos") return Math.cos(x);
-  if (name === "triangle") return triWave(x);
-  if (name === "square") return squareWave(x);
-  if (name === "saw") return sawWave(x);
-
-  return Math.sin(x);
-
-} // end waveformValue
+} // end buildModulatedCircle
 
 
 /* ============================================================
-   triWave(x)
+   detectLobes(radii)
+   ------------------------------------------------------------
+   Finds valley indices (local minima of radius) marking lobe
+   boundaries. Returns an array of lobe descriptors:
+
+     { start, end, count }
+
+   where pts[start .. start+count-1] (wrapping) is the full
+   lobe boundary.
+
+   Strategy:
+   1. Smooth radii with a small window to suppress micro-jitter.
+   2. Find local minima of the smoothed signal.
+   3. Between each consecutive valley pair, record one lobe.
+   4. Reject lobes whose peak-to-valley height is negligible.
 ============================================================ */
-function triWave(x) {
+function detectLobes(radii) {
 
-  const s = (x / Math.PI) % 2;
-  const u = (s + 2) % 2;
-  return 1 - 2 * Math.abs(u - 1);
+  const len   = radii.length - 1; // last point == first (closed curve)
+  const lobes = [];
 
-} // end triWave
+  if (len < 6) return lobes;
 
-
-/* ============================================================
-   squareWave(x)
-============================================================ */
-function squareWave(x) {
-
-  const s = Math.sign(Math.sin(x));
-  if (s === 0) return 1;
-  return s;
-
-} // end squareWave
-
-
-/* ============================================================
-   sawWave(x)
-============================================================ */
-function sawWave(x) {
-
-  return 2 * ((x / (2 * Math.PI)) - Math.floor(0.5 + x / (2 * Math.PI)));
-
-} // end sawWave
-
-
-/* ============================================================
-   noise1(x)
-   Cheap smooth pseudo-noise: sum of sines
-============================================================ */
-function noise1(x) {
-
-  return (
-    Math.sin(x * 1.0 * 1.0) +
-    Math.sin(x * 1.7 * 1.3) * 0.6 +
-    Math.sin(x * 2.9 * 0.7) * 0.35
-  ) / (1 + 0.6 + 0.35);
-
-} // end noise1
-
-
-/* ============================================================
-   harmonicSum(x, n, ampScale)
-============================================================ */
-function harmonicSum(x, n, ampScale) {
-
-  let s = 0;
-
-  for (let k = 1; k <= n; k++) {
-    s += Math.sin(k * x) * (1 / k);
+  // --- Smooth radii with a small window to suppress micro-jitter ---
+  const winSize = Math.max(1, Math.floor(len / 200));
+  const smooth  = new Float64Array(len);
+  for (let i = 0; i < len; i++) {
+    let sum = 0;
+    for (let w = -winSize; w <= winSize; w++) {
+      sum += radii[(i + w + len) % len];
+    }
+    smooth[i] = sum / (2 * winSize + 1);
   }
 
-  const H = Math.log(Math.max(2, n)) + 0.5772156649;
+  // --- Find local minima of smoothed radii ---
+  // Suppress duplicates within minGap samples to avoid double-counting
+  // flat-bottomed valleys.
+  const valleys = [];
+  const minGap  = Math.floor(len / 60);
 
-  return (s / H) * ampScale;
+  for (let i = 0; i < len; i++) {
+    const prev = smooth[(i - 1 + len) % len];
+    const curr = smooth[i];
+    const next = smooth[(i + 1) % len];
+    if (curr <= prev && curr <= next) {
+      if (valleys.length === 0 || i - valleys[valleys.length - 1] >= minGap) {
+        valleys.push(i);
+      }
+    }
+  }
 
-} // end harmonicSum
+  if (valleys.length < 2) return lobes;
+
+  // --- One lobe per consecutive valley pair ---
+  for (let v = 0; v < valleys.length; v++) {
+    const start = valleys[v];
+    const end   = valleys[(v + 1) % valleys.length];
+
+    // Count is wrap-aware
+    const count = end > start
+      ? end - start + 1
+      : (len - start) + end + 1;
+
+    if (count < 4) continue;
+
+    // Verify genuine lobe: peak must be meaningfully above valley floor
+    let peakR = -Infinity;
+    for (let k = 0; k < count; k++) {
+      const idx = (start + k) % len;
+      if (smooth[idx] > peakR) peakR = smooth[idx];
+    }
+    const valleyR = Math.max(smooth[start], smooth[end % len]);
+    if (peakR - valleyR < 0.5) continue;
+
+    lobes.push({ start, end, count });
+  }
+
+  return lobes;
+
+} // end detectLobes
+
+
+/* ============================================================
+   drawOutline(pts, color, lineWidth)
+   ------------------------------------------------------------
+   Draws a closed polyline through pts[].
+   ctx must already be translated to canvas centre.
+============================================================ */
+function drawOutline(pts, color, lineWidth) {
+
+  if (!pts.length) return;
+
+  ctx.save();
+  ctx.beginPath();
+  ctx.moveTo(pts[0].x, pts[0].y);
+  for (let i = 1; i < pts.length; i++) {
+    ctx.lineTo(pts[i].x, pts[i].y);
+  }
+  ctx.closePath();
+  ctx.strokeStyle = color;
+  ctx.lineWidth   = lineWidth;
+  ctx.lineJoin    = "round";
+  ctx.stroke();
+  ctx.restore();
+
+} // end drawOutline
+
+
+/* ============================================================
+   drawStitch(lobes, pts, color, lineWidth, skip)
+   ------------------------------------------------------------
+   For each lobe, collect its pts[] slice (wrapping if needed),
+   then draw stitch lines:
+
+     line i:  lobePts[i]  →  lobePts[i + half]
+
+   where half = floor(count / 2).
+
+   This produces the classic parabolic curve-stitch envelope
+   within each lobe. Both endpoints of every line belong to the
+   same lobe slice, so no line can escape into another lobe.
+
+   skip > 1 thins the line density: only every skip-th line
+   is drawn, while the parabolic shape is preserved.
+
+   ctx must already be translated to canvas centre.
+============================================================ */
+function drawStitch(lobes, pts, color, lineWidth, skip) {
+
+  if (!lobes.length || !pts.length) return;
+
+  const totalPts = pts.length - 1; // closed: last point == first
+  const sk       = Math.max(1, Math.round(Number(skip)));
+
+  ctx.save();
+  ctx.strokeStyle = color;
+  ctx.lineWidth   = Number(lineWidth);
+  ctx.lineJoin    = "round";
+  ctx.lineCap     = "round";
+
+  for (const lobe of lobes) {
+    const { start, count } = lobe;
+
+    // Collect this lobe's points in traversal order (wrap-aware)
+    const lobePts = [];
+    for (let k = 0; k < count; k++) {
+      lobePts.push(pts[(start + k) % totalPts]);
+    }
+
+    const half = Math.floor(lobePts.length / 2);
+    if (half < 2) continue;
+
+    // Stitch line i: lobePts[i] → lobePts[i + half]
+    //   i = 0       : left base to right base (longest, through tip)
+    //   i = half-1  : just before tip to just after tip (shortest)
+    for (let i = 0; i < half; i += sk) {
+      const p1 = lobePts[i];
+      const p2 = lobePts[i + half];
+      ctx.beginPath();
+      ctx.moveTo(p1.x, p1.y);
+      ctx.lineTo(p2.x, p2.y);
+      ctx.stroke();
+    }
+  }
+
+  ctx.restore();
+
+} // end drawStitch
 
 
 /* ============================================================
@@ -617,27 +698,42 @@ function draw() {
   ctx.save();
   ctx.translate(e.cx, e.cy);
 
-  const pts = e.pts;
-  if (!pts.length) throw new Error("draw: no points");
+  if (!e.pts.length) throw new Error("draw: no points");
 
-  ctx.beginPath();
-  ctx.moveTo(pts[0].x, pts[0].y);
+  // --- Outer circle outline ---
+  drawOutline(e.pts, p.strokeStyle, p.lineWidth);
 
-  for (let i = 1; i < pts.length; i++) {
-    ctx.lineTo(pts[i].x, pts[i].y);
+  // --- Outer lobe stitching ---
+  if (p.showStitch) {
+    drawStitch(e.lobes, e.pts, p.stitchColor, p.stitchWidth, p.stitchSkip);
   }
 
-  ctx.closePath();
-
-  ctx.strokeStyle = p.strokeStyle;
-  ctx.lineWidth = p.lineWidth;
-  ctx.lineJoin = "round";
-
-  ctx.stroke();
+  // --- Inner circle outline + stitching ---
+  if (p.showInner) {
+    drawOutline(e.innerPts, p.innerColor, p.lineWidth);
+    drawStitch(e.innerLobes, e.innerPts, p.innerColor, p.stitchWidth, p.innerStitchSkip);
+  }
 
   ctx.restore();
 
 } // end draw
+
+
+/* ============================================================
+   waveformValue(name, x)
+   ------------------------------------------------------------
+   Returns waveform value in [-1, 1].
+   Only sine and cosine are exposed in the UI.
+   - Sine:   zero at θ=0, peaks at θ=π/2
+   - Cosine: peak at θ=0, useful when phaseDeg=0 and you want
+             a lobe pointing straight up (θ=0 direction)
+============================================================ */
+function waveformValue(name, x) {
+
+  if (name === "cos") return Math.cos(x);
+  return Math.sin(x); // default: sine
+
+} // end waveformValue
 
 
 /* ============================================================
@@ -657,7 +753,6 @@ function clampInt(v, a, b) {
 
   const n = parseInt(v, 10);
   if (!Number.isFinite(n)) return a;
-
   if (n < a) return a;
   if (n > b) return b;
   return n;

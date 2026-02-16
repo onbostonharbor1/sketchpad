@@ -1,22 +1,26 @@
 /* ============================================================================
-   SCRIPT 2 — FULL RESTORED VERSION WITH ALL FAMILIES + CISSOID ENGINE
+   SCRIPT 2 — Global Coordinate Version (All Families + Parallel Option)
    ============================================================================ */
 
-   import { buildParameterControls } from "/ui/parameterControls.js";
+import { buildParameterControls } from "/ui/parameterControls.js";
+
 export const scriptInfo = {
-  title: "Cissoid Families (Restored)",
+  title: "Cissoid Families (Parallel Option)",
 
   params: {
     midpoint: { x: 350, y: 300 },
     color: "#0066ff",
     lineWidth: 1.5,
-
-    effect: "offsetCurve",
-
-    numCurves: 24,
+    effect: "parallelOffset",
+    numCurves: 12,
     circleRadius: 140,
     scale: 120,
-    bound: 500,
+    bound: 400,
+
+    offsetStep: 20,
+    arcRange: 360,
+    globalRotation: 0,
+    colorMode: "monochrome", // "monochrome" | "rainbow"
 
     points: []
   },
@@ -26,18 +30,30 @@ export const scriptInfo = {
       label: "Effect",
       widget: "select",
       options: [
-        { value: "offsetCurve",    label: "Offset Curve" },
-        { value: "expandingFan",   label: "Expanding Fan" },
-        { value: "contractingFan", label: "Contracting Fan" },
-        { value: "breathing",      label: "Breathing" },
-        { value: "hyperbolic",     label: "Hyperbolic" },
-        { value: "radialSpokes",   label: "Radial Spokes" },
-        { value: "tickMarks",      label: "Tick Marks" }
+        { value: "parallelOffset",  label: "Parallel Offset" },
+        { value: "offsetCurve",     label: "Offset Curve" },
+        { value: "expandingFan",    label: "Expanding Fan" },
+        { value: "contractingFan",  label: "Contracting Fan" },
+        { value: "breathing",       label: "Breathing" },
+        { value: "radialSpokes",    label: "Radial Spokes" }
       ]
     },
 
-    numCurves:    { label: "# Curves",       widget: "range", min: 1,  max: 64,  step: 1 },
-    circleRadius: { label: "Circle Radius",  widget: "range", min: 40, max: 300, step: 5 },
+    colorMode: {
+      label: "Color Mode",
+      widget: "select",
+      options: [
+        { value: "monochrome", label: "Monochrome" },
+        { value: "rainbow",    label: "Rainbow" }
+      ]
+    },
+
+    offsetStep:     { label: "Offset Step",    widget: "range", min: 5,   max: 50,  step: 1 },
+    bound:          { label: "Bound Box",      widget: "range", min: 50,  max: 600, step: 10 },
+    arcRange:       { label: "Arc Range",      widget: "range", min: 45,  max: 360, step: 5 },
+    globalRotation: { label: "Global Rotate",  widget: "range", min: 0,   max: 360, step: 1 },
+
+    numCurves:    { label: "# Curves",      widget: "range", min: 1,  max: 64,  step: 1 },
     scale:        { label: "Cissoid Scale",  widget: "range", min: 20, max: 300, step: 5 },
     color:        { label: "Color",          widget: "color" },
     lineWidth:    { label: "Line width",     widget: "range", min: 0.5, max: 4,  step: 0.5 }
@@ -50,91 +66,45 @@ export const scriptInfo = {
 };
 
 /* ============================================================================
-   init / update
+   CORE ENGINE: World-Space Calculation with Parallel Normal Offsets
    ============================================================================ */
 
-function init() {
-  const p = scriptInfo.params;
-
-  if (p.points.length === 0)
-    p.points.push({ x: p.midpoint.x, y: p.midpoint.y });
-
-  const pt = p.points[0];
-
-  scriptInfo.elements = {
-    element: {
-      ...p,
-      midpoint: { x: pt.x, y: pt.y }
-    }
-  };
-}
-
-function update(incoming) {
-  const e = scriptInfo.elements.element;
-  const p = scriptInfo.params;
-
-  for (const key in incoming) {
-    const val = incoming[key];
-    if (val === undefined) continue;
-
-    if (key === "points") {
-      const pt = p.points[0];
-      e.midpoint.x = pt.x;
-      e.midpoint.y = pt.y;
-    } else if (Object.hasOwn(e, key)) {
-      e[key] = val;
-    }
-  }
-}
-
-/* ============================================================================
-   CISSOID ENGINE (CLASSICAL, RESTORED)
-   ============================================================================ */
-
-   function generateCissoidLocal(scale) {
-    const pts = [];
-    const steps = 600;
-
-    for (let i = 0; i <= steps; i++) {
-      const t = (i / steps) * 4 - 2;   // -2 → +2
-
-      // Classical cissoid of Diocles
-      const denom = 1 + t * t;
-      const x = (2 * t * t) / denom;
-      const y = (2 * t * t * t) / denom;
-
-      pts.push({ x: x * scale, y: y * scale });
-    }
-
-    return pts;
-  }
-
-
-function drawCissoidInFrame(ctx, localPts, frame, params) {
-  const { origin, tangent, normal } = frame;
-  const { bound, centerX, centerY, color, lineWidth } = params;
-
-  const half = bound * 0.5;
-  const minX = centerX - half;
-  const maxX = centerX + half;
-  const minY = centerY - half;
-  const maxY = centerY + half;
-
-  ctx.strokeStyle = color;
-  ctx.lineWidth = lineWidth;
+function drawCissoidParallel(ctx, ox, oy, angle, offsetAmount, e) {
+  const T = 6;
+  const steps = 400;
+  const cos = Math.cos(angle);
+  const sin = Math.sin(angle);
 
   ctx.beginPath();
   let started = false;
 
-  for (const lp of localPts) {
-    const wx = origin.x + lp.x * tangent.x + lp.y * normal.x;
-    const wy = origin.y + lp.x * tangent.y + lp.y * normal.y;
+  for (let i = 0; i <= steps; i++) {
+    const t = -T + (2 * T) * (i / steps);
+    const denom = 1 + t * t;
 
-    const inside =
-      wx >= minX && wx <= maxX &&
-      wy >= minY && wy <= maxY;
+    // 1. Position
+    const lx = (t * t / denom) * e.scale;
+    const ly = (t * t * t / denom) * e.scale;
 
-    if (inside) {
+    // 2. Derivative (for normal calculation)
+    const dDenom = denom * denom;
+    const ldx = (2 * t) / dDenom;
+    const ldy = (3 * t * t + Math.pow(t, 4)) / dDenom;
+
+    // 3. Normal Vector
+    const mag = Math.hypot(ldx, ldy) || 1;
+    const lnx = -ldy / mag;
+    const lny = ldx / mag;
+
+    // 4. Offset local point
+    const lpx = lx + lnx * offsetAmount;
+    const lpy = ly + lny * offsetAmount;
+
+    // 5. World Space
+    const wx = ox + (lpx * cos - lpy * sin);
+    const wy = oy + (lpx * sin + lpy * cos);
+
+    if (Math.abs(wx - e.midpoint.x) <= e.bound && Math.abs(wy - e.midpoint.y) <= e.bound) {
       if (!started) {
         ctx.moveTo(wx, wy);
         started = true;
@@ -145,269 +115,100 @@ function drawCissoidInFrame(ctx, localPts, frame, params) {
       started = false;
     }
   }
-
   ctx.stroke();
 }
 
-function makeParams(e) {
-  return {
-    bound: e.bound,
-    centerX: e.midpoint.x,
-    centerY: e.midpoint.y,
-    color: e.color,
-    lineWidth: e.lineWidth
-  };
-}
-
 /* ============================================================================
-   FAMILIES (FULL SET, RESTORED)
+   FAMILIES: Effect Management
    ============================================================================ */
 
-   function drawOffsetCurveFamily(ctx, e, localPts) {
-    const cx = e.midpoint.x;
-    const cy = e.midpoint.y;
+function drawFamilies(ctx, e) {
+  const { x: cx, y: cy } = e.midpoint;
+  const arcRad = (e.arcRange * Math.PI) / 180;
+  const globalRotRad = (e.globalRotation * Math.PI) / 180;
 
-    // reference circle
-    ctx.strokeStyle = "black";
-    ctx.lineWidth = 1;
-    ctx.beginPath();
-    ctx.arc(cx, cy, e.circleRadius, 0, Math.PI * 2);
-    ctx.stroke();
+  for (let i = 0; i < e.numCurves; i++) {
+    const t = e.numCurves > 1 ? i / (e.numCurves - 1) : 0;
+    const currentTheta = (t * arcRad) + globalRotRad;
 
-    const params = makeParams(e);
+    // Color logic
+    if (e.colorMode === "rainbow") {
+      ctx.strokeStyle = `hsl(${(t * 360)}, 80%, 50%)`;
+    } else {
+      ctx.strokeStyle = e.color;
+    }
+    ctx.lineWidth = e.lineWidth;
 
-    for (let i = 0; i < e.numCurves; i++) {
-      const theta = (i / e.numCurves) * 2 * Math.PI;
-
-      // point on circle
-      const px = cx + Math.cos(theta) * e.circleRadius;
-      const py = cy + Math.sin(theta) * e.circleRadius;
-
-      // OUTWARD normal (this is the direction the cissoid should open)
-      const nx = Math.cos(theta);
-      const ny = Math.sin(theta);
-
-      // tangent = rotate normal 90° clockwise
-      // this makes +x = tangent, +y = outward
-      const tx = ny;
-      const ty = -nx;
-
-      const frame = {
-        origin: { x: px, y: py },
-        tangent: { x: tx, y: ty },
-        normal:  { x: nx, y: ny }
-      };
-
-      drawCissoidInFrame(ctx, localPts, frame, params);
+    if (e.effect === "parallelOffset") {
+      // Logic for the requested image style
+      const offset = (i - (e.numCurves - 1) / 2) * e.offsetStep;
+      drawCissoidParallel(ctx, cx, cy, globalRotRad, offset, e);
+    } else {
+      // Standard families logic
+      let ox, oy, angle;
+      switch (e.effect) {
+        case "expandingFan":
+          const fanAngle = globalRotRad - (arcRad * 0.4) + (arcRad * 0.8 * t);
+          const r = e.circleRadius * (0.5 + t);
+          ox = cx + Math.cos(fanAngle) * r; oy = cy + Math.sin(fanAngle) * r;
+          angle = fanAngle; break;
+        case "breathing":
+          const pulse = 0.7 + 0.3 * Math.sin(Date.now() / 500);
+          ox = cx + Math.cos(currentTheta) * e.circleRadius * pulse;
+          oy = cy + Math.sin(currentTheta) * e.circleRadius * pulse;
+          angle = currentTheta; break;
+        case "radialSpokes":
+          ox = cx; oy = cy; angle = currentTheta; break;
+        default:
+          ox = cx + Math.cos(currentTheta) * e.circleRadius;
+          oy = cy + Math.sin(currentTheta) * e.circleRadius;
+          angle = currentTheta;
+      }
+      drawCissoidParallel(ctx, ox, oy, angle, 0, e);
     }
   }
-
-
-function drawExpandingFan(ctx, e, localPts) {
-  const params = makeParams(e);
-  const cx = e.midpoint.x;
-  const cy = e.midpoint.y;
-
-  const baseAngle = -Math.PI / 2;
-  const spread = Math.PI * 0.8;
-
-  for (let i = 0; i < e.numCurves; i++) {
-    const t = i / (e.numCurves - 1);
-    const angle = baseAngle - spread * 0.5 + spread * t;
-    const r = e.circleRadius * (0.5 + t);
-
-    const px = cx + Math.cos(angle) * r;
-    const py = cy + Math.sin(angle) * r;
-
-    const tangent = { x: Math.cos(angle), y: Math.sin(angle) };
-    const normal  = { x: -Math.sin(angle), y: Math.cos(angle) };
-
-    const frame = { origin: { x: px, y: py }, tangent, normal };
-
-    drawCissoidInFrame(ctx, localPts, frame, params);
-  }
-}
-
-function drawContractingFan(ctx, e, localPts) {
-  const params = makeParams(e);
-  const cx = e.midpoint.x;
-  const cy = e.midpoint.y;
-
-  const baseAngle = -Math.PI / 2;
-  const spread = Math.PI * 0.8;
-
-  for (let i = 0; i < e.numCurves; i++) {
-    const t = i / (e.numCurves - 1);
-    const angle = baseAngle - spread * 0.5 + spread * t;
-    const r = e.circleRadius * (1.2 - t);
-
-    const px = cx + Math.cos(angle) * r;
-    const py = cy + Math.sin(angle) * r;
-
-    const tangent = { x: Math.cos(angle), y: Math.sin(angle) };
-    const normal  = { x: -Math.sin(angle), y: Math.cos(angle) };
-
-    const frame = { origin: { x: px, y: py }, tangent, normal };
-
-    drawCissoidInFrame(ctx, localPts, frame, params);
-  }
-}
-
-function drawBreathing(ctx, e, localPts) {
-  const params = makeParams(e);
-  const cx = e.midpoint.x;
-  const cy = e.midpoint.y;
-
-  const time = (performance.now() % 4000) / 4000;
-  const radiusScale = 0.7 + 0.3 * Math.sin(time * 2 * Math.PI);
-
-  for (let i = 0; i < e.numCurves; i++) {
-    const theta = (i / e.numCurves) * 2 * Math.PI;
-    const r = e.circleRadius * radiusScale;
-
-    const px = cx + Math.cos(theta) * r;
-    const py = cy + Math.sin(theta) * r;
-
-    const tangent = { x: -Math.sin(theta), y: Math.cos(theta) };
-    const normal  = { x:  Math.cos(theta), y: Math.sin(theta) };
-
-    const frame = { origin: { x: px, y: py }, tangent, normal };
-
-    drawCissoidInFrame(ctx, localPts, frame, params);
-  }
-}
-
-function drawHyperbolic(ctx, e, localPts) {
-  const params = makeParams(e);
-  const cx = e.midpoint.x;
-  const cy = e.midpoint.y;
-
-  for (let i = 0; i < e.numCurves; i++) {
-    const t = (i + 1) / (e.numCurves + 1);
-    const theta = t * 2 * Math.PI;
-    const r = e.circleRadius * (1 / (0.3 + t));
-
-    const px = cx + Math.cos(theta) * r;
-    const py = cy + Math.sin(theta) * r;
-
-    const tangent = { x: -Math.sin(theta), y: Math.cos(theta) };
-    const normal  = { x:  Math.cos(theta), y: Math.sin(theta) };
-
-    const frame = { origin: { x: px, y: py }, tangent, normal };
-
-    drawCissoidInFrame(ctx, localPts, frame, params);
-  }
-}
-
-function drawRadialSpokes(ctx, e, localPts) {
-  const params = makeParams(e);
-  const cx = e.midpoint.x;
-  const cy = e.midpoint.y;
-
-  for (let i = 0; i < e.numCurves; i++) {
-    const theta = (i / e.numCurves) * 2 * Math.PI;
-    const r = e.circleRadius;
-
-    const px = cx + Math.cos(theta) * r;
-    const py = cy + Math.sin(theta) * r;
-
-    const tangent = { x: Math.cos(theta), y: Math.sin(theta) };
-    const normal  = { x: -Math.sin(theta), y: Math.cos(theta) };
-
-    const frame = { origin: { x: px, y: py }, tangent, normal };
-
-    drawCissoidInFrame(ctx, localPts, frame, params);
-  }
-}
-
-function drawTickMarks(ctx, e, localPts) {
-  const params = makeParams(e);
-  const cx = e.midpoint.x;
-  const cy = e.midpoint.y;
-
-  const ticks = e.numCurves;
-
-  for (let i = 0; i < ticks; i++) {
-    const theta = (i / ticks) * 2 * Math.PI;
-    const rInner = e.circleRadius * 0.95;
-    const rOuter = e.circleRadius * 1.05;
-
-    const px = cx + Math.cos(theta) * rOuter;
-    const py = cy + Math.sin(theta) * rOuter;
-
-    const tangent = { x: -Math.sin(theta), y: Math.cos(theta) };
-    const normal  = { x:  Math.cos(theta), y: Math.sin(theta) };
-
-    const frame = { origin: { x: px, y: py }, tangent, normal };
-
-    drawCissoidInFrame(ctx, localPts, frame, params);
-
-    // radial tick
-    ctx.strokeStyle = "black";
-    ctx.lineWidth = 1;
-    ctx.beginPath();
-    ctx.moveTo(cx + Math.cos(theta) * rInner, cy + Math.sin(theta) * rInner);
-    ctx.lineTo(cx + Math.cos(theta) * rOuter, cy + Math.sin(theta) * rOuter);
-    ctx.stroke();
-  }
 }
 
 /* ============================================================================
-   draw()
+   BOILERPLATE
    ============================================================================ */
+
+function init() {
+  const p = scriptInfo.params;
+  if (p.points.length === 0) p.points.push({ x: p.midpoint.x, y: p.midpoint.y });
+  scriptInfo.elements = { element: { ...p } };
+}
+
+function update(incoming) {
+  const e = scriptInfo.elements.element;
+  for (const key in incoming) {
+    if (incoming[key] !== undefined && Object.hasOwn(e, key)) e[key] = incoming[key];
+  }
+  if (incoming.points) {
+    e.midpoint.x = incoming.points[0].x;
+    e.midpoint.y = incoming.points[0].y;
+  }
+}
 
 function draw() {
   const e = scriptInfo.elements.element;
-
-  // FIX: supply a step count
-  const localPts = generateCissoidLocal(e.scale, 400);
-
   ctx.setTransform(1, 0, 0, 1, 0, 0);
   ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+  drawFamilies(ctx, e);
 
-  switch (e.effect) {
-    case "offsetCurve":
-      drawOffsetCurveFamily(ctx, e, localPts);
-      break;
-    case "expandingFan":
-      drawExpandingFan(ctx, e, localPts);
-      break;
-    case "contractingFan":
-      drawContractingFan(ctx, e, localPts);
-      break;
-    case "breathing":
-      drawBreathing(ctx, e, localPts);
-      break;
-    case "hyperbolic":
-      drawHyperbolic(ctx, e, localPts);
-      break;
-    case "radialSpokes":
-      drawRadialSpokes(ctx, e, localPts);
-      break;
-    case "tickMarks":
-      drawTickMarks(ctx, e, localPts);
-      break;
+  if (e.effect === "breathing" || e.colorMode === "rainbow") {
+    requestAnimationFrame(() => scriptInfo.redrawHandler());
   }
 }
 
-
-/* ============================================================================
-   runPattern()
-   ============================================================================ */
-
 export function runPattern() {
   scriptInfo.parameters = scriptInfo.params;
-
   init();
   buildParameterControls(scriptInfo, "tab-scripts", true);
-
   scriptInfo.redrawHandler = () => {
     update(scriptInfo.params);
     draw();
   };
-
   scriptInfo.redrawHandler();
-
-  if (window.armInteractor)
-    window.armInteractor(scriptInfo);
+  if (window.armInteractor) window.armInteractor(scriptInfo);
 }

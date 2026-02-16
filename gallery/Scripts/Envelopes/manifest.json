@@ -1,13 +1,39 @@
 [
   {
+    "filename": "chladni",
+    "path": "chladni.js",
+    "title": "chladni.js"
+  },
+  {
     "filename": "cycloidLike",
     "path": "cycloidLike.js",
     "title": "cycloidLike.js"
+  },
+  {
+    "filename": "harmongraph",
+    "path": "harmongraph.js",
+    "title": "harmongraph.js"
   },
   {
     "filename": "parabolas",
     "path": "parabolas.js",
     "title": "parabolas.js",
     "status": "Broken"
+  },
+  {
+    "filename": "rotaryHarmonograph",
+    "path": "rotaryHarmonograph.js",
+    "title": "rotaryHarmonograph.js"
+  },
+  {
+    "filename": "superformula",
+    "path": "superformula.js",
+    "title": "superformula.js"
+  },
+  {
+    "filename": "superformulaFamilies",
+    "path": "superformulaFamilies.js",
+    "title": "superformulaFamilies.js",
+    "status": "new"
   }
 ]

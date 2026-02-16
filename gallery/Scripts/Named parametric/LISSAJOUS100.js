@@ -21,7 +21,7 @@
 ============================================================ */
 
 /*
-    Absolutely, Barry. Here’s a complete, standalone HTML + JavaScript scaffold for a Curve-Stitch Lissajous Explorer. This version:
+    Here’s a complete, standalone HTML + JavaScript scaffold for a Curve-Stitch Lissajous Explorer. This version:
 • 🧵 Uses straight-line stitching between points on a Lissajous curve
 • 🎛️ Includes interactive sliders for controlling amplitude, frequency, and phase
 • 🖼️ Renders the stitched curve on a canvas

@@ -1,6 +1,6 @@
 /* galleryMenuCmds.js
    ------------------------------------------------------------
-   Gallery Tab â€” Menu Commands (Adapter Layer)
+   Gallery Tab Ã¢â‚¬â€ Menu Commands (Adapter Layer)
    ------------------------------------------------------------
 */
 
@@ -13,45 +13,65 @@ import { refreshGalleryFromManifestEdit } from "./gallery.js";
 /* ============================================================
    archiveGalleryItem(info)
    ------------------------------------------------------------
-   Matches archivePatternsItem logic exactly:
-   1. Calc Next Index.
-   2. Archive.
-   3. Clear Cache.
-   4. Save "Bookmark" state to sessionStorage.
+   1. Ensure cache warm before reading list length.
+   2. Calculate next index.
+   3. Archive.
+   4. Clear cache.
+   5. Navigate in-place — no page reload.
 ============================================================ */
 export async function archiveGalleryItem(info) {
   if (!window.confirm(`Archive "${info.title || info.filename}"?`)) return;
 
-  const { archiveItem } = await import("./menuCmds.js");
+  const { domain, category } = info;
+  const currentIndex = uiState.gallery.saved?.index ?? 0;
 
-  // 1. Perform server-side work first
-  const result = await archiveItem({
+  // 1. Ensure the gallery cache is warm before reading from it.
+  //    It may be cold if this is the first operation in a session,
+  //    or if a previous action cleared it.
+  const { ensureGalleryCacheLoaded, restoreGalleryTab, initGalleryTab,
+          getGalleryCache, clearGalleryCache } =
+    await import("./gallery.js");
+  await ensureGalleryCacheLoaded();
+
+  const list = getGalleryCache()?.[domain]?.[category] ?? [];
+
+  // 2. Calculate where to navigate after removal.
+  const stayInResultsView = list.length > 1;
+  let nextIndex = currentIndex;
+  if (currentIndex >= list.length - 1) {
+    nextIndex = Math.max(0, currentIndex - 1);
+  }
+
+  // 3. Perform the archive (moves file on disk).
+  const { archiveItem } = await import("./menuCmds.js");
+  await archiveItem({
     payload: { manifestPath: info.manifestPath, filename: info.filename },
     showAlert: false
   });
 
-  if (result?.status === "ok") {
-    const { domain, category } = info;
-    const list = manifest.cache.gallery[domain][category];
-    const currentIndex = uiState.gallery.saved.index;
+  // 4. Clear the stale cache so the next load hits disk.
+  clearGalleryCache();
 
-    // 2. Determine new bookmark
-    if (list.length > 1) {
-      const nextIndex = (currentIndex === list.length - 1) ? currentIndex - 1 : currentIndex;
+  // 5. Navigate immediately without a page reload.
+  await ensureGalleryCacheLoaded();
 
-      sessionStorage.setItem("sketchpad.gallery.saved", JSON.stringify({
-        view: "results",
-        domain,
-        category,
-        index: nextIndex
-      }));
-    } else {
-      // Category is now empty
-      sessionStorage.removeItem("sketchpad.gallery.saved");
-    }
-
-    // 3. Single point of truth: Reload the app to the new bookmark
-    window.location.reload();
+  if (stayInResultsView) {
+    uiState.gallery.saved = {
+      view: "results",
+      domain,
+      category,
+      index: nextIndex
+    };
+    await restoreGalleryTab();
+  } else {
+    // Category now empty — go back to category list.
+    uiState.gallery.saved = {
+      view: "categories",
+      domain,
+      category: null,
+      index: null
+    };
+    await initGalleryTab(false);
   }
 }
 

@@ -619,6 +619,54 @@ function getPreviousIndex(i, length) {
   return i === 0 ? length - 1 : i - 1;
 }
 
+/**
+ * getTranslationOffset
+ * Calculates the shift needed to center a set of points on the canvas.
+ * @param {Array} points - Array of Point objects
+ * @param {number} canvasW - Width of canvas
+ * @param {number} canvasH - Height of canvas
+ * @returns {Object} {x, y} offsets
+ */
+/**
+ * getTranslationOffset
+ * Calculates the shift needed to center a set of points on the canvas
+ * by internally accessing canvas dimensions from the context.
+ *
+ * @param {Array} points - Array of Point objects..
+ * @returns {Object} {x, y} translation offsets.
+ */
+export function getTranslationOffset(points, ctx) {
+  if (!points || points.length === 0) return { x: 0, y: 0 };
+
+  // Access dimensions directly from the context's canvas
+  const canvasW = ctx.canvas.width;
+  const canvasH = ctx.canvas.height;
+
+  let minX = Infinity, maxX = -Infinity;
+  let minY = Infinity, maxY = -Infinity;
+
+  // Measurement Pass: Determine the bounds of the point set
+  for (let i = 0; i < points.length; i++) {
+    const pt = points[i];
+    if (pt.x < minX) minX = pt.x;
+    if (pt.x > maxX) maxX = pt.x;
+    if (pt.y < minY) minY = pt.y;
+    if (pt.y > maxY) maxY = pt.y;
+  }
+
+  // Calculate the geometric center of the bounding box
+  const centerX = (minX + maxX) / 2;
+  const centerY = (minY + maxY) / 2;
+
+  // Return the offset required to move that center to the canvas center
+  return {
+    x: (canvasW / 2) - centerX,
+    y: (canvasH / 2) - centerY
+  };
+}
+
+
+
 //////////////////////////////////////////////////////////////////
 /*
 ====================================================================

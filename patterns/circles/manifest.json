@@ -1,9 +1,13 @@
 [
   {
+    "filename": "cycloid0209_152200",
+    "path": "cycloid0209_152200.js",
+    "title": "ACycloid"
+  },
+  {
     "filename": "armsInCircles",
     "path": "armsInCircles.js",
-    "title": "armsInCircles.js",
-    "status": "new"
+    "title": "armsInCircles.js"
   },
   {
     "filename": "circle",
@@ -14,11 +18,6 @@
     "filename": "cycloid",
     "path": "cycloid.js",
     "title": "cycloid.js"
-  },
-  {
-    "filename": "cycloid0209_152200",
-    "path": "cycloid0209_152200.js",
-    "title": "cycloid0209_152200.js"
   },
   {
     "filename": "ellipseStartTaper",
@@ -49,11 +48,6 @@
     "filename": "gradientCircularParabola",
     "path": "gradientCircularParabola.js",
     "title": "Gradient Circular Parabola"
-  },
-  {
-    "filename": "inEllipse0209_125426",
-    "path": "inEllipse0209_125426.js",
-    "title": "inEllipse0209_125426.js"
   },
   {
     "filename": "inEllipse0209_144740",

@@ -36,9 +36,29 @@
     "title": "hypocycloid.js"
   },
   {
+    "filename": "hypocycloidEvolute",
+    "path": "hypocycloidEvolute.js",
+    "title": "hypocycloidEvolute.js"
+  },
+  {
+    "filename": "hypocycloidMany",
+    "path": "hypocycloidMany.js",
+    "title": "hypocycloidMany.js"
+  },
+  {
     "filename": "hypotrochoid",
     "path": "hypotrochoid.js",
     "title": "Hypotrochoid"
+  },
+  {
+    "filename": "hypotrochoid1",
+    "path": "hypotrochoid1.js",
+    "title": "hypotrochoid1.js"
+  },
+  {
+    "filename": "hypotrochoidInteractive",
+    "path": "hypotrochoidInteractive.js",
+    "title": "hypotrochoidInteractive.js"
   },
   {
     "filename": "lissajois1",
@@ -74,8 +94,29 @@
     "status": "Many"
   },
   {
+    "filename": "lissajousCurveStitch",
+    "path": "lissajousCurveStitch.js",
+    "title": "lissajousCurveStitch.js",
+    "status": "new"
+  },
+  {
     "filename": "roseCurve",
     "path": "roseCurve.js",
     "title": "roseCurve.js"
+  },
+  {
+    "filename": "roseCurveInterative",
+    "path": "roseCurveInterative.js",
+    "title": "roseCurveInterative.js"
+  },
+  {
+    "filename": "roseCurvesMany",
+    "path": "roseCurvesMany.js",
+    "title": "roseCurvesMany.js"
+  },
+  {
+    "filename": "roseRhodena",
+    "path": "roseRhodena.js",
+    "title": "roseRhodena.js"
   }
 ]

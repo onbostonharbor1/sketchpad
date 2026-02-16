@@ -18,24 +18,6 @@
     "status": "Queue"
   },
   {
-    "file": "armsInCircles",
-    "path": "/patterns/circles/armsInCircles.js",
-    "title": "armsInCircles.js",
-    "status": "new"
-  },
-  {
-    "file": "cissoidDiocles",
-    "path": "/gallery/Scripts/Curves/cissoidDiocles.js",
-    "title": "cissoidDiocles.js",
-    "status": "new"
-  },
-  {
-    "file": "cissoidSimplified",
-    "path": "/gallery/Scripts/Curves/cissoidSimplified.js",
-    "title": "cissoidSimplified.js",
-    "status": "new"
-  },
-  {
     "file": "complicatedParabolas",
     "path": "/patterns/figures/complicatedParabolas.js",
     "title": "Complicated Parabolas",
@@ -72,11 +54,6 @@
     "status": "favorite"
   },
   {
-    "file": "linesInThree",
-    "path": "/patterns/circles/linesInThree.js",
-    "title": "linesInThree.js"
-  },
-  {
     "file": "LISSAJOUS100",
     "path": "/gallery/Scripts/Named parametric/LISSAJOUS100.js",
     "title": "LISSAJOUS100.js",
@@ -93,6 +70,12 @@
     "path": "/gallery/Scripts/Named parametric/lissajous5.js",
     "title": "lissajous5.js",
     "status": "Many"
+  },
+  {
+    "file": "lissajousCurveStitch",
+    "path": "/gallery/Scripts/Named parametric/lissajousCurveStitch.js",
+    "title": "lissajousCurveStitch.js",
+    "status": "new"
   },
   {
     "file": "manyParametric",
@@ -161,10 +144,22 @@
     "status": "favorite"
   },
   {
+    "file": "sierpinskiGasket",
+    "path": "/gallery/Scripts/Generative/sierpinskiGasket.js",
+    "title": "sierpinskiGasket.js",
+    "status": "new"
+  },
+  {
     "file": "strophoid",
     "path": "/gallery/Scripts/General parametric/strophoid.js",
     "title": "Strophoid",
     "status": "Queue 2"
+  },
+  {
+    "file": "superformulaFamilies",
+    "path": "/gallery/Scripts/Envelopes/superformulaFamilies.js",
+    "title": "superformulaFamilies.js",
+    "status": "new"
   },
   {
     "file": "twoEllipses",

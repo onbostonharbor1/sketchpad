@@ -39,9 +39,6 @@ import { buildCanvasThumbnailBase64 } from "./uiUtilities.js";
        });
 
        if (result.status === "ok") {
-         // Show success message
-         alert("Thumbnail created successfully.");
-         
          // 3. Refresh the UI grid
          // The 100ms delay ensures the OS file system has settled
          setTimeout(() => {
@@ -62,46 +59,67 @@ export async function archivePatternsItem(info) {
   const confirm = window.confirm(`Archive "${info.title || info.filename}"?`);
   if (!confirm) return;
 
-  const category = info.category;
+  const category     = info.category;
   const currentIndex = uiState.patterns.activeItem;
-  const list = manifest.cache.patterns[category];
 
-  // 1. Calculate the next item to show
+  // 1. Ensure the manifest cache is warm before reading from it.
+  //    It may be cold if this is the first operation in a session,
+  //    or if a previous action cleared it.
+  const { ensurePatternsManifestLoaded } = await import("./patterns.js");
+  await ensurePatternsManifestLoaded();
+
+  const list = manifest.cache.patterns?.[category] ?? [];
+
+  // 2. Calculate where to navigate after removal.
+  //    Prefer showing the next item; if this was the last item,
+  //    show the one before it; if the category will be empty,
+  //    fall back to categories.
+  const stayInPatternView = list.length > 1;
   let nextIndex = currentIndex;
-  let stayInPatternView = (list.length > 1);
-
-  if (currentIndex === list.length - 1) {
-    nextIndex = currentIndex - 1;
+  if (currentIndex >= list.length - 1) {
+    nextIndex = Math.max(0, currentIndex - 1);
   }
 
-  // 2. Perform the Archive
+  // 3. Perform the archive (moves file on disk).
   const { archiveItem } = await import("./menuCmds.js");
   await archiveItem({
     payload: { manifestPath: info.manifestPath, filename: info.filename },
     showAlert: false
   });
 
-  // 3. Clear the stale cache
+  // 4. Clear the stale cache so the next load hits disk.
   if (manifest.cache) delete manifest.cache.patterns;
 
-  // 4. THE FIX: Update the "Bookmark" before the reload hits
+  // 5. Navigate immediately without waiting for a page reload.
+  //    Re-load the manifest fresh, then show the next item or categories.
+  const { initPatternsTab, restorePatternsTab } = await import("./patterns.js");
+  await ensurePatternsManifestLoaded();
+
   if (stayInPatternView) {
-    const newState = {
+    const newList = manifest.cache.patterns?.[category] ?? [];
+    // Clamp in case the list shrank more than expected
+    const safeIndex = Math.min(nextIndex, Math.max(0, newList.length - 1));
+
+    uiState.patterns.activeItem = safeIndex;
+    uiState.patterns.saved = {
       view: "pattern",
       activeCategory: category,
-      activeItem: nextIndex
+      activeItem: safeIndex
     };
-    // Save this specifically so the reload puts us back in the SUBTAB
-    sessionStorage.setItem("sketchpad.patterns.saved", JSON.stringify(newState));
-  } else {
-    // If the category is now empty, we HAVE to go back to categories
-    sessionStorage.removeItem("sketchpad.patterns.saved");
-  }
 
-  // The server will now reload the page.
-  // Because of the 'sessionStorage' bookmark above,
-  // setUI will wake up and call restorePatternsTab,
-  // keeping you on the Pattern subtab.
+    await restorePatternsTab();
+  } else {
+    // Category now empty — go back to category list.
+    uiState.patterns.activeCategory = null;
+    uiState.patterns.activeItem     = null;
+    uiState.patterns.saved = {
+      view: "categories",
+      activeCategory: null,
+      activeItem: null
+    };
+
+    await initPatternsTab(false);
+  }
 }
 
 /* ============================================================

@@ -33,11 +33,6 @@ const CATEGORIES_ID = "patterns-categories";
 const PATTERN_ID    = "patterns-pattern";
 
 /* ============================================================
-   Module-level cache for patterns manifest data
-=========================================================== */
-let patternsCache = null;
-
-/* ============================================================
    PatternsTabSpec â€” used by setUI.js
    ------------------------------------------------------------
    Must implement:
@@ -76,18 +71,14 @@ export const PatternsController = {
    ensurePatternsManifestLoaded()
    ------------------------------------------------------------
    Loads the patterns manifest once and caches it into
-   patternsCache as:
+   manifest.cache.patterns as:
      {
        categoryName: [ entry, entry, ... ],
        ...
      }
 =========================================================== */
-async function ensurePatternsManifestLoaded() {
-  console.time('ensurePatternsManifestLoaded');
-  
-  if (patternsCache && Object.keys(patternsCache).length > 0) {
-    console.timeEnd('ensurePatternsManifestLoaded');
-    console.log('  └─ Patterns cache already loaded');
+export async function ensurePatternsManifestLoaded() {
+  if (manifest.cache && manifest.cache.patterns) {
     return;
   }
 
@@ -104,8 +95,11 @@ async function ensurePatternsManifestLoaded() {
     map[categoryName] = raw[i] || [];
   }
 
-  patternsCache = map;
-  console.timeEnd('ensurePatternsManifestLoaded');
+  if (!manifest.cache) {
+    manifest.cache = {};
+  }
+
+  manifest.cache.patterns = map;
 } // end ensurePatternsManifestLoaded
 
 
@@ -252,7 +246,7 @@ export async function restorePatternsTab() {
   if (saved.view === "pattern") {
     // Verify category/item still exist (Refresh & Restore scenario)
     const cat = saved.activeCategory;
-    const list = patternsCache?.[cat] || [];
+    const list = manifest.cache.patterns?.[cat] || [];
 
     if (list.length === 0) {
       // Fallback if category empty/gone
@@ -357,10 +351,9 @@ function clearPatternsCaption() {
    showCategoryList()
    ------------------------------------------------------------
    Shows category frames inside #text.
-   Uses patternsCache exclusively.
+   Uses manifest.cache.patterns exclusively.
 =========================================================== */
 async function showCategoryList() {
-  console.time('patterns.showCategoryList');
   const textDiv   = document.getElementById("text");
   const actionDiv = document.getElementById("action");
   const padDiv    = document.getElementById("sketchpad");
@@ -377,10 +370,10 @@ async function showCategoryList() {
   padDiv.innerHTML    = "";
 
   await ensurePatternsManifestLoaded();
-  const groups = patternsCache;
+  const groups = manifest.cache.patterns;
 
   if (!groups) {
-    throw new Error("showCategoryList: patternsCache missing");
+    throw new Error("showCategoryList: manifest.cache.patterns missing");
   }
 
   const descriptor = buildCategoryDescriptor(
@@ -402,7 +395,6 @@ async function showCategoryList() {
 
   textDiv.innerHTML = "";
   renderCategories("text", descriptor);
-  console.timeEnd('patterns.showCategoryList');
 } // end showCategoryList
 
 
@@ -474,7 +466,7 @@ export function renderPatternThumbGrid(category) {
 
   if (!category) throw new Error("renderPatternThumbGrid: category missing");
 
-  const list = patternsCache[category];
+  const list = manifest.cache.patterns[category];
   if (!Array.isArray(list)) {
     throw new Error("renderPatternThumbGrid: list missing for category: " + category);
   }
@@ -529,7 +521,7 @@ async function showSelectedPattern(category, index) {
   // ... rest of the function ...
 
   await ensurePatternsManifestLoaded();
-  const list = patternsCache[category] || [];
+  const list = manifest.cache.patterns[category] || [];
   const item = list[index];
 
   const textDiv   = document.getElementById("text");
@@ -594,7 +586,7 @@ function onPrev() {
   const category = uiState.patterns.activeCategory;
   const index    = uiState.patterns.activeItem;
 
-  const list = patternsCache?.[category] || [];
+  const list = manifest.cache.patterns?.[category] || [];
   if (!list.length) return;
 
   const newIndex = index > 0 ? index - 1 : list.length - 1;
@@ -614,7 +606,7 @@ function onNext() {
   const category = uiState.patterns.activeCategory;
   const index    = uiState.patterns.activeItem;
 
-  const list = patternsCache?.[category] || [];
+  const list = manifest.cache.patterns?.[category] || [];
   if (!list.length) return;
 
   const newIndex = index < list.length - 1 ? index + 1 : 0;
