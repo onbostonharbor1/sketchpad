@@ -13,7 +13,7 @@
 import { uiState }               from "./uiState.js";
 import { resetCanvas }           from "/draw/drawState.js";
 import { buildParameterControls } from "./parameterControls.js";
-import { markTabDirty }           from "./draw.js";
+import { markTabDirty }           from "./draw/drawNav.js";
 import { syncOverlayToCanvas }    from "./uiUtilities.js";
 
 /**

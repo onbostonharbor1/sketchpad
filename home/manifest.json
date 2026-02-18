@@ -96,12 +96,6 @@
     "status": "Queue 2"
   },
   {
-    "file": "overlappingStars1",
-    "path": "/gallery/Scripts/Curve Stitch/overlappingStars1.js",
-    "title": "overlappingStars1.js",
-    "status": "current"
-  },
-  {
     "file": "parabolas",
     "path": "/gallery/Scripts/Envelopes/parabolas.js",
     "title": "parabolas.js",
@@ -166,12 +160,6 @@
     "path": "/patterns/circles/twoEllipses.js",
     "title": "Two Ellipses",
     "status": "To Gallery"
-  },
-  {
-    "file": "variedEllipse",
-    "path": "/gallery/Scripts/Experimental/variedEllipse.js",
-    "title": "variedEllipse.js",
-    "status": "Examine"
   },
   {
     "file": "weaving",

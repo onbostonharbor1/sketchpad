@@ -15,26 +15,24 @@ export const scriptInfo = {
     yDist: 100,
     xLength: 100,
     yLength: 100,
-    x1: 50,
+    x1: 200,
     y1: 50,
     color: "blue",
     numSteps: 18,
     lineWidth: 0.8,
-    alpha: 1.0,
     points: [] // [0-19] mapped to drawState.pts[1-20]
   },
 
   controls: {
-    color: { widget: "colorPicker", label: "Color" },
-    lineWidth: { widget: "range", label: "Line", min: 0.25, max: 6, step: 0.25 },
-    alpha: { widget: "range", label: "Alpha", min: 0.05, max: 1.0, step: 0.01 },
-    numSteps: { widget: "range", label: "Steps", min: 3, max: 80, step: 1 },
-    xDist:   { widget: "range", label: "xDist",   min: 10, max: 250, step: 1 },
-    yDist:   { widget: "range", label: "yDist",   min: 10, max: 250, step: 1 },
-    xLength: { widget: "range", label: "xLength", min: 20, max: 250, step: 1 },
-    yLength: { widget: "range", label: "yLength", min: 20, max: 250, step: 1 },
-    x1:      { widget: "range", label: "x1",      min: 0,  max: 500, step: 1 },
-    y1:      { widget: "range", label: "y1",      min: 0,  max: 500, step: 1 }
+    numSteps:  { widget: "range", label: "Steps", min: 3, max: 80, step: 1 },
+    xDist:     { widget: "range", label: "x Scale",   min: 10, max: 250, step: 1 },
+    yDist:     { widget: "range", label: "y Scale",   min: 10, max: 250, step: 1 },
+    x1:        { widget: "range", label: "x Mid",      min: 0,  max: 500, step: 1 },
+    y1:        { widget: "range", label: "y Mid",      min: 0,  max: 500, step: 1 },
+    color:     { widget: "colorPicker", label: "Color" },
+    lineWidth: { widget: "range", label: "Line", min: 0.25, max: 3.0, step: 0.25 },
+    xLength:   { widget: "range", label: "xLength", min: 20, max: 250, step: 1 },
+    yLength:   { widget: "range", label: "yLength", min: 20, max: 250, step: 1 }
   }
 };
 
@@ -100,11 +98,7 @@ function draw() {
 
   // Clear background
   ctx.globalCompositeOperation = "source-over";
-  ctx.globalAlpha = 1.0;
   ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
-
-  // Apply transparency
-  ctx.globalAlpha = scriptInfo.params.alpha;
 
   // Draw Grid Lines
   const c = scriptInfo.params.color;

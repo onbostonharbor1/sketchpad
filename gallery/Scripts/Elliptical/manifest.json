@@ -5,11 +5,6 @@
     "title": "Ellipse Curve Stitching"
   },
   {
-    "filename": "ellipseDemo",
-    "path": "ellipseDemo.js",
-    "title": "Ellipse Demo"
-  },
-  {
     "filename": "generativeModulated",
     "path": "generativeModulated.js",
     "title": "generativeModulated.js",

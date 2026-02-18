@@ -43,7 +43,6 @@
                   items: [ { name, onClick, hasSubitems? }, ... ]
 ============================================================ */
 export function renderCategories(targetId, descriptor) {
-  console.time(`renderCategories(${targetId})`);
 
   // Fail-fast container check
   const container = document.getElementById(targetId);
@@ -96,11 +95,6 @@ export function renderCategories(targetId, descriptor) {
       throw new Error(
         "renderCategories: frame.items must be an array"
       );
-    }
-
-    // Skip empty categories
-    if (items.length === 0) {
-      return;
     }
 
     const { frame, header, content } =
@@ -168,10 +162,60 @@ export function renderCategories(targetId, descriptor) {
 
     outer.appendChild(frame);
   });
-  console.timeEnd(`renderCategories(${targetId})`);
 } // end renderCategories
 
 
+/* ============================================================
+   buildCategoryDescriptor(groups, itemLabelFn, onClickFn)
+   ------------------------------------------------------------
+   Helper function to build a category descriptor array from a
+   grouped data structure.
+
+   This is a convenience function for the common pattern where
+   you have data organized as { categoryName: [entries] } and
+   need to convert it to the descriptor format that
+   renderCategories() expects.
+
+   Arguments:
+     groups      - Object with category names as keys, arrays as values
+                   e.g. { "Curves": [...], "Polygons": [...] }
+     
+     itemLabelFn - Function that extracts the display name from an entry
+                   e.g. (entry) => entry.title || entry.filename
+     
+     onClickFn   - Function called when an item is clicked
+                   Receives: (categoryName, sortedList, entry, index)
+                   This signature allows access to both the category
+                   context and the entry's position in the sorted list
+
+   Returns:
+     Array in descriptor format ready for renderCategories()
+
+   Example:
+     const descriptor = buildCategoryDescriptor(
+       manifest.cache.patterns,
+       (entry) => entry.title || entry.filename,
+       (category, list, entry, idx) => {
+         showPattern(category, idx);
+       }
+     );
+     renderCategories("text", descriptor);
+============================================================ */
+export function buildCategoryDescriptor(groups, itemLabelFn, onClickFn) {
+  return Object.keys(groups).sort().map(category => {
+    const list = groups[category] || [];
+    const sorted = [...list].sort(itemLabelFn);
+
+    return {
+      title: category,
+      items: sorted.map((entry, idx) => ({
+        name: itemLabelFn(entry),
+        hasSubitems: false,
+        onClick: () => onClickFn(category, sorted, entry, idx)
+      }))
+    };
+  });
+} // end buildCategoryDescriptor
 
 
 /* ============================================================

@@ -1,5 +1,5 @@
 ////////////////////////////////////////////////////////////////
-// overlay.js — CLEAN FINAL VERSION
+// overlay.js â€” CLEAN FINAL VERSION
 ////////////////////////////////////////////////////////////////
 import { openHelpEditorTinyMCE} from "./help.js";
 
@@ -21,6 +21,15 @@ export const overlayManager = {
   show(name, html) {
     const el = this.layers[name];
     if (!el) throw new Error("overlayManager.show: unknown layer " + name);
+    
+    // CRITICAL: Disable interactor when showing any overlay
+    // The interaction canvas layer can capture mouse events and render
+    // draggable points on top of overlays, making them unusable.
+    // This is automatically re-armed when scripts execute (see scriptRunner.js)
+    if (window.disarmInteractor) {
+      window.disarmInteractor();
+    }
+    
     el.innerHTML = html;
     el.style.display = "block";
   }, // end show
@@ -68,7 +77,7 @@ export const overlayManager = {
 window.overlayManager = overlayManager;
 
 ////////////////////////////////////////////////////////////////
-// initOverlay() — CALL ONCE IN onDomContentLoaded()
+// initOverlay() â€” CALL ONCE IN onDomContentLoaded()
 ////////////////////////////////////////////////////////////////
 export function initOverlay() {
 
@@ -204,7 +213,7 @@ export function showHelpOverlay(helpPath, titleText, options = {}) {
       const header = document.getElementById("overlayTitle");
       if (!header) throw new Error("showHelpOverlay: #overlayTitle missing");
 
-      // IMPORTANT: do NOT append " Help" — the page title is the overlay title.
+      // IMPORTANT: do NOT append " Help" â€” the page title is the overlay title.
       header.textContent = pageTitle;
 
       document.getElementById("overlayContainer").style.display = "block";

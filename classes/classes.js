@@ -36,7 +36,7 @@ class StringThing {
             midBetween:  false,
 
 	                 // USED BY MANY
-            midpoint:    new Point(200, 200),
+            midpoint:    new Point(250, 250),
             numSteps:    20,
 
 	                 // OBJECTS WITH LITTLE NEED

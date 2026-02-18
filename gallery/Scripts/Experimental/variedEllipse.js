@@ -12,16 +12,16 @@
 import { buildParameterControls } from "/ui/parameterControls.js";
 import { Ellipse, TAPER, START_END, FULL, START_TAPER, END_TAPER } from "/classes/ellipseClass.js";
 import { Point } from "/classes/classes.js";
-import { drawInVariedEllipse } from "/draw/drawEllipse.js";
+import { drawInEllipse } from "/draw/drawEllipse.js";
 
 export const scriptInfo = {
   title: "Varied Ellipse Chords",
 
   params: {
-    midpoint: { x: 350, y: 300 },
+    midpoint: { x: 350, y: 350 },
     color: "blue",
     lineWidth: 1,
-    ellipse: { a: 400, b: 200 },
+    ellipse: { a: 640, b: 300 },
     numNodes: 120,
     chordLength: 20,
     startSkip: 0,
@@ -54,7 +54,7 @@ export const scriptInfo = {
     ellipse_a: { label: "Width", widget: "range", min: 50, max: 600, step: 10 },
     ellipse_b: { label: "Height", widget: "range", min: 50, max: 600, step: 10 },
     chordLength: { label: "Chord length", widget: "range", min: 10, max: 50, step: 1 },
-    numNodes: { label: "# Nodes", widget: "range", min: 50, max: 400, step: 5 },
+    numNodes: { label: "# Nodes", widget: "range", min: 50, max: 250, step: 5 },
     rotate: { label: "Rotation", widget: "range", min: 0, max: 360, step: 5 },
 
     variationGroup: { widget: "staticText", text: "--- VARIATION ---" },
@@ -108,10 +108,10 @@ function update(incoming) {
       e.midpoint.y = p.y;
     } else if (key === "ellipse_a") {
       // Map ellipse_a control to ellipse.a
-      e.ellipse.a = val;
+      e.ellipse.a = 2*val;
     } else if (key === "ellipse_b") {
       // Map ellipse_b control to ellipse.b
-      e.ellipse.b = val;
+      e.ellipse.b = 2*val;
     } else if (Object.hasOwn(e, key)) {
       // Direct property assignment
       e[key] = val;
@@ -123,7 +123,7 @@ function update(incoming) {
  * Draw - renders the ellipse
  */
 function draw() {
-  drawInVariedEllipse(scriptInfo.elements.ellipse);
+  drawInEllipse(scriptInfo.elements.ellipse);
 }
 
 /**

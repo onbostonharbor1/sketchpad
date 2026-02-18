@@ -189,7 +189,7 @@ export class Ellipse {
       // --------------------------------------------------------
       spacingBias: 0.0,     // -1 → +1 (non-uniform spacing)
       jitter:      0.0,     // pixel jitter amount
-      jitterMode:  "radial" // "radial", "tangent", "xy"
+      jitterMode:  "xy" // "radial", "tangent", "xy"
     };
 
     // Shallow merge

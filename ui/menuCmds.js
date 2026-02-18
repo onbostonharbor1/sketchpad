@@ -634,7 +634,12 @@ export async function createGalleryPatternPng(spec = {}) {
   if (manifest.cache) delete manifest.cache.gallery;
 
   // 6. User Feedback
-  alert("Gallery image saved successfully.");
+  alert(
+    "PNG and written: " +
+    result.pngPath +
+    "\nThumbnail: " +
+    result.thumbPath
+  );
 
   return result;
 
@@ -716,7 +721,14 @@ export async function createPatternScript(spec = {}) {
   }
   if (manifest.cache) delete manifest.cache.patterns;
 
-  alert("Pattern created successfully.");
+  alert(
+    "Pattern created:\n" +
+    result.scriptPath +
+    "\n\nThumbnail:\n" +
+    result.thumbPath +
+    "\n\nManifest:\n" +
+    result.manifestPath
+  );
 
   return result;
 
@@ -897,7 +909,7 @@ export async function saveSecondaryObject(spec = {}) {
   });
 
   if (result.status === "ok") {
-    alert("Secondary object saved successfully.");
+    alert("Secondary template saved to: " + result.path);
   }
   return result;
 }

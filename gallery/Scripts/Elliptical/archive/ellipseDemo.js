@@ -19,7 +19,7 @@
 
 import { printTitle }             from "/draw/drawUtilities.js";
 import { buildParameterControls } from "/ui/parameterControls.js";
-
+import { pointAtArcLength} from "/draw/drawEllipse.js";
 /* ============================================================
    scriptInfo  (drawRegistry-shaped)
 ============================================================ */
@@ -254,7 +254,7 @@ function drawEllipsePoints(thing) {
    Geometry helpers
 ============================================================ */
 
-function pointAtArcLength(targetLength, maxSamples, cumulative, pts) {
+function pointatArcLength_old(targetLength, maxSamples, cumulative, pts) {
   let low = 1;
   let high = maxSamples;
 

@@ -1,52 +1,69 @@
 /* utilities.js
-   ------------------------------------------------------------
-   Utilities Tab Controller â€” NEW ARCHITECTURE (Patterns/Gallery model)
-   ------------------------------------------------------------
-*/
+   ============================================================
+   Utilities Tab â€” Public Entry Point and Lifecycle
+   ============================================================
+   Role:
+     This is the public entry point for the Utilities tab.
+     It owns exactly three things:
 
-// ADD to imports at top of utilities.js
+       1. UtilityTabSpec â€” the object consumed by setUI.js to
+          drive tab activation (init / restore / save).
 
-import { nodeRebuildAndValidateManifests } from "./nodeLayer.js";
-import { runScriptByPath } from "./scriptRunner.js";
-import { formatRebuildReportShared } from "./uiUtilities.js";
-import { getUtilitiesCaptionMenuItems } from "./utilitiesMenuCmds.js";
-import { openHelpHomeOverlay } from "./help.js";
-import { syncSystemStateAfterRebuild } from "./uiUtilities.js";
-import { setCaptionBar }    from "./caption.js";
-import { renderCategories } from "./categories.js";
-import { manifest }         from "./manifest.js";
+       2. Lifecycle functions â€” initUtilityTab(), restoreUtilityTab(),
+          saveUtilityState(), refreshUtilitiesFromManifestEdit().
+
+       3. Cache loading â€” loads manifest data for Tools and Lab
+          domains during init and restore.
+
+   What does NOT live here:
+     â€¢ Subtab construction and navigation       â†’ utilities/utilitiesNav.js
+     â€¢ Category display and utility execution   â†’ utilities/utilitiesDisplay.js
+     â€¢ Caption bar and menu items               â†’ utilities/utilitiesMenuCmds.js
+     â€¢ Shared module-level state variables      â†’ utilities/utilitiesState.js
+
+   Import structure:
+     utilities.js imports from the utilities/ sub-modules.
+     Sub-modules import from utilities.js only via dynamic import()
+     to avoid circular references.
+   ============================================================ */
+
+import { manifest } from "./manifest.js";
 import {
-  clearDivs,
   setCommandsButtonLabel,
   setCommandsButton,
-  showCommandsOffcanvas
+  setCommandsButtonHandler,
+  showCommandsOffcanvas,
+  clearDivs
 } from "./uiUtilities.js";
+import { formatRebuildReportShared } from "./uiUtilities.js";
+import { nodeRebuildAndValidateManifests } from "./nodeLayer.js";
+import { openHelpHomeOverlay } from "./help.js";
+import {
+  resetUtilitiesState,
+  setUtilitiesCache,
+  getUtilitiesCache,
+  setHasRunUtility,
+  getHasRunUtility
+} from "./utilities/utilitiesState.js";
+import {
+  setUtilitySubtabs,
+  switchUtilityTab
+} from "./utilities/utilitiesNav.js";
+import {
+  displayUtilityResult
+} from "./utilities/utilitiesDisplay.js";
 
-import { menuManager }      from "./menuManager.js";
-
-/* ============================================================
-   Internal module-level vars (NO uiState additions)
-============================================================ */
-let utilitiesCache = null;
-let currentDomain  = null;
-let currentCategory = null;
-let currentList     = [];
-let currentIndex    = 0;
-
-// Track whether any utility has been run in this session
-// This controls whether the Result subtab is displayed
-let hasRunUtility = false;
-
-/* ============================================================
-   Domain constants
-============================================================ */
-const DOMAIN_TOOLS  = "Tools";
-const DOMAIN_LAB    = "Lab";
-const DOMAIN_RESULT = "Result";
 
 /* ============================================================
-   Exported TabSpec for setUI.js
-============================================================ */
+   UtilityTabSpec
+   ============================================================
+   Consumed by setUI.js to activate the Utilities tab.
+
+   setUI.js calls:
+     init(restored)  â€” on cold start or after needsUpdate
+     restore()       â€” when uiState.utilities.saved exists
+     save()          â€” before leaving the tab (optional)
+   ============================================================ */
 export const UtilityTabSpec = {
   theme: "theme-utilities",
   init: initUtilityTab,
@@ -54,52 +71,86 @@ export const UtilityTabSpec = {
   restore: restoreUtilityTab,
 
   action:    () => {},
-
   caption:   () => {},
   sketchpad: () => {},
   subtabs:   setUtilitySubtabs,
   text:      () => {}
 };
 
-/* ============================================================
-   restoreUtilityTab()
-============================================================ */
-async function restoreUtilityTab() {
-  setCommandsButtonLabel("Utilities Commands");
-  wireUtilitiesCommandsButton();
-  const saved = uiState.utilities.saved;
-
-  if (!saved) {
-    await initUtilityTab(false);
-    return;
-  }
-
-  // Restore the hasRunUtility flag from saved state
-  hasRunUtility = saved.hasRunUtility || false;
-
-  await setUtilitySubtabs();
-
-  const tabId = saved.activeUtilityTabId || "tab-tools";
-  uiState.utilities.activeUtilityTabId = tabId;
-
-  await switchUtilityTab(tabId);
-
-  if (tabId === "tab-result" && saved.lastResult) {
-    displayUtilityResult(saved.lastResult);
-  }
-}
 
 /* ============================================================
-   initUtilityTab()
-============================================================ */
+   ensureUtilitiesCacheLoaded()
+   ============================================================
+   Loads the utilities manifest data for Tools and Lab domains.
+
+   Returns immediately if the cache is already populated.
+   Called by init, restore, and refreshUtilitiesFromManifestEdit().
+
+   Cache invalidation:
+     Call setUtilitiesCache(null) before calling this function
+     to force a reload from disk (e.g. after a rebuild).
+   ============================================================ */
+async function ensureUtilitiesCacheLoaded() {
+
+  /* Return immediately if cache is already warm. */
+  const existing = getUtilitiesCache();
+  if (existing && Object.keys(existing).length > 0) return;
+
+  /* Load Tools and Lab manifests. */
+  const toolsRaw = await manifest.get("utilities/Tools");
+  const labRaw   = await manifest.get("utilities/Lab");
+
+  const toolsRegistry = manifest.getRegistry("utilities/Tools");
+  const labRegistry   = manifest.getRegistry("utilities/Lab");
+
+  const cache = { Tools: {}, Lab: {} };
+
+  toolsRegistry.forEach((cat, i) => cache.Tools[cat] = toolsRaw[i] || []);
+  labRegistry.forEach((cat, i) => cache.Lab[cat] = labRaw[i] || []);
+
+  setUtilitiesCache(cache);
+
+  // Also update manifest.cache for backward compatibility
+  if (!manifest.cache) {
+    manifest.cache = {};
+  }
+  manifest.cache.utilities = cache;
+
+} // end ensureUtilitiesCacheLoaded
+
+
+/* ============================================================
+   initUtilityTab(restored)
+   ============================================================
+   Cold-start initializer for the Utilities tab.
+
+   Called by setUI.js when:
+     a) The tab has never been visited (no saved state).
+     b) uiState.utilities.needsUpdate is true (post-rebuild).
+
+   Sequence:
+     1. Clear local cache (forces reload from manifest).
+     2. Set up UI (clear divs, wire commands button).
+     3. Ensure state container exists.
+     4. Load manifest data.
+     5. Restore hasRunUtility flag if applicable.
+     6. Build subtabs.
+     7. Switch to appropriate tab (restored or default).
+
+   Arguments:
+     restored â€” true when called with needsUpdate (Refresh & Restore).
+                The saved state is preserved and the view is restored.
+   ============================================================ */
 export async function initUtilityTab(restored = false) {
+
   // 1. Wipe local module cache immediately on Cold Start
-  utilitiesCache = null;
+  setUtilitiesCache(null);
 
   clearDivs();
   setCommandsButtonLabel("Utilities Commands");
   wireUtilitiesCommandsButton();
 
+  // 2. Ensure state container exists
   uiState.utilities = uiState.utilities || {
     activeUtilityTabId: "tab-tools",
     activeUtilityItem: null,
@@ -108,28 +159,20 @@ export async function initUtilityTab(restored = false) {
     saved: null
   };
 
-  // 2. Fetch from central manifest manager
-  // (These will hit the disk because syncSystemStateAfterRebuild cleared the bucket)
-  const toolsRaw = await manifest.get("utilities/Tools");
-  const labRaw   = await manifest.get("utilities/Lab");
+  // 3. Load manifest data
+  await ensureUtilitiesCacheLoaded();
 
-  const toolsRegistry = manifest.getRegistry("utilities/Tools");
-  const labRegistry   = manifest.getRegistry("utilities/Lab");
-
-  utilitiesCache = { Tools: {}, Lab: {} };
-
-  toolsRegistry.forEach((cat, i) => utilitiesCache.Tools[cat] = toolsRaw[i] || []);
-  labRegistry.forEach((cat, i) => utilitiesCache.Lab[cat] = labRaw[i] || []);
-
-  // Restore hasRunUtility flag if we have saved state
+  // 4. Restore hasRunUtility flag if we have saved state
   if (restored && uiState.utilities.saved) {
-    hasRunUtility = uiState.utilities.saved.hasRunUtility || false;
+    setHasRunUtility(uiState.utilities.saved.hasRunUtility || false);
   } else {
-    hasRunUtility = false;
+    setHasRunUtility(false);
   }
 
+  // 5. Build subtabs
   await setUtilitySubtabs();
 
+  // 6. Determine which tab to switch to
   let tabId = uiState.utilities.activeUtilityTabId || "tab-tools";
 
   if (restored && uiState.utilities.saved) {
@@ -144,22 +187,23 @@ export async function initUtilityTab(restored = false) {
 
       if (subtab && category && entry && entry.path) {
         // Find updated entry in cache
-        const domain = (subtab === "Tools") ? utilitiesCache.Tools
-                     : (subtab === "Lab")   ? utilitiesCache.Lab
+        const cache = getUtilitiesCache();
+        const domain = (subtab === "Tools") ? cache.Tools
+                     : (subtab === "Lab")   ? cache.Lab
                      : null;
 
         let found = null;
         if (domain && domain[category]) {
-            found = domain[category].find(e => e.path === entry.path);
+          found = domain[category].find(e => e.path === entry.path);
         }
 
         if (found) {
-            uiState.utilities.activeUtilityItem = found;
+          uiState.utilities.activeUtilityItem = found;
         } else {
-            // Fallback: active item gone, switch to Tools
-            console.warn("Utility item not found after restore/refresh:", entry.path);
-            tabId = "tab-tools";
-            uiState.utilities.activeUtilityTabId = tabId;
+          // Fallback: active item gone, switch to Tools
+          console.warn("Utility item not found after restore/refresh:", entry.path);
+          tabId = "tab-tools";
+          uiState.utilities.activeUtilityTabId = tabId;
         }
       }
     }
@@ -167,395 +211,63 @@ export async function initUtilityTab(restored = false) {
 
   uiState.utilities.activeUtilityTabId = tabId;
 
+  // 7. Switch to the determined tab
   await switchUtilityTab(tabId);
+
 } // end initUtilityTab
 
 
 /* ============================================================
-   updateUtilitiesCaption()
-   ------------------------------------------------------------
-   ROLE (MULTI-RESPONSIBILITY â€” BY DESIGN)
-   ------------------------------------------------------------
-   This function does MORE than send data to utilitiesMenuCmds.
-   It performs three distinct jobs:
-
-   1) Caption rendering
-      - Computes and sets the visible caption title.
-      - Wires Prev/Next behavior (currently null for Utilities).
-
-   2) Execution context derivation
-      - Computes scriptPath used to run or display the utility.
-      - This reflects how Utilities actually executes entries.
-
-   3) Menu-context bundling (CRITICAL)
-      - Builds a canonical `info` object for utilitiesMenuCmds.
-      - This MUST mirror the Gallery/Patterns contract:
-        â€¢ one canonical identifier
-        â€¢ no display-derived fallbacks
-        â€¢ no filename/path guessing
-============================================================ */
-function updateUtilitiesCaption({ title, path, subtab, category, manifestPath, entryPath, status }) {
-
-  /* ----------------------------------------------------------
-     1) Caption rendering
-     -------------------------------------------------------- */
-  const finalTitle =
-    (category && category.trim() !== "")
-      ? (category + ": " + (title || "(untitled)"))
-      : (title || "(untitled)");
-
-  /* ----------------------------------------------------------
-     2) Execution context derivation
-     -------------------------------------------------------- */
-  const scriptPath =
-    (subtab && category && entryPath)
-      ? `/utilities/${subtab}/${category}/${entryPath}`
-      : "";
-
-  setCaptionBar({
-    targetId: "caption",
-    title: finalTitle,
-    onPrev: null,
-    onNext: null,
-
-    /* --------------------------------------------------------
-       3) Menu-context bundling (Gallery-conformant)
-       ------------------------------------------------------ */
-    onMenu: async (anchor) => {
-
-      if (!manifestPath) {
-        throw new Error("updateUtilitiesCaption: manifestPath missing");
-      }
-      if (!entryPath) {
-        throw new Error("updateUtilitiesCaption: entryPath missing");
-      }
-
-      // Canonical identifier:
-      // Utilities use entry.path as the true manifest key
-      const info = {
-        // Help / identification
-        helpKey: `utilities/${subtab}/${category}/${entryPath}`,
-
-        // Script viewing / execution
-        isScript: true,
-        scriptPath: scriptPath,
-
-        // Manifest operations (Edit, future Archive)
-        manifestPath: manifestPath,
-        matchField: "path",
-        matchValue: entryPath,
-
-        // Canonical file identifier (DO NOT DERIVE)
-        filename: entryPath,
-
-        // Display metadata only
-        title: title || "",
-        status: status || ""
-      };
-
-      const items = await getUtilitiesCaptionMenuItems(info);
-      menuManager.open(items, anchor);
-
-    } // end onMenu
-  });
-
-} // end updateUtilitiesCaption
-
-
-
-
-function displayUtilityResult(html) {
-  const textDiv = document.getElementById("text");
-  if (!textDiv) throw new Error("displayUtilityResult: #text not found");
-
-  textDiv.innerHTML = "";
-  const box = document.createElement("div");
-  box.className = "utility-result-box";
-  box.innerHTML = html || "";
-
-  textDiv.appendChild(box);
-} // end displayUtilityResult
-
-
-/* ============================================================
-   setUtilitySubtabs()
-   ------------------------------------------------------------
-   FIXES
-   1) Generate class name that matches tabs.css: "utilities-subtabs"
-   2) Use data-tab-id consistently (dataset.tabId => attribute data-tab-id)
-   3) Fail-fast if #subtabs missing
-   4) Click handler correctly awaits async tab switch
-   5) Only create Result tab if hasRunUtility is true
-============================================================ */
-async function setUtilitySubtabs() {
-  const el = document.getElementById("subtabs");
-  if (!el) throw new Error("setUtilitySubtabs: #subtabs not found");
-
-  el.innerHTML = "";
-
-  const bar = document.createElement("ul");
-
-  // IMPORTANT: match tabs.css selectors
-  bar.className = "nav nav-tabs utilities-subtabs";
-
-  el.appendChild(bar);
-
-  function makeSubtab(name, id) {
-    const li = document.createElement("li");
-    li.className = "nav-item";
-
-    const btn = document.createElement("button");
-    btn.className = "nav-link";
-    btn.dataset.tabId = id;            // becomes data-tab-id in DOM
-    btn.textContent = name;
-
-    btn.addEventListener("click", async () => {
-      setCommandsButtonLabel("Utilities Commands");
-      await switchUtilityTab(id);
-    });
-
-    li.appendChild(btn);
-    bar.appendChild(li);
-  } // end makeSubtab
-
-  makeSubtab("Tools",  "tab-tools");
-  makeSubtab("Lab",    "tab-lab");
-  
-  // Only create Result tab if a utility has been run
-  if (hasRunUtility) {
-    makeSubtab("Result", "tab-result");
-  }
-} // end setUtilitySubtabs
-
-
-/* ============================================================
-   switchUtilityTab(tabId)
-   ------------------------------------------------------------
-   FIX:
-   - Uses stored category when switching to Result
-   - Calls runUtilityEntry(subtab, category, entry)
-   - No pathname logic elsewhere is changed
-============================================================ */
-async function switchUtilityTab(tabId) {
-
-  if (!tabId) throw new Error("switchUtilityTab: tabId missing");
-  uiState.utilities.activeUtilityTabId = tabId;
-  clearDivs();
-
-  if (tabId === "tab-tools") {
-    await setUtilityCategories("Tools");
-  } else if (tabId === "tab-lab") {
-    await setUtilityCategories("Lab");
-  } else if (tabId === "tab-result") {
-    const subtab   = uiState.utilities.lastUtilitySubtab;
-    const entry    = uiState.utilities.activeUtilityItem;
-    const category = uiState.utilities.activeUtilityCategory;
-
-    if (!subtab || !entry || !category) {
-      throw new Error(
-        "switchUtilityTab(tab-result): missing subtab/category/entry"
-      );
-    }
-
-    await runUtilityEntry(subtab, category, entry);
-  }
-
-  // Activate the clicked subtab (fail-fast)
-  activateUtilitySubtab(tabId);
-
-} // end switchUtilityTab
-
-
-
-/* ============================================================
-   activateUtilitySubtab()
-   ------------------------------------------------------------
-   Small helper: reliable activation (fail-fast, correct selector)
-============================================================ */
-function activateUtilitySubtab(tabId) {
-  const bar = document.querySelector("#subtabs ul.utilities-subtabs");
-  if (!bar) throw new Error("activateUtilitySubtab: ul.utilities-subtabs not found");
-
-  bar.querySelectorAll(".nav-link").forEach((b) => b.classList.remove("active"));
-
-  // IMPORTANT: attribute is data-tab-id (kebab), not data-tabId
-  const btn = bar.querySelector(`[data-tab-id="${tabId}"]`);
-  if (!btn) throw new Error("activateUtilitySubtab: button not found for " + tabId);
-
-  btn.classList.add("active");
-} // end activateUtilitySubtab
-
-
-
-/* ============================================================
-   runUtilityEntry(subtab, category, entry)
-   ------------------------------------------------------------
-   UPDATED:
-   - Uses scriptRunner (same pipeline as Gallery/Patterns)
-   - No direct dynamic import here
-   - No ctx plumbing here
-============================================================ */
-async function runUtilityEntry(subtab, category, entry) {
-
-  if (!subtab) throw new Error("runUtilityEntry: subtab missing");
-  if (!category) throw new Error("runUtilityEntry: category missing");
-  if (!entry) throw new Error("runUtilityEntry: entry missing");
-  if (!entry.path) throw new Error("runUtilityEntry: entry.path missing");
-
-  const scriptPath = `/utilities/${subtab}/${category}/${entry.path}`;
-
-  try {
-
-    // Clear regions (Utilities convention)
-    const textDiv = document.getElementById("text");
-    const actionDiv = document.getElementById("action");
-    const sketchDiv = document.getElementById("sketchpad");
-
-    if (!textDiv) throw new Error("runUtilityEntry: #text not found");
-    if (!actionDiv) throw new Error("runUtilityEntry: #action not found");
-    if (!sketchDiv) throw new Error("runUtilityEntry: #sketchpad not found");
-
-    textDiv.innerHTML = "";
-    actionDiv.innerHTML = "";
-    sketchDiv.innerHTML = "";
-
-    let result = null;
-
-    if (subtab === "Lab") {
-
-      // Canvas execution (controls optional, built only if scriptInfo exists)
-      result = await runScriptByPath(scriptPath, "canvas", {
-        canvasRegionId: "sketchpad",
-        controlsRegionId: "action",
-        enableControls: true
-      });
-
-    } else if (subtab === "Tools") {
-
-      // Text execution
-      result = await runScriptByPath(scriptPath, "text", {
-        textRegionId: "text"
-      });
-
-      if (typeof result === "string") {
-        uiState.utilities.lastResult = result;
-      }
-
-    } else {
-      throw new Error("runUtilityEntry: invalid subtab '" + String(subtab) + "'");
-    }
-
-    updateUtilitiesCaption({
-      title: entry.title || entry.filename || "(untitled)",
-      path: category + "/" + entry.path,
-      subtab,
-      category,
-      manifestPath: `/utilities/${subtab}/${category}/manifest.json`,
-      entryPath: entry.path,
-      status: entry.status || ""
-    });
-
-    // Tools: keep Result box behavior consistent with existing Utilities UX
-    if (subtab === "Tools") {
-      if (result !== null && result !== undefined) {
-        displayUtilityResult(result);
-      }
-    }
-
-    return result;
-
-  } catch (err) {
-    console.error("Error executing " + scriptPath + ":", err);
-    displayUtilityResult("Error executing " + scriptPath + ": " + err.message);
-    throw err;
-  }
-
-} // end runUtilityEntry
-
-
-
-
-/* ============================================================
-   onUtilityItemClick(item)
-   ------------------------------------------------------------
-   FIX: runUtilityEntry now requires category so it can build:
-        /utilities/<subtab>/<category>/<entry.path>
-   
-   When a utility is run for the first time, set hasRunUtility
-   flag and rebuild the subtabs to show the Result tab
-============================================================ */
-async function onUtilityItemClick(item) {
-
-  if (!item) throw new Error("onUtilityItemClick: item missing");
-  if (!item.subtab) throw new Error("onUtilityItemClick: item.subtab missing");
-  if (!item.entry) throw new Error("onUtilityItemClick: item.entry missing");
-  if (!item.category) throw new Error("onUtilityItemClick: item.category missing");
-
-  uiState.utilities.lastUtilitySubtab  = item.subtab;
-  uiState.utilities.activeUtilityItem  = item.entry;
-  uiState.utilities.activeUtilityCategory = item.category;
-  uiState.utilities.activeUtilityTabId = "tab-result";
-
-  // If this is the first utility run, rebuild subtabs to show Result tab
-  const wasFirstRun = !hasRunUtility;
-  hasRunUtility = true;
-  
-  if (wasFirstRun) {
-    await setUtilitySubtabs();
-  }
-
-  activateUtilitySubtab("tab-result");
-
-  clearDivs();
-  await runUtilityEntry(item.subtab, item.category, item.entry);
-
-} // end onUtilityItemClick
-
-
-
-/* ============================================================
-   Categories
-============================================================ */
-async function setUtilityCategories(which) {
-  const textDiv = document.getElementById("text");
-  textDiv.innerHTML = `<p>Loading ${which}...</p>`;
-
-  const sections =
-    which === "Tools" ? utilitiesCache.Tools :
-    which === "Lab"   ? utilitiesCache.Lab   :
-    null;
-
-  if (!sections) {
-    textDiv.innerHTML = `<p style='color:red;'>No manifest data for ${which}</p>`;
+   restoreUtilityTab()
+   ============================================================
+   Reconstructs the Utilities tab from uiState.utilities.saved.
+
+   Called by:
+     initUtilityTab(true)             â€” Refresh & Restore path
+     setUI.js / activateTab()         â€” returning to the tab
+     refreshUtilitiesFromManifestEdit() â€” after manifest mutation
+
+   If saved state is missing entirely, falls back to a cold init.
+   ============================================================ */
+async function restoreUtilityTab() {
+  setCommandsButtonLabel("Utilities Commands");
+  wireUtilitiesCommandsButton();
+
+  const saved = uiState.utilities.saved;
+
+  if (!saved) {
+    await initUtilityTab(false);
     return;
   }
 
-  const frames = Object.keys(sections).map((subdir) => {
-    const entries = sections[subdir] || [];
+  // Restore the hasRunUtility flag from saved state
+  setHasRunUtility(saved.hasRunUtility || false);
 
-    const items = entries.map((entry) => ({
-      name: entry.title || entry.filename || "(untitled)",
-      onClick: () => onUtilityItemClick({ entry, subtab: which, category: subdir }),
-      entry,
-      subtab: which,
-      category: subdir
-    }));
+  await setUtilitySubtabs();
 
-    return { title: subdir, items };
-  });
+  const tabId = saved.activeUtilityTabId || "tab-tools";
+  uiState.utilities.activeUtilityTabId = tabId;
 
-  textDiv.innerHTML = "";
-  renderCategories("text", frames);
-} // end setUtilityCategories
+  await switchUtilityTab(tabId);
+
+  if (tabId === "tab-result" && saved.lastResult) {
+    displayUtilityResult(saved.lastResult);
+  }
+} // end restoreUtilityTab
+
 
 /* ============================================================
    saveUtilityState()
-   ------------------------------------------------------------
-   FIX:
-   - Persist category as well as subtab + entry
-   - Keeps Result reload deterministic
-   - Save hasRunUtility flag to persist Result tab visibility
-============================================================ */
+   ============================================================
+   Called by setUI.js before leaving the tab (optional hook).
+   Returns the current save snapshot for persistence.
+
+   Saves:
+     â€¢ Active tab ID
+     â€¢ Last utility subtab/category/item (for Result restoration)
+     â€¢ Last result text
+     â€¢ hasRunUtility flag (controls Result tab visibility)
+   ============================================================ */
 export function saveUtilityState() {
 
   const s = {
@@ -564,7 +276,7 @@ export function saveUtilityState() {
     lastUtilityCategory: uiState.utilities.activeUtilityCategory || null,
     lastUtilityItem:    uiState.utilities.activeUtilityItem || null,
     lastResult:         uiState.utilities.lastResult || "",
-    hasRunUtility:      hasRunUtility
+    hasRunUtility:      getHasRunUtility()
   };
 
   uiState.utilities.saved = s;
@@ -574,63 +286,17 @@ export function saveUtilityState() {
 
 
 /* ============================================================
-   Exposed helpers
-============================================================ */
-export async function loadCategory(categoryName) {
-  if (!categoryName) {
-    await switchUtilityTab("tab-tools");
-    return;
-  }
-
-  const key = categoryName.toLowerCase();
-
-  if (key === "tools")  return await switchUtilityTab("tab-tools");
-  if (key === "lab")    return await switchUtilityTab("tab-lab");
-  if (key === "result") return await switchUtilityTab("tab-result");
-
-  await switchUtilityTab("tab-tools");
-}
-
-export async function runUtilityItem(name) {
-  throw new Error("runUtilityItem is not wired; items run via onUtilityItemClick.");
-}
-
-function buildUtilitiesOffcanvasHtml() {
-
-  return `
-    <div class="cmdButtonRow">
-      <button id="utilitiesRebuildValidateButton" class="cmdButton" type="button">
-        Rebuild &amp; Validate
-      </button>
-    </div>
-
-    <div class="cmdButtonRow">
-      <button id="utilitiesHelpButton" class="cmdButton" type="button">
-        Help
-      </button>
-    </div>
-
-    <div class="buttonSeparator"></div>
-
-    <div id="utilitiesRebuildReport" class="utilitiesRebuildReport"></div>
-  `;
-
-} // end buildUtilitiesOffcanvasHtml
-
-
-export function formatRebuildReport(report) {
-  return formatRebuildReportShared(report);
-} // end formatRebuildReport
-
-/* ============================================================
    refreshUtilitiesFromManifestEdit()
-   ------------------------------------------------------------
-   FIX:
-   After reloading manifests, rehydrate uiState.utilities.activeUtilityItem
-   from the newly loaded utilitiesCache. Otherwise uiState still holds
-   the old entry object (with stale status/title), so Edit Manifest
-   reopens showing the previous values even though disk is updated.
-============================================================ */
+   ============================================================
+   Called after editing a manifest entry to reload data and
+   restore the current view.
+
+   Sequence:
+     1. Clear manifest cache
+     2. Reload cache (same as init path)
+     3. Rehydrate activeUtilityItem from refreshed cache
+     4. Restore Utilities tab deterministically
+   ============================================================ */
 export async function refreshUtilitiesFromManifestEdit() {
 
   // Drop manifest cache
@@ -639,29 +305,20 @@ export async function refreshUtilitiesFromManifestEdit() {
   }
   if (manifest.cache) delete manifest.cache.utilities;
 
-  // Reload cache (same as init path)
-  const toolsRaw = await manifest.get("utilities/Tools");
-  const labRaw   = await manifest.get("utilities/Lab");
+  // Force reload
+  setUtilitiesCache(null);
+  await ensureUtilitiesCacheLoaded();
 
-  const toolsRegistry = manifest.getRegistry("utilities/Tools");
-  const labRegistry   = manifest.getRegistry("utilities/Lab");
-
-  utilitiesCache = { Tools: {}, Lab: {} };
-
-  toolsRegistry.forEach((cat, i) => utilitiesCache.Tools[cat] = toolsRaw[i] || []);
-  labRegistry.forEach((cat, i) => utilitiesCache.Lab[cat] = labRaw[i] || []);
-
-  // ----------------------------------------------------------
-  // CRITICAL: rehydrate activeUtilityItem from the refreshed cache
-  // ----------------------------------------------------------
+  // Rehydrate activeUtilityItem from the refreshed cache
   const subtab   = uiState.utilities.lastUtilitySubtab;
   const category = uiState.utilities.activeUtilityCategory;
   const entry    = uiState.utilities.activeUtilityItem;
 
   if (subtab && category && entry && entry.path) {
 
-    const domain = (subtab === "Tools") ? utilitiesCache.Tools
-                 : (subtab === "Lab")   ? utilitiesCache.Lab
+    const cache = getUtilitiesCache();
+    const domain = (subtab === "Tools") ? cache.Tools
+                 : (subtab === "Lab")   ? cache.Lab
                  : null;
 
     if (!domain) {
@@ -691,15 +348,40 @@ export async function refreshUtilitiesFromManifestEdit() {
     uiState.utilities.activeUtilityItem = found;
   }
 
-  // Restore Utilities deterministically (Gallery model)
+  // Restore Utilities deterministically
   await restoreUtilityTab();
 
 } // end refreshUtilitiesFromManifestEdit
 
 
+/* ============================================================
+   Maintenance / Commands
+   ============================================================ */
+
+function buildUtilitiesOffcanvasHtml() {
+  return `
+    <div class="cmdButtonRow">
+      <button id="utilitiesRebuildValidateButton" class="cmdButton" type="button">
+        Rebuild &amp; Validate
+      </button>
+    </div>
+
+    <div class="cmdButtonRow">
+      <button id="utilitiesHelpButton" class="cmdButton" type="button">
+        Help
+      </button>
+    </div>
+
+    <div class="buttonSeparator"></div>
+
+    <div id="utilitiesRebuildReport" class="utilitiesRebuildReport"></div>
+  `;
+} // end buildUtilitiesOffcanvasHtml
+
+
 export function wireUtilitiesCommandsButton() {
 
-  setCommandsButton("Commands", () => {
+  setCommandsButtonHandler(() => {
 
     showCommandsOffcanvas({
       title: "Utilities Maintenance",
@@ -724,18 +406,16 @@ export function wireUtilitiesCommandsButton() {
           // 1. Tell Node to fix the files on disk
           const report = await nodeRebuildAndValidateManifests();
 
-          // 2. Perform Global Sync (Wipe cache + Invalidate all tab 'saved' states)
-          // We use the dynamic import pattern you established in home.js
+          // 2. Perform Global Sync
           const { syncSystemStateAfterRebuild } = await import("./uiUtilities.js");
           await syncSystemStateAfterRebuild();
 
-          // 3. Since we are IN the Utilities tab, re-init it now
-          // This triggers step 1 of initUtilityTab above (clearing the cache)
+          // 3. Re-init the Utilities tab
           await initUtilityTab(false);
 
-          out.textContent = formatRebuildReport(report);
+          out.textContent = formatRebuildReportShared(report);
 
-        }); // end click handler
+        });
 
         const helpBtn = document.getElementById("utilitiesHelpButton");
         if (!helpBtn) throw new Error("wireUtilitiesCommandsButton: utilitiesHelpButton missing");
@@ -746,9 +426,9 @@ export function wireUtilitiesCommandsButton() {
           const oc = bootstrap.Offcanvas.getOrCreateInstance(panel);
           oc.hide();
           openHelpHomeOverlay();
-        }); // end click
+        });
 
-      } // end buildBody
+      }
     });
 
   });
@@ -756,14 +436,29 @@ export function wireUtilitiesCommandsButton() {
 } // end wireUtilitiesCommandsButton
 
 
-
-
-
-
-
 /* ============================================================
-   utilityDivs
-============================================================ */
+   Legacy Exports (Compatibility)
+   ============================================================ */
+
+export async function loadCategory(categoryName) {
+  if (!categoryName) {
+    await switchUtilityTab("tab-tools");
+    return;
+  }
+
+  const key = categoryName.toLowerCase();
+
+  if (key === "tools")  return await switchUtilityTab("tab-tools");
+  if (key === "lab")    return await switchUtilityTab("tab-lab");
+  if (key === "result") return await switchUtilityTab("tab-result");
+
+  await switchUtilityTab("tab-tools");
+}
+
+export async function runUtilityItem(name) {
+  throw new Error("runUtilityItem is not wired; items run via onUtilityItemClick.");
+}
+
 export const utilityDivs = {
   activeDivs: ["subtabs"],
   theme: "theme-utilities",
@@ -772,4 +467,4 @@ export const utilityDivs = {
   sketchpad: () => { const el = document.getElementById("sketchpad"); if (el) el.innerHTML = ""; },
   subtabs: setUtilitySubtabs,
   text: () => { const el = document.getElementById("text"); if (el) el.innerHTML = ""; }
-}; // end utilityDivs
+};

@@ -252,16 +252,10 @@ input.ctrl-text[type="text"] {
   white-space: pre-wrap;
   word-break: normal;
   overflow-wrap: break-word;
-
-  /* Add these two lines */
   text-align: center;
   font-weight: bold;
+  gap: 0.8rem !important;
 }
-
-
-/* ===========================================================
-   Commands Button (global tab-level chrome)
-=========================================================== */
 
 /* ===========================================================
    Commands Button (shared style)

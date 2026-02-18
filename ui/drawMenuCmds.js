@@ -5,9 +5,9 @@
    - It derives context and dispatches to ui/menuCmds.js.
 ------------------------------------------------------------ */
 
-import { addDrawSubtab } from "./draw.js";
+import { addDrawSubtab } from "./draw/drawNav.js";
 import { drawActiveTab } from "./drawRunner.js";
-import { markTabClean } from "./draw.js";
+import { markTabClean } from "./draw/drawNav.js";
 import { DrawController } from "./draw.js";
 import { createGalleryPatternPng } from "./menuCmds.js";   // NEW
 import { createPatternScript } from "./menuCmds.js";   // NEW (next to createGalleryPatternPng)
@@ -135,7 +135,7 @@ export async function resetActiveDrawObject() {
   if (!newEntry)
     throw new Error("Reset: module reimport did not recreate entry");
 
-  // ðŸ”¥ GUARANTEED FIX: ensure correct registry key
+  // Ã°Å¸â€Â¥ GUARANTEED FIX: ensure correct registry key
   window.drawRegistry[key] = newEntry;
 
   // Update UI state
@@ -277,3 +277,76 @@ export async function archiveActiveSecondaryObject(menuContext) {
 
   alert("Archived.");
 }
+
+
+/* ============================================================
+   wireDrawCommandsButton()
+   ------------------------------------------------------------
+   Wires the Commands button handler for the Draw tab.
+   The label is already set by initDrawTab/restoreDrawTab.
+   ============================================================ */
+export function wireDrawCommandsButton() {
+  const { setCommandsButtonHandler, showCommandsOffcanvas } =
+    require("./uiUtilities.js");
+  const { openHelpHomeOverlay } = require("./help.js");
+  const { nodeRebuildAndValidateManifests } = require("./nodeLayer.js");
+  const { formatRebuildReportShared, syncSystemStateAfterRebuild } =
+    require("./uiUtilities.js");
+
+  setCommandsButtonHandler(() => {
+    showCommandsOffcanvas({
+      title: "Draw Maintenance",
+      buildBody(container) {
+        if (!container) return;
+
+        container.innerHTML = `
+          <div class="cmdButtonRow">
+            <button id="drawRebuildValidateButton" class="cmdButton" type="button">
+              Rebuild &amp; Validate
+            </button>
+          </div>
+
+          <div class="cmdButtonRow">
+            <button id="drawHelpButton" class="cmdButton" type="button">
+              Help
+            </button>
+          </div>
+
+          <div class="buttonSeparator"></div>
+
+          <div id="drawRebuildReport" class="drawRebuildReport"></div>
+        `;
+
+        const rebuildBtn = document.getElementById("drawRebuildValidateButton");
+        const helpBtn = document.getElementById("drawHelpButton");
+        const reportDiv = document.getElementById("drawRebuildReport");
+
+        if (rebuildBtn) {
+          rebuildBtn.addEventListener("click", async () => {
+            if (!reportDiv) return;
+            reportDiv.textContent = "Running Global Rebuild...";
+
+            const report = await nodeRebuildAndValidateManifests();
+            await syncSystemStateAfterRebuild();
+
+            const { initDrawTab } = await import("./draw.js");
+            await initDrawTab(true);
+
+            reportDiv.textContent = formatRebuildReportShared(report);
+          });
+        }
+
+        if (helpBtn) {
+          helpBtn.addEventListener("click", () => {
+            const panel = document.getElementById("offcanvasPanel");
+            if (panel) {
+              const oc = bootstrap.Offcanvas.getOrCreateInstance(panel);
+              oc.hide();
+            }
+            openHelpHomeOverlay();
+          });
+        }
+      }
+    });
+  });
+} // end wireDrawCommandsButton

@@ -191,8 +191,8 @@ function drawNodes(thing,nodes) {
          j = i + skip
 
      chop  (optional, default false)
-       false → wrap around using modulo
-       true  → stop drawing when j exceeds array bounds
+       false â†’ wrap around using modulo
+       true  â†’ stop drawing when j exceeds array bounds
 
      color (optional, default "blue")
        Line color passed to drawLine().
@@ -266,20 +266,20 @@ PURPOSE
 PARAMETERS
 - ptArray : array of Point objects (or indexable via numbersToPoints
             indirectly through drawLine)
-- skip    : integer ≥ 1
+- skip    : integer â‰¥ 1
             Defines how far ahead in the array the second endpoint is.
             Examples:
-              skip = 1  → connect consecutive points
-                          (0→1, 1→2, 2→3, ...)
-              skip = 2  → skip one point between connections
-                          (0→2, 1→3, 2→4, ...)
-              skip = n  → longer chords, more “woven” patterns
+              skip = 1  â†’ connect consecutive points
+                          (0â†’1, 1â†’2, 2â†’3, ...)
+              skip = 2  â†’ skip one point between connections
+                          (0â†’2, 1â†’3, 2â†’4, ...)
+              skip = n  â†’ longer chords, more â€œwovenâ€ patterns
 - color   : stroke color passed to drawLine
 
 BEHAVIOR
 - Iterates forward through ptArray.
 - For each index i, draws a line from ptArray[i] to ptArray[i + skip].
-- Stops (“chops”) as soon as i + skip would exceed the array bounds.
+- Stops (â€œchopsâ€) as soon as i + skip would exceed the array bounds.
 - No wraparound, no closing segment, no partial line at the end.
 
 ASSUMPTIONS
@@ -325,16 +325,16 @@ PARAMETERS
 - ptArray : array of Point-like objects: {x:number, y:number}
 - skip    : how far forward to connect (integer)
             examples (N = ptArray.length):
-              skip = 1  → 0->1, 1->2, 2->3, ...
-              skip = 2  → 0->2, 1->3, 2->4, ...
-              skip = N/2→ “diameters” on a circle (if N even)
+              skip = 1  â†’ 0->1, 1->2, 2->3, ...
+              skip = 2  â†’ 0->2, 1->3, 2->4, ...
+              skip = N/2â†’ â€œdiametersâ€ on a circle (if N even)
 - color   : stroke color passed to drawLine()
 - start   : first index to use (inclusive)
 - end     : last index to use (exclusive). default is ptArray.length
-- close   : if true, add one final “closing” line after the loop
+- close   : if true, add one final â€œclosingâ€ line after the loop
 - chop    : controls wraparound
-            false → wrap with modulo: j = (i + skip) % ptArray.length
-            true  → do NOT wrap; if (i + skip) is out of range, stop.
+            false â†’ wrap with modulo: j = (i + skip) % ptArray.length
+            true  â†’ do NOT wrap; if (i + skip) is out of range, stop.
 
 NOTES
 - This function assumes drawLine(p1, p2, color) already exists.
@@ -364,7 +364,7 @@ function drawLinesWithin(
     let j = i + skip;
 
     if (chop) {
-      if (j < 0 || j >= ptArray.length) break;   // stop as soon as we’d go out of range
+      if (j < 0 || j >= ptArray.length) break;   // stop as soon as weâ€™d go out of range
     } else {
       j = ((j % ptArray.length) + ptArray.length) % ptArray.length; // safe modulo for negative skip
     }
@@ -420,11 +420,19 @@ function drawLine(arg1, arg2, arg3 = "blue", arg4 = 1) {
     }
 
     // ------------------------------------------------------------
-    // Final mode: draw only endpoints
+    // Final mode: draw line with reduced alpha for light visibility
     // ------------------------------------------------------------
     if (drawState.final === true) {
-        drawCircle(pt1, 1, color, lineWidth);
-        drawCircle(pt2, 1, color, lineWidth);
+        ctx.save();
+        ctx.globalAlpha = 0.15;  // Reduced alpha for light visibility
+        ctx.beginPath();
+        ctx.strokeStyle = color;
+        ctx.lineWidth = lineWidth;
+        ctx.moveTo(pt1.x, pt1.y);
+        ctx.lineTo(pt2.x, pt2.y);
+        ctx.stroke();
+        ctx.closePath();
+        ctx.restore();
         return;
     }
 
@@ -542,9 +550,9 @@ function stitcher(arm1, arm2) {
  * using transforms stored in thing.lineTransform.
  *
  * Supported types:
- *   "straight"      – evenly spaced points start → end
- *   "flexAtMiddle"  – deflect at midpoint, endpoints fixed
- *   "bendAtMid"     – deflect at midpoint, replace far endpoint
+ *   "straight"      â€“ evenly spaced points start â†’ end
+ *   "flexAtMiddle"  â€“ deflect at midpoint, endpoints fixed
+ *   "bendAtMid"     â€“ deflect at midpoint, replace far endpoint
  *
  * @param {StringThing} thing - must have numSteps and lineTransform { type, angle }
  * @param {Line} line - line with start and end Points
@@ -611,7 +619,7 @@ function ptsOnLine(thing, line) {
     return [...firstHalf, ...secondHalf.slice(1)];
   }
 
-  // fallback → straight
+  // fallback â†’ straight
   return ptsOnStraightLine(start, end, numSteps);
 }
 
@@ -619,61 +627,13 @@ function getPreviousIndex(i, length) {
   return i === 0 ? length - 1 : i - 1;
 }
 
-/**
- * getTranslationOffset
- * Calculates the shift needed to center a set of points on the canvas.
- * @param {Array} points - Array of Point objects
- * @param {number} canvasW - Width of canvas
- * @param {number} canvasH - Height of canvas
- * @returns {Object} {x, y} offsets
- */
-/**
- * getTranslationOffset
- * Calculates the shift needed to center a set of points on the canvas
- * by internally accessing canvas dimensions from the context.
- *
- * @param {Array} points - Array of Point objects..
- * @returns {Object} {x, y} translation offsets.
- */
-export function getTranslationOffset(points, ctx) {
-  if (!points || points.length === 0) return { x: 0, y: 0 };
-
-  // Access dimensions directly from the context's canvas
-  const canvasW = ctx.canvas.width;
-  const canvasH = ctx.canvas.height;
-
-  let minX = Infinity, maxX = -Infinity;
-  let minY = Infinity, maxY = -Infinity;
-
-  // Measurement Pass: Determine the bounds of the point set
-  for (let i = 0; i < points.length; i++) {
-    const pt = points[i];
-    if (pt.x < minX) minX = pt.x;
-    if (pt.x > maxX) maxX = pt.x;
-    if (pt.y < minY) minY = pt.y;
-    if (pt.y > maxY) maxY = pt.y;
-  }
-
-  // Calculate the geometric center of the bounding box
-  const centerX = (minX + maxX) / 2;
-  const centerY = (minY + maxY) / 2;
-
-  // Return the offset required to move that center to the canvas center
-  return {
-    x: (canvasW / 2) - centerX,
-    y: (canvasH / 2) - centerY
-  };
-}
-
-
-
 //////////////////////////////////////////////////////////////////
 /*
 ====================================================================
 numbersToPoints(coords)
 --------------------------------------------------------------------
 PURPOSE
-- Normalize mixed “index-or-point” inputs into actual Point objects.
+- Normalize mixed â€œindex-or-pointâ€ inputs into actual Point objects.
 - Accepts numbers (indices into drawState.pts), Point objects, or
   arrays containing any mix of the two.
 - This allows higher-level drawing code to stay concise and flexible
@@ -682,8 +642,8 @@ PURPOSE
 INPUT
 - coords may be:
     1) An array containing:
-         - numbers → treated as indices into drawState.pts
-         - Point objects → passed through unchanged
+         - numbers â†’ treated as indices into drawState.pts
+         - Point objects â†’ passed through unchanged
     2) A single number
          - treated as an index into drawState.pts
     3) A single Point object
@@ -695,11 +655,11 @@ ASSUMPTIONS
 
 RETURN
 - If coords is an array:
-    → returns a new array of Point objects
+    â†’ returns a new array of Point objects
 - If coords is a number:
-    → returns drawState.pts[coords]
+    â†’ returns drawState.pts[coords]
 - Otherwise:
-    → returns coords unchanged (assumed to be a Point)
+    â†’ returns coords unchanged (assumed to be a Point)
 
 DESIGN NOTES
 - This function performs *no copying* of Point objects; it returns
@@ -735,7 +695,7 @@ function numbersToPoints(coords) {
         return nodes;
     }
 
-    // Case 2: coords is a single number → index into drawState.pts
+    // Case 2: coords is a single number â†’ index into drawState.pts
     if (typeof coords === "number") {
         return drawState.pts[coords];
     }
@@ -782,7 +742,7 @@ applyCutoffToParabSegments(thing, segments, armPointCount)
 --------------------------------------------------------------------
 PURPOSE
 - Trim the last part of a stitched parabola so the drawn lines do not
-  “run the circularity” near the perimeter.
+  â€œrun the circularityâ€ near the perimeter.
 
 KEY IDEA
 - Use the actual segment list length as the baseline.
@@ -826,7 +786,7 @@ export function applyCutoffToParabSegments(thing, segments, armPointCount) {
 
   let k = 0;
 
-  // Explicit override: “trim exactly this many line segments”
+  // Explicit override: â€œtrim exactly this many line segmentsâ€
   if (thing.cutoffLines !== null && thing.cutoffLines !== undefined) {
     if (!(typeof thing.cutoffLines === "number") || thing.cutoffLines < 0) {
       throw new Error("applyCutoffToParabSegments: cutoffLines must be null or a number >= 0");

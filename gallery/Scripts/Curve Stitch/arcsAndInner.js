@@ -44,7 +44,7 @@ export function runPattern() {
   }
   for (let i = 0; i < drawState.pts.length; i++) {
       let j = (i+1) % nodes.length;
-    Arm2.push(arcPoints(drawState.pts[i], drawState.pts[j], 0.7, thing.numSteps + 1));
+    Arm2.push(arcPoints(drawState.pts[i], drawState.pts[j], 0.2, thing.numSteps + 1));
   }
   for (let i = 0; i < drawState.pts.length; i++) {
     Arm3.push(ptsOnLine(thing, new Line(drawState.pts[i], mid)))
