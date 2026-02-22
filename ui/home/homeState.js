@@ -1,6 +1,6 @@
 /* homeState.js
    ============================================================
-   Home Tab — Shared Module State
+   Home Tab â€” Shared Module State
    ============================================================
    Role:
      Owns the module-level variables that the Home tab subsystem
@@ -12,32 +12,25 @@
      variables without duplicating them.
 
    Design rules:
-     • No logic — only variable declarations, getters, and setters.
-     • No imports — zero dependencies so any home sub-module can
+     â€¢ No logic â€” only variable declarations, getters, and setters.
+     â€¢ No imports â€” zero dependencies so any home sub-module can
        import this file without creating circular references.
-     • All mutation goes through the setter functions so there is
+     â€¢ All mutation goes through the setter functions so there is
        one clear place to add debugging or validation if needed.
 
    Consumers:
-     home.js          — reset on cold start via resetHomeState()
-     homeManifest.js  — reads/writes manifest data and logged flag
-     homeNav.js       — reads grouped data to render categories
-     homeResults.js   — reads/writes the render token
+     home.js          â€” reset on cold start via resetHomeState()
+     homeManifest.js  â€” reads/writes manifest data and logged flag
+     homeNav.js       â€” reads grouped data to render categories
+     homeResults.js   â€” reads/writes the render token
 
    Variable glossary:
-     homeManifestLogged   — Guards against repeated manifest loads
-                            within a single session. Set to true on
-                            the first load; reset on cold start.
-
-     homeManifestData     — The raw flat array loaded from
-                            /home/manifest.json. Null until loaded.
-
-     homeManifestGrouped  — The manifest data reshaped into a map:
+homeManifestGrouped  â€” The manifest data reshaped into a map:
                               { statusKey: [entry, ...], ... }
                             Used by renderHomeCategories(). Null
                             until groupHomeEntriesByStatus() runs.
 
-     homeResultsRenderToken — An incrementing integer used to
+     homeResultsRenderToken â€” An incrementing integer used to
                             detect stale async renders. Incremented
                             each time renderHomeResults() starts.
                             Async renderers compare their captured
@@ -48,11 +41,9 @@
 
 /* ------------------------------------------------------------
    Raw state variables
-   Do not import and mutate these directly from other modules —
+   Do not import and mutate these directly from other modules â€”
    use the setters below so mutation is traceable.
 ------------------------------------------------------------ */
-let homeManifestLogged      = false;
-let homeManifestData        = null;
 let homeManifestGrouped     = null;
 let homeResultsRenderToken  = 0;
 
@@ -60,17 +51,6 @@ let homeResultsRenderToken  = 0;
 /* ============================================================
    Getters
    ============================================================ */
-
-/* getHomeManifestLogged()
-   -----------------------
-   Returns true if the manifest load has already been kicked
-   for this session, false otherwise. */
-export function getHomeManifestLogged()  { return homeManifestLogged;  }
-
-/* getHomeManifestData()
-   ---------------------
-   Returns the raw flat manifest array, or null if not yet loaded. */
-export function getHomeManifestData()    { return homeManifestData;    }
 
 /* getHomeManifestGrouped()
    ------------------------
@@ -87,17 +67,6 @@ export function getHomeResultsRenderToken() { return homeResultsRenderToken; }
 /* ============================================================
    Setters
    ============================================================ */
-
-/* setHomeManifestLogged(value)
-   ----------------------------
-   Set to true once the manifest load has been kicked.
-   Set to false on cold start to allow reloading. */
-export function setHomeManifestLogged(value)  { homeManifestLogged  = value; }
-
-/* setHomeManifestData(value)
-   --------------------------
-   Replaces the raw manifest array. Pass null to clear. */
-export function setHomeManifestData(value)    { homeManifestData    = value; }
 
 /* setHomeManifestGrouped(value)
    ------------------------------
@@ -130,8 +99,6 @@ export function incrementHomeResultsRenderToken() {
    current value means the old render's token will never match.
    ============================================================ */
 export function resetHomeState() {
-  homeManifestLogged  = false;
-  homeManifestData    = null;
   homeManifestGrouped = null;
-  /* homeResultsRenderToken is deliberately not reset — see note above. */
+  /* homeResultsRenderToken is deliberately not reset â€” see note above. */
 } // end resetHomeState

@@ -1,6 +1,6 @@
 /* figuresNav.js
    ============================================================
-   Figures Tab — Subtab Construction and Navigation
+   Figures Tab â€” Subtab Construction and Navigation
    ============================================================
    Role:
      Owns everything related to building the Figures subtab bar,
@@ -11,21 +11,21 @@
      the subtab UI and coordinate view transitions.
 
    Architectural rules:
-     • Does NOT own the TabSpec, init(), restore(), or save().
+     â€¢ Does NOT own the TabSpec, init(), restore(), or save().
        Those live in figures.js.
-     • Does NOT render figure content or execute figure scripts.
+     â€¢ Does NOT render figure content or execute figure scripts.
        That lives in figuresDisplay.js and figuresRunner.js.
-     • Does NOT build caption bars or menu items.
+     â€¢ Does NOT build caption bars or menu items.
        Those live in figuresMenuCmds.js.
-     • Reads figuresRegistry via getters from figuresState.js.
+     â€¢ Reads figuresRegistry via getters from figuresState.js.
        Never imports the raw variable directly.
 
    Exports:
-     setFiguresSubtabs()         — build empty subtab bar
-     renderSubtabs()             — render all current tabs
-     switchToCategories()        — switch to categories view
-     switchToFigureTab(tabId)    — switch to a specific figure tab
-     closeTab(tabId)             — close a figure tab
+     setFiguresSubtabs()         â€” build empty subtab bar
+     renderSubtabs()             â€” render all current tabs
+     switchToCategories()        â€” switch to categories view
+     switchToFigureTab(tabId)    â€” switch to a specific figure tab
+     closeTab(tabId)             â€” close a figure tab
    ============================================================ */
 
 import {

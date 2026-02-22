@@ -9,11 +9,79 @@ import { addDrawSubtab } from "./draw/drawNav.js";
 import { drawActiveTab } from "./drawRunner.js";
 import { markTabClean } from "./draw/drawNav.js";
 import { DrawController } from "./draw.js";
-import { createGalleryPatternPng } from "./menuCmds.js";   // NEW
-import { createPatternScript } from "./menuCmds.js";   // NEW (next to createGalleryPatternPng)
+import { createGalleryPatternPng } from "./menuCmds.js";
+import { createPatternScript } from "./menuCmds.js";
 import { saveSecondary, archiveSecondary } from "./secondaryObjects.js";
-import { buildCanvasThumbnailBase64 } from "./uiUtilities.js";
-import { uiState } from "./uiState.js";
+import { buildCanvasThumbnailBase64, setCommandsButtonHandler, showCommandsOffcanvas, formatRebuildReportShared } from "/ui/uiUtilities.js";
+import { uiState } from "/ui/uiState.js";
+import { openHelpHomeOverlay } from "./help.js";
+import { nodeRebuildAndValidateManifests } from "./nodeLayer.js";
+
+
+/* ============================================================
+   clearDrawCaption()
+   ------------------------------------------------------------
+   Empties the #caption region for the Draw tab.
+   ============================================================ */
+export function clearDrawCaption() {
+  const el = document.getElementById("caption");
+  if (el) el.innerHTML = "";
+} // end clearDrawCaption
+
+
+/* ============================================================
+   setDrawCaption(entry)
+   ------------------------------------------------------------
+   Populates the #caption region with the draw object's name.
+   ============================================================ */
+export function setDrawCaption(entry) {
+  const el = document.getElementById("caption");
+  if (!el) return;
+  if (!entry) { el.innerHTML = ""; return; }
+  el.textContent = entry.name || "";
+} // end setDrawCaption
+
+
+/* ============================================================
+   setDrawAction()
+   ------------------------------------------------------------
+   No-op placeholder — parameter controls are injected directly
+   by the draw object's own init()/render().
+   ============================================================ */
+export function setDrawAction() {
+  // Parameter controls are wired by drawRunner / parameterControls.
+  // This function exists as the hook consumed by DrawTabSpec and
+  // drawNav.switchTab(); it intentionally does nothing here.
+} // end setDrawAction
+
+
+/* ============================================================
+   buildDrawMenuItems(menuContext)
+   ------------------------------------------------------------
+   Returns menu item descriptors for the Draw tab commands panel.
+   ============================================================ */
+export function buildDrawMenuItems(menuContext) {
+  if (!menuContext) return [];
+
+  return [
+    {
+      label: "Save as PNG",
+      action: () => createPngFromActiveDrawObject(menuContext)
+    },
+    {
+      label: "Save as Pattern",
+      action: () => createPatternFromActiveDrawObject(menuContext)
+    },
+    {
+      label: "Copy Object",
+      action: () => copyActiveDrawObject()
+    },
+    {
+      label: "Reset Parameters",
+      action: () => resetActiveDrawObject()
+    }
+  ];
+} // end buildDrawMenuItems
 
 
 export async function createPatternFromActiveDrawObject(menuContext) {
@@ -61,13 +129,10 @@ export function copyActiveDrawObject() {
 
   const entry = info.drawRegistry;
 
-  // Clone parameters
   const newParams = structuredClone(info.parameters);
 
-  // Base name without previous copy suffix
   const baseName = entry.name.replace(/\s*\(Copy.*\)$/i, "").trim();
 
-  // Find existing copies to determine next number
   const existing = Object.values(uiState.draw.tabs)
     .filter(
       (t) =>
@@ -92,7 +157,6 @@ export function copyActiveDrawObject() {
       ? `${baseName} (Copy)`
       : `${baseName} (Copy ${nextNumber})`;
 
-  // Construct new entry
   const newItem = {
     name: newName,
     entry: {
@@ -120,13 +184,10 @@ export async function resetActiveDrawObject() {
 
   const modulePath = `/drawRegistry/${key}.js`;
 
-  // Remove old entry
   delete window.drawRegistry[key];
 
-  // Re-import (cache-bust)
   await import(/* @vite-ignore */`${modulePath}?t=${Date.now()}`);
 
-  // Get the newly created entry: may appear under different globals
   const newEntry =
     window.drawRegistry[key] ||
     window[`drawRegistry_${key}`] ||
@@ -135,10 +196,8 @@ export async function resetActiveDrawObject() {
   if (!newEntry)
     throw new Error("Reset: module reimport did not recreate entry");
 
-  // Ã°Å¸â€Â¥ GUARANTEED FIX: ensure correct registry key
   window.drawRegistry[key] = newEntry;
 
-  // Update UI state
   info.drawRegistry = newEntry;
   info.parameters = newEntry.params;
 
@@ -190,13 +249,10 @@ export async function saveActiveDrawObjectAsSecondary(menuContext) {
   const name = prompt("Name for this variation?");
   if (!name) return;
 
-  // Primary ID from context (e.g. "bird")
-  // If we are currently on a secondary, we still save as secondary of the SAME primary.
   const primaryId = menuContext.registryKey || menuContext.id;
 
   const entry = info.drawRegistry;
 
-  // Construct payload
   const payload = {
     name: name,
     id: primaryId,
@@ -216,24 +272,20 @@ export async function saveActiveDrawObjectAsSecondary(menuContext) {
 
   await saveSecondary(primaryId, name, payload, thumbBase64);
 
-  // If we were primary, we stay primary but now there is a secondary.
-  // If we were secondary, we stay secondary (old one).
-  // Maybe switch to the new one?
-  // For now, just alert.
   alert("Secondary object created.");
-}
+} // end saveActiveDrawObjectAsSecondary
+
 
 export async function saveActiveSecondaryObject(menuContext) {
   const tabId = uiState.draw.activeSubtab;
   const info  = uiState.draw.tabs[tabId];
 
-  // Safety check: must be in secondary mode
   if (!info || !info.secondary) {
     alert("Not a secondary object.");
     return;
   }
 
-  const sec = info.secondary; // { primaryId, filename, name }
+  const sec = info.secondary;
   const primaryId = sec.primaryId;
   const name = sec.name;
 
@@ -260,7 +312,8 @@ export async function saveActiveSecondaryObject(menuContext) {
   DrawController.markTabClean(tabId);
 
   alert("Saved.");
-}
+} // end saveActiveSecondaryObject
+
 
 export async function archiveActiveSecondaryObject(menuContext) {
   const tabId = uiState.draw.activeSubtab;
@@ -271,27 +324,19 @@ export async function archiveActiveSecondaryObject(menuContext) {
 
   await archiveSecondary(info.secondary.primaryId, info.secondary.filename);
 
-  // Revert to primary
   delete info.secondary;
   await resetActiveDrawObject();
 
   alert("Archived.");
-}
+} // end archiveActiveSecondaryObject
 
 
 /* ============================================================
    wireDrawCommandsButton()
    ------------------------------------------------------------
    Wires the Commands button handler for the Draw tab.
-   The label is already set by initDrawTab/restoreDrawTab.
    ============================================================ */
 export function wireDrawCommandsButton() {
-  const { setCommandsButtonHandler, showCommandsOffcanvas } =
-    require("./uiUtilities.js");
-  const { openHelpHomeOverlay } = require("./help.js");
-  const { nodeRebuildAndValidateManifests } = require("./nodeLayer.js");
-  const { formatRebuildReportShared, syncSystemStateAfterRebuild } =
-    require("./uiUtilities.js");
 
   setCommandsButtonHandler(() => {
     showCommandsOffcanvas({
@@ -318,8 +363,8 @@ export function wireDrawCommandsButton() {
         `;
 
         const rebuildBtn = document.getElementById("drawRebuildValidateButton");
-        const helpBtn = document.getElementById("drawHelpButton");
-        const reportDiv = document.getElementById("drawRebuildReport");
+        const helpBtn    = document.getElementById("drawHelpButton");
+        const reportDiv  = document.getElementById("drawRebuildReport");
 
         if (rebuildBtn) {
           rebuildBtn.addEventListener("click", async () => {
@@ -327,6 +372,8 @@ export function wireDrawCommandsButton() {
             reportDiv.textContent = "Running Global Rebuild...";
 
             const report = await nodeRebuildAndValidateManifests();
+
+            const { syncSystemStateAfterRebuild } = await import("/ui/uiUtilities.js");
             await syncSystemStateAfterRebuild();
 
             const { initDrawTab } = await import("./draw.js");
@@ -349,4 +396,5 @@ export function wireDrawCommandsButton() {
       }
     });
   });
+
 } // end wireDrawCommandsButton

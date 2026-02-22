@@ -1,6 +1,6 @@
 /* patternsMenuCmds.js
    ============================================================
-   Patterns Tab â€” Caption Bar, Menu Items, and Maintenance
+   Patterns Tab Ã¢â‚¬â€ Caption Bar, Menu Items, and Maintenance
    ============================================================
    Role:
      Owns everything related to building the caption bar,
@@ -11,11 +11,11 @@
      edit manifest, create thumbnail, show script).
 
    Architectural rules:
-     â€¢ Does NOT own lifecycle (init/restore/save). Those live
+     Ã¢â‚¬Â¢ Does NOT own lifecycle (init/restore/save). Those live
        in patterns.js.
-     â€¢ Does NOT render patterns or navigate. Those live in
+     Ã¢â‚¬Â¢ Does NOT render patterns or navigate. Those live in
        patternsDisplay.js.
-     â€¢ Uses dynamic imports for lifecycle functions to avoid
+     Ã¢â‚¬Â¢ Uses dynamic imports for lifecycle functions to avoid
        circular dependencies (e.g. refreshing after rebuild).
 
    Exports:
@@ -34,13 +34,20 @@ import { setCaptionBar }        from "../caption.js";
 import { showScriptOffcanvas }  from "../menuCmds.js";
 import { archiveItem }          from "../menuCmds.js";
 import { openEditManifestDialog } from "../menuCmds.js";
-import { buildCanvasThumbnailBase64 } from "../uiUtilities.js";
+import {
+  makeHelpItem,
+  makeShowScriptItem,
+  makeThumbnailItem,
+  makeEditManifestItem,
+  makeArchiveItem
+} from "../menuCmds.js";
+import { buildCanvasThumbnailBase64 } from "/ui/uiUtilities.js";
 import {
   setCommandsButton,
   setCommandsButtonHandler,
   showCommandsOffcanvas
-} from "../uiUtilities.js";
-import { formatRebuildReportShared } from "../uiUtilities.js";
+} from "/ui/uiUtilities.js";
+import { formatRebuildReportShared } from "/ui/uiUtilities.js";
 import { nodeRebuildAndValidateManifests } from "../nodeLayer.js";
 import { openHelpHomeOverlay } from "../help.js";
 import {
@@ -203,7 +210,7 @@ export async function archivePatternsItem(info) {
 
     await restorePatternsTab();
   } else {
-    // Category now empty â€” go back to category list
+    // Category now empty Ã¢â‚¬â€ go back to category list
     uiState.patterns.activeCategory = null;
     uiState.patterns.activeItem     = null;
     uiState.patterns.saved = {
@@ -267,44 +274,13 @@ export async function editPatternsManifestItem(info) {
 export async function getPatternsCaptionMenuItems(info) {
   if (!info) throw new Error("getPatternsCaptionMenuItems: info missing");
 
-  const items = [];
-
-  // Help
-  if (info.helpKey) {
-    items.push(await menuManager.buildHelpItem("patterns", info.helpKey));
-  } else {
-    items.push({ label: "Help", disabled: true, onClick: () => {} });
-  }
-
-  // Show Script
-  items.push({
-    label: "Show Script",
-    disabled: !info.isScript,
-    onClick: () => showPatternScript(info)
-  });
-
-  // Create Thumbnail
-  items.push({
-    label: "Create Thumbnail",
-    disabled: false,
-    onClick: () => createPatternThumbnail(info)
-  });
-
-  // Edit Manifest
-  items.push({
-    label: "Edit Manifest",
-    disabled: false,
-    onClick: () => editPatternsManifestItem(info)
-  });
-
-  // Archive
-  items.push({
-    label: "Archive",
-    disabled: false,
-    onClick: () => archivePatternsItem(info)
-  });
-
-  return items;
+  return [
+    await makeHelpItem("patterns", info.helpKey),
+    makeShowScriptItem(info, showScriptOffcanvas),
+    makeThumbnailItem(() => createPatternThumbnail(info)),
+    makeEditManifestItem(() => editPatternsManifestItem(info)),
+    makeArchiveItem(() => archivePatternsItem(info))
+  ];
 } // end getPatternsCaptionMenuItems
 
 
@@ -363,7 +339,7 @@ export function wirePatternsCommandsButton() {
           const report = await nodeRebuildAndValidateManifests();
 
           // 2. Perform the Global Sync (Wipes cache + Invalidates other tab saved-states)
-          const { syncSystemStateAfterRebuild } = await import("../uiUtilities.js");
+          const { syncSystemStateAfterRebuild } = await import("/ui/uiUtilities.js");
           await syncSystemStateAfterRebuild();
 
           // 3. Re-load the local patterns cache BEFORE restoring

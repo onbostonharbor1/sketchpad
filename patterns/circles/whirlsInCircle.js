@@ -1,7 +1,9 @@
 import { Ellipse, START_END, FULL, TAPER, START_TAPER, END_TAPER }
                        from "/classes/ellipseClass.js";
 import { Point }       from "/classes/classes.js";
-import { createNodes, drawLines, drawLine, drawNodes }
+import { createNodes } from "/draw/createNodes.js";
+
+import { drawLines, drawLine, drawNodes }
                        from "/draw/drawUtilities.js";
 
 export function runPattern() {

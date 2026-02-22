@@ -44,7 +44,7 @@ drawRegularPolygon(thing)
 - Connects consecutive outer boundary arms with curve-stitching
   to fill the perimeter of a regular polygon with parabolas.
 
-drawRegularPolygonCorner(thing)
+drawRegularPolygonCorner(th
 - Creates parabolas anchored at each polygon vertex; it subdivides
   the outer edges and stitches the two segments meeting at the node.
 
@@ -56,8 +56,9 @@ drawRegularPolygonTouch(thing)
 
 
 import { drawState } from "/draw/drawState.js";
+import { createNodes } from "/draw/createNodes.js";
 import { Line, Point, StringThing }       from "../classes/classes.js";
-import { createNodes, drawLines, drawParabs, drawNodes,
+import {  drawLines, drawParabs, drawNodes,
 	 ptsOnLine, stitcher, getPreviousIndex, applyCutoffToParabSegments }            from "./drawUtilities.js";
 
 function createArms(thing, lines) {
@@ -102,7 +103,7 @@ function createParab(arm1, arm2) {
  * @returns {Array} An array of stitched parabolas, one for each arm pair in the shorter array.
  */
 function createParabs(thing, arms1, arms2) {
-  if (arms1.length > arms2.length) {
+  if (arms1[0].length > arms2[0].length) {
     [arms1, arms2] = [arms2, arms1];
   }
   const parabs = [];

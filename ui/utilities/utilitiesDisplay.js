@@ -1,6 +1,6 @@
 /* utilitiesDisplay.js
    ============================================================
-   Utilities Tab — Category Display and Utility Execution
+   Utilities Tab â€” Category Display and Utility Execution
    ============================================================
    Role:
      Owns everything related to displaying utility categories
@@ -10,23 +10,23 @@
      the utility execution (Result view).
 
    Architectural rules:
-     • Does NOT build or activate subtabs. That is utilitiesNav.js.
-     • Does NOT build the caption bar. That is utilitiesMenuCmds.js.
+     â€¢ Does NOT build or activate subtabs. That is utilitiesNav.js.
+     â€¢ Does NOT build the caption bar. That is utilitiesMenuCmds.js.
        This file calls updateUtilitiesCaption() after execution.
-     • Reads and writes utilitiesState.js via getters and setters.
+     â€¢ Reads and writes utilitiesState.js via getters and setters.
        Never declares its own copies of the shared variables.
 
    Exports:
-     setUtilityCategories(which)              — render Tools or Lab categories
-     runUtilityEntry(subtab, category, entry) — execute a utility script
-     onUtilityItemClick(item)                 — handle category item click
-     displayUtilityResult(html)               — display text result
+     setUtilityCategories(which)              â€” render Tools or Lab categories
+     runUtilityEntry(subtab, category, entry) â€” execute a utility script
+     onUtilityItemClick(item)                 â€” handle category item click
+     displayUtilityResult(html)               â€” display text result
    ============================================================ */
 
 import { renderCategories } from "../categories.js";
 import { runScriptByPath } from "../scriptRunner.js";
+import { manifest } from "../manifest.js";
 import {
-  getUtilitiesCache,
   setHasRunUtility,
   getHasRunUtility
 } from "./utilitiesState.js";
@@ -45,7 +45,7 @@ import {
    Renders the category frames for either "Tools" or "Lab".
    
    Arguments:
-     which — "Tools" or "Lab"
+     which â€” "Tools" or "Lab"
    ============================================================ */
 export async function setUtilityCategories(which) {
   const textDiv = document.getElementById("text");
@@ -53,7 +53,10 @@ export async function setUtilityCategories(which) {
 
   textDiv.innerHTML = `<p>Loading ${which}...</p>`;
 
-  const cache = getUtilitiesCache();
+  const cache = {
+    Tools: manifest.getCategoryMap("utilities/Tools"),
+    Lab:   manifest.getCategoryMap("utilities/Lab")
+  };
   const sections =
     which === "Tools" ? cache?.Tools :
     which === "Lab"   ? cache?.Lab   :
@@ -112,7 +115,7 @@ export async function onUtilityItemClick(item) {
 
   activateUtilitySubtab("tab-result");
 
-  const { clearDivs } = await import("../uiUtilities.js");
+  const { clearDivs } = await import("/ui/uiUtilities.js");
   clearDivs();
   
   await runUtilityEntry(item.subtab, item.category, item.entry);
@@ -125,9 +128,9 @@ export async function onUtilityItemClick(item) {
    Executes a utility script using scriptRunner.
    
    Arguments:
-     subtab   — "Tools" or "Lab"
-     category — Category name (subdirectory)
-     entry    — Manifest entry object with .path, .title, etc.
+     subtab   â€” "Tools" or "Lab"
+     category â€” Category name (subdirectory)
+     entry    â€” Manifest entry object with .path, .title, etc.
    ============================================================ */
 export async function runUtilityEntry(subtab, category, entry) {
   if (!subtab) throw new Error("runUtilityEntry: subtab missing");

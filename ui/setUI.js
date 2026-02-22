@@ -11,10 +11,11 @@ import { GalleryTabSpec }  from "./gallery.js";
 import { UtilityTabSpec }  from "./utilities.js";
 import { FiguresTabSpec }  from "./figures.js";
 
-import { clearDivs }        from "./uiUtilities.js";
+import { clearDivs }        from "/ui/uiUtilities.js";
 import { initMenuManager }  from "./menuManager.js";
 import { initOverlay }      from "./overlay.js";
-import { uiState }          from "./uiState.js";
+import { initCanvasLayers } from "./canvasLayerManager.js";
+import { uiState }          from "/ui/uiState.js";
 import { disableAllNextPrevOverlays } from "./nextPrevOverlay.js";
 
 const START = "START_APP";
@@ -83,49 +84,48 @@ function applyTheme(tabKey) {
 /* ============================================================
    Lifecycle: Restore & Init
 =========================================================== */
-function restoreTab(tabKey) {
+async function restoreTab(tabKey) {
   const spec = TabRegistry[tabKey];
   if (!spec || !spec.restore) {
     throw new Error("restoreTab: missing TabSpec.restore for " + tabKey);
   }
-  spec.restore();
+  clearDivs();
+  await spec.restore();
 }
 
-function initTab(tabKey, restored = false) {
+async function initTab(tabKey, restored = false) {
   const spec = TabRegistry[tabKey];
   if (!spec || !spec.init) {
     throw new Error("initTab: missing TabSpec.init for " + tabKey);
   }
   clearDivs();
-  spec.init(restored);
+  await spec.init(restored);
 }
 
 /* ============================================================
    activateTab(tabKey)
 =========================================================== */
-function activateTab(tab) {
+async function activateTab(tab) {
   let tabKey = tab;
 
   if (tab === START) {
     tabKey = "home";
-    // Check pending updates for Home as well
     if (uiState.home && uiState.home.needsUpdate) {
       uiState.home.needsUpdate = false;
-      initTab(tabKey, true);
+      await initTab(tabKey, true);
     } else {
-      initTab(tabKey, false);
+      await initTab(tabKey, false);
     }
   } else {
-    // Check if the tab needs a refresh due to global manifest update
     if (uiState[tabKey] && uiState[tabKey].needsUpdate) {
       uiState[tabKey].needsUpdate = false;
-      initTab(tabKey, true); // init(restored=true) implies "Refresh & Restore"
+      await initTab(tabKey, true);
     } else {
       const saved = uiState[tabKey] && uiState[tabKey].saved;
       if (saved) {
-        restoreTab(tabKey);
+        await restoreTab(tabKey);
       } else {
-        initTab(tabKey, false);
+        await initTab(tabKey, false);
       }
     }
   }
@@ -138,7 +138,7 @@ function activateTab(tab) {
    setUI(tabName)
    PUBLIC ENTRY
 ============================================================ */
-export function setUI(tab) {
+export async function setUI(tab) {
   disableAllNextPrevOverlays();
 
   let tabName = (tab === START) ? START : tab;
@@ -168,7 +168,7 @@ export function setUI(tab) {
   applyTheme(tabName === START ? "home" : tabName);
 
   // 4. Activate
-  activateTab(tabName);
+  await activateTab(tabName);
 
   // 5. Handle Launch Intents
   if (!uiState.launch || uiState.launch.pending !== true) return;
@@ -195,13 +195,11 @@ function handleTabChange(eventOrId) {
 async function onDomContentLoaded() {
   initMenuManager();
   initOverlay();
+  initCanvasLayers();
 
   // 1. Rehydrate all potential stateful tabs from sessionStorage.
-  const { rehydratePatternsState } = await import("./patterns.js");
-  const { rehydrateGalleryState } = await import("./gallery.js");
-
-  rehydratePatternsState();
-  rehydrateGalleryState();
+  // Tab state is not rehydrated from sessionStorage on refresh.
+  // All tabs start fresh (cold init) after a page reload.
 
   // 2. Define tabButtons (This was the missing line causing the error!)
   const tabButtons = document.querySelectorAll("#mainTabs .nav-link");

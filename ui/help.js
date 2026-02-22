@@ -18,8 +18,7 @@ import "tinymce/models/dom";
 import "tinymce/skins/ui/oxide/skin.min.css";
 
 import { nodeDispatch }     from "./nodeLayer.js";
-import { escapeHtml }       from "./uiUtilities.js";
-import { getTinyMceConfig } from "./tinyMceConfig.js";
+import { escapeHtml }       from "/ui/uiUtilities.js";
 import { showHelpOverlay }  from "./overlay.js";
 import { overlayManager } from "./overlay.js";
 
@@ -173,9 +172,9 @@ export function openHelpHomeOverlay() {
    - Does NOT invent ids.
    - Correctly builds helpPath for nested dirs.
    - Caller can pass either:
-       • options.subdirs : ["Scripts","Elliptical"]
+       â€¢ options.subdirs : ["Scripts","Elliptical"]
      OR
-       • options.path    : ["gallery","Scripts","Elliptical"]  (tabName ignored)
+       â€¢ options.path    : ["gallery","Scripts","Elliptical"]  (tabName ignored)
 
    RULES
    -----
@@ -334,6 +333,107 @@ function buildFullHelpHtmlDocument(titleText, fileName, bodyHtml) {
 
 } // end buildFullHelpHtmlDocument
 
+
+
+
+
+/* ============================================================
+   getTinyMceConfig(overrides)
+   ============================================================
+   Returns a TinyMCE init config object. Private to this module.
+   Merged from tinyMceConfig.js — only ever used by
+   openHelpEditorTinyMCE() in this file.
+   ============================================================ */
+function getTinyMceConfig(overrides = {}) {
+
+  if (!overrides) {
+    throw new Error("getTinyMceConfig: overrides missing");
+  }
+
+  if (!overrides.selector) {
+    throw new Error("getTinyMceConfig: overrides.selector missing");
+  }
+
+  const base = {
+
+    // REQUIRED: where to attach TinyMCE
+    selector: overrides.selector,
+
+    // REQUIRED (Vite + npm TinyMCE):
+    // You copied TinyMCE runtime assets into /public/tinymce
+    // so TinyMCE must load plugins/skins/themes/icons/models from there.
+    base_url: "/tinymce",
+
+    // REQUIRED (otherwise TinyMCE disables itself):
+    license_key: "gpl",
+
+    // REQUIRED (explicit script URL for the served TinyMCE core):
+    tinymceScriptSrc: "/tinymce/tinymce.min.js",
+
+    // Core behavior
+    branding: false,
+    promotion: false,
+    statusbar: true,
+    resize: true,
+
+    // Editor sizing (bigger by default for Help editing)
+    width: "100%",
+    height: 900,
+
+    // You said you want both menubar and toolbar for now.
+    menubar: true,
+
+    // Minimal but useful set of plugins (can be trimmed later)
+    plugins: [
+      "lists",
+      "link",
+      "table",
+      "code",
+      "help"
+    ],
+
+    // Toolbar (simple + predictable)
+    toolbar: [
+      "undo redo |",
+      "blocks |",
+      "bold italic underline |",
+      "bullist numlist |",
+      "outdent indent |",
+      "link table |",
+      "removeformat |",
+      "code"
+    ].join(" "),
+
+    // Menubar layout (simple, familiar)
+    menu: {
+      file:   { title: "File",   items: "newdocument" },
+      edit:   { title: "Edit",   items: "undo redo | cut copy paste | selectall" },
+      view:   { title: "View",   items: "code | visualaid" },
+      insert: { title: "Insert", items: "link table" },
+      format: { title: "Format", items: "bold italic underline | removeformat" },
+      tools:  { title: "Tools",  items: "help" }
+    },
+
+    // Keep output clean and predictable for your Help files
+    elementpath: true,
+    browser_spellcheck: true,
+
+    // You said you won't be using a lot of HTML.
+    // This keeps things conservative, but not overly restrictive yet.
+    valid_elements: "*[*]",
+    forced_root_block: "p",
+
+    // Donâ€™t auto-insert weird stuff
+    convert_urls: false
+
+  };
+
+  // Apply caller overrides last (explicit wins)
+  const finalConfig = Object.assign({}, base, overrides);
+
+  return finalConfig;
+
+} // end getTinyMceConfig
 
 
 
@@ -840,12 +940,12 @@ function setHelpBrowserDefaultPage() {
 
    Rules:
      - Arrays:
-         • keep only items that actually have help files
+         â€¢ keep only items that actually have help files
            (we treat ".js" leaf entries as NOT help pages)
-         • if result is empty => return null (prune)
+         â€¢ if result is empty => return null (prune)
      - Objects:
-         • recursively prune children
-         • if object ends up empty => return null (prune)
+         â€¢ recursively prune children
+         â€¢ if object ends up empty => return null (prune)
      - Any other type => throw
 
    Special:

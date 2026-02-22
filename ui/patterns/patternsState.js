@@ -1,10 +1,10 @@
 /* patternsState.js
    ============================================================
-   Patterns Tab — Shared Module State
+   Patterns Tab â€” Shared Module State
    ============================================================
    Role:
      Owns the module-level state that tracks the Patterns tab's
-     current navigation position and manifest cache.
+     current navigation position.
 
      Before this file existed, these were private `let` variables
      inside patterns.js. Once split into multiple files, each
@@ -12,29 +12,29 @@
      through every function call, they are centralized here.
 
    Design rules:
-     • This file contains NO logic — only variable declarations
+     â€¢ This file contains NO logic â€” only variable declarations
        and their getters/setters.
-     • No imports. Must remain a pure data store with zero
+     â€¢ No imports. Must remain a pure data store with zero
        dependencies to avoid circular references.
-     • All mutation goes through setter functions for debugging
+     â€¢ All mutation goes through setter functions for debugging
        and validation.
 
    Consumers:
-     patterns.js         — init/reset, rehydrate, cache loading
-     patternsNav.js      — read/write category state
-     patternsDisplay.js  — read/write all state during display
-     patternsMenuCmds.js — read currentCategory for menu context
+     patterns.js         â€” init/reset, rehydrate, cache loading
+     patternsNav.js      â€” read/write category state
+     patternsDisplay.js  â€” read/write all state during display
+     patternsMenuCmds.js â€” read currentCategory for menu context
 
    Variable glossary:
-     patternsCache     — Manifest data shaped as:
+     patternsCache     â€” Manifest data shaped as:
                          { categoryName: [entries], ... }
                          Null when not yet loaded or cleared.
 
-     currentCategory   — Category string currently shown in
+     currentCategory   â€” Category string currently shown in
                          Pattern view (e.g. "Chladni").
                          Null when in Categories view.
 
-     currentIndex      — Index of the currently displayed pattern
+     currentIndex      â€” Index of the currently displayed pattern
                          within currentCategory's entry list.
                          Null when in Categories view.
    ============================================================ */
@@ -42,7 +42,6 @@
 /* ============================================================
    Module-level state variables
    ============================================================ */
-let patternsCache   = null;
 let currentCategory = null;
 let currentIndex    = null;
 
@@ -50,10 +49,6 @@ let currentIndex    = null;
 /* ============================================================
    Getters
    ============================================================ */
-
-export function getPatternsCache() {
-  return patternsCache;
-}
 
 export function getCurrentCategory() {
   return currentCategory;
@@ -68,10 +63,6 @@ export function getCurrentIndex() {
    Setters
    ============================================================ */
 
-export function setPatternsCache(cache) {
-  patternsCache = cache;
-}
-
 export function setCurrentCategory(category) {
   currentCategory = category;
 }
@@ -84,10 +75,8 @@ export function setCurrentIndex(index) {
 /* ============================================================
    Reset (used by init)
    ============================================================
-   NOTE: Does NOT clear patternsCache - that cache persists
-   across navigation and is only cleared by explicit cache
-   invalidation (e.g. after rebuild). This function only
-   resets the navigation pointers.
+   Resets navigation pointers only.
+   Manifest data lives in ManifestManager — cleared via manifest.clearCache().
    ============================================================ */
 
 export function resetPatternsState() {

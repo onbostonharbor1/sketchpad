@@ -1,25 +1,25 @@
 /* utilities.js
    ============================================================
-   Utilities Tab â€” Public Entry Point and Lifecycle
+   Utilities Tab Ã¢â‚¬â€ Public Entry Point and Lifecycle
    ============================================================
    Role:
      This is the public entry point for the Utilities tab.
      It owns exactly three things:
 
-       1. UtilityTabSpec â€” the object consumed by setUI.js to
+       1. UtilityTabSpec Ã¢â‚¬â€ the object consumed by setUI.js to
           drive tab activation (init / restore / save).
 
-       2. Lifecycle functions â€” initUtilityTab(), restoreUtilityTab(),
+       2. Lifecycle functions Ã¢â‚¬â€ initUtilityTab(), restoreUtilityTab(),
           saveUtilityState(), refreshUtilitiesFromManifestEdit().
 
-       3. Cache loading â€” loads manifest data for Tools and Lab
+       3. Cache loading Ã¢â‚¬â€ loads manifest data for Tools and Lab
           domains during init and restore.
 
    What does NOT live here:
-     â€¢ Subtab construction and navigation       â†’ utilities/utilitiesNav.js
-     â€¢ Category display and utility execution   â†’ utilities/utilitiesDisplay.js
-     â€¢ Caption bar and menu items               â†’ utilities/utilitiesMenuCmds.js
-     â€¢ Shared module-level state variables      â†’ utilities/utilitiesState.js
+     Ã¢â‚¬Â¢ Subtab construction and navigation       Ã¢â€ â€™ utilities/utilitiesNav.js
+     Ã¢â‚¬Â¢ Category display and utility execution   Ã¢â€ â€™ utilities/utilitiesDisplay.js
+     Ã¢â‚¬Â¢ Caption bar and menu items               Ã¢â€ â€™ utilities/utilitiesMenuCmds.js
+     Ã¢â‚¬Â¢ Shared module-level state variables      Ã¢â€ â€™ utilities/utilitiesState.js
 
    Import structure:
      utilities.js imports from the utilities/ sub-modules.
@@ -34,14 +34,12 @@ import {
   setCommandsButtonHandler,
   showCommandsOffcanvas,
   clearDivs
-} from "./uiUtilities.js";
-import { formatRebuildReportShared } from "./uiUtilities.js";
+} from "/ui/uiUtilities.js";
+import { formatRebuildReportShared } from "/ui/uiUtilities.js";
 import { nodeRebuildAndValidateManifests } from "./nodeLayer.js";
 import { openHelpHomeOverlay } from "./help.js";
 import {
   resetUtilitiesState,
-  setUtilitiesCache,
-  getUtilitiesCache,
   setHasRunUtility,
   getHasRunUtility
 } from "./utilities/utilitiesState.js";
@@ -60,9 +58,9 @@ import {
    Consumed by setUI.js to activate the Utilities tab.
 
    setUI.js calls:
-     init(restored)  â€” on cold start or after needsUpdate
-     restore()       â€” when uiState.utilities.saved exists
-     save()          â€” before leaving the tab (optional)
+     init(restored)  Ã¢â‚¬â€ on cold start or after needsUpdate
+     restore()       Ã¢â‚¬â€ when uiState.utilities.saved exists
+     save()          Ã¢â‚¬â€ before leaving the tab (optional)
    ============================================================ */
 export const UtilityTabSpec = {
   theme: "theme-utilities",
@@ -87,36 +85,35 @@ export const UtilityTabSpec = {
    Called by init, restore, and refreshUtilitiesFromManifestEdit().
 
    Cache invalidation:
-     Call setUtilitiesCache(null) before calling this function
+     Call manifest.clearCache() before calling this function
      to force a reload from disk (e.g. after a rebuild).
    ============================================================ */
 async function ensureUtilitiesCacheLoaded() {
 
-  /* Return immediately if cache is already warm. */
-  const existing = getUtilitiesCache();
-  if (existing && Object.keys(existing).length > 0) return;
-
-  /* Load Tools and Lab manifests. */
-  const toolsRaw = await manifest.get("utilities/Tools");
-  const labRaw   = await manifest.get("utilities/Lab");
-
-  const toolsRegistry = manifest.getRegistry("utilities/Tools");
-  const labRegistry   = manifest.getRegistry("utilities/Lab");
-
-  const cache = { Tools: {}, Lab: {} };
-
-  toolsRegistry.forEach((cat, i) => cache.Tools[cat] = toolsRaw[i] || []);
-  labRegistry.forEach((cat, i) => cache.Lab[cat] = labRaw[i] || []);
-
-  setUtilitiesCache(cache);
-
-  // Also update manifest.cache for backward compatibility
-  if (!manifest.cache) {
-    manifest.cache = {};
-  }
-  manifest.cache.utilities = cache;
+  /* Load both domains. ManifestManager caches each basedir; if already
+     warm these calls return immediately. getCategoryMap() then shapes
+     the raw arrays into { categoryName: [entries] } — no tab-level copy. */
+  await manifest.get("utilities/Tools");
+  await manifest.get("utilities/Lab");
 
 } // end ensureUtilitiesCacheLoaded
+
+
+/* ============================================================
+   getUtilitiesCache()
+   ============================================================
+   Returns the combined utilities cache shaped as:
+     { Tools: { categoryName: [entries] }, Lab: { categoryName: [entries] } }
+
+   Reads directly from ManifestManager's shapedCache — no local copy.
+   Must be called after ensureUtilitiesCacheLoaded() has resolved.
+   ============================================================ */
+export function getUtilitiesCache() {
+  return {
+    Tools: manifest.getCategoryMap("utilities/Tools"),
+    Lab:   manifest.getCategoryMap("utilities/Lab")
+  };
+} // end getUtilitiesCache
 
 
 /* ============================================================
@@ -138,13 +135,13 @@ async function ensureUtilitiesCacheLoaded() {
      7. Switch to appropriate tab (restored or default).
 
    Arguments:
-     restored â€” true when called with needsUpdate (Refresh & Restore).
+     restored Ã¢â‚¬â€ true when called with needsUpdate (Refresh & Restore).
                 The saved state is preserved and the view is restored.
    ============================================================ */
 export async function initUtilityTab(restored = false) {
 
-  // 1. Wipe local module cache immediately on Cold Start
-  setUtilitiesCache(null);
+  // 1. Wipe ManifestManager cache so next load hits disk
+  manifest.clearCache();
 
   clearDivs();
   setCommandsButtonLabel("Utilities Commands");
@@ -223,9 +220,9 @@ export async function initUtilityTab(restored = false) {
    Reconstructs the Utilities tab from uiState.utilities.saved.
 
    Called by:
-     initUtilityTab(true)             â€” Refresh & Restore path
-     setUI.js / activateTab()         â€” returning to the tab
-     refreshUtilitiesFromManifestEdit() â€” after manifest mutation
+     initUtilityTab(true)             Ã¢â‚¬â€ Refresh & Restore path
+     setUI.js / activateTab()         Ã¢â‚¬â€ returning to the tab
+     refreshUtilitiesFromManifestEdit() Ã¢â‚¬â€ after manifest mutation
 
    If saved state is missing entirely, falls back to a cold init.
    ============================================================ */
@@ -263,10 +260,10 @@ async function restoreUtilityTab() {
    Returns the current save snapshot for persistence.
 
    Saves:
-     â€¢ Active tab ID
-     â€¢ Last utility subtab/category/item (for Result restoration)
-     â€¢ Last result text
-     â€¢ hasRunUtility flag (controls Result tab visibility)
+     Ã¢â‚¬Â¢ Active tab ID
+     Ã¢â‚¬Â¢ Last utility subtab/category/item (for Result restoration)
+     Ã¢â‚¬Â¢ Last result text
+     Ã¢â‚¬Â¢ hasRunUtility flag (controls Result tab visibility)
    ============================================================ */
 export function saveUtilityState() {
 
@@ -306,7 +303,6 @@ export async function refreshUtilitiesFromManifestEdit() {
   if (manifest.cache) delete manifest.cache.utilities;
 
   // Force reload
-  setUtilitiesCache(null);
   await ensureUtilitiesCacheLoaded();
 
   // Rehydrate activeUtilityItem from the refreshed cache
@@ -407,7 +403,7 @@ export function wireUtilitiesCommandsButton() {
           const report = await nodeRebuildAndValidateManifests();
 
           // 2. Perform Global Sync
-          const { syncSystemStateAfterRebuild } = await import("./uiUtilities.js");
+          const { syncSystemStateAfterRebuild } = await import("/ui/uiUtilities.js");
           await syncSystemStateAfterRebuild();
 
           // 3. Re-init the Utilities tab

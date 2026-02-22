@@ -6,7 +6,7 @@
    - Only event routing lives here.
    ------------------------------------------------------------ */
 
-import { uiState }        from "./uiState.js";
+import { uiState }        from "/ui/uiState.js";
 import { overlayManager } from "./overlay.js";
 
 import * as draw          from "./draw.js";

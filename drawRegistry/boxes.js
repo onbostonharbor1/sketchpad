@@ -1,7 +1,7 @@
 import { Line, Point } from "../classes/classes.js";
 import { CurveStitch }     from "../classes/curveStitchClass.js";
 import { drawInverseStar }          from "../draw/drawRegular.js";
-import { createNodes }              from "../draw/drawUtilities.js";
+
 
 window.drawRegistry_boxes= {
     name:         "Boxes (temp)",

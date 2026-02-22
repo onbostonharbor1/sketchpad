@@ -1,6 +1,7 @@
 import { Point, StringThing, Line } from "/classes/classes.js";
-import { createNodes, ptsOnLine, stitcher, drawLine, drawLines }
+import { ptsOnLine, stitcher, drawLine, drawLines }
                                   from "/draw/drawUtilities.js";
+import { createNodes } from "/draw/createNodes.js";
 
     // Circle in square
 

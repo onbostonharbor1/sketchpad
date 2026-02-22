@@ -1,6 +1,8 @@
 
 import { Point, StringThing, Line } from "/classes/classes.js";
-import { createNodes, ptsOnLine, stitcher, drawLine, drawLines }
+import { createNodes } from "/draw/createNodes.js";
+
+import { ptsOnLine, stitcher, drawLine, drawLines }
                                   	from "/draw/drawUtilities.js";
 import { drawRegularPolygonTouch, drawInnerStar } from "/draw/drawRegular.js";
 import { crossHair }          		from "/draw/drawUnicorns.js";
@@ -60,9 +62,9 @@ export function runPattern () {
 		        new Point(450,100),
 		        new Point(450,600)
 	        ];
-	crossHair(pts,"black");
+	// crossHair(pts,"black");
 
-	drawLine(new Point(0,47),new Point(800,47),"black",2);
-	drawLine(new Point(16,3),new Point(16,800),"black",2);
+	// drawLine(new Point(0,47),new Point(800,47),"black",2);
+	// drawLine(new Point(16,3),new Point(16,800),"black",2);
 }
 

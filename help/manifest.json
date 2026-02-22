@@ -77,7 +77,9 @@
     ]
   },
   "patterns": {
-    "builds": [],
+    "builds": [
+      "firstBuild"
+    ],
     "circles": [],
     "curve_stitch": [],
     "figures": [],

@@ -1,8 +1,8 @@
 /* ===========================================================
-   interactor.js – Unified Interaction Manager
+   interactor.js â€“ Unified Interaction Manager
    =========================================================== */
-import { overlayManager } from "/ui/overlay.js";
-import { uiState } from "./uiState.js";
+import { canvasLayerManager } from "./canvasLayerManager.js";
+import { uiState } from "/ui/uiState.js";
 
 const PointPickerPresets = {
     handleRadius: 5,        // Normal size
@@ -73,7 +73,7 @@ export function disarmInteractor() {
     }
 
     // 2. Hard-reset the interaction canvas layer
-    const canvas = overlayManager.getCanvasLayer("interaction");
+    const canvas = canvasLayerManager.get("interaction");
     if (canvas) {
         const ctx = canvas.getContext("2d");
         // Wipe all pixels
@@ -90,7 +90,7 @@ export function disarmInteractor() {
 
 function activatePointPicker(points, config = {}) {
     const settings = { ...PointPickerPresets, ...config };
-    const canvas = overlayManager.getCanvasLayer("interaction");
+    const canvas = canvasLayerManager.get("interaction");
     const ctx = canvas.getContext("2d");
 
     // Sync dimensions with the main drawing canvas

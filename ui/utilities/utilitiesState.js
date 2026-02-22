@@ -1,10 +1,10 @@
 /* utilitiesState.js
    ============================================================
-   Utilities Tab — Shared Module State
+   Utilities Tab â€” Shared Module State
    ============================================================
    Role:
      Owns the module-level state that tracks the Utilities tab's
-     current navigation position and manifest cache.
+     current navigation position.
 
      Before this file existed, these were private `let` variables
      inside utilities.js. Once split into multiple files, each
@@ -12,45 +12,44 @@
      through every function call, they are centralized here.
 
    Design rules:
-     • This file contains NO logic — only variable declarations
+     â€¢ This file contains NO logic â€” only variable declarations
        and their getters/setters.
-     • No imports. Must remain a pure data store with zero
+     â€¢ No imports. Must remain a pure data store with zero
        dependencies to avoid circular references.
-     • All mutation goes through setter functions for debugging
+     â€¢ All mutation goes through setter functions for debugging
        and validation.
 
    Consumers:
-     utilities.js         — init/reset, rehydrate, cache loading
-     utilitiesNav.js      — read/write tab state, hasRunUtility flag
-     utilitiesDisplay.js  — read cache, display utilities
-     utilitiesMenuCmds.js — read current utility context
+     utilities.js         â€” init/reset, rehydrate, cache loading
+     utilitiesNav.js      â€” read/write tab state, hasRunUtility flag
+     utilitiesDisplay.js  â€” read cache, display utilities
+     utilitiesMenuCmds.js â€” read current utility context
 
    Variable glossary:
-     utilitiesCache      — Manifest data shaped as:
+     utilitiesCache      â€” Manifest data shaped as:
                            { Tools: { category: [entries] },
                              Lab:   { category: [entries] } }
                            Null when not yet loaded or cleared.
 
-     currentDomain       — "Tools" or "Lab" (currently active subtab)
+     currentDomain       â€” "Tools" or "Lab" (currently active subtab)
                            Null when in Result view or not initialized.
 
-     currentCategory     — Category string currently shown.
+     currentCategory     â€” Category string currently shown.
                            Null when in categories view.
 
-     currentList         — Array of entries in current category.
+     currentList         â€” Array of entries in current category.
                            Empty when in categories view.
 
-     currentIndex        — Index within currentList.
+     currentIndex        â€” Index within currentList.
                            0 when in categories view.
 
-     hasRunUtility       — Boolean flag tracking whether any utility
+     hasRunUtility       â€” Boolean flag tracking whether any utility
                            has been run (controls Result tab visibility).
    ============================================================ */
 
 /* ============================================================
    Module-level state variables
    ============================================================ */
-let utilitiesCache  = null;
 let currentDomain   = null;
 let currentCategory = null;
 let currentList     = [];
@@ -61,10 +60,6 @@ let hasRunUtility   = false;
 /* ============================================================
    Getters
    ============================================================ */
-
-export function getUtilitiesCache() {
-  return utilitiesCache;
-}
 
 export function getCurrentDomain() {
   return currentDomain;
@@ -91,10 +86,6 @@ export function getHasRunUtility() {
    Setters
    ============================================================ */
 
-export function setUtilitiesCache(cache) {
-  utilitiesCache = cache;
-}
-
 export function setCurrentDomain(domain) {
   currentDomain = domain;
 }
@@ -119,12 +110,10 @@ export function setHasRunUtility(value) {
 /* ============================================================
    Reset (used by init)
    ============================================================
-   NOTE: Does NOT clear utilitiesCache - that cache persists
-   across navigation and is only cleared by explicit cache
-   invalidation (e.g. after rebuild). This function only
-   resets the navigation pointers.
-   
-   hasRunUtility is also preserved - once true, it stays true
+   Resets navigation pointers only.
+   Manifest data lives in ManifestManager — cleared via manifest.clearCache().
+
+   hasRunUtility is preserved — once true, it stays true
    for the session to keep the Result tab visible.
    ============================================================ */
 
@@ -133,5 +122,5 @@ export function resetUtilitiesState() {
   currentCategory = null;
   currentList     = [];
   currentIndex    = 0;
-  // Note: utilitiesCache and hasRunUtility are NOT reset
+  // Note: hasRunUtility is NOT reset (persists for session)
 }

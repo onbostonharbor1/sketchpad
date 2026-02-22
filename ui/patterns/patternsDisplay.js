@@ -1,6 +1,6 @@
 /* patternsDisplay.js
    ============================================================
-   Patterns Tab — Pattern Display and Navigation
+   Patterns Tab â€” Pattern Display and Navigation
    ============================================================
    Role:
      Owns everything related to showing a selected pattern and
@@ -11,13 +11,13 @@
      in #action and a thumbnail grid also in #action.
 
    Architectural rules:
-     • Does NOT build or activate subtabs. That is patternsNav.js.
-     • Does NOT build the caption bar. That is patternsMenuCmds.js.
+     â€¢ Does NOT build or activate subtabs. That is patternsNav.js.
+     â€¢ Does NOT build the caption bar. That is patternsMenuCmds.js.
        This file calls updatePatternsCaption() from patternsMenuCmds.js
        after displaying a pattern.
-     • Reads and writes patternsState.js via getters and setters.
+     â€¢ Reads and writes patternsState.js via getters and setters.
        Never declares its own copies of the shared variables.
-     • All uiState writes go through this file for pattern-related
+     â€¢ All uiState writes go through this file for pattern-related
        state (activeCategory, activeItem, saved).
 
    Exports:
@@ -28,12 +28,12 @@
    ============================================================ */
 
 import { runScriptByPath } from "../scriptRunner.js";
+import { manifest } from "../manifest.js";
 import {
   renderThumbnailGrid,
   markSelectedThumbnail
-} from "../uiUtilities.js";
+} from "/ui/uiUtilities.js";
 import {
-  getPatternsCache,
   getCurrentCategory,
   getCurrentIndex,
   setCurrentCategory,
@@ -57,7 +57,7 @@ export function renderPatternThumbGrid(category) {
 
   if (!category) throw new Error("renderPatternThumbGrid: category missing");
 
-  const cache = getPatternsCache();
+  const cache = manifest.getCategoryMap("patterns");
   const list = cache[category];
 
   if (!Array.isArray(list)) {
@@ -115,7 +115,7 @@ export async function showSelectedPattern(category, index) {
   // Persist to sessionStorage for page reload survival
   sessionStorage.setItem("sketchpad.patterns.saved", JSON.stringify(savedState));
 
-  const cache = getPatternsCache();
+  const cache = manifest.getCategoryMap("patterns");
   const list = cache[category] || [];
   const item = list[index];
 
@@ -167,13 +167,13 @@ export async function showSelectedPattern(category, index) {
 /* ============================================================
    onPrev() / onNext()
    ------------------------------------------------------------
-   Simple index cycling — fail-fast if cache missing.
+   Simple index cycling â€” fail-fast if cache missing.
    ============================================================ */
 export function onPrev() {
   const category = getCurrentCategory();
   const index    = getCurrentIndex();
 
-  const cache = getPatternsCache();
+  const cache = manifest.getCategoryMap("patterns");
   const list = cache?.[category] || [];
   if (!list.length) return;
 
@@ -195,7 +195,7 @@ export function onNext() {
   const category = getCurrentCategory();
   const index    = getCurrentIndex();
 
-  const cache = getPatternsCache();
+  const cache = manifest.getCategoryMap("patterns");
   const list = cache?.[category] || [];
   if (!list.length) return;
 

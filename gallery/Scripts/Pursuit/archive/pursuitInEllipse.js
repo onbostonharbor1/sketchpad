@@ -73,7 +73,7 @@ function clearCanvasFull() {
      samplePoints — dense perimeter samples (>= 2048 points)
                     used by drawEllipseArcs() to draw curved arcs
 
-   We replicate the sampling logic from getEllipsePoints()
+   We replicate the sampling logic from createNodes()
    directly so we can return the sample array — the exported
    function discards it after use.
 ------------------------------------------------------------ */

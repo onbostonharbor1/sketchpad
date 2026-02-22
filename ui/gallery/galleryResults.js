@@ -1,17 +1,17 @@
 /* galleryResults.js
    ============================================================
-   Gallery Tab — Results Display and Navigation
+   Gallery Tab â€” Results Display and Navigation
    ============================================================
    Role:
      Owns everything related to showing a selected item in the
      Results view and navigating between items with prev/next.
 
      There are two distinct result types in Gallery:
-       • Image results  — Ideabook and Patterns domains.
+       â€¢ Image results  â€” Ideabook and Patterns domains.
                           Items are displayed as <img> elements
                           inside #text, with a thumbnail grid
                           in #action.
-       • Script results — Scripts domain.
+       â€¢ Script results â€” Scripts domain.
                           Items are executed as ES modules into
                           the shared canvas (#sketchpad).
 
@@ -19,13 +19,13 @@
      (prev/next) that works across both.
 
    Architectural rules:
-     • Does NOT build or activate subtabs. That is galleryNav.js.
-     • Does NOT build the caption bar. That is galleryMenuCmds.js.
+     â€¢ Does NOT build or activate subtabs. That is galleryNav.js.
+     â€¢ Does NOT build the caption bar. That is galleryMenuCmds.js.
        This file calls updateGalleryCaption() from galleryMenuCmds.js
        after displaying an item.
-     • Reads and writes galleryState.js via getters and setters.
+     â€¢ Reads and writes galleryState.js via getters and setters.
        Never declares its own copies of the shared variables.
-     • All uiState writes go through this file for result-related
+     â€¢ All uiState writes go through this file for result-related
        state (activeDomain, activeCategory, activeItem, saved).
 
    Exports:
@@ -41,9 +41,8 @@ import {
   clearDivs,
   renderThumbnailGrid,
   markSelectedThumbnail
-} from "../uiUtilities.js";
+} from "/ui/uiUtilities.js";
 import {
-  getGalleryCache,
   getCurrentList,
   getCurrentIndex,
   getCurrentCategory,
@@ -52,11 +51,12 @@ import {
   setCurrentList,
   setCurrentIndex
 } from "./galleryState.js";
+import { getGalleryCache } from "../gallery.js";
 import { updateGalleryCaption } from "./galleryMenuCmds.js";
 
 
 /* ============================================================
-   Constants — must stay in sync with gallery.js and galleryNav.js
+   Constants â€” must stay in sync with gallery.js and galleryNav.js
    ============================================================ */
 const DOMAIN_SCRIPTS = "Scripts";
 
@@ -80,9 +80,9 @@ const DOMAIN_SCRIPTS = "Scripts";
    re-rendering the grid.
 
    Arguments:
-     domain      — "Ideabook" or "Patterns"
-     category    — category string (e.g. "architecture")
-     startIndex  — zero-based index of the item to show first
+     domain      â€” "Ideabook" or "Patterns"
+     category    â€” category string (e.g. "architecture")
+     startIndex  â€” zero-based index of the item to show first
    ============================================================ */
 export async function showGalleryResultsImages(domain, category, startIndex) {
 
@@ -103,13 +103,13 @@ export async function showGalleryResultsImages(domain, category, startIndex) {
   let idx = startIndex;
   if (idx < 0 || idx >= list.length) idx = 0;
 
-  /* ── Write shared navigation state ─────────────────────── */
+  /* Write shared navigation state */
   setCurrentDomain(domain);
   setCurrentCategory(category);
   setCurrentList(list);
   setCurrentIndex(idx);
 
-  /* ── Write uiState ──────────────────────────────────────── */
+  /* Write uiState */
   uiState.gallery.activeDomain   = domain;
   uiState.gallery.activeCategory = category;
   uiState.gallery.activeItem     = list[idx];
@@ -123,13 +123,13 @@ export async function showGalleryResultsImages(domain, category, startIndex) {
   uiState.gallery.saved = saved;
   sessionStorage.setItem("sketchpad.gallery.saved", JSON.stringify(saved));
 
-  /* ── Thumbnail grid in #action ──────────────────────────── */
+  /* Thumbnail grid in #action */
   renderThumbnailGrid(
     "action",
     list,
-    /* thumbPath builder — one thumbnail image per entry */
+    /* thumbPath builder â€” one thumbnail image per entry */
     (entry) => `./gallery/${domain}/${category}/images/thumb_${entry.filename}.png`,
-    /* onClick — update state, image, caption, and highlight */
+    /* onClick â€” update state, image, caption, and highlight */
     async (_, i) => {
       setCurrentIndex(i);
       uiState.gallery.activeItem  = list[i];
@@ -142,7 +142,7 @@ export async function showGalleryResultsImages(domain, category, startIndex) {
     }
   );
 
-  /* ── Initial image and caption ──────────────────────────── */
+  /* Initial image and caption */
   markSelectedThumbnail("action", idx);
   showGalleryImage(domain, category, list[idx]);
   updateGalleryCaption(domain, category);
@@ -156,7 +156,7 @@ export async function showGalleryResultsImages(domain, category, startIndex) {
    Displays a script-based result view for the Scripts domain.
 
    Unlike image results, scripts are executed directly into the
-   shared canvas. There is no thumbnail grid — scripts run
+   shared canvas. There is no thumbnail grid â€” scripts run
    one at a time and fill the sketchpad.
 
    Sequence:
@@ -167,8 +167,8 @@ export async function showGalleryResultsImages(domain, category, startIndex) {
      5. Update the caption bar.
 
    Arguments:
-     category — category string under gallery/Scripts/
-     index    — zero-based index of the script to execute
+     category â€” category string under gallery/Scripts/
+     index    â€” zero-based index of the script to execute
    ============================================================ */
 export async function showGalleryResultsScripts(category, index) {
 
@@ -186,13 +186,13 @@ export async function showGalleryResultsScripts(category, index) {
   let idx = index;
   if (idx < 0 || idx >= list.length) idx = 0;
 
-  /* ── Write shared navigation state ─────────────────────── */
+  /* Write shared navigation state */
   setCurrentDomain(DOMAIN_SCRIPTS);
   setCurrentCategory(category);
   setCurrentList(list);
   setCurrentIndex(idx);
 
-  /* ── Write uiState ──────────────────────────────────────── */
+  /* Write uiState */
   uiState.gallery.activeDomain   = DOMAIN_SCRIPTS;
   uiState.gallery.activeCategory = category;
   uiState.gallery.activeItem     = list[idx];
@@ -206,7 +206,7 @@ export async function showGalleryResultsScripts(category, index) {
   uiState.gallery.saved = saved;
   sessionStorage.setItem("sketchpad.gallery.saved", JSON.stringify(saved));
 
-  /* ── Execute the script and update caption ──────────────── */
+  /* Execute the script and update caption */
   await showGalleryScript(category, list[idx]);
   updateGalleryCaption(DOMAIN_SCRIPTS, category);
 
@@ -219,11 +219,11 @@ export async function showGalleryResultsScripts(category, index) {
    Navigates to the previous item in the current result list,
    wrapping around to the last item if already at the start.
 
-   Works for both image and script domains — the domain argument
+   Works for both image and script domains â€” the domain argument
    determines which display function is called.
 
    Arguments:
-     domain — the active domain string
+     domain â€” the active domain string
    ============================================================ */
 export async function showPrevGalleryItem(domain) {
 
@@ -236,14 +236,14 @@ export async function showPrevGalleryItem(domain) {
   const newIndex = (oldIndex <= 0) ? list.length - 1 : oldIndex - 1;
   setCurrentIndex(newIndex);
 
-  /* ── Persist new position ───────────────────────────────── */
+  /* Persist new position */
   uiState.gallery.activeItem  = list[newIndex];
   uiState.gallery.saved.index = newIndex;
   sessionStorage.setItem("sketchpad.gallery.saved", JSON.stringify(uiState.gallery.saved));
 
   const category = getCurrentCategory();
 
-  /* ── Display the new item ───────────────────────────────── */
+  /* Display the new item */
   if (domain === DOMAIN_SCRIPTS) {
     await showGalleryResultsScripts(category, newIndex);
     updateGalleryCaption(domain, category);
@@ -264,7 +264,7 @@ export async function showPrevGalleryItem(domain) {
    wrapping around to the first item if already at the end.
 
    Arguments:
-     domain — the active domain string
+     domain â€” the active domain string
    ============================================================ */
 export async function showNextGalleryItem(domain) {
 
@@ -275,14 +275,14 @@ export async function showNextGalleryItem(domain) {
   const newIndex = (oldIndex >= list.length - 1) ? 0 : oldIndex + 1;
   setCurrentIndex(newIndex);
 
-  /* ── Persist new position ───────────────────────────────── */
+  /* Persist new position */
   uiState.gallery.activeItem  = list[newIndex];
   uiState.gallery.saved.index = newIndex;
   sessionStorage.setItem("sketchpad.gallery.saved", JSON.stringify(uiState.gallery.saved));
 
   const category = getCurrentCategory();
 
-  /* ── Display the new item ───────────────────────────────── */
+  /* Display the new item */
   if (domain === DOMAIN_SCRIPTS) {
     await showGalleryResultsScripts(category, newIndex);
   } else {
@@ -300,13 +300,13 @@ export async function showNextGalleryItem(domain) {
    Renders a single gallery image into the #text region.
 
    The image is sized to fit within the canvas dimensions
-   (drawState.canvasWidth × drawState.canvasHeight) while
+   (drawState.canvasWidth Ã— drawState.canvasHeight) while
    preserving aspect ratio via CSS max-width/max-height.
 
    Arguments:
-     domain   — domain string (used to build the image URL path)
-     category — category string
-     entry    — manifest entry object with path or filename field
+     domain   â€” domain string (used to build the image URL path)
+     category â€” category string
+     entry    â€” manifest entry object with path or filename field
    ============================================================ */
 export function showGalleryImage(domain, category, entry) {
 
@@ -344,8 +344,8 @@ export function showGalleryImage(domain, category, entry) {
    script can expose interactive sliders if it defines them.
 
    Arguments:
-     category — category string under gallery/Scripts/
-     entry    — manifest entry object with a filename field
+     category â€” category string under gallery/Scripts/
+     entry    â€” manifest entry object with a filename field
    ============================================================ */
 async function showGalleryScript(category, entry) {
 
@@ -392,8 +392,8 @@ async function showGalleryScript(category, entry) {
    different path conventions.
 
    Arguments:
-     category — category string used to strip a leading prefix
-     entry    — manifest entry with path or filename field
+     category â€” category string used to strip a leading prefix
+     entry    â€” manifest entry with path or filename field
 
    Returns:
      A clean relative path string (e.g. "myImage.jpg")

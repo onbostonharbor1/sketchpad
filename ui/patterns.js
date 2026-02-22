@@ -1,28 +1,28 @@
 /* patterns.js
    ============================================================
-   Patterns Tab — Public Entry Point and Lifecycle
+   Patterns Tab Ã¢â‚¬â€ Public Entry Point and Lifecycle
    ============================================================
    Role:
      This is the public entry point for the Patterns tab.
      It owns exactly three things:
 
-       1. PatternsTabSpec — the object consumed by setUI.js to
+       1. PatternsTabSpec Ã¢â‚¬â€ the object consumed by setUI.js to
           drive tab activation (init / restore / save).
 
-       2. Lifecycle functions — initPatternsTab(), restorePatternsTab(),
+       2. Lifecycle functions Ã¢â‚¬â€ initPatternsTab(), restorePatternsTab(),
           savePatternsState(), rehydratePatternsState(). These are
           the only functions that orchestrate the full tab.
 
-       3. Cache loading — ensurePatternsManifestLoaded(). This lives
+       3. Cache loading Ã¢â‚¬â€ ensurePatternsManifestLoaded(). This lives
           here because it is called by both init and restore, and
           also by refreshPatternsFromManifestEdit() in patternsMenuCmds.js
           via dynamic import.
 
    What does NOT live here:
-     • Subtab construction and category rendering → patterns/patternsNav.js
-     • Pattern display and prev/next navigation   → patterns/patternsDisplay.js
-     • Caption bar, menu items, commands panel    → patterns/patternsMenuCmds.js
-     • Shared module-level state variables        → patterns/patternsState.js
+     Ã¢â‚¬Â¢ Subtab construction and category rendering Ã¢â€ â€™ patterns/patternsNav.js
+     Ã¢â‚¬Â¢ Pattern display and prev/next navigation   Ã¢â€ â€™ patterns/patternsDisplay.js
+     Ã¢â‚¬Â¢ Caption bar, menu items, commands panel    Ã¢â€ â€™ patterns/patternsMenuCmds.js
+     Ã¢â‚¬Â¢ Shared module-level state variables        Ã¢â€ â€™ patterns/patternsState.js
 
    Import structure:
      patterns.js imports from the patterns/ sub-modules.
@@ -34,11 +34,9 @@
 import { manifest } from "./manifest.js";
 import {
   setCommandsButtonLabel
-} from "./uiUtilities.js";
+} from "/ui/uiUtilities.js";
 import {
   resetPatternsState,
-  setPatternsCache,
-  getPatternsCache,
   setCurrentCategory,
   setCurrentIndex
 } from "./patterns/patternsState.js";
@@ -57,7 +55,7 @@ import {
 
 
 /* ============================================================
-   Constants — permanent subtab IDs
+   Constants Ã¢â‚¬â€ permanent subtab IDs
    ============================================================ */
 const CATEGORIES_ID = "patterns-categories";
 const PATTERN_ID    = "patterns-pattern";
@@ -69,9 +67,9 @@ const PATTERN_ID    = "patterns-pattern";
    Consumed by setUI.js to activate the Patterns tab.
 
    setUI.js calls:
-     init(restored)  — on cold start or after needsUpdate
-     restore()       — when uiState.patterns.saved exists
-     save()          — before leaving the tab (optional)
+     init(restored)  Ã¢â‚¬â€ on cold start or after needsUpdate
+     restore()       Ã¢â‚¬â€ when uiState.patterns.saved exists
+     save()          Ã¢â‚¬â€ before leaving the tab (optional)
    ============================================================ */
 export const PatternsTabSpec = {
   name: "patterns",
@@ -121,37 +119,15 @@ export const PatternsController = {
    refreshPatternsFromManifestEdit() in patternsMenuCmds.js.
 
    Cache invalidation:
-     Call setPatternsCache(null) before calling this function
+     Call manifest.clearCache() before calling this function
      to force a reload from disk (e.g. after a rebuild).
    ============================================================ */
 export async function ensurePatternsManifestLoaded() {
-  
-  /* Return immediately if cache is already warm. */
-  const existing = getPatternsCache();
-  if (existing && Object.keys(existing).length > 0) return;
 
-  /* Load the patterns manifest. */
-  const raw      = await manifest.get("patterns");
-  const registry = manifest.getRegistry("patterns");
-
-  if (!raw || !registry) {
-    throw new Error("ensurePatternsManifestLoaded: patterns manifest data missing");
-  }
-
-  /* Transform array-of-arrays into a category map. */
-  const map = {};
-  for (let i = 0; i < registry.length; i++) {
-    const categoryName = registry[i];
-    map[categoryName] = raw[i] || [];
-  }
-
-  setPatternsCache(map);
-
-  // Also update manifest.cache for backward compatibility
-  if (!manifest.cache) {
-    manifest.cache = {};
-  }
-  manifest.cache.patterns = map;
+  /* If ManifestManager already has this basedir cached, getCategoryMap()
+     will return immediately. Otherwise, get() loads from disk and
+     populates the cache — one source of truth, no tab-level copy. */
+  await manifest.get("patterns");
 
 } // end ensurePatternsManifestLoaded
 
@@ -176,7 +152,7 @@ export async function ensurePatternsManifestLoaded() {
      7. Otherwise, default to Categories view.
 
    Arguments:
-     restored — true when called with needsUpdate (Refresh & Restore).
+     restored Ã¢â‚¬â€ true when called with needsUpdate (Refresh & Restore).
                 The saved state is preserved and the view is restored.
    ============================================================ */
 export async function initPatternsTab(restored) {
@@ -231,14 +207,14 @@ export async function initPatternsTab(restored) {
    Reconstructs the Patterns tab from uiState.patterns.saved.
 
    Called by:
-     initPatternsTab(true)             — Refresh & Restore path
-     setUI.js / activateTab()          — returning to the tab
-     refreshPatternsFromManifestEdit() — after manifest mutation
+     initPatternsTab(true)             Ã¢â‚¬â€ Refresh & Restore path
+     setUI.js / activateTab()          Ã¢â‚¬â€ returning to the tab
+     refreshPatternsFromManifestEdit() Ã¢â‚¬â€ after manifest mutation
 
    Restore contract (uiState.patterns.saved fields):
-     view           — "categories" or "pattern"
-     activeCategory — category string or null
-     activeItem     — item index or null
+     view           Ã¢â‚¬â€ "categories" or "pattern"
+     activeCategory Ã¢â‚¬â€ category string or null
+     activeItem     Ã¢â‚¬â€ item index or null
 
    If saved state is missing entirely, falls back to a cold
    init to avoid an unrecoverable blank state.
@@ -247,7 +223,7 @@ export async function restorePatternsTab() {
   
   const saved = uiState.patterns?.saved;
   if (!saved) {
-    /* No saved state — fall back to cold init. */
+    /* No saved state Ã¢â‚¬â€ fall back to cold init. */
     return initPatternsTab(false);
   }
 
@@ -262,7 +238,7 @@ export async function restorePatternsTab() {
   if (saved.view === "pattern") {
     // Verify category/item still exist (Refresh & Restore scenario)
     const cat = saved.activeCategory;
-    const cache = getPatternsCache();
+    const cache = manifest.getCategoryMap("patterns");
     const list = cache?.[cat] || [];
 
     if (list.length === 0) {
@@ -351,7 +327,3 @@ export function rehydratePatternsState() {
   setCurrentIndex(parsed.activeItem || null);
 
 } // end rehydratePatternsState
-
-
-// Rehydrate on load
-rehydratePatternsState();

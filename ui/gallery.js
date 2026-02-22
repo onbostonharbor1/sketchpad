@@ -1,28 +1,28 @@
 /* gallery.js
    ============================================================
-   Gallery Tab — Public Entry Point and Lifecycle
+   Gallery Tab â€” Public Entry Point and Lifecycle
    ============================================================
    Role:
      This is the public entry point for the Gallery tab.
      It owns exactly three things:
 
-       1. GalleryTabSpec — the object consumed by setUI.js to
+       1. GalleryTabSpec â€” the object consumed by setUI.js to
           drive tab activation (init / restore / save).
 
-       2. Lifecycle functions — initGalleryTab(), restoreGalleryTab(),
+       2. Lifecycle functions â€” initGalleryTab(), restoreGalleryTab(),
           saveGalleryState(), rehydrateGalleryState(). These are
           the only functions that orchestrate the full tab.
 
-       3. Cache loading — ensureGalleryCacheLoaded(). This lives
+       3. Cache loading â€” ensureGalleryCacheLoaded(). This lives
           here because it is called by both init and restore, and
           also by refreshGalleryFromManifestEdit() in galleryMenuCmds.js
           via dynamic import.
 
    What does NOT live here:
-     • Subtab construction and category rendering → gallery/galleryNav.js
-     • Results display and prev/next navigation  → gallery/galleryResults.js
-     • Caption bar, menu items, commands panel   → gallery/galleryMenuCmds.js
-     • Shared module-level state variables       → gallery/galleryState.js
+     â€¢ Subtab construction and category rendering â†’ gallery/galleryNav.js
+     â€¢ Results display and prev/next navigation  â†’ gallery/galleryResults.js
+     â€¢ Caption bar, menu items, commands panel   â†’ gallery/galleryMenuCmds.js
+     â€¢ Shared module-level state variables       â†’ gallery/galleryState.js
 
    Import structure:
      gallery.js imports from the gallery/ sub-modules.
@@ -35,11 +35,9 @@ import { manifest } from "./manifest.js";
 import {
   clearDivs,
   setCommandsButtonLabel
-} from "./uiUtilities.js";
+} from "/ui/uiUtilities.js";
 import {
   resetGalleryState,
-  setGalleryCache,
-  getGalleryCache,
   setCurrentDomain,
   setCurrentCategory,
   setCurrentIndex
@@ -81,9 +79,9 @@ const SUBTAB_RESULTS  = "gallery-results";
    Consumed by setUI.js to activate the Gallery tab.
 
    setUI.js calls:
-     init(restored)  — on cold start or after needsUpdate
-     restore()       — when uiState.gallery.saved exists
-     save()          — before leaving the tab (optional)
+     init(restored)  â€” on cold start or after needsUpdate
+     restore()       â€” when uiState.gallery.saved exists
+     save()          â€” before leaving the tab (optional)
    ============================================================ */
 export const GalleryTabSpec = {
   name:  "gallery",
@@ -133,37 +131,42 @@ export const GalleryController = {
    refreshGalleryFromManifestEdit() in galleryMenuCmds.js.
 
    Cache invalidation:
-     Call setGalleryCache(null) before calling this function
+     Call manifest.clearCache() before calling this function
      to force a reload from disk (e.g. after a rebuild).
    ============================================================ */
 export async function ensureGalleryCacheLoaded() {
 
-  /* Return immediately if cache is already warm. */
-  const existing = getGalleryCache();
-  if (existing && Object.keys(existing).length > 0) return;
-
-  /* Load all three domains in sequence. */
+  /* Load all three domains. ManifestManager caches each basedir; if already
+     warm these calls return immediately. getCategoryMap() then shapes
+     the raw arrays into { categoryName: [entries] } — no local copy. */
   const domains = [DOMAIN_IDEABOOK, DOMAIN_PATTERNS, DOMAIN_SCRIPTS];
-  const gallery = {};
-
   for (const dom of domains) {
-    const basedir  = `gallery/${dom}`;
-    const raw      = await manifest.get(basedir);
-    const registry = manifest.getRegistry(basedir);
-
-    /* Transform the array-of-arrays from ManifestManager into
-       a { categoryName: [entries] } map for easy lookup. */
-    const domainData = {};
-    for (let i = 0; i < registry.length; i++) {
-      domainData[registry[i]] = raw[i] || [];
-    }
-
-    gallery[dom] = domainData;
+    await manifest.get(`gallery/${dom}`);
   }
 
-  setGalleryCache(gallery);
-
 } // end ensureGalleryCacheLoaded
+
+
+/* ============================================================
+   getGalleryCache()
+   ============================================================
+   Returns the full gallery cache shaped as:
+     {
+       Ideabook: { categoryName: [entries] },
+       Patterns: { categoryName: [entries] },
+       Scripts:  { categoryName: [entries] }
+     }
+
+   Reads directly from ManifestManager's shapedCache — no local copy.
+   Must be called after ensureGalleryCacheLoaded() has resolved.
+   ============================================================ */
+export function getGalleryCache() {
+  return {
+    [DOMAIN_IDEABOOK]: manifest.getCategoryMap(`gallery/${DOMAIN_IDEABOOK}`),
+    [DOMAIN_PATTERNS]: manifest.getCategoryMap(`gallery/${DOMAIN_PATTERNS}`),
+    [DOMAIN_SCRIPTS]:  manifest.getCategoryMap(`gallery/${DOMAIN_SCRIPTS}`)
+  };
+} // end getGalleryCache
 
 
 /* ============================================================
@@ -184,7 +187,7 @@ export async function ensureGalleryCacheLoaded() {
      5. Otherwise, default to Ideabook categories view.
 
    Arguments:
-     restored — true when called with needsUpdate (Refresh & Restore).
+     restored â€” true when called with needsUpdate (Refresh & Restore).
                 The saved state is preserved and the view is restored.
    ============================================================ */
 export async function initGalleryTab(restored) {
@@ -193,24 +196,24 @@ export async function initGalleryTab(restored) {
     throw new Error("initGalleryTab: uiState.gallery missing");
   }
 
-  /* ── 1. Reset shared state ──────────────────────────────── */
+  /* 1. Reset shared state */
   resetGalleryState();
 
-  /* ── 2. Load manifest data ──────────────────────────────── */
+  /* 2. Load manifest data */
   await ensureGalleryCacheLoaded();
 
-  /* ── 3. Build chrome ────────────────────────────────────── */
+  /* 3. Build chrome */
   buildGallerySubtabs();
   setCommandsButtonLabel(GALLERY_COMMAND);
   wireGalleryCommandsButton();
 
-  /* ── 4. Restore saved view if applicable ────────────────── */
+  /* 4. Restore saved view if applicable */
   if (restored && uiState.gallery.saved) {
     await restoreGalleryTab();
     return;
   }
 
-  /* ── 5. Default view: Ideabook categories ───────────────── */
+  /* 5. Default view: Ideabook categories */
   uiState.gallery.activeDomain   = DOMAIN_IDEABOOK;
   uiState.gallery.activeCategory = null;
   uiState.gallery.activeItem     = null;
@@ -236,15 +239,15 @@ export async function initGalleryTab(restored) {
    Reconstructs the Gallery tab from uiState.gallery.saved.
 
    Called by:
-     initGalleryTab(true)             — Refresh & Restore path
-     setUI.js / activateTab()         — returning to the tab
-     refreshGalleryFromManifestEdit() — after manifest mutation
+     initGalleryTab(true)             â€” Refresh & Restore path
+     setUI.js / activateTab()         â€” returning to the tab
+     refreshGalleryFromManifestEdit() â€” after manifest mutation
 
    Restore contract (uiState.gallery.saved fields):
-     view      — "categories" or "results"
-     domain    — "Ideabook" | "Patterns" | "Scripts"
-     category  — category string or null
-     index     — item index or null
+     view      â€” "categories" or "results"
+     domain    â€” "Ideabook" | "Patterns" | "Scripts"
+     category  â€” category string or null
+     index     â€” item index or null
 
    If saved state is missing entirely, falls back to a cold
    init to avoid an unrecoverable blank state.
@@ -252,11 +255,11 @@ export async function initGalleryTab(restored) {
 export async function restoreGalleryTab() {
 
   if (!uiState.gallery?.saved) {
-    /* No saved state — fall back to cold init. */
+    /* No saved state â€” fall back to cold init. */
     return initGalleryTab(false);
   }
 
-  /* ── Rebuild tab chrome ─────────────────────────────────── */
+  /* Rebuild tab chrome */
   await ensureGalleryCacheLoaded();
   buildGallerySubtabs();
   setCommandsButtonLabel(GALLERY_COMMAND);
@@ -264,7 +267,7 @@ export async function restoreGalleryTab() {
 
   const saved = uiState.gallery.saved;
 
-  /* ── Restore Categories view ────────────────────────────── */
+  /* Restore Categories view */
   if (saved.view === "categories") {
     if      (saved.domain === DOMAIN_IDEABOOK) await showIdeabookCategories();
     else if (saved.domain === DOMAIN_PATTERNS) await showPatternsCategories();
@@ -275,7 +278,7 @@ export async function restoreGalleryTab() {
     return;
   }
 
-  /* ── Restore Results view ───────────────────────────────── */
+  /* Restore Results view */
   if (saved.view === "results") {
 
     ensureResultsSubtab(saved.domain);

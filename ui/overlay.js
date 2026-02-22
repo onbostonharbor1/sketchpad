@@ -1,14 +1,11 @@
 ////////////////////////////////////////////////////////////////
-// overlay.js â€” CLEAN FINAL VERSION
+// overlay.js Ã¢â‚¬â€ CLEAN FINAL VERSION
 ////////////////////////////////////////////////////////////////
 import { openHelpEditorTinyMCE} from "./help.js";
 
 export const overlayManager = {
   // Panel overlays (help / forms / debug)
   layers: {},
-
-  // Canvas overlays (interaction / bbox / nodes / guides)
-  canvasLayers: {},
 
   // ---------- Panel overlay API ----------
   register(name, element) {
@@ -23,9 +20,6 @@ export const overlayManager = {
     if (!el) throw new Error("overlayManager.show: unknown layer " + name);
     
     // CRITICAL: Disable interactor when showing any overlay
-    // The interaction canvas layer can capture mouse events and render
-    // draggable points on top of overlays, making them unusable.
-    // This is automatically re-armed when scripts execute (see scriptRunner.js)
     if (window.disarmInteractor) {
       window.disarmInteractor();
     }
@@ -48,36 +42,22 @@ export const overlayManager = {
   }, // end clearLayer
 
   clearAll() {
-    // clears panel overlays (NOT canvas overlays)
+    // Clears panel overlays only.
+    // Canvas layers are managed by canvasLayerManager.js
     for (const name in this.layers) {
       const el = this.layers[name];
       el.innerHTML = "";
       el.style.display = "none";
     }
-  }, // end clearAll
+  } // end clearAll
 
-  // ---------- Canvas overlay API ----------
-  registerCanvas(name, element) {
-    if (!name || !element) {
-      throw new Error("overlayManager.registerCanvas: invalid args");
-    }
-    this.canvasLayers[name] = element;
-  }, // end registerCanvas
-
-  getCanvasLayer(name) {
-    const el = this.canvasLayers[name];
-    if (!el) {
-      throw new Error("overlayManager.getCanvasLayer: unknown canvas layer " + name);
-    }
-    return el;
-  } // end getCanvasLayer
 }; // end overlayManager
 
 // Expose for older code
 window.overlayManager = overlayManager;
 
 ////////////////////////////////////////////////////////////////
-// initOverlay() â€” CALL ONCE IN onDomContentLoaded()
+// initOverlay() Ã¢â‚¬â€ CALL ONCE IN onDomContentLoaded()
 ////////////////////////////////////////////////////////////////
 export function initOverlay() {
 
@@ -94,22 +74,9 @@ export function initOverlay() {
   overlayManager.register("forms", formsEl);
   overlayManager.register("debug", debugEl);
 
-  // ----- Canvas overlays -----
-  const inter  = document.getElementById("interaction-layer");
-  const bbox   = document.getElementById("bbox-layer");
-  const nodes  = document.getElementById("nodes-layer");
-  const guides = document.getElementById("guides-layer");
-
-  if (!inter || !bbox || !nodes || !guides) {
-    throw new Error("initOverlay: missing one or more canvas overlay layers");
-  }
-
-  overlayManager.registerCanvas("interaction", inter);
-  overlayManager.registerCanvas("bbox", bbox);
-  overlayManager.registerCanvas("nodes", nodes);
-  overlayManager.registerCanvas("guides", guides);
-
   // ----- Close button for help/forms/debug panel -----
+  // Note: Canvas layers are initialized separately via initCanvasLayers()
+  // in canvasLayerManager.js
   const closeBtn = document.getElementById("overlayClose");
   if (!closeBtn) throw new Error("initOverlay: #overlayClose missing");
 
@@ -213,7 +180,7 @@ export function showHelpOverlay(helpPath, titleText, options = {}) {
       const header = document.getElementById("overlayTitle");
       if (!header) throw new Error("showHelpOverlay: #overlayTitle missing");
 
-      // IMPORTANT: do NOT append " Help" â€” the page title is the overlay title.
+      // IMPORTANT: do NOT append " Help" Ã¢â‚¬â€ the page title is the overlay title.
       header.textContent = pageTitle;
 
       document.getElementById("overlayContainer").style.display = "block";

@@ -12,7 +12,7 @@
 =========================================================== */
 
 import { nodeListLogFiles, nodeReadLogFile } from "/ui/nodeLayer.js";
-import { escapeHtml } from "/ui/uiUtilities";
+import { escapeHtml } from "/ui/ui/uiUtilities";
 
 export async function runPattern() {
 

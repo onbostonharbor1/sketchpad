@@ -45,54 +45,33 @@ drawManyLines(s) / drawLinesAround / drawLinesWithin
 import { Point, Line } from "../classes/classes.js";
 import { drawState }   from "./drawState.js";
 import { drawParab }   from "/draw/drawRegular.js";
+import { createNodes } from "/draw/createNodes.js";
 
 const toRadians = (deg) => deg * (Math.PI / 180);
 const toDegrees = (rad) => rad * (180 / Math.PI);
 
-
- function createNodes(thing) {
-  const nodes = [];
-  let { midpoint, radius, numNodes, rotate, xScale, yScale } = thing;
-  rotate = toRadians(rotate);
-
-  for (let i = 0; i < numNodes; i++) {
-    // Base angle for evenly spaced nodes
-    const angle = (2 * Math.PI * i) / numNodes + rotate;
-
-    // Circular coordinates before scaling
-    const dx = Math.cos(angle) * radius;
-    const dy = Math.sin(angle) * radius;
-
-    // Apply elliptical distortion
-    const x = midpoint.x + dx * xScale;
-    const y = midpoint.y + dy * yScale;
-
-    nodes.push(new Point(x, y));
-  }
-
-  return nodes;
-}
 //////////////////////////////////////////////////////////////////
 // CREATE PRINT NODES
 //////////////////////////////////////////////////////////////////
 function createPrintNodes(thing) {
-	let nodes = createNodes(thing);
-	let size = drawState.pts.length;
-	for (let i=0; i < nodes.length; i++) {
-	     printCircNum(nodes[i],i+size);
-	     drawState.pts.push(nodes[i]);
-	 }
+  const nodes = createNodes(thing);
+  const offset = drawState.pts.length;
 
-	if (thing.mid) {
-	    for (let i=0; i < nodes.length; i++) {
-		      let j=i+1;
-		      if (j==nodes.length) j=0;
-		      let mid = midpoint(nodes[i],nodes[j]);
-		      drawState.pts.push(mid);
-		      printCircNum(mid);
-	    }
-	}
-	return nodes;
+  nodes.forEach((node, i) => {
+    printCircNum(node, offset + i);
+    drawState.pts.push(node);
+  });
+
+  if (thing.mid) {
+    nodes.forEach((node, i) => {
+      const next = nodes[(i + 1) % nodes.length];
+      const mid  = midpoint(node, next);
+      printCircNum(mid, offset + nodes.length + i);
+      drawState.pts.push(mid);
+    });
+  }
+
+  return nodes;
 }
 
 function convertParabPtsToLines(parabs) {

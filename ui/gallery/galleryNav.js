@@ -1,6 +1,6 @@
 /* galleryNav.js
    ============================================================
-   Gallery Tab — Subtab Construction and Category Views
+   Gallery Tab â€” Subtab Construction and Category Views
    ============================================================
    Role:
      Owns everything related to building the Gallery subtab bar
@@ -13,34 +13,34 @@
      that transition into the Results view.
 
    Architectural rules:
-     • Does NOT own the TabSpec, init(), restore(), or save().
+     â€¢ Does NOT own the TabSpec, init(), restore(), or save().
        Those live in gallery.js.
-     • Does NOT render result content (images or scripts).
+     â€¢ Does NOT render result content (images or scripts).
        That lives in galleryResults.js.
-     • Does NOT build caption bars or command offcanvas panels.
+     â€¢ Does NOT build caption bars or command offcanvas panels.
        Those live in galleryMenuCmds.js.
-     • Reads galleryCache via getters from galleryState.js.
+     â€¢ Reads galleryCache via getters from galleryState.js.
        Never imports the raw variable directly.
 
    Exports:
-     buildGallerySubtabs()         — build the full subtab bar
-     ensureResultsSubtab(domain)   — add/update the Results subtab
-     activateGallerySubtab(id)     — highlight the active subtab
-     showIdeabookCategories()      — render Ideabook category frames
-     showPatternsCategories()      — render Patterns category frames
-     showScriptsCategories()       — render Scripts category frames
-     clearGalleryCaption()         — empty the caption region
+     buildGallerySubtabs()         â€” build the full subtab bar
+     ensureResultsSubtab(domain)   â€” add/update the Results subtab
+     activateGallerySubtab(id)     â€” highlight the active subtab
+     showIdeabookCategories()      â€” render Ideabook category frames
+     showPatternsCategories()      â€” render Patterns category frames
+     showScriptsCategories()       â€” render Scripts category frames
+     clearGalleryCaption()         â€” empty the caption region
    ============================================================ */
 
 import { renderCategories } from "../categories.js";
-import { clearDivs }        from "../uiUtilities.js";
+import { clearDivs }        from "/ui/uiUtilities.js";
 import {
-  getGalleryCache,
-  setCurrentDomain,
+    setCurrentDomain,
   setCurrentCategory,
   setCurrentList,
   setCurrentIndex
 } from "./galleryState.js";
+import { getGalleryCache } from "../gallery.js";
 import {
   showGalleryResultsImages,
   showGalleryResultsScripts
@@ -48,7 +48,7 @@ import {
 
 
 /* ============================================================
-   Constants — domain and subtab identifiers
+   Constants â€” domain and subtab identifiers
    These mirror the constants in gallery.js and must stay in sync.
    They are redeclared here (rather than imported) to keep this
    file self-contained with respect to the nav layer.
@@ -77,13 +77,13 @@ const GALLERY_COMMAND = "Gallery Commands";
      3. Activates the clicked subtab visually.
      4. Clears the caption (no item is selected in category view).
 
-   The Results subtab is NOT built here — it is added lazily
+   The Results subtab is NOT built here â€” it is added lazily
    by ensureResultsSubtab() the first time a category item is
    clicked. This keeps the subtab bar clean until it is needed.
 
    Called by:
-     initGalleryTab()    — on every cold start
-     restoreGalleryTab() — before restoring the saved view
+     initGalleryTab()    â€” on every cold start
+     restoreGalleryTab() â€” before restoring the saved view
    ============================================================ */
 export function buildGallerySubtabs() {
 
@@ -98,7 +98,7 @@ export function buildGallerySubtabs() {
   bar.className = "nav nav-tabs gallery-subtabs";
   container.appendChild(bar);
 
-  /* ── Ideabook subtab ──────────────────────────────────────── */
+  /* Ideabook subtab */
   bar.appendChild(buildSubtabButton(SUBTAB_IDEABOOK, "Ideabook", async () => {
     uiState.gallery.activeDomain = DOMAIN_IDEABOOK;
     uiState.gallery.activeSubtab = "ideabook";
@@ -113,7 +113,7 @@ export function buildGallerySubtabs() {
     clearGalleryCaption();
   }));
 
-  /* ── Patterns subtab ──────────────────────────────────────── */
+  /* Patterns subtab */
   bar.appendChild(buildSubtabButton(SUBTAB_PATTERNS, "Patterns", async () => {
     uiState.gallery.activeDomain = DOMAIN_PATTERNS;
     uiState.gallery.activeSubtab = "patterns";
@@ -128,7 +128,7 @@ export function buildGallerySubtabs() {
     clearGalleryCaption();
   }));
 
-  /* ── Scripts subtab ───────────────────────────────────────── */
+  /* Scripts subtab */
   bar.appendChild(buildSubtabButton(SUBTAB_SCRIPTS, "Scripts", async () => {
     uiState.gallery.activeDomain = DOMAIN_SCRIPTS;
     uiState.gallery.activeSubtab = "scripts";
@@ -152,14 +152,14 @@ export function buildGallerySubtabs() {
    Creates a single <li><button> subtab element.
 
    Arguments:
-     tabId   — the data-tab-id attribute value (e.g. "gallery-ideabook")
-     label   — visible button text
-     onClick — async click handler
+     tabId   â€” the data-tab-id attribute value (e.g. "gallery-ideabook")
+     label   â€” visible button text
+     onClick â€” async click handler
 
    Returns:
      The <li> element ready to append to the subtab <ul>.
 
-   This is a pure DOM factory — it has no knowledge of which
+   This is a pure DOM factory â€” it has no knowledge of which
    domain or view the button represents.
    ============================================================ */
 function buildSubtabButton(tabId, label, onClick) {
@@ -189,18 +189,18 @@ function buildSubtabButton(tabId, label, onClick) {
    or updates its label if it does.
 
    The Results subtab label changes depending on the domain:
-     • Scripts domain  → "Drawings"  (canvas output)
-     • Other domains   → "Images"    (image viewer)
+     â€¢ Scripts domain  â†’ "Drawings"  (canvas output)
+     â€¢ Other domains   â†’ "Images"    (image viewer)
 
    The click handler on the Results button restores the last
    selected item in whichever domain is currently active.
 
    Arguments:
-     domain — one of the DOMAIN_* constants
+     domain â€” one of the DOMAIN_* constants
 
    Called by:
      showIdeabookCategories / showPatternsCategories /
-     showScriptsCategories — when a category item is clicked,
+     showScriptsCategories â€” when a category item is clicked,
      before transitioning to the Results view.
    ============================================================ */
 export function ensureResultsSubtab(domain) {
@@ -258,9 +258,9 @@ export function ensureResultsSubtab(domain) {
    matches subtabId, and removes it from all others.
 
    Arguments:
-     subtabId — the data-tab-id value of the button to activate
+     subtabId â€” the data-tab-id value of the button to activate
 
-   This is a pure visual operation — it does not change uiState.
+   This is a pure visual operation â€” it does not change uiState.
    Callers are responsible for updating uiState.gallery.activeSubtab
    before or after calling this function.
    ============================================================ */
@@ -390,7 +390,7 @@ export async function showPatternsCategories() {
    Scripts differ from the image domains in two ways:
      1. Clicking an item calls showGalleryResultsScripts()
         instead of showGalleryResultsImages().
-     2. sortItems is set to false — scripts have a meaningful
+     2. sortItems is set to false â€” scripts have a meaningful
         manual order in the manifest and should not be
         alphabetically re-sorted by renderCategories().
    ============================================================ */

@@ -1,6 +1,6 @@
 /* ui/menuCmds.js
     ------------------------------------------------------------
-    Shared Menu Commands â€” Generic Dialogs
+    Shared Menu Commands:  Generic Dialogs
     ------------------------------------------------------------
     Purpose:
       - Provide shared UI dialogs used by multiple tabs.
@@ -18,7 +18,7 @@
 import { nodeDispatch } from "./nodeLayer.js";
 import { overlayManager } from "./overlay.js";
 import { showHelpOverlay } from "./overlay.js";
-import { escapeHtml } from "./uiUtilities.js";
+import { escapeHtml } from "/ui/uiUtilities.js";
 import { manifest } from "./manifest.js";
 
 /* ============================================================
@@ -67,7 +67,7 @@ export async function archiveItem(specOrPayload) {
     { manifestPath, filename }
   );
 
-  // Default success alert (restores yesterdayâ€™s behavior)
+  // Default success alert (restores yesterdayÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢s behavior)
   const showAlert = (spec.showAlert !== false);
   if (showAlert) {
     alert("Archived: " + filename);
@@ -166,7 +166,7 @@ function validateEditManifestSpec(spec) {
 } // end validateEditManifestSpec
 
 /* ============================================================
-    buildEditManifestHtml â€” TABLE LAYOUT (REFINED)
+    buildEditManifestHtml ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â TABLE LAYOUT (REFINED)
 =========================================================== */
 function buildEditManifestHtml(spec) {
 
@@ -258,7 +258,7 @@ function buildEditManifestHtml(spec) {
 
 
 /* ============================================================
-    wireEditManifestHandlers â€” UPDATED (NO UseCustom BUTTON)
+    wireEditManifestHandlers ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â UPDATED (NO UseCustom BUTTON)
 =========================================================== */
 function wireEditManifestHandlers(spec, resolve) {
 
@@ -628,10 +628,7 @@ export async function createGalleryPatternPng(spec = {}) {
   }
 
   // 5. Invalidate manifest cache
-  if (manifest && typeof manifest.clearCache === "function") {
-    manifest.clearCache();
-  }
-  if (manifest.cache) delete manifest.cache.gallery;
+  manifest.clearCache();
 
   // 6. User Feedback
   alert(
@@ -716,10 +713,7 @@ export async function createPatternScript(spec = {}) {
   }
 
   // Invalidate manifest cache so Patterns picks up the new entry deterministically
-  if (manifest && typeof manifest.clearCache === "function") {
-    manifest.clearCache();
-  }
-  if (manifest.cache) delete manifest.cache.patterns;
+  manifest.clearCache();
 
   alert(
     "Pattern created:\n" +
@@ -913,5 +907,124 @@ export async function saveSecondaryObject(spec = {}) {
   }
   return result;
 }
+
+/* ============================================================
+   MENU ITEM FACTORIES
+   ============================================================
+   Each factory returns a single menu item descriptor:
+     { label, disabled, tooltip, onClick }
+
+   Factories know nothing about which tab is calling them.
+   Tab-specific behaviour (post-action navigation, cache
+   clearing) is passed in via the handler argument.
+
+   This is the single place to change label text, tooltip
+   copy, or disabled logic for each action type.
+   ============================================================ */
+
+
+/* ------------------------------------------------------------
+   makeHelpItem(tabName, helpKey, options)
+   ------------------------------------------------------------
+   Returns a Help menu item.
+     â€¢ If helpKey is provided, delegates to menuManager.buildHelpItem
+       which resolves the help file and opens the overlay.
+     â€¢ If no helpKey, returns a disabled placeholder.
+
+   Arguments:
+     tabName  â€” e.g. "patterns", "gallery", "figures"
+     helpKey  â€” item-specific help file key, or null/undefined
+     options  â€” passed through to buildHelpItem (e.g. { subdirs })
+   ------------------------------------------------------------ */
+export async function makeHelpItem(tabName, helpKey, options = {}) {
+  if (helpKey) {
+    const { menuManager } = await import("./menuManager.js");
+    return menuManager.buildHelpItem(tabName, helpKey, options);
+  }
+  return { label: "Help", disabled: true, tooltip: "No help available", onClick: () => {} };
+} // end makeHelpItem
+
+
+/* ------------------------------------------------------------
+   makeShowScriptItem(info, handler)
+   ------------------------------------------------------------
+   Returns a Show Script menu item.
+     â€¢ Disabled when info.isScript is falsy or info.scriptPath missing.
+     â€¢ handler is called with (scriptPath, label) when clicked.
+
+   Arguments:
+     info    â€” { isScript, scriptPath, filename, title }
+     handler â€” fn(scriptPath, label) â€” typically showScriptOffcanvas
+   ------------------------------------------------------------ */
+export function makeShowScriptItem(info, handler) {
+  const scriptPath = info.scriptPath || "";
+  const enabled    = !!(info.isScript && scriptPath);
+  const label      = info.filename || info.title || info.file || scriptPath || "(untitled)";
+
+  return {
+    label:    "Show Script",
+    disabled: !enabled,
+    tooltip:  "View the source code for this item",
+    onClick:  () => { if (enabled) handler(scriptPath, label); }
+  };
+} // end makeShowScriptItem
+
+
+/* ------------------------------------------------------------
+   makeThumbnailItem(handler)
+   ------------------------------------------------------------
+   Returns a Create Thumbnail menu item.
+     â€¢ Always enabled â€” handler is responsible for checking canvas.
+
+   Arguments:
+     handler â€” async fn() â€” tab-specific thumbnail creation
+   ------------------------------------------------------------ */
+export function makeThumbnailItem(handler) {
+  return {
+    label:    "Create Thumbnail",
+    disabled: false,
+    tooltip:  "Generate a thumbnail from the current canvas",
+    onClick:  () => { handler(); }
+  };
+} // end makeThumbnailItem
+
+
+/* ------------------------------------------------------------
+   makeEditManifestItem(handler)
+   ------------------------------------------------------------
+   Returns an Edit Manifest menu item.
+     â€¢ Always enabled â€” handler validates its own preconditions.
+
+   Arguments:
+     handler â€” async fn() â€” tab-specific manifest edit + refresh
+   ------------------------------------------------------------ */
+export function makeEditManifestItem(handler) {
+  return {
+    label:    "Edit Manifest",
+    disabled: false,
+    tooltip:  "Edit title, status, and other metadata",
+    onClick:  async () => { await handler(); }
+  };
+} // end makeEditManifestItem
+
+
+/* ------------------------------------------------------------
+   makeArchiveItem(handler)
+   ------------------------------------------------------------
+   Returns an Archive menu item.
+     â€¢ Always enabled â€” handler shows its own confirm dialog.
+
+   Arguments:
+     handler â€” async fn() â€” tab-specific archive + navigation
+   ------------------------------------------------------------ */
+export function makeArchiveItem(handler) {
+  return {
+    label:    "Archive",
+    disabled: false,
+    tooltip:  "Move this item to the archive folder",
+    onClick:  async () => { await handler(); }
+  };
+} // end makeArchiveItem
+
 
 // end menuCmds.js

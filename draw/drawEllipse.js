@@ -1,45 +1,8 @@
-/*
-====================================================================
-getVariedEllipsePoints(thing)
---------------------------------------------------------------------
-PURPOSE:
-- Generates a set of discrete nodes (coordinates) along an elliptical
-  path to be used for string-art "nailing templates."
-- Unlike standard ellipse generation, this function introduces
-  "organic" variations through spacing bias and positional jitter.
-
-PARAMETERS:
-- thing: An object containing:
-    * ellipse: {a, b} (Semi-major and semi-minor axes)
-    * midpoint: {x, y} (Center of the ellipse)
-    * numNodes: Total number of points to generate
-    * rotate: Rotation in degrees
-    * xScale, yScale: Scaling factors for the axes
-    * spacingBias: A value (typically 0 to 1) that remaps node
-      distribution. 0 is uniform; higher values cluster nodes
-      toward the end of the parametric sweep (Math.pow remapping).
-    * jitter: The maximum distance a point can move from its
-      calculated "perfect" position.
-    * jitterMode:
-        - "xy": Random displacement in any direction.
-        - "tangent": Displacement along the curve's direction.
-        - "radial": Displacement toward or away from the center.
-
-MATHEMATICS:
-- Uses the parametric form: x = a*cos(θ), y = b*sin(θ).
-- Applies a rotation matrix to the points before adding center offsets.
-- Remapping: θ = (i/numNodes)^(1 + 4*bias) * 2π
-
-RETURN:
-- An Array of Point-like objects {x, y}.
-====================================================================
-*/
-
 import { Ellipse, START_END, FULL, TAPER, START_TAPER, END_TAPER }
                                from "/classes/ellipseClass.js";
 import { Line, Point }         from "/classes/classes.js";
 import { drawLine, drawNodes, toRadians } from "./drawUtilities.js";
-
+import { createNodes }         from "./createNodes.js";
 const CLOSE     = true;
 const DONT_DRAW = true;
 
@@ -211,7 +174,7 @@ function renderPattern(thing, nodes) {
 // drawInCircle
 /////////////////////////////////////////////////////////////////
 export function drawInCircle(thing) {
-    thing.ellipse = { a: thing.radius, b: thing.radius };
+    thing.ellipse = { a: thing.radius*2, b: thing.radius*2 };
     drawInEllipse(thing);
 }
 
@@ -219,7 +182,7 @@ export function drawInCircle(thing) {
 // drawInEllipse
 /////////////////////////////////////////////////////////////////
 export function drawInEllipse(thing) {
-    let nodes = getEllipsePoints(thing);
+    let nodes = createNodes(thing);
     renderPattern(thing, nodes);
 }
 
@@ -249,107 +212,7 @@ export function pointAtArcLength(targetLength, maxSamples, cumulativeLengths, po
     };
 }
 
-/*
-====================================================================
-getEllipsePoints(thing)
---------------------------------------------------------------------
-PURPOSE:
-- The universal generator for Ellipse and Circle nodes.
-- Uses arc-length sampling to ensure perfectly even spacing.
-- Optionally applies Spacing Bias (remapping) and Jitter (noise).
-- If jitter and bias are 0 (class defaults), output is standard.
 
-PIPELINE:
-1. Sample: Create a high-resolution map of the ellipse geometry.
-2. Remap: Apply spacingBias to the 't' index if non-zero.
-3. Interpolate: Find the exact x/y at that arc-length.
-4. Jitter: Displace the point based on jitterMode if jitter > 0.
-====================================================================
-*/
-export function getEllipsePoints(thing) {
-    const {
-        numNodes, rotate, xScale, yScale,
-        spacingBias, jitter, jitterMode, midpoint
-    } = thing;
-
-    const width  = thing.ellipse.a * xScale;
-    const height = thing.ellipse.b * yScale;
-    const radiusX = width / 2;
-    const radiusY = height / 2;
-    const rotationRad = toRadians(rotate);
-    const cosR = Math.cos(rotationRad);
-    const sinR = Math.sin(rotationRad);
-
-    // Internal helper for raw parametric points
-    const pointAtAngle = (theta) => {
-        const rawX = radiusX * Math.cos(theta);
-        const rawY = radiusY * Math.sin(theta);
-        return {
-            x: midpoint.x + rawX * cosR - rawY * sinR,
-            y: midpoint.y + rawX * sinR + rawY * cosR
-        };
-    };
-
-    // --- STEP 1: Arc-Length Sampling ---
-    // Create a high-resolution map to solve the "equal spacing" problem
-    const samples = Math.max(2048, numNodes * 16);
-    const samplePoints = new Array(samples + 1);
-    const cumulativeLengths = new Float64Array(samples + 1);
-    let cumulativeDistance = 0;
-    let previousPoint = null;
-
-    for (let i = 0; i <= samples; i++) {
-        const theta = (i * 2 * Math.PI) / samples;
-        const currentPoint = pointAtAngle(theta);
-        samplePoints[i] = currentPoint;
-        if (previousPoint) {
-            cumulativeDistance += Math.hypot(
-                currentPoint.x - previousPoint.x,
-                currentPoint.y - previousPoint.y
-            );
-        }
-        cumulativeLengths[i] = cumulativeDistance;
-        previousPoint = currentPoint;
-    }
-
-    const totalArcLength = cumulativeLengths[samples];
-    const segmentLength = totalArcLength / numNodes;
-    const points = new Array(numNodes);
-
-    // --- STEP 2: Distribution & Modification ---
-    const remap = (t) => (spacingBias === 0) ? t : Math.pow(t, 1 + 4 * spacingBias);
-
-    for (let i = 0; i < numNodes; i++) {
-        // Apply bias to the index 't'
-        const t = remap(i / numNodes);
-        const targetLength = t * totalArcLength;
-
-        // Get the "perfect" point from the arc-length map
-        let pt = pointAtArcLength(targetLength, samples, cumulativeLengths, samplePoints);
-
-        // --- STEP 3: Apply Jitter ---
-        if (jitter > 0) {
-            const theta = t * Math.PI * 2; // Approximate angle for directional jitter
-            const noise = (Math.random() * 2 - 1) * jitter;
-
-            if (jitterMode === "xy") {
-                pt.x += noise;
-                pt.y += (Math.random() * 2 - 1) * jitter;
-            } else if (jitterMode === "tangent") {
-                // Perpendicular to normal
-                pt.x += noise * -Math.sin(theta);
-                pt.y += noise * Math.cos(theta);
-            } else {
-                // Radial (default)
-                pt.x += noise * Math.cos(theta);
-                pt.y += noise * Math.sin(theta);
-            }
-        }
-        points[i] = pt;
-    }
-
-    return points;
-}
 
 /**
  * ====================================================================
@@ -418,5 +281,53 @@ export function arcPoints(a, b, r_frac, n) {
     return sampledPoints;
 }
 
+export function arcCurvature(pt1, pt2, curve, numPoints = 32) {
+    // Lets me specify using a real looking number
+    let curvature = curve/1000;
+    let pts = [];
+    // Use the same math to find center, radius, and sweep
+    const dx = pt2.x - pt1.x;
+    const dy = pt2.y - pt1.y;
+    const d  = Math.hypot(dx, dy);
+    if (d === 0) return;
 
+    if (curvature === 0) {
+	pts.push(pt1);
+	pts.push(pt2);
+	return pts;
+    }
+
+    const sign = Math.sign(curvature);
+    let   R    = Math.abs(1 / curvature);
+    const Rmin = d / 2;
+    if (R < Rmin)
+	R = Rmin;
+
+    const mx = (pt1.x + pt2.x) / 2;
+    const my = (pt1.y + pt2.y) / 2;
+    const ux = dx / d;
+    const uy = dy / d;
+    const nx = -uy;
+    const ny = ux;
+    const h  = Math.sqrt(Math.max(0, R * R - (d / 2) * (d / 2)));
+    const Cx = mx + sign * h * nx;
+    const Cy = my + sign * h * ny;
+
+    let a0 = Math.atan2(pt1.y - Cy, pt1.x - Cx);
+    let a1 = Math.atan2(pt2.y - Cy, pt2.x - Cx);
+    const twoPi = Math.PI * 2;
+    // CCW sweep in [0, 2π)
+    let delta  = ((a1 - a0) % twoPi + twoPi) % twoPi;
+    // choose minor sweep in (-π, π]
+    if (delta > Math.PI) delta -= twoPi;
+
+    for (let i = 0; i <= numPoints; i++) {
+	const t = i / numPoints;
+	const a = a0 + t * delta;
+	const x = Cx + R * Math.cos(a);
+	const y = Cy + R * Math.sin(a);
+	pts.push(new Point(x,y));
+    }
+    return pts;
+}
 

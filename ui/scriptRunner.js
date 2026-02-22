@@ -278,6 +278,7 @@ export async function executeScriptToCanvas(mod, title, options = {}) {
     ctx.fillRect(0, 0, drawState.canvasWidth, drawState.canvasHeight);
   }
 
+  //  SET DEBUG HERE
   // 1. EXECUTE THE SCRIPT FIRST
   // This ensures the script's runPattern() populates the points array
   await mod.runPattern();

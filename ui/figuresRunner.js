@@ -27,7 +27,7 @@
 
    ============================================================ */
 
-import { uiState } from "./uiState.js";
+import { uiState } from "/ui/uiState.js";
 import { resetCanvas } from "/draw/drawState.js";
 import { clearCanvas } from "./drawRunner.js";
 import { buildParameterControls } from "./parameterControls.js";

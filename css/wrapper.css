@@ -118,8 +118,8 @@ body {
   position: relative;
   background: white;
   display: flex;
-  justify-content: center;
-  align-items: center;
+  justify-content: flex-start;
+  align-items: flex-start;
   overflow: hidden;
 }
 
@@ -349,6 +349,7 @@ body {
   gap: 8px;
   overflow-y: auto;
 }
+
 
 /* Interface Controls (Above Action Panel) */
 #interface-controls {

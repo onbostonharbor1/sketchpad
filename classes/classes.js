@@ -51,12 +51,6 @@ class StringThing {
             xScale:      1,
             yScale:      1,
 
-			// USED FOR CIRCULAR OBJECTS, NOT ELLIPSES
-			ellipse: {
-        			a: null,
-					b: null
-      		},
-
 			// MEANING NEEDS TO BE FIRMER
             cutoff:      s.numSteps ? s.numSteps / 2 : 10, // fallback if numSteps missing
             factor:      0,
@@ -64,7 +58,17 @@ class StringThing {
             shorten:     0,
 //          yIncrement:  1,
             trunc:       false,
+			ellipse: {
+                a: null,
+                b: null
+          },
 
+			// --------------------------------------------------------
+			// NEW EXPERIMENTAL PARAMETERS
+			// --------------------------------------------------------
+			spacingBias: 0.0,     // -1 → +1 (non-uniform spacing)
+			jitter:      0.0,     // pixel jitter amount
+			jitterMode:  "xy", // "radial", "tangent", "xy"
 
   			// Cutoff control for “don’t run the circle” end behavior.
       		// 0 means no trimming. Typical useful range: 0.05 .. 0.25
@@ -75,7 +79,7 @@ class StringThing {
       		cutoffLines: null
         };
 
-        const merged = Object.assign({}, defaults, s);
+		const merged = Object.assign({}, defaults, s);
 
         // Assign all merged properties to this instance
         Object.assign(this, merged);

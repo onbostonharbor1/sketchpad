@@ -1,6 +1,6 @@
 /* figuresDisplay.js
    ============================================================
-   Figures Tab — Category Loading and Figure Display
+   Figures Tab â€” Category Loading and Figure Display
    ============================================================
    Role:
      Owns everything related to loading the category list and
@@ -12,10 +12,10 @@
      to execute the figure scripts.
 
    Architectural rules:
-     • Does NOT build or activate subtabs. That is figuresNav.js.
-     • Does NOT build the caption bar. That is figuresMenuCmds.js.
-     • Does NOT execute figure scripts directly. Uses figuresRunner.js.
-     • Reads and writes figuresState.js via getters and setters.
+     â€¢ Does NOT build or activate subtabs. That is figuresNav.js.
+     â€¢ Does NOT build the caption bar. That is figuresMenuCmds.js.
+     â€¢ Does NOT execute figure scripts directly. Uses figuresRunner.js.
+     â€¢ Reads and writes figuresState.js via getters and setters.
 
    Exports:
      loadFiguresCategories()
@@ -124,9 +124,14 @@ export async function loadFigure(figureId, directory, name) {
     // Run script to init state
     await runFigureScript(path, figureId);
 
-    // Ensure name is stored
+    // Ensure name and manifest context are stored
     if (uiState.figures.tabs[tabId]) {
-      uiState.figures.tabs[tabId].name = name;
+      uiState.figures.tabs[tabId].name         = name;
+      uiState.figures.tabs[tabId].directory    = directory;
+      uiState.figures.tabs[tabId].manifestPath = `/figures/${directory}/manifest.json`;
+      uiState.figures.tabs[tabId].matchField   = "id";
+      uiState.figures.tabs[tabId].matchValue   = figureId;
+      uiState.figures.tabs[tabId].scriptPath   = path;
     }
   }
 

@@ -1,6 +1,6 @@
 /* patternsNav.js
    ============================================================
-   Patterns Tab â€” Subtab Construction and Category Views
+   Patterns Tab Ã¢â‚¬â€ Subtab Construction and Category Views
    ============================================================
    Role:
      Owns everything related to building the Patterns subtab bar
@@ -12,25 +12,25 @@
      that transition into the Pattern view.
 
    Architectural rules:
-     â€¢ Does NOT own the TabSpec, init(), restore(), or save().
+     Ã¢â‚¬Â¢ Does NOT own the TabSpec, init(), restore(), or save().
        Those live in patterns.js.
-     â€¢ Does NOT render pattern content (canvas execution).
+     Ã¢â‚¬Â¢ Does NOT render pattern content (canvas execution).
        That lives in patternsDisplay.js.
-     â€¢ Does NOT build caption bars or command offcanvas panels.
+     Ã¢â‚¬Â¢ Does NOT build caption bars or command offcanvas panels.
        Those live in patternsMenuCmds.js.
-     â€¢ Reads patternsCache via getters from patternsState.js.
+     Ã¢â‚¬Â¢ Reads patternsCache via getters from patternsState.js.
        Never imports the raw variable directly.
 
    Exports:
-     setPatternsSubtabs()       â€” build the full subtab bar
-     addPatternSubtab(category) â€” add/update the Pattern subtab
-     showCategoryList()         â€” render category frames
-     clearPatternsCaption()     â€” empty the caption region
+     setPatternsSubtabs()       Ã¢â‚¬â€ build the full subtab bar
+     addPatternSubtab(category) Ã¢â‚¬â€ add/update the Pattern subtab
+     showCategoryList()         Ã¢â‚¬â€ render category frames
+     clearPatternsCaption()     Ã¢â‚¬â€ empty the caption region
    ============================================================ */
 
 import { renderCategories, buildCategoryDescriptor } from "../categories.js";
+import { manifest } from "../manifest.js";
 import {
-  getPatternsCache,
   setCurrentCategory,
   setCurrentIndex
 } from "./patternsState.js";
@@ -40,7 +40,7 @@ import {
 
 
 /* ============================================================
-   Constants â€” permanent subtab IDs
+   Constants Ã¢â‚¬â€ permanent subtab IDs
    ============================================================ */
 const CATEGORIES_ID = "patterns-categories";
 const PATTERN_ID    = "patterns-pattern";
@@ -51,8 +51,8 @@ const PATTERN_ID    = "patterns-pattern";
    ------------------------------------------------------------
    Builds the Patterns subtab bar inside #subtabs.
 
-   â€¢ "Categories" tab is always present and active by default.
-   â€¢ "Pattern" tab is added later by addPatternSubtab() when
+   Ã¢â‚¬Â¢ "Categories" tab is always present and active by default.
+   Ã¢â‚¬Â¢ "Pattern" tab is added later by addPatternSubtab() when
      a specific pattern is selected.
    ============================================================ */
 export function setPatternsSubtabs() {
@@ -173,7 +173,7 @@ export function addPatternSubtab(category) {
    showCategoryList()
    ------------------------------------------------------------
    Shows category frames inside #text.
-   Uses patternsCache exclusively.
+   Uses manifest.getCategoryMap("patterns") exclusively.
    ============================================================ */
 export async function showCategoryList() {
   const textDiv   = document.getElementById("text");
@@ -191,10 +191,10 @@ export async function showCategoryList() {
   actionDiv.innerHTML = "";
   padDiv.innerHTML    = "";
 
-  const groups = getPatternsCache();
+  const groups = manifest.getCategoryMap("patterns");
 
   if (!groups) {
-    throw new Error("showCategoryList: patternsCache missing");
+    throw new Error("showCategoryList: patterns manifest not loaded");
   }
 
   const descriptor = buildCategoryDescriptor(

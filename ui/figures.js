@@ -30,8 +30,8 @@
      to avoid circular references.
    ============================================================ */
 
-import { uiState } from "./uiState.js";
-import { setCommandsButtonLabel } from "./uiUtilities.js";
+import { uiState } from "/ui/uiState.js";
+import { setCommandsButtonLabel } from "/ui/uiUtilities.js";
 import {
   resetFiguresState,
   setCurrentTabId

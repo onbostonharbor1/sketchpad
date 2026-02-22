@@ -8,12 +8,11 @@
      data after a manifest edit.
 
      The Home manifest is a flat array of entry objects, each
-     with at minimum a "path" and "status" field. Unlike the
-     gallery and patterns manifests (which are loaded via the
-     central ManifestManager), the Home manifest is loaded
-     directly via fileLayer.loadJSON() because it has a simpler,
-     flat structure that does not require the registry/category
-     abstraction.
+     with at minimum a "path" and "status" field. It is loaded
+     by populating manifest.cache["home"] directly so that
+     manifest.clearCache() invalidates it along with all other
+     tab manifests. We cannot use manifest.get("home") because
+     the "home" basedir collides with the server's /home/ directory.
 
    Architectural rules:
      • Does NOT render category frames. That is homeNav.js.
@@ -24,17 +23,15 @@
 
    Exports:
      loadHomeManifest()                      — one-shot kick
-     loadHomeManifest_async(forceReload)     — the actual async load
+     loadHomeManifest_async()                — the actual async load
      groupHomeEntriesByStatus(list)          — pure grouping utility
      refreshHomeCategoriesFromManifestEdit() — post-edit refresh
    ============================================================ */
 
+import { manifest } from "../manifest.js";
 import { fileLayer } from "../fileLayer.js";
 import {
-  getHomeManifestLogged,
-  setHomeManifestLogged,
-  getHomeManifestData,
-  setHomeManifestData,
+  getHomeManifestGrouped,
   setHomeManifestGrouped
 } from "./homeState.js";
 
@@ -51,25 +48,16 @@ const HOME_VIEW_RESULTS    = "results";
    ============================================================
    One-shot entry point for kicking the async manifest load.
 
-   Uses the homeManifestLogged flag (from homeState.js) to
-   prevent repeated disk reads within a single session. The
-   flag is reset by resetHomeState() on cold start, so a
-   full tab reinit always triggers a fresh load.
-
-   Errors are surfaced loudly via console.error and rethrow
-   rather than being swallowed, consistent with the fail-fast
-   architecture used throughout the app.
+   ManifestManager's own cache means repeated calls are cheap —
+   the second call returns the already-cached data immediately.
+   The homeManifestLogged guard in homeState.js is no longer
+   needed and has been removed.
 
    Called by:
      initHomeTab()    — on cold start
      restoreHomeTab() — on tab restore
    ============================================================ */
 export function loadHomeManifest() {
-
-  /* Guard: only load once per session unless reset. */
-  if (getHomeManifestLogged()) return;
-
-  setHomeManifestLogged(true);
 
   /* Kick the async work. Errors surface loudly in the console. */
   loadHomeManifest_async().catch((err) => {
@@ -81,42 +69,48 @@ export function loadHomeManifest() {
 
 
 /* ============================================================
-   loadHomeManifest_async(forceReload)
+   loadHomeManifest_async()
    ============================================================
-   Loads /home/manifest.json from disk, groups the entries by
-   status, and triggers category rendering if the tab is
-   currently in the Categories view.
+   Loads /home/manifest.json via ManifestManager, groups the
+   entries by status, and triggers category rendering if the
+   tab is currently in the Categories view.
 
-   The forceReload argument appends a cache-busting query string
-   so the browser does not serve a stale version after a rebuild
-   or manifest edit.
+   ManifestManager caches the raw array after the first load.
+   Subsequent calls return immediately from cache. To force a
+   fresh disk read (e.g. after a manifest edit), call
+   manifest.clearCache() before this function.
 
    Sequence:
-     1. Fetch JSON from disk (with optional cache bust).
+     1. Load flat array via fileLayer (or ManifestManager cache if warm).
      2. Validate it is a flat array.
-     3. Store raw data in homeState.
-     4. Group by status and store grouped map in homeState.
-     5. If the tab is currently in Categories view, trigger
+     3. Group by status and store grouped map in homeState.
+     4. If the tab is currently in Categories view, trigger
         renderHomeCategories() via homeNav.js.
-
-   Arguments:
-     forceReload — if true, appends ?v=<timestamp> to the URL
    ============================================================ */
-export async function loadHomeManifest_async(forceReload) {
+export async function loadHomeManifest_async() {
 
-  const basePath    = "/home/manifest.json";
-  const manifestUrl = forceReload
-    ? (basePath + "?v=" + Date.now())
-    : basePath;
+  /* The home manifest lives at /home/manifest.json. We cannot use
+     manifest.get("home") because ManifestManager resolves basedirs as
+     /<basedir>/... which collides with the server's /home/ filesystem
+     directory. Instead we load directly via fileLayer and populate
+     manifest.cache manually so that manifest.clearCache() still
+     invalidates home data along with everything else. */
 
-  const data = await fileLayer.loadJSON(manifestUrl);
+  let data;
 
-  if (!Array.isArray(data)) {
-    throw new Error("Home manifest must be a flat array (got non-array)");
+  /* Return from ManifestManager cache if already warm. */
+  if (Object.prototype.hasOwnProperty.call(manifest.cache, "home")) {
+    data = manifest.cache["home"];
+  } else {
+    data = await fileLayer.loadJSON("/home/manifest.json");
+    if (!Array.isArray(data)) {
+      throw new Error("Home manifest must be a flat array (got non-array)");
+    }
+    /* Store in ManifestManager cache so clearCache() invalidates it. */
+    manifest.cache["home"] = data;
   }
 
-  /* Store raw data and grouped map in shared state. */
-  setHomeManifestData(data);
+  /* Group and store in shared state. */
   const grouped = groupHomeEntriesByStatus(data);
   setHomeManifestGrouped(grouped);
 
@@ -180,8 +174,8 @@ export function groupHomeEntriesByStatus(list) {
 
    This is the single re-entry point after any Home manifest
    change. It:
-     1. Clears the in-memory manifest data to force a fresh load.
-     2. Reloads and regroups from disk (with cache bust).
+     1. Clears ManifestManager's cache to force a fresh disk read.
+     2. Reloads and regroups from disk.
      3. Inspects the current saved view and active entry.
      4. Decides whether to stay in Results or bounce to Categories.
 
@@ -191,21 +185,16 @@ export function groupHomeEntriesByStatus(list) {
      • Entry status changed (non-empty) → stay in Results, sync
        the saved entry fields so the next Edit dialog seeds
        the correct current values.
-
-   Exported for use by homeMenuCmds.js (called after Edit Manifest
-   dialog confirms).
    ============================================================ */
 export async function refreshHomeCategoriesFromManifestEdit() {
 
-  /* ── 1. Clear in-memory data to force a fresh disk read ─── */
-  setHomeManifestData(null);
-  setHomeManifestGrouped(null);
+  /* ── 1. Invalidate ManifestManager cache ─── */
+  manifest.clearCache();
 
-  /* ── 2. Reload from disk with cache bust ────────────────── */
-  await loadHomeManifest_async(true);
+  /* ── 2. Reload from disk ──────────────────── */
+  await loadHomeManifest_async();
 
-  /* ── 3. Check current view and active entry ─────────────── */
-  /* Import ensureHomeSavedState lazily to avoid circular import. */
+  /* ── 3. Check current view and active entry ─ */
   const { ensureHomeSavedState } = await import("../home.js");
   ensureHomeSavedState();
 
@@ -220,8 +209,8 @@ export async function refreshHomeCategoriesFromManifestEdit() {
     throw new Error("refreshHomeCategoriesFromManifestEdit: activeEntry.path missing");
   }
 
-  /* ── 4. Find the entry in the freshly loaded manifest ───── */
-  const data  = getHomeManifestData();
+  /* ── 4. Find the entry in the freshly loaded manifest ─ */
+  const data  = manifest.cache["home"] || [];
   const match = data.find((e) => e && e.path === entryPath);
 
   const { switchHomeView } = await import("./homeNav.js");

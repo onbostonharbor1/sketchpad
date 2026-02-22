@@ -1,30 +1,30 @@
 /* galleryMenuCmds.js   (ui/gallery/galleryMenuCmds.js)
    ============================================================
-   Gallery Tab â€” Caption Bar, Menu Commands, and Maintenance
+   Gallery Tab Ã¢â‚¬â€ Caption Bar, Menu Commands, and Maintenance
    ============================================================
    Role:
      Owns three related concerns that all sit at the boundary
      between the user's actions and the underlying data:
 
-     1. Caption bar â€” builds the title, prev/next callbacks, and
+     1. Caption bar Ã¢â‚¬â€ builds the title, prev/next callbacks, and
         the per-item context menu for whatever item is currently
         displayed in the Results view.
 
-     2. Menu command handlers â€” the functions invoked when the
+     2. Menu command handlers Ã¢â‚¬â€ the functions invoked when the
         user selects Archive, Edit Manifest, or Show Script from
         the caption menu.
 
-     3. Commands offcanvas â€” the "Gallery Commands" maintenance
+     3. Commands offcanvas Ã¢â‚¬â€ the "Gallery Commands" maintenance
         panel, including the Rebuild & Validate button and its
         post-rebuild refresh sequence.
 
    Architectural rules:
-     â€¢ Does NOT render category frames or subtabs. galleryNav.js.
-     â€¢ Does NOT display images or execute scripts. galleryResults.js.
-     â€¢ Does NOT own TabSpec, init(), or restore(). gallery.js.
-     â€¢ Reads currentCategory from galleryState.js via getter.
+     Ã¢â‚¬Â¢ Does NOT render category frames or subtabs. galleryNav.js.
+     Ã¢â‚¬Â¢ Does NOT display images or execute scripts. galleryResults.js.
+     Ã¢â‚¬Â¢ Does NOT own TabSpec, init(), or restore(). gallery.js.
+     Ã¢â‚¬Â¢ Reads currentCategory from galleryState.js via getter.
        Never touches the raw variable directly.
-     â€¢ refreshGalleryFromManifestEdit() is the single re-entry
+     Ã¢â‚¬Â¢ refreshGalleryFromManifestEdit() is the single re-entry
        point after any manifest mutation (edit or archive).
 
    Exports:
@@ -33,7 +33,6 @@
      archiveGalleryItem(info)
      wireGalleryCommandsButton()
      refreshGalleryFromManifestEdit()
-     formatRebuildReport(report)
    ============================================================ */
 
 import { manifest }                          from "../manifest.js";
@@ -44,12 +43,18 @@ import { nodeRebuildAndValidateManifests }   from "../nodeLayer.js";
 import { showScriptOffcanvas }               from "../menuCmds.js";
 import { openEditManifestDialog }            from "../menuCmds.js";
 import {
+  makeHelpItem,
+  makeShowScriptItem,
+  makeEditManifestItem,
+  makeArchiveItem
+} from "../menuCmds.js";
+import {
   formatRebuildReportShared,
   syncSystemStateAfterRebuild,
   setCommandsButton,
   setCommandsButtonHandler,
   showCommandsOffcanvas
-} from "../uiUtilities.js";
+} from "/ui/uiUtilities.js";
 import {
   getGalleryCache,
   setGalleryCache,
@@ -64,7 +69,7 @@ import { initGalleryTab } from "../gallery.js";
 
 
 /* ============================================================
-   Constants â€” must stay in sync with gallery.js
+   Constants Ã¢â‚¬â€ must stay in sync with gallery.js
    ============================================================ */
 const DOMAIN_SCRIPTS = "Scripts";
 
@@ -76,18 +81,18 @@ const DOMAIN_SCRIPTS = "Scripts";
    gallery item.
 
    The caption bar shows:
-     â€¢ A title in the form "CategoryLabel: ItemTitle"
-     â€¢ Prev / Next navigation arrows
-     â€¢ A menu button that opens the per-item context menu
+     Ã¢â‚¬Â¢ A title in the form "CategoryLabel: ItemTitle"
+     Ã¢â‚¬Â¢ Prev / Next navigation arrows
+     Ã¢â‚¬Â¢ A menu button that opens the per-item context menu
 
    The context menu is built lazily (on menu button click) via
    getGalleryCaptionMenuItems(). This avoids building the info
-   object on every navigation step â€” only when the user actually
+   object on every navigation step Ã¢â‚¬â€ only when the user actually
    opens the menu.
 
    Arguments:
-     domain        â€” "Ideabook", "Patterns", or "Scripts"
-     categoryLabel â€” the category string shown in the title
+     domain        Ã¢â‚¬â€ "Ideabook", "Patterns", or "Scripts"
+     categoryLabel Ã¢â‚¬â€ the category string shown in the title
    ============================================================ */
 export function updateGalleryCaption(domain, categoryLabel) {
 
@@ -113,7 +118,7 @@ export function updateGalleryCaption(domain, categoryLabel) {
   const onPrev = () => showPrevGalleryItem(domain);
   const onNext = () => showNextGalleryItem(domain);
 
-  /* Menu button â€” builds the info object and opens the context menu. */
+  /* Menu button Ã¢â‚¬â€ builds the info object and opens the context menu. */
   const onMenu = async (anchor) => {
 
     const category = getCurrentCategory();
@@ -173,13 +178,13 @@ export function updateGalleryCaption(domain, categoryLabel) {
    context menu. Called by the onMenu handler above.
 
    Menu items:
-     Help          â€” opens the help overlay for this item
-     Show Script   â€” shows script source (disabled for images)
-     Edit Manifest â€” opens the manifest edit dialog
-     Archive       â€” moves the item to the archive folder
+     Help          Ã¢â‚¬â€ opens the help overlay for this item
+     Show Script   Ã¢â‚¬â€ shows script source (disabled for images)
+     Edit Manifest Ã¢â‚¬â€ opens the manifest edit dialog
+     Archive       Ã¢â‚¬â€ moves the item to the archive folder
 
    Arguments:
-     info â€” the canonical identity object built by updateGalleryCaption
+     info Ã¢â‚¬â€ the canonical identity object built by updateGalleryCaption
 
    Returns:
      Array of menu item descriptors for menuManager.open()
@@ -188,43 +193,12 @@ export async function getGalleryCaptionMenuItems(info) {
 
   if (!info) throw new Error("getGalleryCaptionMenuItems: info missing");
 
-  const items = [];
-
-  /* â”€â”€ Help â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
-  if (info.helpKey) {
-    const helpItem = await menuManager.buildHelpItem("gallery", info.helpKey, {
-      subdirs: info.helpSubdirs
-    });
-    items.push(helpItem);
-  } else {
-    items.push({ label: "Help", disabled: true, onClick: () => {} });
-  }
-
-  /* â”€â”€ Show Script â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
-  items.push({
-    label:   "Show Script",
-    disabled: !info.isScript,
-    tooltip: "View the source code for this gallery item",
-    onClick: () => showGalleryScriptSource(info)
-  });
-
-  /* â”€â”€ Edit Manifest â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
-  items.push({
-    label:   "Edit Manifest",
-    disabled: false,
-    tooltip: "Edit title, status, and other metadata",
-    onClick: async () => { await editGalleryManifestItem(info); }
-  });
-
-  /* â”€â”€ Archive â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
-  items.push({
-    label:   "Archive",
-    disabled: false,
-    tooltip: "Move this item to the archive folder",
-    onClick: async () => { await archiveGalleryItem(info); }
-  });
-
-  return items;
+  return [
+    await makeHelpItem("gallery", info.helpKey, { subdirs: info.helpSubdirs }),
+    makeShowScriptItem(info, (path, label) => showGalleryScriptSource({ ...info, scriptPath: path })),
+    makeEditManifestItem(() => editGalleryManifestItem(info)),
+    makeArchiveItem(() => archiveGalleryItem(info))
+  ];
 
 } // end getGalleryCaptionMenuItems
 
@@ -236,7 +210,7 @@ export async function getGalleryCaptionMenuItems(info) {
    Only applicable when info.isScript is true.
 
    Arguments:
-     info â€” canonical identity object; must have scriptPath set
+     info Ã¢â‚¬â€ canonical identity object; must have scriptPath set
    ============================================================ */
 function showGalleryScriptSource(info) {
 
@@ -261,7 +235,7 @@ function showGalleryScriptSource(info) {
    UI reflects the updated title/status immediately.
 
    Arguments:
-     info â€” canonical identity object
+     info Ã¢â‚¬â€ canonical identity object
    ============================================================ */
 async function editGalleryManifestItem(info) {
 
@@ -283,7 +257,7 @@ async function editGalleryManifestItem(info) {
     allowClearStatus:  true
   });
 
-  /* User cancelled â€” no changes to apply. */
+  /* User cancelled Ã¢â‚¬â€ no changes to apply. */
   if (!ok) return;
 
   /* Re-sync the UI with the updated manifest data. */
@@ -303,7 +277,7 @@ async function editGalleryManifestItem(info) {
    and the page reloads to the new bookmark.
 
    Arguments:
-     info â€” canonical identity object
+     info Ã¢â‚¬â€ canonical identity object
    ============================================================ */
 export async function archiveGalleryItem(info) {
 
@@ -338,7 +312,7 @@ export async function archiveGalleryItem(info) {
         index:    nextIndex
       }));
     } else {
-      /* Category is now empty â€” clear the bookmark entirely. */
+      /* Category is now empty Ã¢â‚¬â€ clear the bookmark entirely. */
       sessionStorage.removeItem("sketchpad.gallery.saved");
     }
 
@@ -369,19 +343,19 @@ export async function archiveGalleryItem(info) {
    ============================================================ */
 export async function refreshGalleryFromManifestEdit() {
 
-  /* â”€â”€ 1 & 2. Invalidate both caches â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+  /* Ã¢â€â‚¬Ã¢â€â‚¬ 1 & 2. Invalidate both caches Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬ */
   if (manifest && typeof manifest.clearCache === "function") {
     manifest.clearCache();
   }
   setGalleryCache(null);
 
-  /* â”€â”€ 3. Reload from disk â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+  /* Ã¢â€â‚¬Ã¢â€â‚¬ 3. Reload from disk Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬ */
   /* ensureGalleryCacheLoaded is imported from gallery.js to
      avoid duplicating the load logic here. */
   const { ensureGalleryCacheLoaded } = await import("../gallery.js");
   await ensureGalleryCacheLoaded();
 
-  /* â”€â”€ 4. Locate the active item in the fresh cache â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+  /* Ã¢â€â‚¬Ã¢â€â‚¬ 4. Locate the active item in the fresh cache Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬ */
   const cache    = getGalleryCache();
   const domain   = uiState.gallery.activeDomain;
   const category = uiState.gallery.activeCategory;
@@ -404,7 +378,7 @@ export async function refreshGalleryFromManifestEdit() {
     });
 
     if (!found) {
-      /* Item gone â€” clamp index and restore with nearest neighbour. */
+      /* Item gone Ã¢â‚¬â€ clamp index and restore with nearest neighbour. */
       uiState.gallery.activeItem = null;
       if (uiState.gallery.saved?.view === "results" && list.length > 0) {
         let idx = uiState.gallery.saved.index;
@@ -421,25 +395,13 @@ export async function refreshGalleryFromManifestEdit() {
     }
   }
 
-  /* â”€â”€ 5. Restore the current view â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+  /* Ã¢â€â‚¬Ã¢â€â‚¬ 5. Restore the current view Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬ */
   const { restoreGalleryTab } = await import("../gallery.js");
   await restoreGalleryTab();
 
 } // end refreshGalleryFromManifestEdit
 
 
-/* ============================================================
-   formatRebuildReport(report)
-   ============================================================
-   Formats the Node rebuild/validate response into a human-
-   readable string for display in the offcanvas report area.
-
-   Delegates to the shared formatter in uiUtilities.js so that
-   all tabs display rebuild output in the same format.
-   ============================================================ */
-export function formatRebuildReport(report) {
-  return formatRebuildReportShared(report);
-} // end formatRebuildReport
 
 
 /* ============================================================
@@ -482,8 +444,8 @@ function buildGalleryOffcanvasHtml() {
      5. The rebuild report is displayed in the offcanvas.
 
    Called by:
-     initGalleryTab()    â€” on cold start
-     restoreGalleryTab() â€” on restore
+     initGalleryTab()    Ã¢â‚¬â€ on cold start
+     restoreGalleryTab() Ã¢â‚¬â€ on restore
    ============================================================ */
 export function wireGalleryCommandsButton() {
 
@@ -500,7 +462,7 @@ export function wireGalleryCommandsButton() {
         const out     = document.getElementById("galleryRebuildReport");
         const helpBtn = document.getElementById("galleryHelpButton");
 
-        /* â”€â”€ Rebuild & Validate â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+        /* Ã¢â€â‚¬Ã¢â€â‚¬ Rebuild & Validate Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬ */
         btn?.addEventListener("click", async () => {
           out.textContent = "Rebuilding...";
 
@@ -517,10 +479,10 @@ export function wireGalleryCommandsButton() {
           await initGalleryTab(false);
 
           /* 5. Show the rebuild summary. */
-          out.textContent = formatRebuildReport(report);
+          out.textContent = formatRebuildReportShared(report);
         });
 
-        /* â”€â”€ Help â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+        /* Ã¢â€â‚¬Ã¢â€â‚¬ Help Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬ */
         helpBtn?.addEventListener("click", () => {
           /* Close the offcanvas before opening help overlay. */
           const panel = document.getElementById("offcanvasPanel");

@@ -1,25 +1,25 @@
 /* ui/manifest.js
    ------------------------------------------------------------
-   ManifestManager â€” New Architecture (Generic Loader)
+   ManifestManager Ã¢â‚¬â€ New Architecture (Generic Loader)
    ------------------------------------------------------------
    Responsibilities:
-     â€¢ Given a basedir string (e.g. "patterns", "gallery/Ideabook"),
+     Ã¢â‚¬Â¢ Given a basedir string (e.g. "patterns", "gallery/Ideabook"),
        load manifest data using fileLayer.path helpers.
 
-     â€¢ If ../<basedir>/directoryRegistry.json exists:
+     Ã¢â‚¬Â¢ If ../<basedir>/directoryRegistry.json exists:
          - Load it as an array of category names.
          - For each category, load:
              ../<basedir>/<category>/manifest.json
          - Return an array-of-arrays:
              [ itemsForCat0, itemsForCat1, ... ]
 
-     â€¢ Else if ../<basedir>/manifest.json exists:
+     Ã¢â‚¬Â¢ Else if ../<basedir>/manifest.json exists:
          - Load it as a flat array and return that array.
 
-     â€¢ Else:
+     Ã¢â‚¬Â¢ Else:
          - Return [].
 
-     â€¢ All results are cached per basedir.
+     Ã¢â‚¬Â¢ All results are cached per basedir.
 
    This module knows NOTHING about:
      - tabs
@@ -34,11 +34,15 @@ import { fileLayer } from "./fileLayer.js";
 export class ManifestManager {
 
   constructor() {
-    // Cache: basedir â†’ data (array or array-of-arrays)
+    // Cache: basedir Ã¢â€ â€™ data (array or array-of-arrays)
     this.cache = {};
 
     // Optional: store directoryRegistry arrays per basedir
     this.registryCache = {};
+
+    // Shaped cache: basedir → { categoryName: [entries] }
+    // Computed lazily by getCategoryMap() and cleared with clearCache().
+    this.shapedCache = {};
   } // end constructor
 
 
@@ -72,11 +76,11 @@ export class ManifestManager {
     // 1) Check cache first
     if (Object.prototype.hasOwnProperty.call(this.cache, basedir)) {
       console.timeEnd(`ManifestManager.get(${basedir})`);
-      console.log(`  └─ Cache HIT for '${basedir}'`);
+      console.log(`  â””-> Cache HIT for '${basedir}'`);
       return this.cache[basedir];
     }
 
-    console.log(`  └─ Cache MISS for '${basedir}' - loading from disk...`);
+    console.log(`  â””-> Cache MISS for '${basedir}' - loading from disk...`);
 
     // 2) Try directoryRegistry.json
     const dirRegPath = fileLayer.path.directoryRegistry(basedir);
@@ -125,7 +129,7 @@ export class ManifestManager {
         return drawData;
     }
 
-    // 3) No directoryRegistry â†’ try flat manifest.json
+    // 3) No directoryRegistry Ã¢â€ â€™ try flat manifest.json
     const flatPath   = fileLayer.path.flatManifest(basedir);
     const hasFlat    = await fileLayer.exists(flatPath);
 
@@ -142,7 +146,7 @@ export class ManifestManager {
       return data;
     }
 
-    // 4) Nothing exists â†’ empty
+    // 4) Nothing exists Ã¢â€ â€™ empty
     console.timeEnd(`ManifestManager.get(${basedir})`);
     this.cache[basedir] = [];
     return [];
@@ -185,6 +189,51 @@ export class ManifestManager {
   } // end getRegistry
 
 
+
+
+  /* ============================================================
+      getCategoryMap(basedir)
+      ------------------------------------------------------------
+      Returns the manifest data for a basedir shaped as a plain
+      object: { categoryName: [entries], ... }
+
+      This is the single authoritative source tabs should use
+      instead of maintaining their own local caches.
+
+      Requires that get(basedir) has already been awaited so the
+      raw data and registry are warm. Will throw if called before
+      the basedir has been loaded.
+
+      Result is memoized in this.shapedCache and cleared by
+      clearCache(), so invalidation is automatic.
+   ============================================================ */
+  getCategoryMap(basedir) {
+
+    // Return memoized shaped result if available.
+    if (Object.prototype.hasOwnProperty.call(this.shapedCache, basedir)) {
+      return this.shapedCache[basedir];
+    }
+
+    const raw      = this.cache[basedir];
+    const registry = this.registryCache[basedir];
+
+    if (!raw || !registry) {
+      throw new Error(
+        `ManifestManager.getCategoryMap: '${basedir}' not yet loaded. ` +
+        `Call await manifest.get('${basedir}') first.`
+      );
+    }
+
+    const map = {};
+    for (let i = 0; i < registry.length; i++) {
+      map[registry[i]] = raw[i] || [];
+    }
+
+    this.shapedCache[basedir] = map;
+    return map;
+
+  } // end getCategoryMap
+
   /* ============================================================
       clearCache()
       ------------------------------------------------------------
@@ -195,6 +244,7 @@ export class ManifestManager {
   clearCache() {
     this.cache = {};
     this.registryCache = {};
+    this.shapedCache = {};
 
     // Optional: Log to console so you know the "Global Reset" happened
     console.log("ManifestManager: Global cache cleared.");

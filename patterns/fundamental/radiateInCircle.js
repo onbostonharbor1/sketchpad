@@ -1,5 +1,6 @@
-import { createNodes, drawNodes, drawLine } from "/draw/drawUtilities.js";
+import { drawNodes, drawLine } from "/draw/drawUtilities.js";
 import { Point, StringThing } from "/classes/classes.js";
+import { createNodes } from "/draw/createNodes.js";
 
 export function runPattern(){
 //	printTitle("Figure 255k");

@@ -1,6 +1,6 @@
 /* utilitiesMenuCmds.js
    ============================================================
-   Utilities Tab — Caption Bar and Menu Items
+   Utilities Tab â€” Caption Bar and Menu Items
    ============================================================
    Role:
      Owns everything related to building the caption bar and
@@ -10,19 +10,19 @@
      edit manifest, archive).
 
    Architectural rules:
-     • Does NOT own lifecycle (init/restore/save). Those live
+     â€¢ Does NOT own lifecycle (init/restore/save). Those live
        in utilities.js.
-     • Does NOT render utilities or navigate. Those live in
+     â€¢ Does NOT render utilities or navigate. Those live in
        utilitiesDisplay.js and utilitiesNav.js.
-     • Uses dynamic imports for lifecycle functions to avoid
+     â€¢ Uses dynamic imports for lifecycle functions to avoid
        circular dependencies.
 
    Exports:
-     updateUtilitiesCaption(options)    — build caption bar
-     getUtilitiesCaptionMenuItems(info) — build menu items
-     showUtilitiesScript(info)          — show script offcanvas
-     editUtilitiesManifestItem(info)    — edit manifest dialog
-     archiveUtilitiesItem(info)         — archive utility
+     updateUtilitiesCaption(options)    â€” build caption bar
+     getUtilitiesCaptionMenuItems(info) â€” build menu items
+     showUtilitiesScript(info)          â€” show script offcanvas
+     editUtilitiesManifestItem(info)    â€” edit manifest dialog
+     archiveUtilitiesItem(info)         â€” archive utility
    ============================================================ */
 
 import { setCaptionBar } from "../caption.js";
@@ -31,6 +31,12 @@ import { manifest } from "../manifest.js";
 import { archiveItem } from "../menuCmds.js";
 import { showScriptOffcanvas } from "../menuCmds.js";
 import { openEditManifestDialog } from "../menuCmds.js";
+import {
+  makeHelpItem,
+  makeShowScriptItem,
+  makeEditManifestItem,
+  makeArchiveItem
+} from "../menuCmds.js";
 
 
 /* ============================================================
@@ -39,9 +45,9 @@ import { openEditManifestDialog } from "../menuCmds.js";
    Builds the caption bar for a utility.
    
    This function performs three jobs:
-   1) Caption rendering — computes and sets the visible title
-   2) Execution context — derives scriptPath for menu operations
-   3) Menu-context bundling — builds canonical info object
+   1) Caption rendering â€” computes and sets the visible title
+   2) Execution context â€” derives scriptPath for menu operations
+   3) Menu-context bundling â€” builds canonical info object
    
    Arguments:
      options = {
@@ -127,55 +133,12 @@ export async function getUtilitiesCaptionMenuItems(info) {
 
   if (!info) throw new Error("getUtilitiesCaptionMenuItems: info missing");
 
-  const items = [];
-
-  /* ----------------------------------------------------------
-     Show Script
-     -------------------------------------------------------- */
-  const scriptPath = info.scriptPath || "";
-
-  const label =
-    info.filename ||
-    info.title ||
-    info.entryPath ||
-    scriptPath ||
-    "(untitled)";
-
-  items.push({
-    label: "Show Script",
-    disabled: !scriptPath,
-    tooltip: "View the source code for this utility",
-    onClick: () => {
-      if (!scriptPath) return;
-      showScriptOffcanvas(scriptPath, label);
-    }
-  });
-
-  /* ----------------------------------------------------------
-     Edit Manifest
-     -------------------------------------------------------- */
-  items.push({
-    label: "Edit Manifest",
-    disabled: false,
-    tooltip: "Edit title, status, and other metadata",
-    onClick: async () => {
-      await editUtilitiesManifestItem(info);
-    }
-  });
-
-  /* ----------------------------------------------------------
-     Archive
-     -------------------------------------------------------- */
-  items.push({
-    label: "Archive",
-    disabled: false,
-    tooltip: "Move this utility to archive folder",
-    onClick: async () => {
-      await archiveUtilitiesItem(info);
-    }
-  });
-
-  return items;
+  return [
+    await makeHelpItem("utilities", info.helpKey),
+    makeShowScriptItem(info, showScriptOffcanvas),
+    makeEditManifestItem(() => editUtilitiesManifestItem(info)),
+    makeArchiveItem(() => archiveUtilitiesItem(info))
+  ];
 
 } // end getUtilitiesCaptionMenuItems
 

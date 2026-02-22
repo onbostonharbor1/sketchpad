@@ -2,7 +2,8 @@
 
 import { Point, StringThing, Line }  from "/classes/classes.js";
 import { drawInCircle }        from "/draw/drawEllipse.js";
-import { createNodes, drawLines, drawManyLines, drawLinesAround, ptsOnLine, stitcher } from "/draw/drawUtilities.js";
+import { drawLines, drawManyLines, drawLinesAround, ptsOnLine, stitcher } from "/draw/drawUtilities.js";
+import { createNodes } from "/draw/createNodes.js";
 import { Ellipse, START_END, FULL, TAPER, START_TAPER, END_TAPER }
                                from "/classes/ellipseClass.js";
 

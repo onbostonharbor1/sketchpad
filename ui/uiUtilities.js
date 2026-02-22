@@ -1,13 +1,14 @@
-import { overlayManager } from "./overlay.js";
+import { overlayManager }      from "./overlay.js";
+import { canvasLayerManager } from "./canvasLayerManager.js";
 import { manifest } from "./manifest.js";
-import { uiState } from "./uiState.js";
+import { uiState } from "/ui/uiState.js";
 
 /* ------------------------------------------------------------
    clearDivs(args="")
    Empties the core divs shared by all tabs.
 
    Arguments:
-     args â€“ optional string id of an extra div to clear in addition
+     args Ã¢â‚¬â€œ optional string id of an extra div to clear in addition
 ------------------------------------------------------------ */
 function clearDivs(args = "") {
     // 1. Clear standard regions
@@ -18,7 +19,10 @@ function clearDivs(args = "") {
 
     ids.forEach(id => {
         const el = document.getElementById(id);
-        if (el) el.innerHTML = "";
+        if (el) {
+            el.innerHTML = "";
+            el.style.display = "";
+        }
     });
 
     // 1b. Hide/Clear Layout-specific Elements
@@ -40,18 +44,7 @@ function clearDivs(args = "") {
     if (wrapper) wrapper.style.display = "none";
 
     // 2. Clear canvas overlay layers (pixels + HTML)
-    for (const name in overlayManager.canvasLayers) {
-        const layer = overlayManager.canvasLayers[name];
-
-        // Clear HTML elements
-        layer.innerHTML = "";
-
-        // Clear canvas pixels
-        const ctx = layer.getContext("2d");
-        if (ctx) {
-            ctx.clearRect(0, 0, layer.width, layer.height);
-        }
-    }
+    canvasLayerManager.clearAll();
 
     // 3. Clear main canvas pixels (prevent ghosting)
     const canvas = window.drawCanvas;
@@ -130,88 +123,6 @@ export async function rebuildAllSystemCaches() {
   });
 } // end rebuildAllSystemCaches
 
-/* ------------------------------------------------------------
-   showOffcanvas(title, text)
-   Displays text in the existing #offcanvasPanel.
-   Used for viewing script source.
------------------------------------------------------------- */
-function showOffcanvas(title, text) {
-  const panel = document.getElementById("offcanvasPanel");
-  const hdr = panel.querySelector(".offcanvas-title");
-  const body = panel.querySelector(".offcanvas-body");
-
-  hdr.textContent = title;
-
-  const pre = document.createElement("pre");
-  pre.style.whiteSpace = "pre-wrap";
-  pre.textContent = text;
-
-  body.innerHTML = "";
-  body.appendChild(pre);
-
-  const off = bootstrap.Offcanvas.getOrCreateInstance(panel);
-  off.show();
-} // end showOffcanvas
-
-
-/* ------------------------------------------------------------
-   initOffcanvasHandler()
-   Initializes the shared offcanvas panel used by Gallery
-   and Utility tabs. Creates or reuses Bootstrap instance.
------------------------------------------------------------- */
-function initOffcanvasHandler() {
-  const panel = document.getElementById("offcanvasPanel");
-  if (!panel) {
-    console.warn("initOffcanvasHandler: #offcanvasPanel not found");
-    return;
-  }
-
-  // initialize Bootstrap offcanvas once
-  const offcanvas = bootstrap.Offcanvas.getOrCreateInstance(panel);
-
-  // close button already uses data-bs-dismiss="offcanvas"
-  // this ensures Esc key and backdrop click also work
-  panel.addEventListener("hidden.bs.offcanvas", () => {
-    console.log("Offcanvas closed");
-  });
-
-  // optional: expose global reference
-  window.sharedOffcanvas = offcanvas;
-} // end initOffcanvasHandler
-
-/* ------------------------------------------------------------
-   showSharedOffcanvas(title, text)
-   ------------------------------------------------------------
-   Displays text (e.g., script source, manifest entry, or notes)
-   inside the shared offcanvas panel. Used by multiple tabs.
------------------------------------------------------------- */
-function showSharedOffcanvas(title, text) {
-  const panel = document.getElementById("offcanvasPanel");
-  if (!panel) throw new Error("showSharedOffcanvas: #offcanvasPanel not found");
-
-  const titleEl = panel.querySelector(".offcanvas-title");
-  const body = panel.querySelector(".offcanvas-body");
-  if (!titleEl || !body) return;
-
-  titleEl.textContent = title || "(untitled)";
-  body.innerHTML = `<pre style="white-space:pre-wrap;">${
-    text || "(empty)"
-  }</pre>`;
-
-  try {
-    const offcanvas = bootstrap.Offcanvas.getOrCreateInstance(panel);
-    offcanvas.show();
-  } catch (err) {
-    panel.classList.add("show");
-    panel.style.visibility = "visible";
-    panel.style.opacity = "1";
-  }
-} // end showSharedOffcanvas
-
-function wrapIndex(i, len) {
-  return (i + len) % len;
-} // end wrapIndex
-
 
 /**
  * Set the Commands button label for the active top-level tab.
@@ -247,11 +158,7 @@ function clearOverlaysForTabSwitch() {
 
 export {
   clearDivs,
-  clearOverlaysForTabSwitch,
-  showOffcanvas,
-  initOffcanvasHandler,
-  showSharedOffcanvas,
-  wrapIndex
+  clearOverlaysForTabSwitch
 };
 
 
@@ -311,13 +218,13 @@ export function renderThumbnailGrid(targetId, items, buildSrc, onClick) {
    buildCategoryDescriptor
    ------------------------------------------------------------
    Re-exported from categories.js for backward compatibility.
-   
+
    This function has been moved to categories.js where it
    belongs (it builds descriptors for renderCategories).
-   
+
    New code should import directly from categories.js:
      import { buildCategoryDescriptor } from "./categories.js"
-   
+
    This re-export maintains compatibility with existing code.
 ============================================================ */
 export { buildCategoryDescriptor } from "./categories.js";
@@ -349,39 +256,72 @@ export function setCommandsButtonHandler(onClick) {
    Uses the permanent offcanvas shell (#offcanvasPanel).
    Dynamically populates the body and shows it.
 *************************************************************/
-export function showCommandsOffcanvas({ title, buildBody }) {
+/* ============================================================
+   showOffcanvas({ title, buildBody?, bodyHtml? })
+   ============================================================
+   Unified offcanvas display function. Accepts either:
+
+     buildBody (function) — called with the body element,
+       used when the caller needs to wire event handlers after
+       inserting HTML (Commands panels).
+
+     bodyHtml (string) — injected directly as innerHTML,
+       used for simple content display (thumbnails, scripts).
+
+   Exactly one of buildBody or bodyHtml must be provided.
+   ============================================================ */
+export function showOffcanvas({ title, buildBody, bodyHtml }) {
 
   const panel = document.getElementById("offcanvasPanel");
-  if (!panel) throw new Error("showCommandsOffcanvas: #offcanvasPanel not found");
+  if (!panel) throw new Error("showOffcanvas: #offcanvasPanel not found");
 
   const titleEl = panel.querySelector(".offcanvas-title");
-  if (!titleEl) throw new Error("showCommandsOffcanvas: .offcanvas-title not found");
+  if (!titleEl) throw new Error("showOffcanvas: .offcanvas-title not found");
 
   const bodyEl = panel.querySelector(".offcanvas-body");
-  if (!bodyEl) throw new Error("showCommandsOffcanvas: .offcanvas-body not found");
+  if (!bodyEl) throw new Error("showOffcanvas: .offcanvas-body not found");
 
-  if (typeof buildBody !== "function") {
-    throw new Error("showCommandsOffcanvas: buildBody must be a function");
+  if (!buildBody && !bodyHtml && bodyHtml !== "") {
+    throw new Error("showOffcanvas: either buildBody or bodyHtml is required");
   }
 
-  titleEl.textContent = title || "Commands";
-
+  titleEl.textContent = title || "";
   bodyEl.innerHTML = "";
-  buildBody(bodyEl);
+
+  if (typeof buildBody === "function") {
+    buildBody(bodyEl);
+  } else {
+    bodyEl.innerHTML = bodyHtml || "";
+  }
 
   if (!window.bootstrap || !window.bootstrap.Offcanvas) {
-    throw new Error("showCommandsOffcanvas: Bootstrap Offcanvas not available on window.bootstrap");
+    throw new Error("showOffcanvas: Bootstrap Offcanvas not available on window.bootstrap");
   }
 
   const oc = window.bootstrap.Offcanvas.getOrCreateInstance(panel);
   oc.show();
 
-} // end showCommandsOffcanvas
+} // end showOffcanvas
+
+
+/* ============================================================
+   Backward-compatibility aliases
+   ============================================================
+   showCommandsOffcanvas and showOffcanvasPanel both delegate
+   to showOffcanvas. Callers can migrate at their own pace.
+   ============================================================ */
+export function showCommandsOffcanvas({ title, buildBody }) {
+  return showOffcanvas({ title, buildBody });
+}
+
+export function showOffcanvasPanel({ title, bodyHtml }) {
+  return showOffcanvas({ title, bodyHtml });
+}
+
 
 /* ===========================================================
-   Commands button wiring + Offcanvas helper
+   setCommandsButton(label, onClick)
 =========================================================== */
-
 export function setCommandsButton(label, onClick) {
 
   const btn = document.getElementById("commandsButton");
@@ -389,7 +329,7 @@ export function setCommandsButton(label, onClick) {
 
   btn.textContent = label || "Commands";
 
-  // fail-fast: remove prior handler cleanly by cloning
+  // Deterministic: remove prior handler by cloning the node.
   const fresh = btn.cloneNode(true);
   btn.parentNode.replaceChild(fresh, btn);
 
@@ -399,27 +339,6 @@ export function setCommandsButton(label, onClick) {
   });
 
 } // end setCommandsButton
-
-
-export function showOffcanvasPanel({ title, bodyHtml }) {
-
-  const panel = document.getElementById("offcanvasPanel");
-  if (!panel) throw new Error("showOffcanvasPanel: #offcanvasPanel not found");
-
-  const titleEl = panel.querySelector(".offcanvas-title");
-  const bodyEl  = panel.querySelector(".offcanvas-body");
-
-  if (!titleEl) throw new Error("showOffcanvasPanel: .offcanvas-title not found");
-  if (!bodyEl)  throw new Error("showOffcanvasPanel: .offcanvas-body not found");
-
-  titleEl.textContent = title || "";
-  bodyEl.innerHTML = bodyHtml || "";
-
-  // Bootstrap is already loaded (bundle). Fail-fast if not.
-  const oc = bootstrap.Offcanvas.getOrCreateInstance(panel);
-  oc.show();
-
-} // end showOffcanvasPanel
 
 
 
@@ -458,7 +377,7 @@ export function formatRebuildReportShared(report) {
   if (addedFiles.length) {
     lines.push("Added files:");
     for (const p of addedFiles) {
-      lines.push("â€¢ " + p);
+      lines.push("Ã¢â‚¬Â¢ " + p);
     }
     lines.push("");
   }
@@ -471,7 +390,7 @@ export function formatRebuildReportShared(report) {
   if (brokenFiles.length) {
     lines.push("Broken files:");
     for (const p of brokenFiles) {
-      lines.push("â€¢ " + p);
+      lines.push("Ã¢â‚¬Â¢ " + p);
     }
     lines.push("");
   }
@@ -570,19 +489,9 @@ export function buildCanvasThumbnailBase64(sourceCanvas, w, h) {
   return dataUrl.split(",")[1];
 } // end buildCanvasThumbnailBase64
 
-export function syncOverlayToCanvas(layerName, referenceCanvas) {
-  const layer = overlayManager.getCanvasLayer(layerName);
-  if (!layer) return;
-
-  layer.innerHTML = ""; // Clear old contents
-  layer.style.position = "absolute";
-  layer.style.left = "0px";
-  layer.style.top = "0px";
-  layer.style.width = referenceCanvas.width + "px";
-  layer.style.height = referenceCanvas.height + "px";
-  layer.style.pointerEvents = "none";
-  layer.style.display = "block";
-}
+/* syncOverlayToCanvas has moved to canvasLayerManager.js as syncLayerToCanvas().
+   Re-exported here for backward compatibility. */
+export { syncLayerToCanvas as syncOverlayToCanvas } from "./canvasLayerManager.js";
 
 export function escapeHtml(text) {
   return String(text)

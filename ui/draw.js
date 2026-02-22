@@ -28,8 +28,8 @@
      drawMenuCmds.js imports from draw/drawNav.js directly.
    ============================================================ */
 
-import { uiState }                from "./uiState.js";
-import { clearDivs, setCommandsButtonLabel } from "./uiUtilities.js";
+import { uiState }                from "/ui/uiState.js";
+import { clearDivs, setCommandsButtonLabel } from "/ui/uiUtilities.js";
 import { drawActiveTab, setDrawSketchpad } from "./drawRunner.js";
 import {
   setDrawSubtabs,

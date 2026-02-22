@@ -10,11 +10,11 @@
      - Export drawRegistry state to standalone Pattern scripts
    ------------------------------------------------------------ */
 
-import { uiState }               from "./uiState.js";
+import { uiState }               from "/ui/uiState.js";
 import { resetCanvas }           from "/draw/drawState.js";
 import { buildParameterControls } from "./parameterControls.js";
 import { markTabDirty }           from "./draw/drawNav.js";
-import { syncOverlayToCanvas }    from "./uiUtilities.js";
+import { syncOverlayToCanvas }    from "/ui/uiUtilities.js";
 
 /**
  * drawActiveTab()

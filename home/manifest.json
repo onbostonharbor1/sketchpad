@@ -78,16 +78,16 @@
     "status": "new"
   },
   {
+    "file": "manyJoinedParabs",
+    "path": "/gallery/Scripts/Curve Stitch/manyJoinedParabs.js",
+    "title": "Many Joined Parabs",
+    "status": "favorite"
+  },
+  {
     "file": "manyParametric",
     "path": "/gallery/Scripts/Multiple/manyParametric.js",
     "title": "Many Parametric",
     "status": "Broken"
-  },
-  {
-    "file": "manyJoinedParabs",
-    "path": "/gallery/Scripts/Curve Stitch/manyJoinedParabs.js",
-    "title": "manyJoinedParabs.js",
-    "status": "favorite"
   },
   {
     "file": "modulatedCircle",

@@ -1,5 +1,5 @@
-import { getEllipsePoints }                  from "./drawEllipse.js";
-import { createNodes, drawLine, ptsOnLine, drawNodes }  from "./drawUtilities.js";
+import { drawLine, ptsOnLine, drawNodes }  from "./drawUtilities.js";
+import { createNodes } from "/draw/createNodes.js";
 import { Line, Point }                               from "/classes/classes.js";
 
 //////////////////////////////////////////////////////////////////
@@ -52,7 +52,7 @@ export function drawCycloid(thing) {
 // drawMysticRose
 /////////////////////////////////////////////////////////////////
 export function drawMysticRose(thing){
-    let nodes = getEllipsePoints(thing);
+    let nodes = createNodes(thing);
 	ctx.save();
 	ctx.strokeStyle = thing.color;
 	ctx.lineWidth   = thing.lineWidth;
@@ -80,6 +80,8 @@ export function drawRadiate(thing){
 	      ctx.moveTo(thing.radialPt.x, thing.radialPt.y);
 	      ctx.lineTo(thing.nodes[i].x, thing.nodes[i].y);
 	  }
+	ctx.moveTo(thing.radialPt.x, thing.radialPt.y);
+	ctx.lineTo(thing.end.x, thing.end.y);
 	ctx.stroke();
 	ctx.restore();
 } // end drawRadiate
