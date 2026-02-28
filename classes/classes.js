@@ -5,12 +5,7 @@
 //////////////////////////////////////////////////////////////////
 // both         CircularParabola: do clockwise and
 //              counterclockwise at same time
-// cutoff       pointsOnParabola: at some point,
-//              want to stop drawing from the
-//              parabola to the arm
-// factor       InverseStar: shrinks the arms.
-//              Differs from shorten in that
-//              this starts from the end of the arm
+
 // lineTransform
 //              How to transform the array points within
 //              ptsOnLine: straight, bendWithin, bendFromMid, and
@@ -50,33 +45,23 @@ class StringThing {
             rotate:      0,
             xScale:      1,
             yScale:      1,
-
-			// MEANING NEEDS TO BE FIRMER
-            cutoff:      s.numSteps ? s.numSteps / 2 : 10, // fallback if numSteps missing
-            factor:      0,
-	   		both:        false,
             shorten:     0,
-//          yIncrement:  1,
-            trunc:       false,
+            truncate:    0,
 			ellipse: {
                 a: null,
                 b: null
-          },
+			},
+
+			// MEANING NEEDS TO BE FIRMER
+			both:        false,
+ //          yIncrement:  1,
 
 			// --------------------------------------------------------
 			// NEW EXPERIMENTAL PARAMETERS
 			// --------------------------------------------------------
 			spacingBias: 0.0,     // -1 → +1 (non-uniform spacing)
 			jitter:      0.0,     // pixel jitter amount
-			jitterMode:  "xy", // "radial", "tangent", "xy"
-
-  			// Cutoff control for “don’t run the circle” end behavior.
-      		// 0 means no trimming. Typical useful range: 0.05 .. 0.25
-      		cutoffFrac: 0.0,
-
-      		// Optional explicit override. If >= 0, use this directly.
-      		// If null, compute from cutoffFrac + nodes/steps.
-      		cutoffLines: null
+			jitterMode:  "xy" // "radial", "tangent", "xy"
         };
 
 		const merged = Object.assign({}, defaults, s);
@@ -84,8 +69,8 @@ class StringThing {
         // Assign all merged properties to this instance
         Object.assign(this, merged);
 		if (this.ellipse.a === null) {
-			this.ellipse.a = this.radius;
-			this.ellipse.b = this.radius;
+			this.ellipse.a = this.radius*2;
+			this.ellipse.b = this.radius*2;
 		}
         // Adjustments
         this.numCycloids += 1; // intentional offset
@@ -212,6 +197,13 @@ class Line {
 	);
     }
 
+	pointAt(t) {
+		return new Point(
+		  this.start.x + t * (this.end.x - this.start.x),
+		  this.start.y + t * (this.end.y - this.start.y)
+		);
+	  }
+
     translate(dx, dy) {
         this.start.x += dx;
         this.start.y += dy;
@@ -272,18 +264,13 @@ class Line {
 				pivot.x + dx * cos - dy * sin,
 				pivot.y + dx * sin + dy * cos
 			);
-	}
+		}
 
-	this.start = rotatePoint(this.start);
-	this.end = rotatePoint(this.end);
-	return this;
+		this.start = rotatePoint(this.start);
+		this.end = rotatePoint(this.end);
+		return this;
     }
 
-//    rotateAround(center, angle) {
-//	return new Line(
-//	    this.start.rotatedAround(center, angle),
-//	    this.end.rotatedAround(center, angle)
-//	);
 
     rotateAtStart(angleRadians) {
 	const newEnd = this.end.rotateAround(this.start, angleRadians);
@@ -400,6 +387,37 @@ class Line {
 
 		return new Point(x, y);
 	}
+
+	/* Inside class Line */
+
+/**
+ * Returns a new Line that is a sub-segment of this one.
+ * @param {number} t1 - Start ratio (0.0 to 1.0)
+ * @param {number} t2 - End ratio (0.0 to 1.0)
+ */
+// Returns a new Line segment between two ratios (0.0 to 1.0)
+trim(t1 = 0, t2 = 1) {
+    return new Line(this.pointAt(t1), this.pointAt(t2));
+}
+
+// Calculates how many steps remain in a segment to maintain constant density
+remainingSteps(totalSteps, shortenRatio, truncateSteps) {
+    // Determine what fraction of the original line is actually being drawn
+    const usedRatio = (1 - shortenRatio) - (truncateSteps / totalSteps);
+    return Math.max(1, Math.floor(totalSteps * usedRatio));
+}
+
+/**
+ * A more semantic version for your specific use case.
+ * shorten: ratio to remove from start (0 to 1)
+ * truncateSteps: number of steps to remove from end
+ * totalSteps: the numSteps from your StringThing
+ */
+trimForStitch(shortenRatio, truncateSteps, totalSteps) {
+    const tStart = shortenRatio;
+    const tEnd = 1 - (truncateSteps / totalSteps);
+    return this.trim(tStart, tEnd);
+}
 
 }
 export { Point, Line, StringThing };

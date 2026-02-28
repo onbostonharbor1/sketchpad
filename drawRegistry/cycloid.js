@@ -39,10 +39,10 @@ window.drawRegistry_cycloid = {
         numCycloids: { widget: "range", min: 1,   max: 12,  step: 1,   label: "Loops:" },
         radius:      { widget: "range", min: 80,  max: 350, step: 5,   label: "Radius:" },
         numNodes:    { widget: "range", min: 64,  max: 300, step: 10,  label: "Points:" },
-        xScale:      { widget: "range", min: 0.5, max: 2,   step: 0.1, label: "X Scale:" },
-        yScale:      { widget: "range", min: 0.5, max: 2,   step: 0.1, label: "Y Scale:" },
+        xScale:      { widget: "range", min: 0.5, max: 2,   step: 0.1, label: "Width:" },
+        yScale:      { widget: "range", min: 0.5, max: 2,   step: 0.1, label: "Height:" },
         color:       { widget: "colorPicker",                          label: "Color:" },
-        lineWidth:   { widget: "range", min: .5,  max: 3,   step: .5,  label: "Width:" }
+        lineWidth:   { widget: "range", min: .5,  max: 3,   step: .5,  label: "Line wid.:" }
     },
 
     init() {
@@ -66,7 +66,10 @@ window.drawRegistry_cycloid = {
         for (const key in incoming) {
             const value = incoming[key];
             if (value === undefined) continue;
-
+            if (key === "radius") {
+                s.ellipse.a = incoming[key]*2;
+                s.ellipse.b = incoming[key]*2;
+            }
             if (key === "points") {
                 // Update internal midpoint from interactive point handle
                 const p = this.params.points[0];

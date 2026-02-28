@@ -3,23 +3,28 @@ import { Point } from "./classes.js";
 export class CurveStitch {
     constructor (s= {}) {
 	const defaults = {
-            both:        false,                    // check this one out
-	                                 // fallback if numSteps missing
-            cutoff:      s.numSteps ? s.numSteps / 2 : 10,
-            midpoint:    new Point(200, 200),
-            numNodes:    4,
-            numSteps:    20,
-            radius:      200,
-			ellipse: {
-                a: s.radius*2,
-                b: s.radius*2
-          },
-            rotate:      0,
-            shorten:     0,                     // check usage, part of Line?
-            trunc:       false,                 // confirm use
-//            yIncrement:  1,
+        color:       "black",
+        lineWidth:   1,
+        midBetween:  false,
+        midpoint:    new Point(200, 200),
+
+        numSteps:    20,
+        numNodes:    4,
+        radius:      200,
+        rotate:      0,
+
+            truncate:    0,
             xScale:      1,
             yScale:      1,
+            shorten:     0,
+            truncate:    0,
+            ellipse: {
+                a: null,
+                b: null,
+          },
+
+            both:        false,      // check this one out
+            //            yIncrement:  1,
             // --------------------------------------------------------
             // NEW EXPERIMENTAL PARAMETERS
             // --------------------------------------------------------
@@ -28,18 +33,18 @@ export class CurveStitch {
             jitterMode:  "xy" // "radial", "tangent", "xy"
 
 	};
-        const merged = Object.assign({}, defaults, s);
+    const merged = Object.assign({}, defaults, s);
 
-        // Assign all merged properties to this instance
-        Object.assign(this, merged);
+    // Assign all merged properties to this instance
+    Object.assign(this, merged);
 
-        // Normalize ellipse axes — mirrors the same logic in StringThing.
-        // Ensures thing.ellipse.a and thing.ellipse.b are always valid numbers
-        // so that createNodes() (unified createNodes) can rely on them
-        // unconditionally, regardless of which class constructed the thing.
-        if (!this.ellipse || this.ellipse.a === null || this.ellipse.a === undefined) {
-            this.ellipse = { a: this.radius, b: this.radius };
-        }
+    // Normalize ellipse axes
+    // Ensures thing.ellipse.a and thing.ellipse.b are always valid numbers
+    // so that createNodes() (unified createNodes) can rely on them
+    // unconditionally, regardless of which class constructed the thing.
+    if (this.ellipse.a === null)
+        this.ellipse = { a: this.radius*2,
+                         b: this.radius*2 };
     }
 }
 

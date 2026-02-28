@@ -39,8 +39,6 @@ import "./drawRegistry/parabola.js";
 import "./drawRegistry/parametrics.js";
 import "./drawRegistry/radiate.js";
 import "./drawRegistry/regularPolygon.js";
-import "./drawRegistry/bird.js";
-import "./drawRegistry/nautilus.js";
 import "./drawRegistry/regularPursuit.js";
 
 // Registry collector

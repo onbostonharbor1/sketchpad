@@ -42,7 +42,7 @@ export function runPattern () {
 	drawInnerStar(thing1);
 
 	let nodes1   = createNodes(thing1);
-	thing1.trunc = 12;
+	thing1.truncate = 12;
 	for (let i=0; i < numNodes; i++){
 		let j = i+1;
 	    if (i == 3) j = 0;

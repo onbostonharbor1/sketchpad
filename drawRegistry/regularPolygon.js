@@ -22,10 +22,12 @@ window.drawRegistry_regularPolygon = {
 
   interactive: true,
   params: {
-    radius:    150,
+    radius:    300,
     numNodes:  5,
     numSteps:  20,
     rotate:    0,
+    truncate:  0,
+    shorten:    0.2,
     xScale:    1,
     yScale:    1,
     color:     "blue",
@@ -39,10 +41,12 @@ window.drawRegistry_regularPolygon = {
     numNodes:  { widget: "range", min: 3,   max: 16,  step: 1,   label: "Nodes:" },
     numSteps:  { widget: "range", min: 10,  max: 64,  step: 1,   label: "Steps:" },
     rotate:    { widget: "range", min: 0,   max: 360, step: 5,   label: "Rotation:" },
-    xScale:    { widget: "range", min: 0.5, max: 2,   step: 0.1, label: "X Scale:" },
-    yScale:    { widget: "range", min: 0.5, max: 2,   step: 0.1, label: "Y Scale:" },
+    xScale:    { widget: "range", min: 0.5, max: 2,   step: 0.1, label: "Width:" },
+    yScale:    { widget: "range", min: 0.5, max: 2,   step: 0.1, label: "Height:" },
+    truncate:  { widget: "range", min: 0,   max: 20,  step: 1,   label: "Truncate:" },
+    shorten:   { widget: "range", min: 0,   max: 1,  step: .05,  label: "Shorten:" },
     color:     { widget: "colorPicker",                          label: "Color:" },
-    lineWidth: { widget: "range", min: 1,   max: 5,   step: 1,   label: "Width:" }
+    lineWidth: { widget: "range", min: 1,   max: 5,   step: 1,   label: "Line Wid.:" }
   },
 
   /* ==========================================================
@@ -83,7 +87,10 @@ window.drawRegistry_regularPolygon = {
     // Handle standard UI control updates
     for (const key in incoming) {
       if (key === "points" || incoming[key] === undefined) continue;
-
+      if (key === "radius") {
+        e.ellipse.a = incoming[key]*2;
+        e.ellipse.b = incoming[key]*2;
+      }
       // Sync style/geometry to the CurveStitch instance
       if (Object.hasOwn(e, key)) {
         e[key] = (key === "color") ? incoming[key] : Number(incoming[key]);

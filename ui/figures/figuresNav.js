@@ -1,6 +1,6 @@
 /* figuresNav.js
    ============================================================
-   Figures Tab â€” Subtab Construction and Navigation
+   Figures Tab: Subtab Construction and Navigation
    ============================================================
    Role:
      Owns everything related to building the Figures subtab bar,

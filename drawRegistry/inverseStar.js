@@ -26,11 +26,12 @@ window.drawRegistry_inverseStar = {
     interactive: true,
     params: {
         midpoint:  { x: 300, y: 300 },
-        radius:    150,
+        radius:    200,
         numNodes:  5,
         numSteps:  20,
         rotate:    0,
         xScale:    1,
+        shorten:  0.0,
         yScale:    1,
         color:     "blue",
         lineWidth: 1,
@@ -44,8 +45,9 @@ window.drawRegistry_inverseStar = {
         rotate:    { widget: "range", min: 0,   max: 360, step: 5,   label: "Rotation:" },
         xScale:    { widget: "range", min: 0.5, max: 2,   step: 0.1, label: "X Scale:" },
         yScale:    { widget: "range", min: 0.5, max: 2,   step: 0.1, label: "Y Scale:" },
+        shorten:    { widget: "range", min: 0,   max: 1,  step: .05,   label: "Shorten:" },
         color:     { widget: "colorPicker",                          label: "Color:" },
-        lineWidth: { widget: "range", min: .5,  max: 3,   step: .5,  label: "Width:" }
+        lineWidth: { widget: "range", min: .5,  max: 3,   step: .5,  label: "Line Wid.:" }
     },
 
     init() {

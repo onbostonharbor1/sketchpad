@@ -149,17 +149,20 @@ export function initCanvasLayers() {
      name            — registered layer name
      referenceCanvas — the <canvas> to match dimensions against
    ============================================================ */
-export function syncLayerToCanvas(name, referenceCanvas) {
 
-  const layer = canvasLayerManager.get(name);
+   /* canvasLayerManager.js */
 
-  layer.innerHTML    = "";
-  layer.style.position  = "absolute";
-  layer.style.left      = "0px";
-  layer.style.top       = "0px";
-  layer.style.width     = referenceCanvas.width + "px";
-  layer.style.height    = referenceCanvas.height + "px";
-  layer.style.pointerEvents = "none";
-  layer.style.display   = "block";
+   export function syncLayerToCanvas(name, referenceCanvas) {
 
-} // end syncLayerToCanvas
+    const layer = canvasLayerManager.get(name);
+
+    layer.innerHTML    = "";
+    layer.style.position  = "absolute";
+    layer.style.left      = "0px";
+    layer.style.top       = "0px";
+    layer.style.width     = referenceCanvas.width + "px";
+    layer.style.height    = referenceCanvas.height + "px";
+    layer.style.pointerEvents = "none";
+    layer.style.display   = "block";
+
+  } // end syncLayerToCanvas

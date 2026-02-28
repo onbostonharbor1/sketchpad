@@ -58,8 +58,8 @@ drawRegularPolygonTouch(thing)
 import { drawState } from "/draw/drawState.js";
 import { createNodes } from "/draw/createNodes.js";
 import { Line, Point, StringThing }       from "../classes/classes.js";
-import {  drawLines, drawParabs, drawNodes,
-	 ptsOnLine, stitcher, getPreviousIndex, applyCutoffToParabSegments }            from "./drawUtilities.js";
+import {  drawLines, drawParabs, drawNodes, shortenArm,
+	 ptsOnLine, stitcher, getPreviousIndex }            from "./drawUtilities.js";
 
 function createArms(thing, lines) {
   const arms = [];
@@ -118,8 +118,33 @@ function drawManyParabs(thing, parabs) {
 }
 
 function drawAParab(thing, line1, line2) {
-    const pts = [line1.start, line1.end, line2.start, line2.end];
-    drawParab(thing,pts);
+  const pts = [line1.start, line1.end, line2.start, line2.end];
+  return drawParab(thing, pts);  // thread return value up
+}
+
+function changeLine(arm, truncate = 0, shorten = 0) {
+  const minLength = 2;
+  const available = Math.max(0, arm.length - minLength);
+
+  // Clamp combined removal to what's actually available
+  if (truncate + shorten > available) {
+    const ratio = available / (truncate + shorten);
+    truncate = Math.floor(truncate * ratio);
+    shorten = Math.floor(shorten * ratio);
+  }
+
+  // Remove from back
+  if (truncate > 0) {
+    arm.length = arm.length - truncate;
+  }
+
+  // Remove from front
+  if (shorten > 0) {
+    arm.reverse();
+    arm.length = arm.length - shorten;
+    arm.reverse();
+  }
+  return arm;
 }
 
 /* ============================================================
@@ -127,46 +152,21 @@ function drawAParab(thing, line1, line2) {
    ------------------------------------------------------------
    PURPOSE
    - Build two arms from two lines and stitch them into a parabola.
-   - Apply cutoff AFTER stitching and BEFORE drawing.
-
-   HOW cutoff works (high level)
-   - stitcher(arm1, arm2) returns an array of points (the “segments”).
-   - applyCutoffToParabSegments trims the LAST k points from that array.
-   - This prevents the last few lines from “running the circularity”
-     near the end where the stitch converges toward the arc.
-
-   NOTE
-   - arm1.length is passed as armPointCount only as an available anchor.
-     Your current applyCutoff function doesn’t actually require it, but
-     it’s fine to pass it for future tuning.
    ============================================================ */
-function drawParab(thing, pts) {
+   function drawParab(thing, pts) {
+    if (pts.length === 3) pts.splice(1, 0, pts[1]);
+    const line1 = new Line(pts[0], pts[1]);
+    const line2 = new Line(pts[2], pts[3]);
+    const savedTransform = thing.lineTransform;
+    thing.lineTransform = 0;
+    let arm1 = ptsOnLine(thing, line1);
+    arm1 = changeLine(arm1, thing.truncate, thing.shorten);
+    thing.lineTransform = savedTransform;
+    const arm2 = ptsOnLine(thing, line2);
+    drawLines(thing, stitcher(arm1, arm2));
 
-  if (pts.length === 3) pts.splice(1, 0, pts[1]);
-
-  // Build the two defining lines
-  const line1 = new Line(pts[0], pts[1]);
-  const line2 = new Line(pts[2], pts[3]);
-
-  // Build arms. Don't transform first line.
-  const savedTransform = thing.lineTransform;
-  thing.lineTransform = 0;
-  const arm1 = ptsOnLine(thing, line1);
-
-  // Restore transform for second line.
-  thing.lineTransform = savedTransform;
-  const arm2 = ptsOnLine(thing, line2);
-
-  // Stitch into a parabola (array of points)
-  let parab = stitcher(arm1, arm2);
-
-  // Apply cutoff here (this is the only new behavior)
-  // parab = applyCutoffToParabSegments(thing, parab, arm1.length);
-
-  // Draw the (possibly trimmed) parabola
-  drawLines(thing, parab);
-
-} // end drawParab
+    return { start: arm1[0], end: arm1[arm1.length - 1] };  // trimmed endpoints
+  }
 
 
 
@@ -206,30 +206,18 @@ function drawCircularParabola(thing) {
     arms2.push(buildWrappedArm(nodes, i, numSteps));
   }
 
-  // ------------------------------------------------------------
-  // Clockwise set (apply cutoff HERE)
-  // ------------------------------------------------------------
+
   let parabs = createParabs(thing, arms1, arms2);
-
-  if (thing.cutoffFrac > 0 || (thing.cutoffLines !== null && thing.cutoffLines !== undefined)) {
-    const armPointCount = numSteps + 1;
-    parabs = parabs.map(p => applyCutoffToParabSegments(thing, p, armPointCount));
-  }
-
   drawParabs(thing, parabs);
 
   // ------------------------------------------------------------
-  // Counter-clockwise set (apply cutoff again)
+  // Counter-clockwise set
   // ------------------------------------------------------------
   for (let arm of arms2) arm.reverse();
   arms2 = [arms2[arms2.length - 1], ...arms2.slice(0, -1)];
 
   parabs = createParabs(thing, arms1, arms2);
 
-  if (thing.cutoffFrac > 0 || (thing.cutoffLines !== null && thing.cutoffLines !== undefined)) {
-    const armPointCount = numSteps + 1;
-    parabs = parabs.map(p => applyCutoffToParabSegments(thing, p, armPointCount));
-  }
 
   drawParabs(thing, parabs);
 

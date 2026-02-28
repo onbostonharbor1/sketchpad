@@ -42,10 +42,10 @@ window.drawRegistry_circularParabola = {
         numNodes:  { widget: "range", min: 3,   max: 16,  step: 1,   label: "Nodes:" },
         numSteps:  { widget: "range", min: 10,  max: 64,  step: 1,   label: "Steps:" },
         rotate:    { widget: "range", min: 0,   max: 360, step: 5,   label: "Rotation:" },
-        xScale:    { widget: "range", min: 0.5, max: 2,   step: 0.1, label: "X Scale:" },
-        yScale:    { widget: "range", min: 0.5, max: 2,   step: 0.1, label: "Y Scale:" },
+        xScale:    { widget: "range", min: 0.5, max: 2,   step: 0.1, label: "Width:" },
+        yScale:    { widget: "range", min: 0.5, max: 2,   step: 0.1, label: "Height:" },
         color:     { widget: "colorPicker",                          label: "Color:" },
-        lineWidth: { widget: "range", min: .5,  max: 3,   step: .5,  label: "Width:" }
+        lineWidth: { widget: "range", min: .5,  max: 3,   step: .5,  label: "Line Wid.:" }
     },
 
     init() {
@@ -69,7 +69,10 @@ window.drawRegistry_circularParabola = {
         for (const key in incoming) {
             const value = incoming[key];
             if (value === undefined) continue;
-
+            if (key === "radius") {
+                s.ellipse.a = incoming[key]*2;
+                s.ellipse.b = incoming[key]*2;
+            }
             if (key === "points") {
                 const p = this.params.points[0];
                 s.midpoint.x = p.x;

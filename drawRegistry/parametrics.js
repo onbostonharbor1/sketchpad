@@ -31,7 +31,7 @@ window.drawRegistry_parametrics = {
         color:     "#0000ff",
         lineWidth: 1,
         depth:     0.5,
-        sharpness: 3,
+        sharpness: 4,
         phase:     0,
         complexity: 75,      // Lowered default so "Ends" are visible
         showIntersections: false
@@ -41,9 +41,9 @@ window.drawRegistry_parametrics = {
         color:     { widget: "colorPicker", label: "Color" },
         lineWidth: { widget: "range", min: 0.5, max: 5, step: 0.5, label: "Width" },
         depth:     { widget: "range", min: 0.1, max: 1.5, step: 0.1, label: "Inner Scale" },
-        sharpness: { widget: "range", min: 1,   max: 9,   step: 2,   label: "Pointy-ness" }, // Odd steps only
-        phase:     { widget: "range", min: 0,   max: 6.28,step: 0.01,label: "Rotation" },
+        sharpness: { widget: "range", min: 1,   max: 9,   step: 1,   label: "Pointy-ness" }, // Odd steps only
 
+        phase:     { widget: "range", min: 0,   max: 6.28,step: 0.01,label: "Rotation" },
         thinningHeader: { widget: "staticText", text: "--- Thin Drawing ---" },
 
         // Complexity slider: Lowering this "thins" the ripples to reveal the star.

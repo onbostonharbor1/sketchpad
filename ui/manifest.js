@@ -76,11 +76,11 @@ export class ManifestManager {
     // 1) Check cache first
     if (Object.prototype.hasOwnProperty.call(this.cache, basedir)) {
       console.timeEnd(`ManifestManager.get(${basedir})`);
-      console.log(`  â””-> Cache HIT for '${basedir}'`);
+      console.log(`-> Cache HIT for '${basedir}'`);
       return this.cache[basedir];
     }
 
-    console.log(`  â””-> Cache MISS for '${basedir}' - loading from disk...`);
+    console.log(`-> Cache MISS for '${basedir}' - loading from disk...`);
 
     // 2) Try directoryRegistry.json
     const dirRegPath = fileLayer.path.directoryRegistry(basedir);

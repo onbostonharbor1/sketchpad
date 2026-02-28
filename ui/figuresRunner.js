@@ -548,3 +548,4 @@ function performHitTest(x, y, tabState) {
 
     return -1;  // No hit
 }
+

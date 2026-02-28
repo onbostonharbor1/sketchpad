@@ -1,142 +1,130 @@
-/* ============================================================
-   buildCanvasThumbnailBase64(sourceCanvas, w, h)
-   ------------------------------------------------------------
-   Crops excess whitespace by finding the bounding box of
-   non-transparent pixels, then scales the cropped region to
-   w x h.
+/* drawRegistry/parabola.js */
+import { Line, Point, StringThing } from "../classes/classes.js";
+import { drawAParab }               from "../draw/drawRegular.js";
 
-   Returns BASE64 ONLY (no data: prefix).
-
-   Notes:
-     - Uses alpha > 0 as "drawn".
-     - If canvas is blank, falls back to scaling full canvas.
-     - Adds small padding so strokes don't touch the edge.
-
-   This version treats “background” as near-white pixels and
-   crops to pixels that are NOT near-white.
-
-   Returns BASE64 ONLY (no data: prefix).
-=========================================================== */
-function buildCanvasThumbnailBase64(sourceCanvas, w, h) {
-
-  // ---- validate inputs ----
-  if (!sourceCanvas) throw new Error("buildCanvasThumbnailBase64: sourceCanvas missing");
-  if (typeof w !== "number" || w <= 0) throw new Error("buildCanvasThumbnailBase64: invalid w");
-  if (typeof h !== "number" || h <= 0) throw new Error("buildCanvasThumbnailBase64: invalid h");
-
-  const sw = sourceCanvas.width;
-  const sh = sourceCanvas.height;
-
-  if (typeof sw !== "number" || typeof sh !== "number") {
-    throw new Error("buildCanvasThumbnailBase64: sourceCanvas has no width/height");
+function updateLine(line, pts, iStart, iEnd, iMid) {
+  const incomingMid = new Point(pts[iMid].x, pts[iMid].y);
+  if (!incomingMid.isSame(line.midpoint())) {
+    line.moveMidpointTo(incomingMid);
+  } else {
+    line.setStart(new Point(pts[iStart].x, pts[iStart].y));
+    line.setEnd(new Point(pts[iEnd].x,     pts[iEnd].y));
   }
+}
 
-  // ---- read pixels from source ----
-  const scanCanvas = document.createElement("canvas");
-  scanCanvas.width = sw;
-  scanCanvas.height = sh;
+function syncHandles(p, l1, l2) {
+  const [s1, e1, m1] = [l1.startPt(), l1.endPt(), l1.midpoint()];
+  const [s2, e2, m2] = [l2.startPt(), l2.endPt(), l2.midpoint()];
+  p.line1_pt1 = pt(s1);  p.line1_pt2 = pt(e1);
+  p.line2_pt1 = pt(s2);  p.line2_pt2 = pt(e2);
+  p.points[0] = pt(s1);  p.points[1] = pt(e1);  p.points[2] = pt(m1);
+  p.points[3] = pt(s2);  p.points[4] = pt(e2);  p.points[5] = pt(m2);
+}
 
-  const scanCtx = scanCanvas.getContext("2d");
-  if (!scanCtx) throw new Error("buildCanvasThumbnailBase64: scanCtx null");
+const pt = ({ x, y }) => ({ x, y });
 
-  scanCtx.clearRect(0, 0, sw, sh);
-  scanCtx.drawImage(sourceCanvas, 0, 0);
+window.drawRegistry_parabola = {
+  name:         "Parabola",
+  id:           "parabola",
+  version:      2.0,
+  category:     "fundamental",
+  firstOrder:   true,
+  source:       "internal",
+  tags:         ["Geometry", "Curve Stitch"],
+  description:  "Stitched parabola with synchronized lifecycle handles.",
+  status:       "",
 
-  const img = scanCtx.getImageData(0, 0, sw, sh);
-  const data = img.data;
+  background: null,
+  overlays:   [],
+  transforms: [],
+  elements:   null,
 
-  // ---- find bounding box of NON-WHITE-ish pixels ----
-  // Treat pixels as background if they are very close to white.
-  // If you ever change the background color, adjust these numbers.
-  const WHITE_CUTOFF = 245; // 245..255 are "near white"
+  interactive: true,
+  params: {
+    line1_pt1: { x: 30,  y: 50  },
+    line1_pt2: { x: 50,  y: 350 },
+    line2_pt1: { x: 50,  y: 350 },
+    line2_pt2: { x: 350, y: 350 },
+    color:     "#008800",
+    lineWidth: 1,
+    truncate:  2,
+    shorten:   3,
+    points:    []
+  },
 
-  let minX = sw, minY = sh, maxX = -1, maxY = -1;
+  controls: {
+    truncate:  { widget: "range", min: 0,   max: 20, step: 1,   label: "Truncate:" },
+    shorten:   { widget: "range", min: 0,   max: 20, step: 1,   label: "Shorten:"  },
+    color:     { widget: "colorPicker", label: "Color:" },
+    lineWidth: { widget: "range", min: 0.5, max: 4,  step: 0.5, label: "Line wid.:" }
+  },
 
-  for (let y = 0; y < sh; y++) {
-    const row = y * sw * 4;
+  init() {
+    const p = this.params;
+    p.points.length = 0;
 
-    for (let x = 0; x < sw; x++) {
-      const i = row + x * 4;
+    const l1 = new Line(new Point(p.line1_pt1.x, p.line1_pt1.y), new Point(p.line1_pt2.x, p.line1_pt2.y));
+    const l2 = new Line(new Point(p.line2_pt1.x, p.line2_pt1.y), new Point(p.line2_pt2.x, p.line2_pt2.y));
+    const thing = new StringThing({ color: p.color, lineWidth: p.lineWidth });
 
-      const r = data[i + 0];
-      const g = data[i + 1];
-      const b = data[i + 2];
-      const a = data[i + 3];
+    const m1 = l1.midpoint();
+    p.points.push({ x: p.line1_pt1.x, y: p.line1_pt1.y });  // [0] l1 start
+    p.points.push({ x: p.line1_pt2.x, y: p.line1_pt2.y });  // [1] l1 end
+    p.points.push({ x: m1.x, y: m1.y });                    // [2] l1 mid
 
-      // If truly transparent, ignore it (rare in your current setup)
-      if (a === 0) continue;
+    const m2 = l2.midpoint();
+    p.points.push({ x: p.line2_pt1.x, y: p.line2_pt1.y });  // [3] l2 start
+    p.points.push({ x: p.line2_pt2.x, y: p.line2_pt2.y });  // [4] l2 end
+    p.points.push({ x: m2.x, y: m2.y });                    // [5] l2 mid
 
-      // Background test: "near white"
-      const isNearWhite = (r >= WHITE_CUTOFF && g >= WHITE_CUTOFF && b >= WHITE_CUTOFF);
+    this.elements = { l1, l2, thing };
+  },
 
-      if (!isNearWhite) {
-        if (x < minX) minX = x;
-        if (y < minY) minY = y;
-        if (x > maxX) maxX = x;
-        if (y > maxY) maxY = y;
-      }
+  update(incoming) {
+    const p = this.params;
+    const { l1, l2, thing } = this.elements;
+
+    if (incoming.points) {
+      updateLine(l1, p.points, 0, 1, 2);
+      updateLine(l2, p.points, 3, 4, 5);
+      syncHandles(p, l1, l2);
     }
+
+    for (const [key, val] of Object.entries(incoming)) {
+      if (key === "lineWidth") { thing.lineWidth = p.lineWidth = Number(val); }
+      else if (key in thing)   { thing[key] = p[key] = val; }
+    }
+
+    // 1. Calculate the trimmed line based on parameters
+    const s = p.shorten  / thing.numSteps;
+    const t = p.truncate / thing.numSteps;
+
+    const startPt = l1.pointAt(s);
+    const endPt   = l1.pointAt(1 - t);
+
+    this.elements.trimmedL1 = new Line(startPt, endPt);
+
+    // 2. Sync the draggable points array to the trimmed coordinates
+    // This ensures the red dots move to the visual start/end of the line
+    p.points[0].x = startPt.x;
+    p.points[0].y = startPt.y;
+    p.points[1].x = endPt.x;
+    p.points[1].y = endPt.y;
+
+    // Update midpoint handle so it stays between the trimmed ends
+    const mid = this.elements.trimmedL1.midpoint();
+    p.points[2].x = mid.x;
+    p.points[2].y = mid.y;
+  },
+
+
+  draw() {
+    const { trimmedL1, l2, thing } = this.elements;
+
+    // We no longer need to manually toggle truncate/shorten here
+    // because trimmedL1 is already calculated in update()
+    drawAParab(thing, trimmedL1, l2);
   }
 
-  // ---- if nothing found (blank or all-white), fall back to full canvas ----
-  let cropX = 0;
-  let cropY = 0;
-  let cropW = sw;
-  let cropH = sh;
 
-  if (maxX >= 0 && maxY >= 0) {
-    cropX = minX;
-    cropY = minY;
-    cropW = (maxX - minX + 1);
-    cropH = (maxY - minY + 1);
-  }
-
-  // ---- add padding (source pixels), clamp to canvas ----
-  const pad = 4;
-  cropX = cropX - pad;
-  cropY = cropY - pad;
-  cropW = cropW + pad * 2;
-  cropH = cropH + pad * 2;
-
-  if (cropX < 0) { cropW += cropX; cropX = 0; }
-  if (cropY < 0) { cropH += cropY; cropY = 0; }
-  if (cropX + cropW > sw) cropW = sw - cropX;
-  if (cropY + cropH > sh) cropH = sh - cropY;
-
-  if (cropW <= 0 || cropH <= 0) {
-    throw new Error("buildCanvasThumbnailBase64: computed invalid crop region");
-  }
-
-  // ---- draw cropped region into crop canvas ----
-  const cropCanvas = document.createElement("canvas");
-  cropCanvas.width = cropW;
-  cropCanvas.height = cropH;
-
-  const cropCtx = cropCanvas.getContext("2d");
-  if (!cropCtx) throw new Error("buildCanvasThumbnailBase64: cropCtx null");
-
-  cropCtx.clearRect(0, 0, cropW, cropH);
-  cropCtx.drawImage(sourceCanvas, cropX, cropY, cropW, cropH, 0, 0, cropW, cropH);
-
-  // ---- scale to final thumb canvas ----
-  const tmp = document.createElement("canvas");
-  tmp.width = w;
-  tmp.height = h;
-
-  const tctx = tmp.getContext("2d");
-  if (!tctx) throw new Error("buildCanvasThumbnailBase64: tmp.getContext returned null");
-
-  tctx.clearRect(0, 0, w, h);
-  tctx.drawImage(cropCanvas, 0, 0, cropW, cropH, 0, 0, w, h);
-
-  const dataUrl = tmp.toDataURL("image/png");
-
-  const prefix = "data:image/png;base64,";
-  if (!dataUrl.startsWith(prefix)) {
-    throw new Error("buildCanvasThumbnailBase64: unexpected data URL prefix");
-  }
-
-  return dataUrl.slice(prefix.length);
-
-} // end buildCanvasThumbnailBase64
-
+};

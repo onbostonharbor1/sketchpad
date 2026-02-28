@@ -335,6 +335,24 @@
     "title": "533.JPG"
   },
   {
+    "filename": "IMG_0371",
+    "path": "IMG_0371.WEBP",
+    "title": "IMG_0371.WEBP",
+    "status": "new"
+  },
+  {
+    "filename": "IMG_0372",
+    "path": "IMG_0372.WEBP",
+    "title": "IMG_0372.WEBP",
+    "status": "new"
+  },
+  {
+    "filename": "IMG_0373",
+    "path": "IMG_0373.WEBP",
+    "title": "IMG_0373.WEBP",
+    "status": "new"
+  },
+  {
     "filename": "IMG_6786",
     "path": "IMG_6786.WEBP",
     "title": "IMG_6786.WEBP"
@@ -507,5 +525,11 @@
     "filename": "IMG_9657",
     "path": "IMG_9657.PNG",
     "title": "IMG_9657.PNG"
+  },
+  {
+    "filename": "jmm2020-donohue",
+    "path": "jmm2020-donohue.jpg",
+    "title": "jmm2020-donohue.jpg",
+    "status": "new"
   }
 ]

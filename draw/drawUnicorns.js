@@ -21,6 +21,8 @@ export function crossHair(points, color="gray") {
 /////////////////////////////////////////////////////////////////
 
 export function drawCycloid(thing) {
+	thing.ellipse.a=thing.ellipse.a;
+	thing.ellipse.b=thing.ellipse.b;
     const nodes = createNodes(thing);
     const { numNodes, numCycloids, color, lineWidth } = thing;
 

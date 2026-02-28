@@ -21,8 +21,8 @@ window.drawRegistry_circularParabolaMulti = {
 
     interactive: true,
     params: {
-        midpoint:  { x: 300, y: 300 }, // The 'Anchor'
-        radius:    100,                // Internal size (Slider controlled)
+        midpoint:  { x: 400, y: 350 }, // The 'Anchor'
+        radius:    200,                // Internal size (Slider controlled)
         drift:     0,                  // Calculated distance
         numNodes:  6,
         numSteps:  20,
@@ -34,10 +34,10 @@ window.drawRegistry_circularParabolaMulti = {
 
     controls: {
         radius:    { widget: "range", min: 50,  max: 300, step: 5,   label: "Parabola Size:" },
-        numNodes:  { widget: "range", min: 3,   max: 12,  step: 1,   label: "Petals:" },
-        numSteps:  { widget: "range", min: 10,  max: 50,  step: 1,   label: "Steps:" },
+        numNodes:  { widget: "range", min: 3,   max: 8,  step: 1,    label: "Petals:" },
+        numSteps:  { widget: "range", min: 10,  max: 35,  step: 1,   label: "Steps:" },
         color:     { widget: "colorPicker",                          label: "Color:" },
-        lineWidth: { widget: "range", min: .5,  max: 3,   step: .5,  label: "Width:" }
+        lineWidth: { widget: "range", min: .5,  max: 3,   step: .5,  label: "Line Wid.:" }
     },
 
     init() {

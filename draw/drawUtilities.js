@@ -97,8 +97,8 @@ export function drawManyParabs(thing, parabs) {
 
 function drawParabs(thing, parabs) {
   for (let parab of parabs) {
-//    if (parab.length == 3) parab.splice(1, 0, parab[1]);
-    for (let j = 0; j < parab.length; j++) {
+   if (parab.length == 3) parab.splice(1, 0, parab[1]);
+    for (let j = 0; j < parab.length-thing.truncate; j++) {
       let start = parab[j].start;
       let end = parab[j].end;
       drawLine(start, end, thing.color, thing.lineWidth);
@@ -486,26 +486,42 @@ function printTitle(text = "No Title") {
   drawState.title = text;
   //   updateOverlayTitle(); // Sync overlay if present
 }
-//function printTitle(options = {}) {
-//  // If options is a string, treat it as the text
-//  if (typeof options === "string") {
-//    options = { text: options };
-//  }
-//
-//  const {
-//    text = "No Title",
-//    color = "blue",
-//    x = 150,
-//    y = 20
-//  } = options;
-//
-//  ctx.save();
-//  ctx.font = "20px sans-serif";
-//  ctx.textAlign = "center";
-//  ctx.fillStyle = color;
-//  ctx.fillText(text, x, y);
-//  ctx.restore();
-//}
+
+export function shortenArm(arm) {
+  // thing.shorten is the percent to shorten.
+  // I want the amount left
+  let shorten = (100 - thing.shorten) / 100;
+  let deltaX = Math.abs(arm[arm.length - 1].x - arm[0].x);
+  //	if (deltaX == 0)
+  //	    deltaX = 100;
+  let length = shorten * deltaX;
+  let j = 0;
+  for (let i = 0; i < arm.length - 1; i++) {
+    deltaX = Math.abs((arm[i].x - arm1[0].x));
+    if (deltaX > length) {
+      j = i;
+      break;
+    }
+  }
+  if (j == 0) j = arm.length - 1;;
+  return j;
+
+  // if (BOTH) {
+  //     let k = 0;
+  //     for (let i=0; i < thing.arm2.length -1; i++) {
+  // 	        deltaX = Math.abs((thing.arm2[i].x - thing.arm2[0].x));
+  // 	        if (deltaX > length ) {
+  // 	        	k = i;
+  // 	        	break;
+  // 	   		}
+  //  	}
+  //     	if (k==0) k=thing.arm2.length -1;;
+  //     	thing.arm2.length=k;
+  // }
+  // thing.arm2.splice(j,thing.arm2.length-1);
+  // if (thing.arm2.length < thing.arm1.length)
+  // thing.arm2.splice(0,j-1);
+}
 
 /////////////////////////////////////////////////////////////////////////
 // stitcher
@@ -714,91 +730,6 @@ function setPt(pt,draw=true) {
 	    printCircNum(pt);
 	  return drawState.pts.length - 1;
 }
-
-/*
-====================================================================
-applyCutoffToParabSegments(thing, segments, armPointCount)
---------------------------------------------------------------------
-PURPOSE
-- Trim the last part of a stitched parabola so the drawn lines do not
-  â€œrun the circularityâ€ near the perimeter.
-
-KEY IDEA
-- Use the actual segment list length as the baseline.
-  That makes the cutoff stable even when thing.numNodes is temporarily
-  changed inside drawCircularParabola (origNodes * numSteps).
-
-PARAMETERS
-- thing:
-    thing.cutoffFrac  : fraction of the parabola to trim off the END.
-                        0.00 = no trimming
-                        0.10 = trim last 10% of the parabola
-                        Typical: 0.05 .. 0.25
-    thing.cutoffLines : optional explicit override; integer count of
-                        trailing points to remove (>= 0). If set, it
-                        overrides cutoffFrac.
-- segments:
-    Array of Points returned by stitcher(arm1, arm2).
-- armPointCount:
-    Kept for compatibility with your earlier signature; not required
-    for the proportional method, but harmless to pass.
-
-BEHAVIOR
-- If cutoffLines is a number >= 0, remove exactly that many trailing
-  points (but never remove everything).
-- Else, compute k from cutoffFrac and segments.length:
-      k = round(segments.length * cutoffFrac)
-- Returns a NEW array (slice), does not mutate the original.
-====================================================================
-*/
-export function applyCutoffToParabSegments(thing, segments, armPointCount) {
-
-  if (!Array.isArray(segments)) {
-    throw new Error("applyCutoffToParabSegments: segments must be an array");
-  }
-  if (!(typeof armPointCount === "number") || armPointCount <= 1) {
-    throw new Error("applyCutoffToParabSegments: armPointCount must be a number > 1");
-  }
-
-  const total = segments.length;
-  if (total === 0) return segments;
-
-  let k = 0;
-
-  // Explicit override: â€œtrim exactly this many line segmentsâ€
-  if (thing.cutoffLines !== null && thing.cutoffLines !== undefined) {
-    if (!(typeof thing.cutoffLines === "number") || thing.cutoffLines < 0) {
-      throw new Error("applyCutoffToParabSegments: cutoffLines must be null or a number >= 0");
-    }
-    k = Math.floor(thing.cutoffLines);
-  } else {
-
-    // Fractional mode: trim proportional to the number of points on the arm.
-    const frac = thing.cutoffFrac;
-
-    if (!(typeof frac === "number")) throw new Error("applyCutoffToParabSegments: cutoffFrac must be a number");
-    if (frac <= 0) return segments;
-
-    // segments are points; line segments are one fewer
-    const maxSegs = Math.max(0, total - 1);
-
-    // Use armPointCount as the stable scale driver
-    k = Math.round((armPointCount - 1) * frac);
-
-    // Clamp
-    if (k > maxSegs) k = maxSegs;
-  }
-
-  if (k <= 0) return segments;
-
-  // Never trim everything (keep at least 2 points = 1 segment)
-  if (k >= total - 1) k = total - 2;
-
-  return segments.slice(0, total - k);
-
-} // end applyCutoffToParabSegments
-
-
 
 export {
   toRadians,
