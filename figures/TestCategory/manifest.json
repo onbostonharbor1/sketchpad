@@ -1,12 +1,14 @@
-{
-    "testFigure1": {
-      "name": "Test Figure 1",
-      "description": "A combination of regularPolygon, linkedCircles, and nautilus",
-      "status": "draft"
+[
+    {
+      "filename": "testFigure1",
+      "path":     "testFigure1.js",
+      "title":    "Test Figure 1",
+      "status":   "test"
     },
-    "testFigure2": {
-      "name": "Test Figure 2",
-      "description": "A combination of bird, boxes, and cycloid",
-      "status": "draft"
+    {
+      "filename": "testFigure2",
+      "path": "testFigure2.js",
+      "title": "Test Figure 2",
+      "status": "test"
     }
-  }
+]

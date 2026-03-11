@@ -1,36 +1,31 @@
 /* draw.js
    ============================================================
-   Draw Tab — Public Entry Point and Lifecycle
+   Draw Tab -- Public Entry Point and Lifecycle
    ============================================================
    Role:
      Public entry point for the Draw tab. Owns exactly three things:
 
-       1. DrawTabSpec / DrawController — the objects consumed by
+       1. DrawTabSpec / DrawController -- the objects consumed by
           setUI.js and external callers.
 
-       2. Lifecycle functions — initDrawTab(), restoreDrawTab(),
+       2. Lifecycle functions -- initDrawTab(), restoreDrawTab(),
           saveDrawState(). These orchestrate the full tab.
 
-       3. Launch intent — consumeLaunchIfForDraw(), clearLaunch().
+       3. Launch intent -- consumeLaunchIfForDraw(), clearLaunch().
           Handles incoming navigation intent from other tabs (e.g.
           clicking a drawRegistry item in Home launches Draw with
           a specific registry entry pre-selected).
 
    What does NOT live here:
-     • Subtab construction, switching, secondaries → draw/drawNav.js
-     • Category rendering                          → draw/drawCategories.js
-     • Shared module state (idsWithSecondaries)    → draw/drawState.js
-     • Caption, action, menu commands, maintenance → drawMenuCmds.js
-
-   Circular dependency note:
-     The previous draw.js ↔ drawMenuCmds.js circular import has
-     been resolved. draw.js no longer imports drawMenuCmds.js.
-     drawMenuCmds.js imports from draw/drawNav.js directly.
+     * Subtab construction, switching, secondaries  -> draw/drawNav.js
+     * Category rendering                           -> draw/drawCategories.js
+     * Shared module state (idsWithSecondaries)     -> draw/drawTabState.js
+     * Caption, action, menu commands, maintenance  -> draw/drawMenuCmds.js
    ============================================================ */
 
-import { uiState }                from "/ui/uiState.js";
+import { uiState }                    from "/ui/uiState.js";
 import { clearDivs, setCommandsButtonLabel } from "/ui/uiUtilities.js";
-import { drawActiveTab, setDrawSketchpad } from "./drawRunner.js";
+import { drawActiveTab, setDrawSketchpad }   from "/ui/drawRunner.js";
 import {
   setDrawSubtabs,
   addDrawSubtab,
@@ -42,21 +37,21 @@ import {
   validateOpenSecondaryTabs,
   showSecondaryOffcanvas,
   loadSecondaryObjectInTab
-}                                 from "./draw/drawNav.js";
+}                                           from "/ui/draw/drawNav.js";
 import {
   setDrawText,
   collectRegistryEntries,
   groupEntriesByCategory,
   renderDrawCategories
-}                                 from "./draw/drawCategories.js";
+}                                           from "/ui/draw/drawCategories.js";
 import {
   clearDrawCaption,
-  setDrawCaption,
+  updateDrawCaption,
   setDrawAction,
   buildDrawMenuItems,
   copyActiveDrawObject,
   wireDrawCommandsButton
-}                                 from "./drawMenuCmds.js";
+}                                           from "/ui/draw/drawMenuCmds.js";
 
 
 /* ============================================================
@@ -67,8 +62,6 @@ const DEFAULT_DRAW_SUBTAB = "tab-categories";
 
 /* ============================================================
    DrawTabSpec
-   ============================================================
-   Consumed by setUI.js to activate the Draw tab.
    ============================================================ */
 export const DrawTabSpec = {
   name:    "draw",
@@ -81,7 +74,7 @@ export const DrawTabSpec = {
 
   buildSubtabs:          setDrawSubtabs,
   clearCaption:          clearDrawCaption,
-  buildCaptionForObject: setDrawCaption,
+  buildCaptionForObject: updateDrawCaption,
   buildText:             setDrawText,
   buildAction:           setDrawAction,
   buildSketchpad:        setDrawSketchpad
@@ -90,9 +83,6 @@ export const DrawTabSpec = {
 
 /* ============================================================
    DrawController
-   ============================================================
-   Public interface for external callers (drawRunner.js,
-   drawMenuCmds.js, parameter controls, etc.).
    ============================================================ */
 export const DrawController = {
   initDrawTab,
@@ -107,7 +97,7 @@ export const DrawController = {
   clearCanvas:          null, /* set by drawRunner at startup */
   setDrawAction,
   clearDrawCaption,
-  setDrawCaption,
+  updateDrawCaption,
   setDrawSketchpad,
   setDrawText,
   copyActiveDrawObject,
@@ -120,49 +110,30 @@ export const DrawController = {
 
 /* ============================================================
    initDrawTab(restored)
-   ============================================================
-   Cold-start initialiser for the Draw tab.
-
-   Sequence:
-     1. Kick secondary discovery async (updates idsWithSecondaries).
-        When discovery completes, refresh the category list and
-        optionally validate open secondary tabs.
-     2. Clear regions and wire the commands button.
-     3. Build the subtab bar.
-     4. Check for an incoming launch intent from another tab.
-        If present, open that registry entry immediately.
-     5. Otherwise, activate the previously active subtab or fall
-        back to Categories.
-
-   Arguments:
-     restored — true when called in Refresh & Restore mode.
-                Triggers validateOpenSecondaryTabs() after discovery.
    ============================================================ */
 export function initDrawTab(restored = false) {
 
   if (!uiState.draw.tabs) uiState.draw.tabs = {};
 
-  /* ── 1. Async secondaries discovery ────────────────────── */
+  /* 1. Async secondaries discovery */
   updateSecondariesDiscovery().then(() => {
-    /* Refresh the category list now that discovery is complete. */
     if (uiState.draw.activeSubtab === "tab-categories") {
       renderDrawCategories();
     }
-    /* In Refresh & Restore mode, prune stale secondary tabs. */
     if (restored) {
       validateOpenSecondaryTabs();
     }
   });
 
-  /* ── 2. Clear and wire ──────────────────────────────────── */
+  /* 2. Clear and wire */
   clearDivs();
   setCommandsButtonLabel("Draw Commands");
   wireDrawCommandsButton();
 
-  /* ── 3. Build subtabs ───────────────────────────────────── */
+  /* 3. Build subtabs */
   setDrawSubtabs();
 
-  /* ── 4. Launch intent ───────────────────────────────────── */
+  /* 4. Launch intent */
   const intent = consumeLaunchIfForDraw();
   if (intent?.sourceType === "drawRegistry") {
     const entry = window.drawRegistry[intent.registryKey];
@@ -170,11 +141,10 @@ export function initDrawTab(restored = false) {
     return;
   }
 
-  /* ── 5. Restore active subtab ───────────────────────────── */
+  /* 5. Restore active subtab */
   const activeId = uiState.draw.activeSubtab || DEFAULT_DRAW_SUBTAB;
 
   if (!uiState.draw.tabs[activeId]) {
-    /* Active tab was removed — fall back to Categories. */
     uiState.draw.activeSubtab = DEFAULT_DRAW_SUBTAB;
     switchTab(DEFAULT_DRAW_SUBTAB);
   } else {
@@ -186,13 +156,6 @@ export function initDrawTab(restored = false) {
 
 /* ============================================================
    restoreDrawTab()
-   ============================================================
-   Restore path — called when returning to the Draw tab after
-   a previous visit.
-
-   Disarms any active interactor from the previous session,
-   rebuilds the subtab bar, handles any pending launch intent,
-   then restores the previously active tab.
    ============================================================ */
 function restoreDrawTab() {
 
@@ -202,7 +165,6 @@ function restoreDrawTab() {
   wireDrawCommandsButton();
   setDrawSubtabs();
 
-  /* Handle launch intent (e.g. from Home). */
   const intent = consumeLaunchIfForDraw();
   if (intent?.sourceType === "drawRegistry") {
     const entry = window.drawRegistry[intent.registryKey];
@@ -213,7 +175,6 @@ function restoreDrawTab() {
   const activeId = uiState.draw.activeSubtab || DEFAULT_DRAW_SUBTAB;
 
   if (!uiState.draw.tabs[activeId]) {
-    /* Active tab no longer exists — show categories. */
     uiState.draw.activeSubtab = DEFAULT_DRAW_SUBTAB;
     clearDivs();
     renderDrawCategories();
@@ -227,13 +188,6 @@ function restoreDrawTab() {
 
 /* ============================================================
    saveDrawState()
-   ============================================================
-   Serialises the current draw tab state into a plain object
-   for persistence in uiState.
-
-   Filters out "control" parameters (UI-only controls like
-   sliders that drive interaction but are not part of the
-   draw object's persistent definition) before saving.
    ============================================================ */
 export function saveDrawState() {
 
@@ -248,7 +202,6 @@ export function saveDrawState() {
         (k) => window.drawRegistry[k] === info.drawRegistry
       );
 
-      /* Exclude parameters marked as UI controls from the saved snapshot. */
       const allParams = info.parameters || {};
       const controls  = info.drawRegistry.controls || {};
 
@@ -280,13 +233,6 @@ export function saveDrawState() {
 
 /* ============================================================
    consumeLaunchIfForDraw()
-   ============================================================
-   Checks uiState.launch for a pending intent targeting the Draw
-   tab. If found, extracts the intent, clears the launch state,
-   and returns the intent object.
-
-   Returns null if there is no pending intent or if the intent
-   targets a different tab.
    ============================================================ */
 function consumeLaunchIfForDraw() {
 
@@ -308,9 +254,6 @@ function consumeLaunchIfForDraw() {
 
 /* ============================================================
    clearLaunch()
-   ============================================================
-   Resets all fields of uiState.launch to their idle state.
-   Called immediately after consuming a launch intent.
    ============================================================ */
 function clearLaunch() {
 

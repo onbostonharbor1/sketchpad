@@ -6,6 +6,7 @@
 import { WIDGET_TYPES } from "../shared/constants.js";
 import { setHiddenControl } from "../widgets/hiddenWidget.js";
 import { setRangeControlUnified } from "../widgets/rangeWidget.js";
+import { setRangeHeaderControl } from "../widgets/rangeWidget.js";
 import { setCheckboxControl } from "../widgets/checkboxWidget.js";
 import { setSelectControl } from "../widgets/selectWidget.js";
 import { setRadioControl } from "../widgets/radioWidget.js";

@@ -1,0 +1,175 @@
+/* drawRunner.js
+   ============================================================
+   Draw Tab -- Drawing Execution and Transformation Engine
+   ============================================================
+   Responsibilities:
+     - Render active drawRegistry objects to the shared canvas
+     - Manage the #sketchpad DOM and interaction overlay sync
+     - Handle coordinate alignment for the interaction layer
+     - Export drawRegistry state to standalone Pattern scripts
+   ============================================================ */
+
+import { uiState }                from "/ui/uiState.js";
+import { resetCanvas }            from "/draw/drawState.js";
+import { buildParameterControls } from "/ui/parameterControls.js";
+import { markTabDirty }           from "/ui/draw/drawNav.js";
+import { syncOverlayToCanvas }    from "/ui/uiUtilities.js";
+import { canvasLayerManager }     from "/ui/canvasLayerManager.js";
+
+
+/* ============================================================
+   drawActiveTab()
+   ============================================================ */
+export function drawActiveTab() {
+
+  const tabId = uiState.draw.activeSubtab;
+  const info  = uiState.draw.tabs[tabId];
+
+  if (!info || info.type !== "object" || !info.drawRegistry) return;
+
+  const entry = info.drawRegistry;
+
+  const wrapper = document.getElementById("sketchpad-wrapper");
+  if (wrapper) wrapper.style.display = "flex";
+
+  const sketchpad = document.getElementById("sketchpad");
+  if (!sketchpad) throw new Error("drawActiveTab: #sketchpad not found");
+
+  sketchpad.innerHTML = "";
+
+  const canvas = window.drawCanvas;
+  if (!canvas) throw new Error("drawActiveTab: window.drawCanvas missing");
+
+  sketchpad.appendChild(canvas);
+
+  if (!ctx) throw new Error("drawActiveTab: global ctx missing");
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+  syncOverlayToCanvas("interaction", canvas);
+  syncOverlayToCanvas("guides", canvas);
+
+  const state = uiState.draw.tabs[tabId];
+  if (!state) throw new Error("drawActiveTab: missing tab state");
+
+  state.redrawHandler = drawActiveTab;
+  state.onParamChange = () => markTabDirty(tabId);
+
+  buildParameterControls(state, "tab-draw", true);
+
+  try {
+    const params = (state.parameters = entry.params);
+    entry.update(params);
+    entry.draw();
+    renderScaffoldGuides(entry);
+  } catch (err) {
+    console.error("✗ Error redrawing " + entry.name, err);
+  }
+
+} // end drawActiveTab
+
+
+/* ============================================================
+   renderScaffoldGuides(entry)
+   ============================================================ */
+function renderScaffoldGuides(entry) {
+
+  if (!entry.elements || !entry.elements.l1) return;
+
+  try {
+    const guideCanvas = canvasLayerManager.get("guides");
+    const gCtx        = guideCanvas.getContext("2d");
+    const l1          = entry.elements.l1;
+
+    gCtx.clearRect(0, 0, guideCanvas.width, guideCanvas.height);
+
+    gCtx.save();
+    gCtx.strokeStyle = "rgba(180, 180, 180, 0.4)";
+    gCtx.lineWidth   = 1.5;
+    gCtx.setLineDash([8, 4]);
+
+    gCtx.beginPath();
+    gCtx.moveTo(l1.start.x, l1.start.y);
+    gCtx.lineTo(l1.end.x, l1.end.y);
+    gCtx.stroke();
+
+    gCtx.restore();
+  } catch (err) {
+    console.warn("renderScaffoldGuides: guides layer not available", err);
+  }
+
+} // end renderScaffoldGuides
+
+
+/* ============================================================
+   setDrawSketchpad(item)
+   ============================================================ */
+export function setDrawSketchpad(item) {
+  const tabId = "tab-" + item.name.replace(/\s+/g, "-").toLowerCase();
+  uiState.draw.activeSubtab = tabId;
+  drawActiveTab();
+} // end setDrawSketchpad
+
+
+/* ============================================================
+   clearCanvas()
+   ============================================================ */
+export function clearCanvas() {
+  if (!ctx) return;
+  ctx.clearRect(0, 0, window.drawCanvas.width, window.drawCanvas.height);
+} // end clearCanvas
+
+
+/* ============================================================
+   createPatternScriptTextFromDrawRegistry(entry, params)
+   ============================================================ */
+export function createPatternScriptTextFromDrawRegistry(entry, params) {
+
+  if (!entry)  throw new Error("createPatternScriptTextFromDrawRegistry: entry missing");
+  if (!params) throw new Error("createPatternScriptTextFromDrawRegistry: params missing");
+
+  const title        = entry.name.trim();
+  const paramsJson   = JSON.stringify(params, null, 2);
+  const controlsJson = entry.controls ? JSON.stringify(entry.controls, null, 2) : "null";
+
+  return `import { resetCanvas } from "/ui/drawState.js";
+
+/* ============================================================
+    PATTERN EXPORT: ${escapeForBlockComment(title)}
+============================================================ */
+
+export const scriptInfo = {
+  title: ${JSON.stringify(title)},
+  params: ${paramsJson},
+  controls: ${controlsJson},
+  parameters: null,
+  onParamChange() {},
+  redrawHandler: null
+};
+
+export async function runPattern() {
+  scriptInfo.parameters = scriptInfo.params;
+  resetCanvas();
+
+  const idName = "__DRAW_REGISTRY_ID__";
+  const mod = await import(/* @vite-ignore */ \`/drawRegistry/\${idName}.js?t=\${Date.now()}\`);
+
+  if (!window.drawRegistry) throw new Error("Pattern export: window.drawRegistry missing");
+
+  const entry = window.drawRegistry[idName];
+  if (!entry) throw new Error("Pattern export: drawRegistry entry not found: " + idName);
+
+  entry.params = structuredClone(scriptInfo.params);
+  entry.init();
+  entry.update(entry.params);
+  entry.draw(entry.params);
+
+  return null;
+} // end runPattern
+`;
+
+} // end createPatternScriptTextFromDrawRegistry
+
+
+function escapeForBlockComment(s) {
+  return String(s).replace(/\*\//g, "* /");
+} // end escapeForBlockComment

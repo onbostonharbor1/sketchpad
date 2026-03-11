@@ -1,12 +1,18 @@
 /* ============================================================
-   Parab Envelope + Recipe Variants — 8 Draggable Vertices
+   Parab Envelope — 8 Draggable Vertices
+   ============================================================
+   Radius and rotate apply incremental transforms to the live
+   points, using their centroid as the pivot/origin. This means
+   dragged configurations scale and rotate naturally around
+   their own center of mass. Points are seeded once at init
+   from fixed circle indices — never reset afterward.
    ============================================================ */
 import { Point, StringThing } from "/classes/classes.js";
 import { drawState } from "/draw/drawState.js";
 import { createPrintNodes, _m, drawManyParabs } from "/draw/drawUtilities.js";
 
 export const scriptInfo = {
-  title: "Parab Recipe Variants (8 Draggable Vertices)",
+  title: "Many Joined Parabs (8 Draggable Vertices)",
   interactive: true,
 
   params: {
@@ -21,31 +27,36 @@ export const scriptInfo = {
     lineWidth: 1,
     alpha: 1.0,
     background: "",
-    patternVariant: "original",
+    compositeOperation: "source-over",
 
     // Index 0-5 are envelope anchors, 6-7 are interior midpoints
     points: []
   },
 
   controls: {
-    patternVariant: {
-      widget: "select",
-      label: "Variant",
-      options: [
-        { value: "original",         label: "Original" },
-        { value: "rotated",          label: "Rotated" },
-        { value: "mirrored",         label: "Mirrored" },
-        { value: "rotatedMirrored", label: "Rotated + Mirrored" }
-      ]
-    },
-    radius:    { widget: "range", label: "Radius", min: 50, max: 380, step: 1 },
-    rotate:    { widget: "range", label: "Rotate", min: 0, max: 360, step: 1 },
-    numSteps:  { widget: "range", label: "Steps",  min: 7,  max: 80,  step: 1 },
-    lineWidth: { widget: "range", label: "Line",   min: 0.25, max: 6, step: 0.25 },
-    color:     { widget: "colorPicker", label: "Color" }
+    radius:    { widget: "range",  label: "Radius",  min: 50,   max: 380, step: 1 },
+    rotate:    { widget: "range",  label: "Rotate",  min: 0,    max: 360, step: 1 },
+    numSteps:  { widget: "range",  label: "Steps",   min: 7,    max: 80,  step: 1 },
+    lineWidth: { widget: "range",  label: "Line",    min: 0.25, max: 6,   step: 0.25 },
+    color:     { widget: "color",  label: "Color" },
+    reset: {
+      widget: "button",
+      label: "Reset",
+      fullRow: true,
+      action() {
+        this._state.seeded = false;
+        this.update(this.params);
+        this.draw();
+        armInteractor(this);
+      }
+    }
   },
 
-  _state: { lastVariant: null, seeded: false },
+  _state: {
+    seeded:     false,
+    lastRadius: null,
+    lastRotate: null
+  },
 
   init() {
     this.elements = {
@@ -58,27 +69,40 @@ export const scriptInfo = {
     if (this.params.points.length === 0) this.update(this.params);
   },
 
-update(params) {
+  update(params) {
     const t = this.elements.thing;
     Object.assign(t, params);
     t.midpoint.x = params.midpointX;
     t.midpoint.y = params.midpointY;
 
-    drawState.pts.length = 0;
-    createPrintNodes(t);
-    const pts = drawState.pts;
+    t.ellipse.a = params.radius * 2;
+    t.ellipse.b = params.radius * 2;
 
-    // 1. Check if the Variant changed
-    const variantChanged = (params.patternVariant !== this._state.lastVariant);
+    if (!this._state.seeded) {
+      // First run — generate circle nodes and seed the 8 points.
+      drawState.pts.length = 0;
+      createPrintNodes(t);
+      this._seed(params, drawState.pts);
+      this._state.seeded     = true;
+      this._state.lastRadius = params.radius;
+      this._state.lastRotate = params.rotate;
+    } else {
+      // Subsequent runs — apply incremental transforms to live points.
+      if (params.radius !== this._state.lastRadius) {
+        const ratio = params.radius / this._state.lastRadius;
+        this._scalePoints(params.points, ratio);
+        this._state.lastRadius = params.radius;
+      }
+      if (params.rotate !== this._state.lastRotate) {
+        let delta = params.rotate - this._state.lastRotate;
+        if (delta >  180) delta -= 360;
+        if (delta < -180) delta += 360;
+        this._rotatePoints(params.points, delta * Math.PI / 180);
+        this._state.lastRotate = params.rotate;
+      }
+    }
 
-    // 2. ALWAYS sync the points to the new Rotate/Radius geometry
-    // This ensures the dots move with the lines
-    this.reseed(params, pts);
-
-    this._state.seeded = true;
-    this._state.lastVariant = params.patternVariant;
-
-    this.elements.parabs = this.buildParabs(params);
+    this.elements.parabs = this._buildParabs(params);
   },
 
   draw() {
@@ -89,63 +113,17 @@ update(params) {
     } else {
       ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
     }
+    ctx.globalCompositeOperation = this.params.compositeOperation;
+    ctx.globalAlpha = this.params.alpha;
     ctx.strokeStyle = this.params.color;
     ctx.lineWidth = this.params.lineWidth;
     drawManyParabs(this.elements.thing, this.elements.parabs);
     ctx.restore();
   },
 
-  /**
-   * RESEED: The Bridge between Parametric Math and User Interaction.
-   * * PURPOSE:
-   * This function takes the raw, calculated nodes from the 'StringThing' generator
-   * and "seeds" them into the 'params.points' array that the Interactor tracks.
-   *
-   * THE MEMORY REFERENCE RULE:
-   * The Interactor holds a permanent pointer to the objects inside 'params.points'.
-   * We MUST NOT reassign the array (e.g., params.points = [...]) because that
-   * snaps the connection, making the red dots vanish. Instead, we mutate the
-   * .x and .y properties of the existing objects (In-Place Update).
-   *
-   * GEOMETRIC MAPPING:
-   * 1. Mapper: Uses getMapper to determine which physical nodes in the envelope
-   * become our primary anchors (p0, p1, etc.) based on the selected Variant.
-   * 2. Anchors: Extracts 6 specific vertices from the generated envelope.
-   * 3. Derived Points: Calculates 2 interior midpoints (lMid, rMid) using
-   * the anchor positions to complete the 8-point interactive set.
-   */
-  reseed(params, pts) {
-    const map = this.getMapper(params, pts.length);
-
-    // Grab the 6 primary anchor nodes from the calculated envelope
-    const p0 = pts[map(0)], p1 = pts[map(1)], p2 = pts[map(2)],
-          p3 = pts[map(3)], p4 = pts[map(4)], p6 = pts[map(6)];
-
-    // Derive the 2 interior midpoints for the inner parabola logic
-    const lMid = _m(p0, p6);
-    const rMid = _m(p1, p6);
-
-    // This is the ordered set of 8 coordinates we want the handles to follow
-    const sourcePoints = [p0, p1, p2, p3, p4, p6, lMid, rMid];
-
-    if (params.points.length === 0) {
-      // INITIALIZATION: Only happens once to establish the object references
-      params.points = sourcePoints.map(p => ({ x: p.x, y: p.y }));
-    } else {
-      // IN-PLACE MUTATION: Update existing objects to keep the Interactor 'live'
-      sourcePoints.forEach((src, i) => {
-        if (params.points[i]) {
-          params.points[i].x = src.x;
-          params.points[i].y = src.y;
-        }
-      });
-    }
-  },
-
-  reseed(params, pts) {
-    const map = this.getMapper(params, pts.length);
-    const p0 = pts[map(0)], p1 = pts[map(1)], p2 = pts[map(2)],
-          p3 = pts[map(3)], p4 = pts[map(4)], p6 = pts[map(6)];
+  _seed(params, pts) {
+    const p0 = pts[0], p1 = pts[1], p2 = pts[2],
+          p3 = pts[3], p4 = pts[4], p6 = pts[6];
 
     const lMid = _m(p0, p6);
     const rMid = _m(p1, p6);
@@ -153,9 +131,10 @@ update(params) {
     const sourcePoints = [p0, p1, p2, p3, p4, p6, lMid, rMid];
 
     if (params.points.length === 0) {
-      params.points = sourcePoints.map(p => ({ x: p.x, y: p.y }));
+      // First init — create the objects the interactor will bind to.
+      sourcePoints.forEach(p => params.points.push({ x: p.x, y: p.y }));
     } else {
-      // In-place update keeps the Interactor's reference alive
+      // Reset — mutate existing objects in-place, interactor references stay valid.
       sourcePoints.forEach((src, i) => {
         params.points[i].x = src.x;
         params.points[i].y = src.y;
@@ -163,42 +142,54 @@ update(params) {
     }
   },
 
-  buildParabs(params) {
-    const v = params.points;
-    return [
-        [v[0], v[6], v[4]],
-        [v[6], v[4], v[7]],
-        [v[1], v[7], v[4]],
-        [v[1], v[7], v[2]],
-        [v[2], v[7], v[5]],
-        [v[7], v[5], v[6]],
-        [v[3], v[6], v[5]],
-        [v[3], v[6], v[0]]
-    ];
+  _centroid(points) {
+    const n = points.length;
+    let cx = 0, cy = 0;
+    for (const p of points) { cx += p.x; cy += p.y; }
+    return { x: cx / n, y: cy / n };
   },
 
-  getMapper(params, n) {
-    const { patternVariant: mode } = params;
-    return (k) => {
-      let i = k;
-      if (mode.includes("rotated")) i += 0; // Offset logic removed
-      if (mode.includes("mirrored")) {
-        if (i === 0) i = 1;
-        else if (i === 1) i = 0;
-        else if (i === 2) i = 3;
-        else if (i === 3) i = 2;
-      }
-      return ((i % n) + n) % n;
-    };
+  _scalePoints(points, ratio) {
+    const c = this._centroid(points);
+    for (const p of points) {
+      p.x = c.x + (p.x - c.x) * ratio;
+      p.y = c.y + (p.y - c.y) * ratio;
+    }
+  },
+
+  _rotatePoints(points, deltaRad) {
+    const c = this._centroid(points);
+    const cos = Math.cos(deltaRad);
+    const sin = Math.sin(deltaRad);
+    for (const p of points) {
+      const dx = p.x - c.x;
+      const dy = p.y - c.y;
+      p.x = c.x + dx * cos - dy * sin;
+      p.y = c.y + dx * sin + dy * cos;
+    }
+  },
+
+  _buildParabs(params) {
+    const v = params.points;
+    return [
+      [v[0], v[6], v[4]],
+      [v[6], v[4], v[7]],
+      [v[1], v[7], v[4]],
+      [v[1], v[7], v[2]],
+      [v[2], v[7], v[5]],
+      [v[7], v[5], v[6]],
+      [v[3], v[6], v[5]],
+      [v[3], v[6], v[0]]
+    ];
   }
 };
 
 export function runPattern() {
-    scriptInfo.init();
-    scriptInfo.redrawHandler();
+  scriptInfo.init();
+  scriptInfo.redrawHandler();
 }
 
 scriptInfo.redrawHandler = () => {
-    scriptInfo.update(scriptInfo.params);
-    scriptInfo.draw();
+  scriptInfo.update(scriptInfo.params);
+  scriptInfo.draw();
 };

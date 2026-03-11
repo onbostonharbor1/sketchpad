@@ -1,7 +1,7 @@
 /* drawRegistry/circularParabola.js */
-import { Point }                from "../classes/classes.js";
-import { CurveStitch }           from "../classes/curveStitchClass.js";
-import { drawCircularParabola }  from "../draw/drawRegular.js";
+import { Point }                from "/classes/classes.js";
+import { CurveStitch }          from "/classes/curveStitchClass.js";
+import { drawCircularParabola } from "/draw/drawRegular.js";
 
 window.drawRegistry_circularParabola = {
     name:         "Circular Parabola",
@@ -30,6 +30,8 @@ window.drawRegistry_circularParabola = {
         numNodes:  5,
         numSteps:  20,
         rotate:    0,
+        shorten:  0,
+        shorten:   0,
         xScale:    1,
         yScale:    1,
         color:     "blue",
@@ -44,8 +46,9 @@ window.drawRegistry_circularParabola = {
         rotate:    { widget: "range", min: 0,   max: 360, step: 5,   label: "Rotation:" },
         xScale:    { widget: "range", min: 0.5, max: 2,   step: 0.1, label: "Width:" },
         yScale:    { widget: "range", min: 0.5, max: 2,   step: 0.1, label: "Height:" },
+        shorten:   { widget: "range", min: 0,   max: 15,  step: 1,   label: "Shorten:" },
         color:     { widget: "colorPicker",                          label: "Color:" },
-        lineWidth: { widget: "range", min: .5,  max: 3,   step: .5,  label: "Line Wid.:" }
+        lineWidth: { widget: "range", min: .5,  max: 3,   step: .5,  label: "Line Wid. :" }
     },
 
     init() {

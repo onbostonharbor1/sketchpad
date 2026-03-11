@@ -30,6 +30,7 @@ window.drawRegistry_inverseStar = {
         numNodes:  5,
         numSteps:  20,
         rotate:    0,
+        shorten:   0,
         xScale:    1,
         shorten:  0.0,
         yScale:    1,
@@ -45,7 +46,7 @@ window.drawRegistry_inverseStar = {
         rotate:    { widget: "range", min: 0,   max: 360, step: 5,   label: "Rotation:" },
         xScale:    { widget: "range", min: 0.5, max: 2,   step: 0.1, label: "X Scale:" },
         yScale:    { widget: "range", min: 0.5, max: 2,   step: 0.1, label: "Y Scale:" },
-        shorten:    { widget: "range", min: 0,   max: 1,  step: .05,   label: "Shorten:" },
+        shorten:   { widget: "range", min: 0,   max: 10,  step: 1,   label: "Shorten:" },
         color:     { widget: "colorPicker",                          label: "Color:" },
         lineWidth: { widget: "range", min: .5,  max: 3,   step: .5,  label: "Line Wid.:" }
     },
@@ -72,6 +73,10 @@ window.drawRegistry_inverseStar = {
             const value = incoming[key];
             if (value === undefined) continue;
 
+            if (key === "radius") {
+                s.ellipse.a = incoming[key]*2;
+                s.ellipse.b = incoming[key]*2;
+            }
             if (key === "points") {
                 // Sync midpoint from the draggable point handle
                 const p = this.params.points[0];

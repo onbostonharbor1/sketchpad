@@ -24,10 +24,11 @@ window.drawRegistry_parabola = {
     line1_pt2: { x: 50,  y: 350 },
     line2_pt1: { x: 50,  y: 350 },
     line2_pt2: { x: 350, y: 350 },
-    truncate:  2,
-    shorten:   3,
+    numSteps:  20,
+    truncate:  0,
+    shorten:   0,
     color:     "#008800",
-    lineWidth: 2,
+    lineWidth: 1,
     points:    [] // The interaction layer monitors this array
   },
 
@@ -35,7 +36,8 @@ window.drawRegistry_parabola = {
     truncate:  { widget: "range", min: 0,   max: 20, step: 1,   label: "Trim Bottom:" },
     shorten:   { widget: "range", min: 0,   max: 20, step: 1,   label: "Shorten Top:" },
     color:     { widget: "colorPicker", label: "Color:" },
-    lineWidth: { widget: "range", min: 0.5, max: 4,  step: 0.5, label: "Width:" }
+    numSteps:  { widget: "range", min: 10,  max: 30, step: 1,   label: "Steps:" },
+    lineWidth: { widget: "range", min: 0.5, max: 3,  step: 0.5, label: "Line wid.:" }
   },
 
   /**
@@ -109,8 +111,13 @@ window.drawRegistry_parabola = {
       p.line1_pt1 = { x: s1.x, y: s1.y }; p.line1_pt2 = { x: e1.x, y: e1.y };
       p.line2_pt1 = { x: s2.x, y: s2.y }; p.line2_pt2 = { x: e2.x, y: e2.y };
 
-      p.points[0] = { ...p.line1_pt1 }; p.points[1] = { ...p.line1_pt2 }; p.points[2] = { x: m1.x, y: m1.y };
-      p.points[3] = { ...p.line2_pt1 }; p.points[4] = { ...p.line2_pt2 }; p.points[5] = { x: m2.x, y: m2.y };
+      // MUTATE existing array objects instead of replacing them
+      p.points[0].x = s1.x; p.points[0].y = s1.y;
+      p.points[1].x = e1.x; p.points[1].y = e1.y;
+      p.points[2].x = m1.x; p.points[2].y = m1.y;
+      p.points[3].x = s2.x; p.points[3].y = s2.y;
+      p.points[4].x = e2.x; p.points[4].y = e2.y;
+      p.points[5].x = m2.x; p.points[5].y = m2.y;
     }
 
     // Handle style and slider updates dynamically

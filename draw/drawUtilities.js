@@ -42,7 +42,7 @@ drawManyLines(s) / drawLinesAround / drawLinesWithin
 */
 
 
-import { Point, Line } from "../classes/classes.js";
+import { Point, Line } from "/classes/classes.js";
 import { drawState }   from "./drawState.js";
 import { drawParab }   from "/draw/drawRegular.js";
 import { createNodes } from "/draw/createNodes.js";
@@ -736,7 +736,6 @@ export {
   toDegrees,
   comparePoints,
   convertParabPtsToLines,
-  createNodes,
   createPrintNodes,
   drawParabs,
   displayPoint,

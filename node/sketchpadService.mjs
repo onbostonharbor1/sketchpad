@@ -223,6 +223,28 @@ export async function editManifestEntry(payload = {}) {
       newStatus
     });
 
+    // Mirror the change into ./home/manifest.json so the Home tab
+    // stays consistent without requiring a full rebuild.
+    let homeIndexUpdated = -1;
+    try {
+      const manifestDir  = path.dirname(manifestPath);
+      const editedList   = readJsonFileSync(manifestPath);
+      const editedEntry  = editedList[report.indexUpdated];
+      const rootedPath   = makeRootedPath(manifestDir, editedEntry);
+      console.log("editManifestEntry: mirror rootedPath =", rootedPath);
+
+      const homeReport = editManifestEntryInSingleFile({
+        manifestPath: homeManifestPath,
+        matchField:   "path",
+        matchValue:   rootedPath,
+        newTitle,
+        newStatus
+      });
+      homeIndexUpdated = homeReport.indexUpdated;
+    } catch (mirrorErr) {
+      console.error("editManifestEntry: home mirror FAILED:", mirrorErr.message);
+    }
+
     return {
       request: "editManifestEntry",
       status: "ok",
@@ -231,7 +253,9 @@ export async function editManifestEntry(payload = {}) {
       oldTitle: report.oldTitle,
       newTitle: report.newTitle,
       oldStatus: report.oldStatus,
-      newStatus: report.newStatus
+      newStatus: report.newStatus,
+      homeManifestAlsoUpdated: homeIndexUpdated >= 0,
+      homeIndexUpdated
     };
   }
 

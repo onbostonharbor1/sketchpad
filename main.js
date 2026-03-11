@@ -52,7 +52,6 @@ import "/ui/actionRegistry.js";
 import "/ui/canvasLayerManager.js"
 import "/ui/caption.js";
 import "/ui/categories.js";
-import "/ui/drawMenuCmds.js";
 import "/ui/drawRunner.js";
 import "/ui/fileLayer.js";
 import "/ui/help.js";
@@ -66,20 +65,24 @@ import "/ui/overlay.js";
 import "/ui/parameterControls.js";
 import "/ui/resultsViewController";
 import "/ui/scriptRunner.js";
-import "/ui/secondaryObjects.js";
+import "/ui/draw/secondaryObjects.js";
 
-import "/ui/draw.js";
-import "/ui/drawMenuCmds.js";
-import "/ui/figures.js";
-import "/ui/figuresMenuCmds.js";
-import "/ui/gallery.js";
-import "/ui/galleryMenuCmds.js";
-import "/ui/home.js";
-import "/ui/homeMenuCmds.js";
-import "/ui/patterns.js";
-import "/ui/patternsMenuCmds.js";
-import "/ui/utilities.js";
-import "/ui/utilitiesMenuCmds.js";
+import "/ui/draw/draw.js";
+import "/ui/draw/drawCategories.js";
+import "/ui/draw/drawMenuCmds.js";
+import "/ui/draw/drawNav.js";
+import "/ui/draw/drawRunner.js";
+import "/ui/draw/drawTabState.js";
+import "/ui/figures/figures.js";
+import "/ui/figures/figuresMenuCmds.js";
+import "/ui/gallery/gallery.js";
+import "/ui/gallery/galleryMenuCmds.js";
+import "/ui/home/home.js";
+import "/ui/home/homeMenuCmds.js";
+import "/ui/patterns/patterns.js";
+import "/ui/patterns/patternsMenuCmds.js";
+import "/ui/utilities/utilities.js";
+import "/ui/utilities/utilitiesMenuCmds.js";
 
 // UI infrastructure
 import "/ui/uiUtilities.js";

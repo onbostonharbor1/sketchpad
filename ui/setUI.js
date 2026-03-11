@@ -4,12 +4,12 @@
    ------------------------------------------------------------
 */
 
-import { HomeTabSpec }     from "./home.js";
-import { DrawTabSpec }     from "./draw.js";
-import { PatternsTabSpec } from "./patterns.js";
-import { GalleryTabSpec }  from "./gallery.js";
-import { UtilityTabSpec }  from "./utilities.js";
-import { FiguresTabSpec }  from "./figures.js";
+import { HomeTabSpec }     from "/ui/home/home.js";
+import { DrawTabSpec }     from "/ui/draw/draw.js";
+import { PatternsTabSpec } from "/ui/patterns/patterns.js";
+import { GalleryTabSpec }  from "/ui/gallery/gallery.js";
+import { UtilityTabSpec }  from "/ui/utilities/utilities.js";
+import { FiguresTabSpec }  from "/ui/figures//figures.js";
 
 import { clearDivs }        from "/ui/uiUtilities.js";
 import { initMenuManager }  from "./menuManager.js";

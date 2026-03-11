@@ -14,13 +14,13 @@ export function runPattern() {
 	let center = new Point(200,227);
 	let s = { midpoint:     center,
 	      numNodes:     150,
-        lineWidth:    .6,
+        	lineWidth:    .6,
 	      rotate:       0,
 	      chordLength:  40,
 	      startSkip:    0,
 	      endSkip:      0,
 	      withinCirc:   START_END,
-	      color:        "#5a6673",
+	      color:        "blue",
 	      radius:       radius };
 	let thing       = new Ellipse(s);
 	let pt          = new Point(center.x+radius/2, center.y);
@@ -44,7 +44,6 @@ export function runPattern() {
 	thing.numSteps = 21;
 	thing.arm2      = ptsOnLine(thing,line);
 	let arm2        = thing.arm2;
-	drawInCircle(thing);
 
 	s = { midpoint:     center,
 	      numNodes:     150,
@@ -53,7 +52,7 @@ export function runPattern() {
 	      startSkip:    0,
 	      endSkip:      0,
 	      withinCirc:   START_END,
-	      color:        "#acb5bf",
+	      color:        "lightgreen",
 	      radius:       radius };
 	thing = new Ellipse(s);
 	drawInCircle(thing);
@@ -64,11 +63,13 @@ export function runPattern() {
 	      startSkip:    0,
 	      endSkip:      0,
 	      withinCirc:   START_END,
-	      color:        "black",
-	      radius:       radius/2 };
+	      color:        "red",
+	      radius:       radius };
 	thing     = new Ellipse(s);
 	let nodes = createNodes(thing);
 	drawLine(nodes[0],nodes[nodes.length-1], "black");
+//	printCircNum(nodes[0]);
+	printCircNum(nodes[30]);
 
 	thing.arm1 = arm1;
 	let start  = nodes.length/4;
@@ -76,12 +77,14 @@ export function runPattern() {
 	thing.arm2 = nodes.slice(start,end);
   arm2 = thing.arm2;
   thing.lineWidth = .5;
+  thing.color = "green";
 	drawLines(thing, stitcher(arm1,arm2));
+	printCircNum(end);
 
 	thing.arm1 = arm2;
 	start      = 3*nodes.length/4-2;
 	end        = start+22;
 	thing.arm2 = nodes.slice(start,end);
   arm2       = thing.arm2.reverse();
-	drawLines(thing, stitcher(arm1,arm2));
+	// drawLines(thing, stitcher(arm1,arm2));
 }

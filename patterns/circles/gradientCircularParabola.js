@@ -28,7 +28,7 @@ export function runPattern() {
 	let s = { color: color,
 	      numNodes: 6,
 	      numSteps: 30,
-	      rotate: 90,
+	    //   rotate: 90,
 	      midpoint: new Point(350,350),
 	      yScale: 1.5,
 	      both: true

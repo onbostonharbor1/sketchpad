@@ -10,6 +10,7 @@ export class CurveStitch {
 
         numSteps:    20,
         numNodes:    4,
+        ellipse:     { a: null, b: null },
         radius:      200,
         rotate:      0,
 

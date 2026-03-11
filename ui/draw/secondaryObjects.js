@@ -1,10 +1,10 @@
-/* ui/secondaryObjects.js
+/* ui/draw/secondaryObjects.js
    ------------------------------------------------------------
    Service Bridge for Secondary Object Management
    ------------------------------------------------------------
 */
 
-import { nodeDispatch } from "./nodeLayer.js";
+import { nodeDispatch } from "/ui/nodeLayer.js";
 
 /* ------------------------------------------------------------
    saveSecondary(primaryId, name, dataPayload, thumbBase64)

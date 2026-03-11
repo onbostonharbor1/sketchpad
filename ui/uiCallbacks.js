@@ -9,11 +9,11 @@
 import { uiState }        from "/ui/uiState.js";
 import { overlayManager } from "./overlay.js";
 
-import * as draw          from "./draw.js";
-import * as patterns      from "./patterns.js";
-import * as gallery       from "./gallery.js";
-import * as figures       from "./figures.js";
-import * as utility       from "./utilities.js"; // ⭐ NEW
+import * as draw          from "/ui/draw/draw.js";
+import * as patterns      from "/ui/patterns/patterns.js";
+import * as gallery       from "/ui/gallery/gallery.js";
+import * as figures       from "/ui/figures/figures.js";
+import * as utility       from "/ui/utilities/utilities.js"; // ⭐ NEW
 
 /* ===========================================================
    TAB ACTIVATION

@@ -25,8 +25,8 @@ window.drawRegistry_mysticRose = {
 
     interactive:  true,
     params: {
-      midpoint:  { x: 300, y: 200 },
-      radius:    250,
+      midpoint:  { x: 300, y: 300 },
+      radius:    200,
       numNodes:  20,
       xScale:    1,
       yScale:    1,
@@ -36,12 +36,12 @@ window.drawRegistry_mysticRose = {
     },
 
     controls: {
-        radius:    { widget: "range", min: 80,  max: 500, step: 5,   label: "Radius:" },
+        radius:    { widget: "range", min: 80,  max: 300, step: 5,   label: "Radius:" },
         numNodes:  { widget: "range", min: 12,  max: 30,  step: 1,   label: "Nodes:" },
         xScale:    { widget: "range", min: 0.5, max: 2,   step: 0.1, label: "X Scale:" },
         yScale:    { widget: "range", min: 0.5, max: 2,   step: 0.1, label: "Y Scale:" },
         color:     { widget: "colorPicker",                          label: "Color:" },
-        lineWidth: { widget: "range", min: .5,  max: 3, step: .5,  label: "Width:" }
+        lineWidth: { widget: "range", min: .25,  max: 3, step: .25,  label: "Line wid.:" }
     },
 
     init() {
@@ -69,8 +69,8 @@ window.drawRegistry_mysticRose = {
                 s.midpoint.x = p.x;
                 s.midpoint.y = p.y;
             } else if (key === "radius") {
-                s.ellipse.a = value;
-                s.ellipse.b = value;
+                s.ellipse.a = value*2;
+                s.ellipse.b = value*2;
             } else if (Object.hasOwn(s, key)) {
                 s[key] = value;
             }

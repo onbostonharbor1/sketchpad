@@ -1,39 +1,33 @@
 /* homeNav.js
    ============================================================
-   Home Tab — Subtabs, Category View, and Tab Launch
+   Home Tab -- Subtabs, Category View, and Tab Launch
    ============================================================
    Role:
      Owns the subtab bar, the category view rendering, and the
      helpers that launch other tabs from within Home.
 
-     Shared subtab mechanics are delegated to
-     resultsViewController.js. This file supplies the
-     Home-specific adapter and owns the category descriptor
-     builder (which is unique to Home due to its drawRegistry
-     launch path).
-
    Architectural rules:
-     • Does NOT own the TabSpec, init(), or restore(). home.js.
-     • Does NOT load or parse the manifest. homeManifest.js.
-     • Does NOT render results. homeResults.js.
-     • Does NOT build caption bars or commands panels. homeMenuCmds.js.
-     • Reads homeManifestGrouped from homeState.js via getter.
+     * Does NOT own the TabSpec, init(), or restore(). home.js.
+     * Does NOT load or parse the manifest. homeManifest.js.
+     * Does NOT render results. homeResults.js.
+     * Does NOT build caption bars or commands panels. homeMenuCmds.js.
+     * Reads homeManifestGrouped from homeState.js via getter.
 
    Exports:
-     setHomeSubtabs()                    — build/rebuild the subtab bar
-     activateHomeSubtabButton(viewKey)   — highlight the active subtab
-     switchHomeView(viewKey)             — transition between views
-     renderHomeCategories(grouped)       — render category frames
-     renderHomeCategoriesIfReady()       — render if data is available
+     setHomeSubtabs()
+     activateHomeSubtabButton(viewKey)
+     switchHomeView(viewKey)
+     renderHomeCategories(grouped)
+     renderHomeCategoriesIfReady()
    ============================================================ */
 
-import { renderCategories } from "../categories.js";
-import { buildSubtabBar, activateSubtab } from "../resultsViewController.js";
-import { getHomeManifestGrouped } from "./homeState.js";
+import { renderCategories }              from "/ui/categories.js";
+import { buildSubtabBar, activateSubtab } from "/ui/resultsViewController.js";
+import { getHomeManifestGrouped }        from "./homeState.js";
 
 
 /* ============================================================
-   Constants — view keys must stay in sync with home.js
+   Constants
    ============================================================ */
 const HOME_VIEW_CATEGORIES = "categories";
 const HOME_VIEW_RESULTS    = "results";
@@ -45,11 +39,6 @@ const CSS_CLASS     = "home-subtabs";
 
 /* ============================================================
    buildHomeAdapter()
-   ============================================================
-   Returns the RVCAdapter for the Home tab.
-
-   The Results subtab is conditional — it only appears once
-   an entry has been selected (activeEntry is set).
    ============================================================ */
 function buildHomeAdapter() {
   return {
@@ -83,42 +72,25 @@ function buildHomeAdapter() {
 
 /* ============================================================
    setHomeSubtabs()
-   ============================================================
-   Builds the Home subtab bar inside #subtabs.
-
-   The Categories subtab is always present. The Results subtab
-   is added only when uiState.home.saved.activeEntry exists.
-
-   Safe to call repeatedly — replaces inner HTML each time.
    ============================================================ */
 export function setHomeSubtabs() {
-
   const saved = uiState.home?.saved;
   if (!saved) throw new Error("setHomeSubtabs: uiState.home.saved missing");
-
   buildSubtabBar(buildHomeAdapter());
-
 } // end setHomeSubtabs
 
 
 /* ============================================================
    activateHomeSubtabButton(viewKey)
-   ============================================================
-   Highlights the subtab button for the given view key.
-   Pure visual operation — does not change uiState.
    ============================================================ */
 export function activateHomeSubtabButton(viewKey) {
-
   const activeId = (viewKey === HOME_VIEW_RESULTS) ? RESULTS_ID : CATEGORIES_ID;
   activateSubtab(CSS_CLASS, activeId);
-
 } // end activateHomeSubtabButton
 
 
 /* ============================================================
    switchHomeView(viewKey)
-   ============================================================
-   Transitions the Home tab between its two views.
    ============================================================ */
 export async function switchHomeView(viewKey) {
 
@@ -130,9 +102,7 @@ export async function switchHomeView(viewKey) {
   setHomeSubtabs();
   activateHomeSubtabButton(viewKey);
 
-  /* ── Categories view ─────────────────────────────────────── */
   if (viewKey === HOME_VIEW_CATEGORIES) {
-
     const captionDiv = document.getElementById("caption");
     if (!captionDiv) throw new Error("switchHomeView: #caption not found");
     captionDiv.innerHTML = "";
@@ -149,9 +119,8 @@ export async function switchHomeView(viewKey) {
     return;
   }
 
-  /* ── Results view ────────────────────────────────────────── */
   if (viewKey === HOME_VIEW_RESULTS) {
-    const { renderHomeResults } = await import("./homeResults.js");
+    const { renderHomeResults } = await import("/ui/home/homeResults.js");
     await renderHomeResults();
     return;
   }
@@ -163,9 +132,6 @@ export async function switchHomeView(viewKey) {
 
 /* ============================================================
    renderHomeCategoriesIfReady()
-   ============================================================
-   Renders categories if manifest data is loaded, otherwise
-   shows a loading message.
    ============================================================ */
 export function renderHomeCategoriesIfReady() {
 
@@ -185,24 +151,15 @@ export function renderHomeCategoriesIfReady() {
 
 /* ============================================================
    renderHomeCategories(grouped)
-   ============================================================
-   Builds the category descriptor and renders to #text.
    ============================================================ */
 export function renderHomeCategories(grouped) {
-
   const frames = buildHomeCategoryDescriptor(grouped);
   renderCategories("text", frames);
-
 } // end renderHomeCategories
 
 
 /* ============================================================
    buildHomeCategoryDescriptor(grouped)
-   ============================================================
-   Converts the grouped manifest map into the descriptor array
-   for renderCategories(). Home has unique click logic:
-     • drawRegistry entries → launch Draw tab
-     • All others → enter Results view
    ============================================================ */
 function buildHomeCategoryDescriptor(grouped) {
 
@@ -211,30 +168,24 @@ function buildHomeCategoryDescriptor(grouped) {
   );
 
   return statuses.map((status) => {
-
     const items = grouped[status] || [];
 
     return {
       title: status,
       items: items.map((entry) => {
-
         const name = entry.title || entry.file;
 
         return {
           name,
           hasSubitems: false,
-
           onClick: () => {
-
             const saved = uiState.home?.saved;
             if (!saved) throw new Error("buildHomeCategoryDescriptor onClick: uiState.home.saved missing");
 
-            /* ── drawRegistry launch path ─────────────────── */
+            /* drawRegistry launch path */
             if (entry.sourceType === "drawRegistry") {
-
-              if (!entry.registryKey) {
+              if (!entry.registryKey)
                 throw new Error("Home launcher: drawRegistry entry missing registryKey");
-              }
 
               saved.view         = HOME_VIEW_CATEGORIES;
               saved.activeStatus = null;
@@ -251,7 +202,7 @@ function buildHomeCategoryDescriptor(grouped) {
               return;
             }
 
-            /* ── Normal Home Results path ─────────────────── */
+            /* Normal Home Results path */
             saved.view         = HOME_VIEW_RESULTS;
             saved.activeStatus = status;
             saved.activeEntry  = entry;
@@ -259,12 +210,10 @@ function buildHomeCategoryDescriptor(grouped) {
 
             switchHomeView(HOME_VIEW_RESULTS);
 
-            import("./homeMenuCmds.js").then((m) => {
+            import("/ui/home/homeMenuCmds.js").then((m) => {
               m.setHomeCaptionForResult(entry);
             });
-
-          } // end onClick
-
+          }
         };
       })
     };
@@ -275,19 +224,13 @@ function buildHomeCategoryDescriptor(grouped) {
 
 /* ============================================================
    launchTabViaSetUI(tabKey)
-   ============================================================
-   Switches to another tab via dynamic import of setUI.js to
-   avoid a circular dependency (setUI imports home.js).
    ============================================================ */
 function launchTabViaSetUI(tabKey) {
-
   if (!tabKey) throw new Error("launchTabViaSetUI: tabKey missing");
 
-  return import("../setUI.js").then((mod) => {
-    if (typeof mod.setUI !== "function") {
+  return import("/ui/setUI.js").then((mod) => {
+    if (typeof mod.setUI !== "function")
       throw new Error("launchTabViaSetUI: setUI export missing");
-    }
     mod.setUI(tabKey);
   });
-
 } // end launchTabViaSetUI

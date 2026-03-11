@@ -64,7 +64,9 @@ import {  drawLines, drawParabs, drawNodes, shortenArm,
 function createArms(thing, lines) {
   const arms = [];
   for (let i = 0; i < lines.length; i++) {
-    arms.push(ptsOnLine(thing, lines[i]));
+    let temp = ptsOnLine(thing,lines[i]);
+    arms.push(changeLine(temp, thing.truncate, thing.shorten));
+    // arms.push(ptsOnLine(thing, lines[i]));
   }
   return arms;
 }
@@ -181,8 +183,7 @@ function drawCircularParabola(thing) {
 
   let nodes = createNodes(thing);
   const linesInner = createLinesFromNodesMiddle(nodes, thing.midpoint);
-  const arms1 = createArms(thing, linesInner);
-
+  let arms1 = createArms(thing, linesInner);
   // ------------------------------------------------------------
   // Arms2: subdivide the circle perimeter into N arc-arms,
   // each with (numSteps + 1) points INCLUDING BOTH ENDPOINTS.

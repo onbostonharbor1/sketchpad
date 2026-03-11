@@ -1,32 +1,20 @@
-/* homeMenuCmds.js   (ui/home/homeMenuCmds.js)
+/* homeMenuCmds.js
    ============================================================
-   Home Tab Ã¢â‚¬â€ Caption Bar, Menu Commands, and Maintenance
+   Home Tab -- Caption Bar, Menu Commands, and Maintenance
    ============================================================
    Role:
-     Owns three related concerns that sit at the boundary between
-     the user's actions and the underlying data:
-
-     1. Caption bar Ã¢â‚¬â€ builds the caption for the Results view,
-        including the full file path display and the per-item
-        context menu (Show Script, Edit Manifest).
-
-     2. Menu command handlers Ã¢â‚¬â€ the functions invoked when the
-        user selects Show Script or Edit Manifest from the caption
-        context menu.
-
-     3. Commands offcanvas Ã¢â‚¬â€ the "Home Commands" maintenance panel,
-        including the Rebuild & Validate button and its post-rebuild
-        refresh sequence.
+     1. Caption bar -- builds the caption for the Results view,
+        including the full file path display and per-item context menu.
+     2. Menu command handlers -- Show Script, Edit Manifest.
+     3. Commands offcanvas -- the "Home Commands" maintenance panel.
 
    Architectural rules:
-     Ã¢â‚¬Â¢ Does NOT render category frames. homeNav.js.
-     Ã¢â‚¬Â¢ Does NOT display results. homeResults.js.
-     Ã¢â‚¬Â¢ Does NOT load the manifest. homeManifest.js.
-     Ã¢â‚¬Â¢ Does NOT own TabSpec, init(), or restore(). home.js.
-     Ã¢â‚¬Â¢ setHomeCaptionForResult() builds the bundle FRESH inside the
-       onMenu closure Ã¢â‚¬â€ never captures a stale closure reference.
-       This is important: if the user edits the manifest while
-       Results is visible, the next menu open must show current values.
+     * Does NOT render category frames. homeNav.js.
+     * Does NOT display results. homeResults.js.
+     * Does NOT load the manifest. homeManifest.js.
+     * Does NOT own TabSpec, init(), or restore(). home.js.
+     * setHomeCaptionForResult() builds the bundle FRESH inside the
+       onMenu closure -- never captures a stale closure reference.
 
    Exports:
      clearHomeCaption()
@@ -37,59 +25,40 @@
      wireHomeCommandsButton()
    ============================================================ */
 
-import { menuManager }              from "../menuManager.js";
-import { setCaptionBar }            from "../caption.js";
-import { showScriptOffcanvas }      from "../menuCmds.js";
-import { openEditManifestDialog }   from "../menuCmds.js";
+import { menuManager }                       from "/ui/menuManager.js";
+import { setCaptionBar }                     from "/ui/caption.js";
+import { openHelpHomeOverlay }               from "/ui/help.js";
+import { nodeRebuildAndValidateManifests }   from "/ui/nodeLayer.js";
 import {
+  showScriptOffcanvas,
+  openEditManifestDialog,
   makeHelpItem,
   makeShowScriptItem,
   makeEditManifestItem
-} from "../menuCmds.js";
-import { openHelpHomeOverlay }      from "../help.js";
-import { nodeRebuildAndValidateManifests } from "../nodeLayer.js";
+}                                            from "/ui/menuCmds.js";
 import {
   formatRebuildReportShared,
-  syncSystemStateAfterRebuild,
-  setCommandsButton,
   setCommandsButtonHandler,
   showCommandsOffcanvas
-} from "/ui/uiUtilities.js";
+}                                            from "/ui/uiUtilities.js";
 import { refreshHomeCategoriesFromManifestEdit } from "./homeManifest.js";
-import { isJsPath } from "./homeResults.js";
+import { isJsPath }                          from "./homeResults.js";
 
 
 /* ============================================================
    clearHomeCaption()
-   ============================================================
-   Empties the #caption region.
-
-   Called when entering the Categories view, where no item is
-   selected and the caption bar should be blank.
    ============================================================ */
 export function clearHomeCaption() {
-
   const el = document.getElementById("caption");
   if (!el) throw new Error("clearHomeCaption: #caption not found");
   el.innerHTML = "";
-
 } // end clearHomeCaption
 
 
 /* ============================================================
    setHomeCaption(titleText)
-   ============================================================
-   Builds a minimal caption bar with a title and no prev/next
-   or menu button.
-
-   Used during init as a placeholder caption and for any view
-   that does not require interactive caption elements.
-
-   Arguments:
-     titleText Ã¢â‚¬â€ the string to display as the caption title
    ============================================================ */
 export function setHomeCaption(titleText) {
-
   setCaptionBar({
     targetId: "caption",
     title:    titleText,
@@ -97,49 +66,27 @@ export function setHomeCaption(titleText) {
     onNext:   null,
     onMenu:   null
   });
-
 } // end setHomeCaption
 
 
 /* ============================================================
    setHomeCaptionForResult(entry)
-   ============================================================
-   Builds the full Results caption bar for the given entry.
-
-   The caption shows the entry title and a menu button. The full
-   rooted file path is also injected as a text span into the
-   caption button bar, to the left of the menu button.
-
-   The onMenu handler builds the info bundle FRESH each time
-   the menu is opened, reading from uiState.home.saved.activeEntry
-   rather than from the entry argument captured at construction
-   time. This ensures that if the user edits the manifest while
-   Results is still visible, the next menu open seeds the Edit
-   dialog with the correct current values.
-
-   Arguments:
-     entry Ã¢â‚¬â€ the active manifest entry object (must have .path)
    ============================================================ */
 export function setHomeCaptionForResult(entry) {
 
-  if (!entry)                   throw new Error("setHomeCaptionForResult: entry missing");
+  if (!entry)                    throw new Error("setHomeCaptionForResult: entry missing");
   if (typeof entry !== "object") throw new Error("setHomeCaptionForResult: entry must be an object");
 
   const title    = entry.title || entry.file || "(untitled)";
   const fullPath = entry.path  || "";
 
-  if (typeof fullPath !== "string" || !fullPath.length) {
+  if (typeof fullPath !== "string" || !fullPath.length)
     throw new Error("setHomeCaptionForResult: entry.path missing");
-  }
 
-  /* Ã¢â€â‚¬Ã¢â€â‚¬ Build the caption bar Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬ */
   setCaptionBar({
     targetId: "caption",
     title,
     onMenu: async (anchor) => {
-
-      /* Read the CURRENT active entry fresh on every menu open.
-         Never rely on the entry argument captured at construction. */
       const saved = uiState.home?.saved;
       if (!saved) throw new Error("setHomeCaptionForResult onMenu: uiState.home.saved missing");
 
@@ -147,11 +94,9 @@ export function setHomeCaptionForResult(entry) {
       if (!active) throw new Error("setHomeCaptionForResult onMenu: activeEntry missing");
 
       const activePath = active.path;
-      if (typeof activePath !== "string" || !activePath.length) {
+      if (typeof activePath !== "string" || !activePath.length)
         throw new Error("setHomeCaptionForResult onMenu: activeEntry.path missing");
-      }
 
-      /* Build the info bundle with current values from uiState. */
       const bundle = {
         tabName:      "home",
         manifestPath: "/home/manifest.json",
@@ -166,31 +111,22 @@ export function setHomeCaptionForResult(entry) {
 
       const items = await getHomeCaptionMenuItems(bundle);
       menuManager.open(items, anchor);
-
-    } // end onMenu
+    }
   });
 
-  /* Ã¢â€â‚¬Ã¢â€â‚¬ Inject the full path into .caption-buttons Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬ */
-  /* The path span is inserted to the left of the menu button
-     so the user can see exactly which file is being displayed. */
+  /* Inject the full path into .caption-buttons */
   const btnBar = document.querySelector("#caption .caption-buttons");
-  if (!btnBar) {
-    throw new Error("setHomeCaptionForResult: .caption-buttons not found");
-  }
+  if (!btnBar) throw new Error("setHomeCaptionForResult: .caption-buttons not found");
 
-  /* Remove any existing path span from a previous result. */
   const old = btnBar.querySelector(".home-caption-path");
   if (old) old.remove();
 
-  const span = document.createElement("span");
-  span.className  = "home-caption-path";
-  span.innerHTML  = fullPath + "&nbsp;&nbsp;";
+  const span       = document.createElement("span");
+  span.className   = "home-caption-path";
+  span.innerHTML   = fullPath + "&nbsp;&nbsp;";
 
-  /* Insert BEFORE the last button (the menu button). */
   const buttons = btnBar.querySelectorAll("button");
-  if (!buttons.length) {
-    throw new Error("setHomeCaptionForResult: no buttons in .caption-buttons");
-  }
+  if (!buttons.length) throw new Error("setHomeCaptionForResult: no buttons in .caption-buttons");
   btnBar.insertBefore(span, buttons[buttons.length - 1]);
 
 } // end setHomeCaptionForResult
@@ -198,20 +134,6 @@ export function setHomeCaptionForResult(entry) {
 
 /* ============================================================
    getHomeCaptionMenuItems(info)
-   ============================================================
-   Builds the array of menu item descriptors for the caption
-   context menu.
-
-   Menu items:
-     Show Script   Ã¢â‚¬â€ opens the script source offcanvas
-                     (disabled for non-script entries)
-     Edit Manifest Ã¢â‚¬â€ opens the manifest edit dialog
-
-   Arguments:
-     info Ã¢â‚¬â€ the bundle object built by setHomeCaptionForResult
-
-   Returns:
-     Array of menu item descriptors for menuManager.open()
    ============================================================ */
 export async function getHomeCaptionMenuItems(info) {
 
@@ -228,16 +150,6 @@ export async function getHomeCaptionMenuItems(info) {
 
 /* ============================================================
    editHomeManifestItem(homeItem)
-   ============================================================
-   Opens the Edit Manifest dialog for the active Home entry.
-   After a confirmed edit, triggers refreshHomeCategoriesFromManifestEdit()
-   to re-sync the UI with the updated manifest data.
-
-   The refresh function (in homeManifest.js) handles all decision
-   logic for whether to stay in Results or bounce to Categories.
-
-   Arguments:
-     homeItem Ã¢â‚¬â€ the info bundle from getHomeCaptionMenuItems
    ============================================================ */
 export async function editHomeManifestItem(homeItem) {
 
@@ -258,22 +170,15 @@ export async function editHomeManifestItem(homeItem) {
     allowClearStatus:  true
   });
 
-  /* User cancelled Ã¢â‚¬â€ no changes to apply. */
   if (!ok) return;
 
-  /* Re-sync the UI with the updated manifest. */
   await refreshHomeCategoriesFromManifestEdit();
 
 } // end editHomeManifestItem
 
 
-
-
 /* ============================================================
    buildHomeOffcanvasHtml()
-   ============================================================
-   Returns the HTML string for the Home Commands offcanvas body.
-   IDs here must match the selectors in wireHomeCommandsButton().
    ============================================================ */
 function buildHomeOffcanvasHtml() {
   return `
@@ -295,32 +200,16 @@ function buildHomeOffcanvasHtml() {
 
 /* ============================================================
    wireHomeCommandsButton()
-   ============================================================
-   Attaches the click handler to the shared Commands button so
-   that clicking it opens the Home Commands offcanvas.
-
-   Rebuild & Validate sequence:
-     1. Node rewrites all manifests on disk.
-     2. syncSystemStateAfterRebuild() wipes the central manifest
-        cache and marks all other tabs as needing a refresh.
-     3. initHomeTab(false) cold-starts the Home tab with fresh data.
-     4. The rebuild report is displayed in the offcanvas.
-
-   Called by:
-     initHomeTab()    Ã¢â‚¬â€ on cold start
-     restoreHomeTab() Ã¢â‚¬â€ on restore
    ============================================================ */
 export function wireHomeCommandsButton() {
 
   setCommandsButtonHandler(() => {
-
     showCommandsOffcanvas({
       title: "Home Maintenance",
       buildBody(offcanvasBodyEl) {
 
-        if (!offcanvasBodyEl) {
+        if (!offcanvasBodyEl)
           throw new Error("wireHomeCommandsButton buildBody: offcanvasBodyEl missing");
-        }
 
         offcanvasBodyEl.innerHTML = buildHomeOffcanvasHtml();
 
@@ -330,29 +219,20 @@ export function wireHomeCommandsButton() {
         const out = document.getElementById("homeRebuildReport");
         if (!out) throw new Error("wireHomeCommandsButton: #homeRebuildReport missing");
 
-        /* Ã¢â€â‚¬Ã¢â€â‚¬ Rebuild & Validate Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬ */
         btn.addEventListener("click", async () => {
-
           out.textContent = "Running Global Rebuild...";
 
-          /* 1. Server-side manifest maintenance. */
           const report = await nodeRebuildAndValidateManifests();
 
-          /* 2. Wipe central cache + mark all other tabs stale. */
+          const { syncSystemStateAfterRebuild } = await import("/ui/uiUtilities.js");
           await syncSystemStateAfterRebuild();
 
-          /* 3. Cold-start Home tab with fresh data.
-             Import dynamically to avoid circular reference
-             (home.js imports from this file). */
-          const { initHomeTab } = await import("../home.js");
+          const { initHomeTab } = await import("/ui/home/home.js");
           initHomeTab(false);
 
-          /* 4. Show the rebuild summary. */
           out.textContent = formatRebuildReportShared(report);
+        });
 
-        }); // end click
-
-        /* Ã¢â€â‚¬Ã¢â€â‚¬ Help Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬ */
         const helpBtn = document.getElementById("homeHelpButton");
         if (!helpBtn) throw new Error("wireHomeCommandsButton: #homeHelpButton missing");
 
@@ -362,11 +242,9 @@ export function wireHomeCommandsButton() {
           const oc = bootstrap.Offcanvas.getOrCreateInstance(panel);
           oc.hide();
           openHelpHomeOverlay();
-        }); // end click
-
-      } // end buildBody
+        });
+      }
     });
-
   });
 
 } // end wireHomeCommandsButton

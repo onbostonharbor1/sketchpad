@@ -8,7 +8,7 @@ import { uiState } from "/ui/uiState.js";
    Empties the core divs shared by all tabs.
 
    Arguments:
-     args Ã¢â‚¬â€œ optional string id of an extra div to clear in addition
+     args - optional string id of an extra div to clear in addition
 ------------------------------------------------------------ */
 function clearDivs(args = "") {
     // 1. Clear standard regions
@@ -108,7 +108,7 @@ export async function rebuildAllSystemCaches() {
 
   // 3. Clear Home's private grouping logic (Dynamic Import)
   try {
-    const homeMod = await import("./home.js");
+    const homeMod = await import("/ui/home/home.js");
     if (homeMod && typeof homeMod.clearHomeLocalState === "function") {
       homeMod.clearHomeLocalState();
     }
@@ -377,7 +377,7 @@ export function formatRebuildReportShared(report) {
   if (addedFiles.length) {
     lines.push("Added files:");
     for (const p of addedFiles) {
-      lines.push("Ã¢â‚¬Â¢ " + p);
+      lines.push("- " + p);
     }
     lines.push("");
   }
@@ -390,7 +390,7 @@ export function formatRebuildReportShared(report) {
   if (brokenFiles.length) {
     lines.push("Broken files:");
     for (const p of brokenFiles) {
-      lines.push("Ã¢â‚¬Â¢ " + p);
+      lines.push("- " + p);
     }
     lines.push("");
   }

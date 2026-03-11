@@ -1,27 +1,160 @@
 /* drawMenuCmds.js
-   ------------------------------------------------------------
-   ADAPTER ONLY:
-   - This file does NOT do canvas work.
-   - It derives context and dispatches to ui/menuCmds.js.
------------------------------------------------------------- */
+   ============================================================
+   Draw Tab -- Caption Bar, Menu Items, and Command Implementations
+   ============================================================
+   Role:
+     Owns everything related to building the caption bar,
+     constructing caption menu items, and implementing the
+     draw command actions (save, copy, reset, secondary objects,
+     maintenance offcanvas).
 
-import { addDrawSubtab } from "./draw/drawNav.js";
-import { drawActiveTab } from "./drawRunner.js";
-import { markTabClean } from "./draw/drawNav.js";
-import { DrawController } from "./draw.js";
-import { createGalleryPatternPng } from "./menuCmds.js";
-import { createPatternScript } from "./menuCmds.js";
-import { saveSecondary, archiveSecondary } from "./secondaryObjects.js";
-import { buildCanvasThumbnailBase64, setCommandsButtonHandler, showCommandsOffcanvas, formatRebuildReportShared } from "/ui/uiUtilities.js";
-import { uiState } from "/ui/uiState.js";
-import { openHelpHomeOverlay } from "./help.js";
-import { nodeRebuildAndValidateManifests } from "./nodeLayer.js";
+   Architectural rules:
+     * Does NOT own lifecycle (init/restore/save). Those live
+       in draw.js.
+     * Does NOT render draw objects or navigate. Those live in
+       draw/drawNav.js and drawRunner.js.
+     * Uses dynamic imports where needed to avoid circular
+       dependencies.
+
+   Exports:
+     updateDrawCaption(entry)
+     getDrawCaptionMenuItems(entry)
+     clearDrawCaption()
+     setDrawAction()
+     buildDrawMenuItems(menuContext)
+     createPngFromActiveDrawObject(menuContext)
+     createPatternFromActiveDrawObject(menuContext)
+     copyActiveDrawObject()
+     resetActiveDrawObject()
+     saveActiveDrawObjectAsSecondary(menuContext)
+     saveActiveSecondaryObject(menuContext)
+     archiveActiveSecondaryObject(menuContext)
+     wireDrawCommandsButton()
+   ============================================================ */
+
+import { menuManager }                from "/ui/menuManager.js";
+import { setCaptionBar }              from "/ui/caption.js";
+import { makeHelpItem }               from "/ui/menuCmds.js";
+import { createGalleryPatternPng }    from "/ui/menuCmds.js";
+import { createPatternScript }        from "/ui/menuCmds.js";
+import { saveSecondary, archiveSecondary } from "/ui/draw/secondaryObjects.js";
+import { uiState }                    from "/ui/uiState.js";
+import { openHelpHomeOverlay }        from "/ui/help.js";
+import { nodeRebuildAndValidateManifests } from "/ui/nodeLayer.js";
+import {
+  buildCanvasThumbnailBase64,
+  setCommandsButtonHandler,
+  showCommandsOffcanvas,
+  formatRebuildReportShared
+}                                     from "/ui/uiUtilities.js";
+
+
+/* ============================================================
+   updateDrawCaption(entry)
+   ------------------------------------------------------------
+   Builds the full caption bar for a draw object tab.
+   Title rule: entry.name
+   No prev/next -- Draw uses subtabs, not a linear list.
+   ============================================================ */
+export function updateDrawCaption(entry) {
+
+  if (!entry) {
+    clearDrawCaption();
+    return;
+  }
+
+  const title = entry.name || "(untitled)";
+
+  setCaptionBar({
+    targetId: "caption",
+    title,
+
+    // No onPrev / onNext -- Draw tab navigation is via subtabs.
+
+    onMenu: async (anchor) => {
+      const menuItems = await getDrawCaptionMenuItems(entry);
+      menuManager.open(menuItems, anchor);
+    }
+  });
+
+} // end updateDrawCaption
+
+
+/* ============================================================
+   getDrawCaptionMenuItems(entry)
+   ------------------------------------------------------------
+   Always present:
+     Help, Save as PNG, Save as Pattern, Copy Object,
+     Reset Parameters
+
+   Primary object only (no info.secondary):
+     Save as Secondary
+
+   Secondary object only (info.secondary present):
+     Save Secondary, Archive Secondary
+   ============================================================ */
+export async function getDrawCaptionMenuItems(entry) {
+
+  const tabId = uiState.draw.activeSubtab;
+  const info  = uiState.draw.tabs?.[tabId];
+
+  const menuContext = {
+    id:       entry.id       || entry.name,
+    category: entry.category || "uncategorized"
+  };
+
+  const items = [
+    await makeHelpItem("draw", null),
+    {
+      label:    "Save as PNG",
+      disabled: false,
+      onClick:  () => createPngFromActiveDrawObject(menuContext)
+    },
+    {
+      label:    "Save as Pattern",
+      disabled: false,
+      onClick:  () => createPatternFromActiveDrawObject(menuContext)
+    },
+    {
+      label:    "Copy Object",
+      disabled: false,
+      onClick:  () => copyActiveDrawObject()
+    },
+    {
+      label:    "Reset Parameters",
+      disabled: false,
+      onClick:  () => resetActiveDrawObject()
+    }
+  ];
+
+  if (info?.secondary) {
+    items.push(
+      {
+        label:    "Save Secondary",
+        disabled: false,
+        onClick:  () => saveActiveSecondaryObject(menuContext)
+      },
+      {
+        label:    "Archive Secondary",
+        disabled: false,
+        onClick:  () => archiveActiveSecondaryObject(menuContext)
+      }
+    );
+  } else {
+    items.push({
+      label:    "Save as Secondary",
+      disabled: false,
+      onClick:  () => saveActiveDrawObjectAsSecondary(menuContext)
+    });
+  }
+
+  return items;
+
+} // end getDrawCaptionMenuItems
 
 
 /* ============================================================
    clearDrawCaption()
-   ------------------------------------------------------------
-   Empties the #caption region for the Draw tab.
    ============================================================ */
 export function clearDrawCaption() {
   const el = document.getElementById("caption");
@@ -30,22 +163,9 @@ export function clearDrawCaption() {
 
 
 /* ============================================================
-   setDrawCaption(entry)
-   ------------------------------------------------------------
-   Populates the #caption region with the draw object's name.
-   ============================================================ */
-export function setDrawCaption(entry) {
-  const el = document.getElementById("caption");
-  if (!el) return;
-  if (!entry) { el.innerHTML = ""; return; }
-  el.textContent = entry.name || "";
-} // end setDrawCaption
-
-
-/* ============================================================
    setDrawAction()
    ------------------------------------------------------------
-   No-op placeholder — parameter controls are injected directly
+   No-op placeholder -- parameter controls are injected directly
    by the draw object's own init()/render().
    ============================================================ */
 export function setDrawAction() {
@@ -58,32 +178,36 @@ export function setDrawAction() {
 /* ============================================================
    buildDrawMenuItems(menuContext)
    ------------------------------------------------------------
-   Returns menu item descriptors for the Draw tab commands panel.
+   Legacy descriptor format used by older callers.
+   New code should use getDrawCaptionMenuItems() instead.
    ============================================================ */
 export function buildDrawMenuItems(menuContext) {
   if (!menuContext) return [];
 
   return [
     {
-      label: "Save as PNG",
+      label:  "Save as PNG",
       action: () => createPngFromActiveDrawObject(menuContext)
     },
     {
-      label: "Save as Pattern",
+      label:  "Save as Pattern",
       action: () => createPatternFromActiveDrawObject(menuContext)
     },
     {
-      label: "Copy Object",
+      label:  "Copy Object",
       action: () => copyActiveDrawObject()
     },
     {
-      label: "Reset Parameters",
+      label:  "Reset Parameters",
       action: () => resetActiveDrawObject()
     }
   ];
 } // end buildDrawMenuItems
 
 
+/* ============================================================
+   createPatternFromActiveDrawObject(menuContext)
+   ============================================================ */
 export async function createPatternFromActiveDrawObject(menuContext) {
 
   if (!menuContext) throw new Error("createPatternFromActiveDrawObject: menuContext missing");
@@ -91,20 +215,17 @@ export async function createPatternFromActiveDrawObject(menuContext) {
   const category = menuContext.category;
   const idName   = menuContext.id;
 
-  if (typeof category !== "string" || category.trim() === "") {
+  if (typeof category !== "string" || category.trim() === "")
     throw new Error("createPatternFromActiveDrawObject: menuContext.category missing/invalid");
-  }
 
-  if (typeof idName !== "string" || idName.trim() === "") {
+  if (typeof idName !== "string" || idName.trim() === "")
     throw new Error("createPatternFromActiveDrawObject: menuContext.id missing/invalid");
-  }
 
   const tabId = uiState.draw.activeSubtab;
   const info  = uiState.draw.tabs[tabId];
 
-  if (!info || info.type !== "object") {
+  if (!info || info.type !== "object")
     throw new Error("createPatternFromActiveDrawObject: active draw tab is not an object tab");
-  }
 
   const entry = info.drawRegistry;
   if (!entry) throw new Error("createPatternFromActiveDrawObject: drawRegistry entry missing");
@@ -112,34 +233,28 @@ export async function createPatternFromActiveDrawObject(menuContext) {
   const params = info.parameters;
   if (!params) throw new Error("createPatternFromActiveDrawObject: active parameters missing");
 
-  await createPatternScript({
-    category: category,
-    idName:   idName,
-    entry:    entry,
-    params:   params
-  });
+  await createPatternScript({ category, idName, entry, params });
 
 } // end createPatternFromActiveDrawObject
 
 
+/* ============================================================
+   copyActiveDrawObject()
+   ============================================================ */
 export function copyActiveDrawObject() {
+
   const tabId = uiState.draw.activeSubtab;
-  const info = uiState.draw.tabs[tabId];
+  const info  = uiState.draw.tabs[tabId];
   if (!info || info.type !== "object") return;
 
-  const entry = info.drawRegistry;
-
+  const entry     = info.drawRegistry;
   const newParams = structuredClone(info.parameters);
-
-  const baseName = entry.name.replace(/\s*\(Copy.*\)$/i, "").trim();
+  const baseName  = entry.name.replace(/\s*\(Copy.*\)$/i, "").trim();
 
   const existing = Object.values(uiState.draw.tabs)
-    .filter(
-      (t) =>
-        t.type === "object" &&
-        t.drawRegistry &&
-        t.drawRegistry.name &&
-        t.drawRegistry.name.startsWith(baseName)
+    .filter((t) =>
+      t.type === "object" &&
+      t.drawRegistry?.name?.startsWith(baseName)
     )
     .map((t) => t.drawRegistry.name);
 
@@ -152,38 +267,33 @@ export function copyActiveDrawObject() {
     }
   });
 
-  const newName =
-    nextNumber === 1
-      ? `${baseName} (Copy)`
-      : `${baseName} (Copy ${nextNumber})`;
+  const newName = nextNumber === 1
+    ? `${baseName} (Copy)`
+    : `${baseName} (Copy ${nextNumber})`;
 
-  const newItem = {
-    name: newName,
-    entry: {
-      ...entry,
-      name: newName,
-      params: newParams
-    }
-  };
+  import("/ui/draw/drawNav.js").then((m) => {
+    m.addDrawSubtab({ name: newName, entry: { ...entry, name: newName, params: newParams } });
+  });
 
-  addDrawSubtab(newItem);
 } // end copyActiveDrawObject
 
 
+/* ============================================================
+   resetActiveDrawObject()
+   ============================================================ */
 export async function resetActiveDrawObject() {
+
   const tabId = uiState.draw.activeSubtab;
-  const info = uiState.draw.tabs[tabId];
+  const info  = uiState.draw.tabs[tabId];
   if (!info || info.type !== "object") return;
 
   const oldEntry = info.drawRegistry;
-
   const key = Object.keys(window.drawRegistry).find(
     (k) => window.drawRegistry[k] === oldEntry
   );
   if (!key) throw new Error("Reset: registry key not found");
 
   const modulePath = `/drawRegistry/${key}.js`;
-
   delete window.drawRegistry[key];
 
   await import(/* @vite-ignore */`${modulePath}?t=${Date.now()}`);
@@ -193,23 +303,27 @@ export async function resetActiveDrawObject() {
     window[`drawRegistry_${key}`] ||
     window[`drawRegistry_${key.replace(/^drawRegistry_/, "")}`];
 
-  if (!newEntry)
-    throw new Error("Reset: module reimport did not recreate entry");
+  if (!newEntry) throw new Error("Reset: module reimport did not recreate entry");
 
   window.drawRegistry[key] = newEntry;
-
-  info.drawRegistry = newEntry;
-  info.parameters = newEntry.params;
+  info.drawRegistry  = newEntry;
+  info.parameters    = newEntry.params;
 
   newEntry.init();
-
   info.dirty = false;
-  DrawController.markTabClean(tabId);
 
+  const { markTabClean } = await import("/ui/draw/drawNav.js");
+  markTabClean(tabId);
+
+  const { drawActiveTab } = await import("/ui/drawRunner.js");
   drawActiveTab();
+
 } // end resetActiveDrawObject
 
 
+/* ============================================================
+   createPngFromActiveDrawObject(menuContext)
+   ============================================================ */
 export async function createPngFromActiveDrawObject(menuContext) {
 
   if (!menuContext) throw new Error("createPngFromActiveDrawObject: menuContext missing");
@@ -217,31 +331,26 @@ export async function createPngFromActiveDrawObject(menuContext) {
   const category = menuContext.category;
   const idName   = menuContext.id;
 
-  if (typeof category !== "string" || category.trim() === "") {
+  if (typeof category !== "string" || category.trim() === "")
     throw new Error("createPngFromActiveDrawObject: menuContext.category missing/invalid");
-  }
 
-  if (typeof idName !== "string" || idName.trim() === "") {
+  if (typeof idName !== "string" || idName.trim() === "")
     throw new Error("createPngFromActiveDrawObject: menuContext.id missing/invalid");
-  }
 
   const canvas = window.drawCanvas;
   if (!canvas) throw new Error("createPngFromActiveDrawObject: window.drawCanvas missing");
 
-  await createGalleryPatternPng({
-    category: category,
-    idName:   idName,
-    canvas:   canvas
-  });
+  await createGalleryPatternPng({ category, idName, canvas });
 
 } // end createPngFromActiveDrawObject
 
 
-/* ===========================================================
+/* ============================================================
    Secondary Object Commands
-=========================================================== */
+   ============================================================ */
 
 export async function saveActiveDrawObjectAsSecondary(menuContext) {
+
   const tabId = uiState.draw.activeSubtab;
   const info  = uiState.draw.tabs[tabId];
   if (!info) return;
@@ -250,33 +359,32 @@ export async function saveActiveDrawObjectAsSecondary(menuContext) {
   if (!name) return;
 
   const primaryId = menuContext.registryKey || menuContext.id;
-
-  const entry = info.drawRegistry;
+  const entry     = info.drawRegistry;
 
   const payload = {
-    name: name,
-    id: primaryId,
-    version: entry.version,
-    category: entry.category,
-    firstOrder: false,
-    source: "secondary",
-    tags: entry.tags || [],
+    name,
+    id:          primaryId,
+    version:     entry.version,
+    category:    entry.category,
+    firstOrder:  false,
+    source:      "secondary",
+    tags:        entry.tags        || [],
     description: entry.description || "",
-    params: info.parameters
+    params:      info.parameters
   };
 
   const canvas = window.drawCanvas;
   if (!canvas) throw new Error("saveActiveDrawObjectAsSecondary: window.drawCanvas missing");
 
   const thumbBase64 = buildCanvasThumbnailBase64(canvas, 50, 50);
-
   await saveSecondary(primaryId, name, payload, thumbBase64);
-
   alert("Secondary object created.");
+
 } // end saveActiveDrawObjectAsSecondary
 
 
 export async function saveActiveSecondaryObject(menuContext) {
+
   const tabId = uiState.draw.activeSubtab;
   const info  = uiState.draw.tabs[tabId];
 
@@ -285,37 +393,36 @@ export async function saveActiveSecondaryObject(menuContext) {
     return;
   }
 
-  const sec = info.secondary;
-  const primaryId = sec.primaryId;
-  const name = sec.name;
-
+  const { primaryId, name } = info.secondary;
   const entry = info.drawRegistry;
 
   const payload = {
-    name: name,
-    id: primaryId,
-    version: entry.version,
-    category: entry.category,
-    firstOrder: false,
-    source: "secondary",
-    tags: entry.tags || [],
+    name,
+    id:          primaryId,
+    version:     entry.version,
+    category:    entry.category,
+    firstOrder:  false,
+    source:      "secondary",
+    tags:        entry.tags        || [],
     description: entry.description || "",
-    params: info.parameters
+    params:      info.parameters
   };
 
-  const canvas = window.drawCanvas;
+  const canvas      = window.drawCanvas;
   const thumbBase64 = buildCanvasThumbnailBase64(canvas, 50, 50);
-
   await saveSecondary(primaryId, name, payload, thumbBase64);
 
   info.dirty = false;
-  DrawController.markTabClean(tabId);
+  const { markTabClean } = await import("/ui/draw/drawNav.js");
+  markTabClean(tabId);
 
   alert("Saved.");
+
 } // end saveActiveSecondaryObject
 
 
 export async function archiveActiveSecondaryObject(menuContext) {
+
   const tabId = uiState.draw.activeSubtab;
   const info  = uiState.draw.tabs[tabId];
   if (!info || !info.secondary) return;
@@ -323,18 +430,15 @@ export async function archiveActiveSecondaryObject(menuContext) {
   if (!confirm("Are you sure you want to archive this secondary object?")) return;
 
   await archiveSecondary(info.secondary.primaryId, info.secondary.filename);
-
   delete info.secondary;
   await resetActiveDrawObject();
-
   alert("Archived.");
+
 } // end archiveActiveSecondaryObject
 
 
 /* ============================================================
    wireDrawCommandsButton()
-   ------------------------------------------------------------
-   Wires the Commands button handler for the Draw tab.
    ============================================================ */
 export function wireDrawCommandsButton() {
 
@@ -376,7 +480,7 @@ export function wireDrawCommandsButton() {
             const { syncSystemStateAfterRebuild } = await import("/ui/uiUtilities.js");
             await syncSystemStateAfterRebuild();
 
-            const { initDrawTab } = await import("./draw.js");
+            const { initDrawTab } = await import("/ui/draw/draw.js");
             await initDrawTab(true);
 
             reportDiv.textContent = formatRebuildReportShared(report);

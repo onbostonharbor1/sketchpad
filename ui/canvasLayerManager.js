@@ -149,20 +149,23 @@ export function initCanvasLayers() {
      name            — registered layer name
      referenceCanvas — the <canvas> to match dimensions against
    ============================================================ */
+export function syncLayerToCanvas(name, referenceCanvas) {
+  const layer = canvasLayerManager.get(name);
 
-   /* canvasLayerManager.js */
+  // 1. Sync CSS Display Size
+  layer.style.position = "absolute";
+  layer.style.left = "0px";
+  layer.style.top = "0px";
+  layer.style.width = referenceCanvas.width + "px";
+  layer.style.height = referenceCanvas.height + "px";
+  layer.style.pointerEvents = "none";
+  layer.style.display = "block";
 
-   export function syncLayerToCanvas(name, referenceCanvas) {
-
-    const layer = canvasLayerManager.get(name);
-
-    layer.innerHTML    = "";
-    layer.style.position  = "absolute";
-    layer.style.left      = "0px";
-    layer.style.top       = "0px";
-    layer.style.width     = referenceCanvas.width + "px";
-    layer.style.height    = referenceCanvas.height + "px";
-    layer.style.pointerEvents = "none";
-    layer.style.display   = "block";
-
-  } // end syncLayerToCanvas
+  // 2. Sync Internal Drawing Buffer (Safely)
+  // Only update if the size actually differs to prevent
+  // wiping the canvas pixels continuously on every redraw.
+  if (layer.width !== referenceCanvas.width || layer.height !== referenceCanvas.height) {
+    layer.width = referenceCanvas.width;
+    layer.height = referenceCanvas.height;
+  }
+} // end syncLayerToCanvas

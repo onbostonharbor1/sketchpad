@@ -62,16 +62,11 @@ window.drawRegistry_cycloid = {
 
     update(incoming) {
         const s = this.elements.thing;
-
         for (const key in incoming) {
-            const value = incoming[key];
+            const value = incoming[key];   // ← add this line
             if (value === undefined) continue;
-            if (key === "radius") {
-                s.ellipse.a = incoming[key]*2;
-                s.ellipse.b = incoming[key]*2;
-            }
+
             if (key === "points") {
-                // Update internal midpoint from interactive point handle
                 const p = this.params.points[0];
                 s.midpoint.x = p.x;
                 s.midpoint.y = p.y;

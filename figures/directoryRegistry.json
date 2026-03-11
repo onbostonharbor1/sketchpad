@@ -1,7 +1,3 @@
-{
-    "TestCategory": {
-      "name": "Test Category",
-      "directory": "TestCategory",
-      "description": "A collection of test figures for development."
-    }
-  }
+[
+    "TestCategory"
+]

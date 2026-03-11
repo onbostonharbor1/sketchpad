@@ -1,0 +1,364 @@
+<!doctype html>
+
+<html lang="en">
+
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Help Treatise — Coding Simplicity</title>
+  <link rel="stylesheet" href="/help/help_treatise.css" />
+</head>
+
+<body>
+
+  <h1>Coding Simplicity</h1>
+
+  <p>
+    This document describes a philosophy of simplicity for code written in Sketchpad,
+    derived from working sessions between Barry and Claude.
+    It exists because Claude's trained instincts tend toward complexity —
+    frameworks, derived quantities, general machinery —
+    and this document is intended to be read at the start of a session
+    to orient Claude toward a simpler way of working.
+  </p>
+
+  <p>
+    The core principle is: <strong>code should reflect the idea directly,
+    not the machinery needed to produce the output.</strong>
+  </p>
+
+  <hr />
+
+  <h2>Part 1 — The Central Pattern</h2>
+
+  <p>
+    Almost every simplification in practice comes down to one distinction:
+  </p>
+
+  <ul>
+    <li><strong>Claude's instinct:</strong> compute a value from a formula.</li>
+    <li><strong>Barry's instinct:</strong> start at a point and increment.</li>
+  </ul>
+
+  <p>
+    When seeding points on a grid, Claude reaches for:
+  </p>
+
+  <pre>x = xLeft + (xRight - xLeft) * i / (M - 1)</pre>
+
+  <p>
+    Barry replaces this with:
+  </p>
+
+  <pre>for (let x = x0; pts.length &lt; M; x += dx) pts.push(x);</pre>
+
+  <p>
+    The formula computes each position independently from derived bounds.
+    The increment just adds a delta to the previous value.
+    The increment version is shorter, more readable, and makes the
+    structure of the thing visible at a glance.
+    It also makes parameters obvious: the only things that matter are
+    the starting point and the delta — not a left bound, a right bound,
+    and a count all held together.
+  </p>
+
+  <div class="note">
+    <strong>Rule:</strong> When building a sequence of evenly spaced values,
+    always choose increment-from-start over formula-from-bounds.
+    The starting point and the delta are the natural parameters.
+    Everything else is derived and should not appear in the code.
+  </div>
+
+  <hr />
+
+  <h2>Part 2 — Don't Build the General Machinery</h2>
+
+  <p>
+    Claude's instinct when faced with a pattern is to build the general case first.
+    Barry's instinct is to name the actual patterns directly.
+  </p>
+
+  <h3>Example: Sliding window vs. named triplet types</h3>
+
+  <p>
+    When building parabola triplets from a grid of points,
+    Claude's approach was to build an intermediate sequence array
+    and slide a window of 3 across it:
+  </p>
+
+  <pre>const seq = [];
+for (let j = 0; j &lt; M; j++) {
+  seq.push(pt(extRow, j));
+  if (j &lt; M - 1) seq.push(pt(bandRow, j));
+}
+for (let k = 0; k &lt; seq.length - 2; k++)
+  triplets.push([seq[k], seq[k+1], seq[k+2]]);</pre>
+
+  <p>
+    Barry recognized that the sliding window only ever produces two shapes:
+  </p>
+
+  <ul>
+    <li><strong>Type A:</strong> <span class="mono">[ext[j], band[j], ext[j+1]]</span> — apex on band row</li>
+    <li><strong>Type B:</strong> <span class="mono">[band[j], ext[j+1], band[j+1]]</span> — apex on exterior row</li>
+  </ul>
+
+  <p>
+    The simpler version names these directly:
+  </p>
+
+  <pre>/* Type A: apex on band row */
+for (let j = 0; j &lt; M - 1; j++)
+  triplets.push([pt(extRow, j), pt(bandRow, j), pt(extRow, j+1)]);
+
+/* Type B: apex on exterior row */
+for (let j = 0; j &lt; M - 2; j++)
+  triplets.push([pt(bandRow, j), pt(extRow, j+1), pt(bandRow, j+1)]);</pre>
+
+  <p>
+    No intermediate array. No window. The geometry is visible in the code.
+  </p>
+
+  <div class="note">
+    <strong>Rule:</strong> Before building general machinery (sequences, windows, indices),
+    ask: what are the actual things being produced?
+    Name them directly. The general machinery is often hiding two or three
+    simple cases that can be stated plainly.
+  </div>
+
+  <hr />
+
+  <h2>Part 3 — Don't Compute What You Can Choose</h2>
+
+  <p>
+    A related instinct in Claude is to derive parameters from other parameters.
+    Barry's approach is to choose the primitive directly and let everything else follow.
+  </p>
+
+  <h3>Example: Grid layout</h3>
+
+  <p>
+    When seeding a grid of points, Claude computed the grid dimensions from
+    <span class="mono">radius</span>, <span class="mono">midpointX</span>, and <span class="mono">midpointY</span>:
+  </p>
+
+  <pre>const xLeft  = cx - r / 2;
+const xRight = cx + r / 2;
+const topX = Array.from({ length: M }, (_, i) =>
+  xLeft + (xRight - xLeft) * i / (M - 1)
+);</pre>
+
+  <p>
+    Barry replaced this with: choose a top-left corner and a delta.
+  </p>
+
+  <pre>const x0 = 100, y0 = 50;
+const dx = params.width * params.scale;
+const dy = params.height * params.scale;</pre>
+
+  <p>
+    Everything else falls out from these four values.
+    There is no derived left bound, right bound, or center.
+    The consequence is that adding width, height, and scale controls
+    is a trivial change — you just expose the primitives that were
+    already there. In the original version, it would have required
+    rethinking the entire coordinate derivation.
+  </p>
+
+  <div class="note">
+    <strong>Rule:</strong> Expose primitives, not derived quantities.
+    If a parameter is computed from two others, ask whether those two
+    others are the more natural controls. Parameters should be the
+    things you actually want to adjust, not the things the formula needs.
+  </div>
+
+  <hr />
+
+  <h2>Part 4 — Don't Create Points You Don't Use</h2>
+
+  <p>
+    Claude's first grid implementation stored a full
+    <span class="mono">(2N-1) × (2M-1)</span> rectangular grid —
+    every intersection of exterior and band rows and columns.
+    Only half of those points were ever referenced in the parabola triplets.
+    The other half appeared as ghost drag handles with no geometry attached.
+  </p>
+
+  <p>
+    The fix was to recognize that exterior rows and band rows have
+    different x sequences:
+  </p>
+
+  <ul>
+    <li>Exterior rows: <span class="mono">x0, x0+dx, x0+2dx, ...</span> (M values)</li>
+    <li>Band rows: <span class="mono">x0+dx/2, x0+3dx/2, ...</span> (M-1 values, the midpoints)</li>
+  </ul>
+
+  <p>
+    Once that structure was explicit, <span class="mono">_seed</span> became:
+  </p>
+
+  <pre>for (let i = 0, y = y0; i &lt; 2*N-1; i++, y += dy) {
+  const xs = (i % 2 === 0) ? extX : bandX;
+  xs.forEach(x => params.points.push({ x, y }));
+}</pre>
+
+  <p>
+    Every point stored is a point used. No orphans.
+  </p>
+
+  <div class="note">
+    <strong>Rule:</strong> Only create what is needed.
+    If points, intermediate arrays, or objects are created but not all used,
+    that is a sign the structure does not match the actual geometry.
+    Find the structure that matches, and the unused elements disappear.
+  </div>
+
+  <hr />
+
+  <h2>Part 5 — The Working Method</h2>
+
+  <p>
+    The simplifications above do not happen automatically.
+    They require a particular way of working together.
+  </p>
+
+  <h3>Think before writing</h3>
+
+  <p>
+    Claude should describe its intended approach before writing any code.
+    Barry will often stop it here and redirect toward the simpler version.
+    This is more efficient than writing code and then simplifying it.
+  </p>
+
+  <h3>Ask: what is it really?</h3>
+
+  <p>
+    When Claude proposes a structure, Barry often responds with
+    "not quite" and restates the thing more directly.
+    The correct response to this is not to add another layer of abstraction —
+    it is to ask: what is the actual thing being described?
+    Usually the answer is smaller and more direct than what Claude proposed.
+  </p>
+
+  <h3>Small steps, verified</h3>
+
+  <p>
+    Each change is small and verified before the next one is made.
+    This is not just about coding comfort — it preserves architectural ownership.
+    When each step is understood before the next begins,
+    the person writing the code understands every line of it.
+  </p>
+
+  <h3>Eliminate, don't guard</h3>
+
+  <p>
+    When a block of code is wrong, remove it entirely.
+    Do not add a conditional guard around it.
+    Guarded-but-wrong code accumulates and obscures the structure.
+  </p>
+
+  <div class="note">
+    <strong>Rule:</strong> The goal is code where the idea is visible.
+    If you have to explain why a block of code is there,
+    the code is probably not simple enough yet.
+  </div>
+
+  <hr />
+
+  <h2>Part 6 — Before/After Reference</h2>
+
+  <p>
+    The following pairs show Claude's instinct alongside the simpler replacement.
+    When Claude notices it is about to write something in the left column,
+    it should stop and find the right column version instead.
+  </p>
+
+  <table style="border-collapse:collapse; width:100%; margin: 12px 0;">
+    <thead>
+      <tr>
+        <th style="text-align:left; padding:8px; border-bottom:2px solid #ddd; width:50%">Claude's instinct</th>
+        <th style="text-align:left; padding:8px; border-bottom:2px solid #ddd; width:50%">Simpler replacement</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td style="padding:8px; border-bottom:1px solid #eee; vertical-align:top">
+          Compute position from formula using derived bounds
+        </td>
+        <td style="padding:8px; border-bottom:1px solid #eee; vertical-align:top">
+          Start at a point, increment by delta
+        </td>
+      </tr>
+      <tr>
+        <td style="padding:8px; border-bottom:1px solid #eee; vertical-align:top">
+          Build intermediate sequence array, slide window of 3
+        </td>
+        <td style="padding:8px; border-bottom:1px solid #eee; vertical-align:top">
+          Name the two triplet types, push directly
+        </td>
+      </tr>
+      <tr>
+        <td style="padding:8px; border-bottom:1px solid #eee; vertical-align:top">
+          Store full rectangular grid of all intersections
+        </td>
+        <td style="padding:8px; border-bottom:1px solid #eee; vertical-align:top">
+          Store only the points that are actually used
+        </td>
+      </tr>
+      <tr>
+        <td style="padding:8px; border-bottom:1px solid #eee; vertical-align:top">
+          Expose radius, midpointX, midpointY as controls
+        </td>
+        <td style="padding:8px; border-bottom:1px solid #eee; vertical-align:top">
+          Expose width, height, scale — the actual primitives
+        </td>
+      </tr>
+      <tr>
+        <td style="padding:8px; border-bottom:1px solid #eee; vertical-align:top">
+          Add a conditional guard around wrong code
+        </td>
+        <td style="padding:8px; border-bottom:1px solid #eee; vertical-align:top">
+          Remove the wrong code entirely
+        </td>
+      </tr>
+      <tr>
+        <td style="padding:8px; border-bottom:1px solid #eee; vertical-align:top">
+          Build the general case first
+        </td>
+        <td style="padding:8px; border-bottom:1px solid #eee; vertical-align:top">
+          Name the actual cases that exist and state them plainly
+        </td>
+      </tr>
+      <tr>
+        <td style="padding:8px; border-bottom:1px solid #eee; vertical-align:top">
+          Write code, then simplify
+        </td>
+        <td style="padding:8px; border-bottom:1px solid #eee; vertical-align:top">
+          Describe approach first, think before writing
+        </td>
+      </tr>
+    </tbody>
+  </table>
+
+  <hr />
+
+  <h2>Summary</h2>
+
+  <p>
+    Simplicity in this codebase is not a style preference — it is a structural property.
+    Code that reflects the idea directly is easier to change, easier to debug,
+    and easier to extend. The joinedParabs example demonstrates this concretely:
+    adding width, height, and scale controls to the final version was a three-line change
+    because the primitives were already explicit. The same change to the original version
+    would have required rethinking the entire coordinate system.
+  </p>
+
+  <p>
+    The discipline required is: stop before building, ask what the thing really is,
+    and find the version where the answer is visible in the code.
+  </p>
+
+</body>
+
+</html>

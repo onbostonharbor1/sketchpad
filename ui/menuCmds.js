@@ -67,7 +67,7 @@ export async function archiveItem(specOrPayload) {
     { manifestPath, filename }
   );
 
-  // Default success alert (restores yesterdayÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢s behavior)
+  // Default success alert (restores yesterday's behavior)
   const showAlert = (spec.showAlert !== false);
   if (showAlert) {
     alert("Archived: " + filename);
@@ -166,7 +166,7 @@ function validateEditManifestSpec(spec) {
 } // end validateEditManifestSpec
 
 /* ============================================================
-    buildEditManifestHtml ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â TABLE LAYOUT (REFINED)
+    buildEditManifestHtml - TABLE LAYOUT (REFINED)
 =========================================================== */
 function buildEditManifestHtml(spec) {
 
@@ -258,7 +258,7 @@ function buildEditManifestHtml(spec) {
 
 
 /* ============================================================
-    wireEditManifestHandlers ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â UPDATED (NO UseCustom BUTTON)
+    wireEditManifestHandlers - UPDATED (NO UseCustom BUTTON)
 =========================================================== */
 function wireEditManifestHandlers(spec, resolve) {
 

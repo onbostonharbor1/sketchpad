@@ -10,10 +10,21 @@
     "title": "curveStitch.js"
   },
   {
+    "filename": "joinedParabs",
+    "path": "joinedParabs.js",
+    "title": "joinedParabs.js",
+    "status": "new"
+  },
+  {
     "filename": "manyJoinedParabs",
     "path": "manyJoinedParabs.js",
     "title": "Many Joined Parabs",
-    "status": "favorite"
+    "status": "fix"
+  },
+  {
+    "filename": "manyRowsColumns",
+    "path": "manyRowsColumns.js",
+    "title": "manyRowsColumns.js"
   },
   {
     "filename": "ovalBoat",

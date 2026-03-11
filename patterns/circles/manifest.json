@@ -1,18 +1,20 @@
 [
   {
-    "filename": "cycloid0209_152200",
-    "path": "cycloid0209_152200.js",
-    "title": "ACycloid"
-  },
-  {
     "filename": "armsInCircles",
     "path": "armsInCircles.js",
-    "title": "armsInCircles.js"
+    "title": "armsInCircles.js",
+    "status": "fix"
   },
   {
     "filename": "circle",
     "path": "circle.js",
-    "title": "circle.js"
+    "title": "Circle too high",
+    "status": "fix"
+  },
+  {
+    "filename": "cycloid0209_152200",
+    "path": "cycloid0209_152200.js",
+    "title": "Cycloid long name"
   },
   {
     "filename": "cycloid",
@@ -45,29 +47,15 @@
     "title": "ellipseStartEnd.js"
   },
   {
-    "filename": "gradientCircularParabola",
-    "path": "gradientCircularParabola.js",
-    "title": "Gradient Circular Parabola"
-  },
-  {
-    "filename": "inEllipse0209_144740",
-    "path": "inEllipse0209_144740.js",
-    "title": "inEllipse0209_144740.js"
-  },
-  {
-    "filename": "inEllipse0209_145236",
-    "path": "inEllipse0209_145236.js",
-    "title": "inEllipse0209_145236.js"
-  },
-  {
-    "filename": "inEllipse0209_145550",
-    "path": "inEllipse0209_145550.js",
-    "title": "inEllipse0209_145550.js"
-  },
-  {
     "filename": "linesInThree",
     "path": "linesInThree.js",
     "title": "linesInThree.js"
+  },
+  {
+    "filename": "gradientCircularParabola",
+    "path": "gradientCircularParabola.js",
+    "title": "Red Gradient Circular Parabola",
+    "status": "fix"
   },
   {
     "filename": "skippingNegative",
@@ -88,12 +76,12 @@
     "filename": "twoEllipses",
     "path": "twoEllipses.js",
     "title": "Two Ellipses",
-    "status": "To Gallery"
+    "status": "fix"
   },
   {
     "filename": "whirlsInCircle",
     "path": "whirlsInCircle.js",
     "title": "Whirls In Circle",
-    "status": "To Gallery"
+    "status": "fix"
   }
 ]

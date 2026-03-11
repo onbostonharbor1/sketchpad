@@ -1,0 +1,315 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>parabola.js — Analysis</title>
+  <style>
+    /* help_treatise.css inline */
+    body {
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+      margin: 24px;
+      line-height: 1.35;
+    }
+    h1, h2, h3 { margin: 18px 0 10px; }
+    h1 { font-size: 1.6rem; }
+    h2 {
+      font-size: 1.25rem;
+      border-top: 1px solid #ddd;
+      padding-top: 14px;
+      margin-top: 22px;
+    }
+    h3 { font-size: 1.05rem; margin-top: 18px; }
+    code, pre {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+      font-size: 0.92em;
+    }
+    pre {
+      background: #f6f6f7;
+      border: 1px solid #e3e3e6;
+      padding: 12px;
+      overflow: auto;
+    }
+    ul { margin: 8px 0 10px 22px; }
+    li { margin: 4px 0; }
+    .note  { background: #fffbe6; border: 1px solid #f2d36b; padding: 10px 12px; }
+    .warn  { background: #fff0f0; border: 1px solid #e0a0a0; padding: 10px 12px; }
+    .ok    { background: #eefaf0; border: 1px solid #9ad0a6; padding: 10px 12px; }
+    .small { font-size: 0.95em; color: #333; }
+    .indent { margin-left: 18px; }
+    .hr { height: 1px; background: #ddd; margin: 14px 0; }
+    .mono {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+    }
+
+    /* table styles */
+    table {
+      border-collapse: collapse;
+      width: 100%;
+      margin: 12px 0;
+      font-size: 0.93em;
+    }
+    th {
+      background: #f0f0f2;
+      border: 1px solid #ccc;
+      padding: 7px 10px;
+      text-align: left;
+    }
+    td {
+      border: 1px solid #ddd;
+      padding: 6px 10px;
+      vertical-align: top;
+    }
+    tr:nth-child(even) td { background: #fafafa; }
+  </style>
+</head>
+<body>
+
+<h1>parabola.js — Analysis</h1>
+<p class="small">drawRegistry entry · <code>id: "parabola"</code> · <code>version: 2.0</code> · category: <code>fundamental</code></p>
+
+<p>
+  A production-ready drawRegistry primitive that renders a <em>stitched parabola</em> —
+  a classic string-art construction where evenly-spaced points along two line segments
+  are connected by straight lines, creating the visual illusion of a parabolic curve.
+  The entry is fully interactive: six drag handles on the canvas allow real-time
+  reshaping of both arm lines.
+</p>
+
+<!-- ============================================================ -->
+<h2>File Structure at a Glance</h2>
+
+<table>
+  <tr><th>Section</th><th>What it does</th></tr>
+  <tr><td><code>name / id / version / category</code></td><td>Registry metadata. <code>firstOrder: true</code> means it appears at the top of the draw category listing.</td></tr>
+  <tr><td><code>background / overlays / transforms</code></td><td>Declared but unused here. <code>overlays: []</code> — the interactive layer is handled externally by <code>interactor.js</code>, not via this array.</td></tr>
+  <tr><td><code>params</code></td><td>All mutable state: four line-endpoint coords, truncate/shorten sliders, color, lineWidth, and the shared <code>points[]</code> array used by the interactor.</td></tr>
+  <tr><td><code>controls</code></td><td>Widget descriptors consumed by the parameter controls UI. Defines range sliders for trim/shorten/width and a color picker.</td></tr>
+  <tr><td><code>init()</code></td><td>One-time setup: builds Line and StringThing objects, populates the six drag handles.</td></tr>
+  <tr><td><code>update(incoming)</code></td><td>Processes drags from the interaction layer and slider/style changes from the UI.</td></tr>
+  <tr><td><code>draw()</code></td><td>Single delegation call: <code>drawAParab(thing, l1, l2)</code>.</td></tr>
+</table>
+
+<!-- ============================================================ -->
+<h2>Imports</h2>
+
+<pre>import { Line, Point, StringThing } from "../classes/classes.js";
+import { drawAParab }               from "../draw/drawRegular.js";</pre>
+
+<ul>
+  <li><code>Line</code> — represents one of the two parabola arms; provides midpoint, moveMidpointTo, setStart/setEnd.</li>
+  <li><code>Point</code> — lightweight <code>{ x, y }</code> wrapper with an <code>isSame()</code> comparison method.</li>
+  <li><code>StringThing</code> — style + trim container passed to the drawing function.</li>
+  <li><code>drawAParab</code> — the actual rendering algorithm; operates on the two Line objects and the StringThing.</li>
+</ul>
+
+<!-- ============================================================ -->
+<h2>params — The State Object</h2>
+
+<table>
+  <tr><th>Key</th><th>Type</th><th>Role</th></tr>
+  <tr><td><code>line1_pt1 / line1_pt2</code></td><td><code>{ x, y }</code></td><td>Endpoints of the first arm line.</td></tr>
+  <tr><td><code>line2_pt1 / line2_pt2</code></td><td><code>{ x, y }</code></td><td>Endpoints of the second arm line.</td></tr>
+  <tr><td><code>truncate</code></td><td>Number (0–20)</td><td>Trims stitching lines from the bottom of the parabola.</td></tr>
+  <tr><td><code>shorten</code></td><td>Number (0–20)</td><td>Trims stitching lines from the top.</td></tr>
+  <tr><td><code>color</code></td><td>String (hex)</td><td>Stroke color passed to the StringThing.</td></tr>
+  <tr><td><code>lineWidth</code></td><td>Number (0.5–4)</td><td>Stroke width passed to the StringThing.</td></tr>
+  <tr><td><code>points</code></td><td>Array (6 objects)</td><td>Shared drag handles. Mutated in-place by the interactor. Layout: <code>[s1, e1, m1, s2, e2, m2]</code>.</td></tr>
+</table>
+
+<div class="note">
+  <strong>points[] layout:</strong> indices 0–2 correspond to line 1 (start, end, midpoint);
+  indices 3–5 correspond to line 2.  The midpoint handles (2 and 5) are <em>derived</em>
+  — they are not independent geometry; they move the entire line when dragged.
+</div>
+
+<!-- ============================================================ -->
+<h2>init()</h2>
+
+<p>Called once when the drawing is first loaded or reset. Three responsibilities:</p>
+
+<ol>
+  <li><strong>Clear handles:</strong> <code>p.points.length = 0</code> drops old handle objects so stale references can't leak across reload cycles.</li>
+  <li><strong>Build master geometry:</strong> constructs <code>Line</code> and <code>StringThing</code> instances from current params, stored in <code>this.elements</code>.</li>
+  <li><strong>Populate handles:</strong> pushes six <code>{ x, y }</code> objects into <code>p.points</code>. The midpoints at index 2 and 5 are computed from <code>l.midpoint()</code>.</li>
+</ol>
+
+<pre>const m1 = l1.midpoint();
+p.points.push({ x: p.line1_pt1.x, y: p.line1_pt1.y }); // [0] start
+p.points.push({ x: p.line1_pt2.x, y: p.line1_pt2.y }); // [1] end
+p.points.push({ x: m1.x, y: m1.y });                   // [2] midpoint (derived)</pre>
+
+<div class="ok">
+  Storing geometry in <code>this.elements</code> rather than rebuilding it on every
+  <code>draw()</code> call means the Line objects persist across frames — important
+  because <code>update()</code> calls mutating methods on them directly.
+</div>
+
+<!-- ============================================================ -->
+<h2>update(incoming)</h2>
+
+<p>
+  Handles two entirely different kinds of change in a single method,
+  dispatched on whether <code>incoming.points</code> is present.
+</p>
+
+<h3>Branch 1 — Interactive drags (incoming.points truthy)</h3>
+
+<p>
+  The interactor mutates the <code>points[]</code> array directly before calling
+  <code>update()</code>. The method must decide which handle was moved and
+  reconcile the Line object. It applies <strong>midpoint-first priority</strong>:
+</p>
+
+<pre>const incomingMid1 = new Point(p.points[2].x, p.points[2].y);
+if (!incomingMid1.isSame(l1.midpoint())) {
+    l1.moveMidpointTo(incomingMid1);   // translate whole line
+} else {
+    l1.setStart(new Point(p.points[0].x, p.points[0].y));
+    l1.setEnd  (new Point(p.points[1].x, p.points[1].y));
+}</pre>
+
+<p>
+  Because all three handles (start, end, midpoint) are draggable simultaneously,
+  the check disambiguates intent: if the midpoint moved, it was a translation drag —
+  the endpoints are recalculated by the Line. If the midpoint is unchanged, an
+  endpoint was dragged and the line is reshaped.
+</p>
+
+<p>
+  After resolving geometry, a <strong>double sync</strong> is performed:
+</p>
+<ul>
+  <li><code>p.line1_pt1 = { x: s1.x, y: s1.y }</code> — keeps serializable params current.</li>
+  <li><code>p.points[0].x = s1.x; p.points[0].y = s1.y</code> — keeps visual handles accurate after a midpoint-driven translation.</li>
+</ul>
+
+<div class="warn">
+  <strong>In-place mutation is mandatory.</strong> The interactor holds direct object
+  references into <code>p.points[]</code>. Replacing array slots with new objects
+  (<code>p.points[0] = { x, y }</code>) would break those references — the interactor
+  would render its handles at stale positions. Always mutate <code>.x</code> / <code>.y</code>
+  on the existing objects.
+</div>
+
+<h3>Branch 2 — Slider and style changes</h3>
+
+<pre>for (const [key, val] of Object.entries(incoming)) {
+    if (key === "lineWidth") { thing.lineWidth = p.lineWidth = Number(val); }
+    else if (key === "shorten")  { thing.shorten  = p.shorten  = Number(val); }
+    else if (key === "truncate") { thing.truncate = p.truncate = Number(val); }
+    else if (key in thing)       { thing[key] = p[key] = val; }
+}</pre>
+
+<p>
+  A generic loop avoids a long if/else chain for color and other future style params.
+  Numeric coercion (<code>Number(val)</code>) is applied explicitly to the three
+  slider-driven properties since widget values arrive as strings.
+</p>
+
+<!-- ============================================================ -->
+<h2>draw()</h2>
+
+<pre>draw() {
+    const { l1, l2, thing } = this.elements;
+    drawAParab(thing, l1, l2);
+}</pre>
+
+<p>
+  Intentionally minimal. All logic lives in <code>init</code> and <code>update</code>;
+  <code>draw()</code> is a pure delegation. This means it can be called repeatedly
+  (e.g., on every animation frame or slider change) without side effects.
+</p>
+
+<!-- ============================================================ -->
+<h2>The Overlay / Interaction Layer</h2>
+
+<p>
+  <code>parabola.js</code> declares <code>overlays: []</code> — it does <em>not</em>
+  use the DOM overlay system. Instead, interactivity comes from a dedicated canvas
+  layer managed by <code>interactor.js</code>.
+</p>
+
+<h3>How armInteractor works</h3>
+
+<table>
+  <tr><th>Step</th><th>What happens</th></tr>
+  <tr><td>1. <code>armInteractor(instance)</code> called</td><td>Disarms any previous interactor, then reads <code>instance.params.points</code>.</td></tr>
+  <tr><td>2. <code>activatePointPicker(points, config)</code></td><td>Sizes the <code>"interaction"</code> canvas to match <code>window.drawCanvas</code>, makes it visible and pointer-events-active.</td></tr>
+  <tr><td>3. Initial render</td><td>Draws six red dots (LEGO Bright Red) with white stroke over the canvas at the handle positions.</td></tr>
+  <tr><td>4. Mouse events (window-scoped)</td><td>mousedown finds the nearest handle within <code>hitTolerance: 10px</code>. mousemove mutates <code>points[draggedIndex].x/y</code> and calls <code>onUpdate()</code>. mouseup releases the drag.</td></tr>
+  <tr><td>5. <code>onUpdate()</code></td><td>Calls <code>instance.update(instance.params)</code>, then triggers a redraw via <code>instance.redrawHandler</code> or the active tab's handler.</td></tr>
+  <tr><td>6. <code>disarmInteractor()</code></td><td>Aborts the AbortController (removes all three listeners), clears the interaction canvas, hides it.</td></tr>
+</table>
+
+<h3>Signal-guarded render</h3>
+<pre>function render() {
+    if (signal.aborted) return;  // ghost-draw guard
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    // ...draw handles...
+}</pre>
+
+<p>
+  Without this guard, a slider change arriving after <code>disarmInteractor()</code>
+  could invoke a queued <code>render()</code> call that repaints handles on a
+  canvas that is supposed to be empty. The abort check prevents that.
+</p>
+
+<h3>Hover and active states</h3>
+<table>
+  <tr><th>State</th><th>Color</th><th>Value</th></tr>
+  <tr><td>Idle</td><td>LEGO Bright Red</td><td><code>#C91A09</code></td></tr>
+  <tr><td>Hovered or dragging</td><td>LEGO Bright Orange</td><td><code>#FE8A18</code></td></tr>
+  <tr><td>Stroke (all)</td><td>White</td><td><code>white</code>, 1.5px</td></tr>
+</table>
+
+<!-- ============================================================ -->
+<h2>Data Flow Summary</h2>
+
+<pre>
+User drags handle
+  └─ interactor mutates points[i].x / points[i].y
+  └─ calls onUpdate()
+       └─ parabola.update(params)          // params.points already mutated
+            ├─ midpoint-first priority logic
+            ├─ l1/l2 Line objects updated
+            └─ double-sync back to params + points[]
+       └─ redrawHandler()
+            └─ parabola.draw()
+                 └─ drawAParab(thing, l1, l2)
+
+User moves slider
+  └─ UI calls parabola.update({ shorten: 5 })
+       └─ assigns to thing.shorten + p.shorten
+  └─ redrawHandler()
+       └─ parabola.draw()
+</pre>
+
+<!-- ============================================================ -->
+<h2>Design Strengths</h2>
+
+<table>
+  <tr><th>Aspect</th><th>Notes</th></tr>
+  <tr><td>Lifecycle compliance</td><td>Clean <code>init / update / draw</code> separation. Each method has a single responsibility.</td></tr>
+  <tr><td>Reference stability</td><td>In-place mutation of <code>points[]</code> objects preserves the interactor's array bindings across frames.</td></tr>
+  <tr><td>Midpoint disambiguation</td><td>Priority logic correctly handles all three draggable handles without ambiguity.</td></tr>
+  <tr><td>Thin draw method</td><td><code>draw()</code> is a pure delegation — idempotent, no state side effects.</td></tr>
+  <tr><td>Generic style loop</td><td>Avoids per-property branches for every future style addition.</td></tr>
+  <tr><td>Separated concerns</td><td>Interaction layer entirely external — <code>parabola.js</code> knows nothing about event listeners or canvas layers.</td></tr>
+  <tr><td>AbortController cleanup</td><td>All three event listeners removed in one <code>controller.abort()</code> call — no leaks on script switch.</td></tr>
+</table>
+
+<!-- ============================================================ -->
+<h2>One Architectural Note</h2>
+
+<div class="warn">
+  <code>params.points</code> serves dual duty: it is both the interactor's shared
+  mutable state <em>and</em> a serializable param field. If this entry is ever
+  serialized to JSON and restored, <code>points[]</code> should be re-derived from
+  the four <code>line*_pt*</code> params (as <code>init()</code> already does) rather
+  than restoring the saved <code>points[]</code> directly. Restoring raw handle
+  positions would bypass the midpoint-derivation step and could leave the six handles
+  inconsistent with the actual line geometry.
+</div>
+
+</body>
+</html>

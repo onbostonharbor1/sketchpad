@@ -1,6 +1,6 @@
 /* figuresMenuCmds.js
    ============================================================
-   Figures Tab — Caption Bar and Menu Items
+   Figures Tab -- Caption Bar and Menu Items
    ============================================================
    Role:
      Owns everything related to building the caption bar and
@@ -10,11 +10,11 @@
      reset order, archive, edit manifest, show script).
 
    Architectural rules:
-     • Does NOT own lifecycle (init/restore/save). Those live
+     * Does NOT own lifecycle (init/restore/save). Those live
        in figures.js.
-     • Does NOT render figures or navigate. Those live in
+     * Does NOT render figures or navigate. Those live in
        figuresDisplay.js and figuresNav.js.
-     • Uses dynamic imports for runner functions to avoid
+     * Uses dynamic imports for runner functions to avoid
        circular dependencies.
 
    Exports:
@@ -25,61 +25,41 @@
      editFigureManifestItem(info)
    ============================================================ */
 
-import { setCaptionBar }          from "../caption.js";
-import { menuManager }            from "../menuManager.js";
-import { manifest }               from "../manifest.js";
-import { archiveItem }            from "../menuCmds.js";
-import { showScriptOffcanvas }    from "../menuCmds.js";
-import { openEditManifestDialog } from "../menuCmds.js";
+import { setCaptionBar }          from "/ui/caption.js";
+import { menuManager }            from "/ui/menuManager.js";
+import { manifest }               from "/ui/manifest.js";
 import {
+  archiveItem,
+  showScriptOffcanvas,
+  openEditManifestDialog,
   makeHelpItem,
   makeShowScriptItem,
   makeEditManifestItem,
   makeArchiveItem
-} from "../menuCmds.js";
+}                                 from "/ui/menuCmds.js";
 
 
 /* ============================================================
    setFiguresCaption(name, context)
-   ============================================================
-   Builds the caption bar for the figures tab.
-
-   Arguments:
-     name    — Display name for the caption (default: "Figures")
-     context — Optional context object:
-               { figureId, name, path, manifestPath,
-                 matchField, matchValue, helpKey, scriptPath }
-               If provided, enables the menu button.
    ============================================================ */
 export function setFiguresCaption(name = "Figures", context = null) {
+
   const config = {
     targetId: "caption",
-    title: name,
-    onMenu: context ? async (anchor) => {
+    title:    name,
+    onMenu:   context ? async (anchor) => {
       const items = await getFiguresCaptionMenuItems(context);
       menuManager.open(items, anchor);
     } : null
   };
+
   setCaptionBar(config);
+
 } // end setFiguresCaption
 
 
 /* ============================================================
    getFiguresCaptionMenuItems(info)
-   ============================================================
-   Returns menu items for the figures caption menu.
-
-   Arguments:
-     info = {
-       figureId:     <string>
-       name:         <string>
-       path:         <string>  — script path (for Reset Order)
-       scriptPath:   <string>  — same as path, for Show Script
-       manifestPath: <string>  — path to the manifest.json
-       matchField:   <string>  — field to match in manifest
-       matchValue:   <string>  — value to match
-       helpKey:      <string>  — optional help file key
-     }
    ============================================================ */
 export async function getFiguresCaptionMenuItems(info) {
 
@@ -99,8 +79,6 @@ export async function getFiguresCaptionMenuItems(info) {
 
 /* ============================================================
    makeResetOrderItem(info)
-   ============================================================
-   Returns a Reset Order menu item — figures-specific.
    ============================================================ */
 function makeResetOrderItem(info) {
   return {
@@ -109,7 +87,7 @@ function makeResetOrderItem(info) {
     tooltip:  "Reload figure and reset all overlays to default order",
     onClick:  async () => {
       if (info.path && info.figureId) {
-        const { runFigureScript } = await import("../figuresRunner.js");
+        const { runFigureScript } = await import("/ui/figuresRunner.js");
         runFigureScript(info.path, info.figureId);
       }
     }
@@ -119,8 +97,6 @@ function makeResetOrderItem(info) {
 
 /* ============================================================
    makeSaveItem(info)
-   ============================================================
-   Returns a Save menu item — figures-specific.
    ============================================================ */
 function makeSaveItem(info) {
   return {
@@ -134,14 +110,6 @@ function makeSaveItem(info) {
 
 /* ============================================================
    archiveFigureItem(info)
-   ============================================================
-   Confirms with the user then archives the active figure via
-   the shared archiveItem command.
-
-   After archiving, navigates back to the figures category list.
-
-   Arguments:
-     info — { name, manifestPath, matchField, matchValue }
    ============================================================ */
 export async function archiveFigureItem(info) {
 
@@ -154,11 +122,9 @@ export async function archiveFigureItem(info) {
     showAlert: false
   });
 
-  /* Clear stale manifest cache. */
-  if (manifest.cache) delete manifest.cache.figures;
+  manifest.clearCache();
 
-  /* Navigate back to the figures category list. */
-  const { initFiguresTab } = await import("../figures.js");
+  const { initFiguresTab } = await import("/ui/figures/figures.js");
   await initFiguresTab(false);
 
 } // end archiveFigureItem
@@ -166,12 +132,6 @@ export async function archiveFigureItem(info) {
 
 /* ============================================================
    editFigureManifestItem(info)
-   ============================================================
-   Opens the Edit Manifest dialog for the active figure and,
-   if confirmed, refreshes the figures tab.
-
-   Arguments:
-     info — { manifestPath, matchField, matchValue, name }
    ============================================================ */
 export async function editFigureManifestItem(info) {
 
@@ -186,7 +146,7 @@ export async function editFigureManifestItem(info) {
     matchField:        String(info.matchField),
     matchValue:        String(info.matchValue),
     fileLabel:         String(info.name || info.matchValue),
-    initialTitle:      String(info.name  || ""),
+    initialTitle:      String(info.name   || ""),
     initialStatus:     String(info.status || ""),
     statusPresets:     ["new", "working", "current", "favorite"],
     allowCustomStatus: true,
@@ -195,10 +155,9 @@ export async function editFigureManifestItem(info) {
 
   if (!ok) return;
 
-  /* Clear stale cache and restore. */
-  if (manifest.cache) delete manifest.cache.figures;
+  manifest.clearCache();
 
-  const { restoreFiguresTab } = await import("../figures.js");
+  const { restoreFiguresTab } = await import("/ui/figures/figures.js");
   await restoreFiguresTab();
 
 } // end editFigureManifestItem
@@ -206,16 +165,13 @@ export async function editFigureManifestItem(info) {
 
 /* ============================================================
    saveFigureState(context)
-   ============================================================
-   Saves the current figure overlay configuration as a
-   downloadable JSON file.
    ============================================================ */
 export async function saveFigureState(context) {
 
-  const { getActiveOverlays } = await import("../figuresRunner.js");
+  const { getActiveOverlays } = await import("/ui/figuresRunner.js");
 
-  const overlays = getActiveOverlays();
-  const saveData = {
+  const overlays  = getActiveOverlays();
+  const saveData  = {
     figureId:  context.figureId,
     timestamp: Date.now(),
     overlays:  overlays.map(o => {

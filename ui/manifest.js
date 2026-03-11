@@ -1,25 +1,25 @@
 /* ui/manifest.js
    ------------------------------------------------------------
-   ManifestManager Ã¢â‚¬â€ New Architecture (Generic Loader)
+   ManifestManager --  New Architecture (Generic Loader)
    ------------------------------------------------------------
    Responsibilities:
-     Ã¢â‚¬Â¢ Given a basedir string (e.g. "patterns", "gallery/Ideabook"),
+     - Given a basedir string (e.g. "patterns", "gallery/Ideabook"),
        load manifest data using fileLayer.path helpers.
 
-     Ã¢â‚¬Â¢ If ../<basedir>/directoryRegistry.json exists:
+     - If ../<basedir>/directoryRegistry.json exists:
          - Load it as an array of category names.
          - For each category, load:
              ../<basedir>/<category>/manifest.json
          - Return an array-of-arrays:
              [ itemsForCat0, itemsForCat1, ... ]
 
-     Ã¢â‚¬Â¢ Else if ../<basedir>/manifest.json exists:
+     - Else if ../<basedir>/manifest.json exists:
          - Load it as a flat array and return that array.
 
-     Ã¢â‚¬Â¢ Else:
+     - Else:
          - Return [].
 
-     Ã¢â‚¬Â¢ All results are cached per basedir.
+     - All results are cached per basedir.
 
    This module knows NOTHING about:
      - tabs
@@ -34,7 +34,7 @@ import { fileLayer } from "./fileLayer.js";
 export class ManifestManager {
 
   constructor() {
-    // Cache: basedir Ã¢â€ â€™ data (array or array-of-arrays)
+    // Cache: basedir --  data (array or array-of-arrays)
     this.cache = {};
 
     // Optional: store directoryRegistry arrays per basedir
@@ -129,7 +129,7 @@ export class ManifestManager {
         return drawData;
     }
 
-    // 3) No directoryRegistry Ã¢â€ â€™ try flat manifest.json
+    // 3) No directoryRegistry --  try flat manifest.json
     const flatPath   = fileLayer.path.flatManifest(basedir);
     const hasFlat    = await fileLayer.exists(flatPath);
 
@@ -146,7 +146,7 @@ export class ManifestManager {
       return data;
     }
 
-    // 4) Nothing exists Ã¢â€ â€™ empty
+    // 4) Nothing exists --  empty
     console.timeEnd(`ManifestManager.get(${basedir})`);
     this.cache[basedir] = [];
     return [];

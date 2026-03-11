@@ -3,11 +3,11 @@
    Category Rendering System (Final Architecture)
    ------------------------------------------------------------
    Responsibilities:
-     Ã¢â‚¬Â¢ Render category frames using a single universal descriptor
+     - Render category frames using a single universal descriptor
        format supplied by tabs.
-     Ã¢â‚¬Â¢ ZERO knowledge of manifests, tabs, patterns, gallery, etc.
-     Ã¢â‚¬Â¢ Fail-fast on invalid descriptor structure.
-     Ã¢â‚¬Â¢ Purely a DOM builder.
+     - ZERO knowledge of manifests, tabs, patterns, gallery, etc.
+     - Fail-fast on invalid descriptor structure.
+     - Purely a DOM builder.
 
    Descriptor Format (required):
      [
@@ -37,8 +37,8 @@
    Render an array of category frames into the specified target
    container.
 
-   targetId   Ã¢â‚¬â€œ DOM id of the container (e.g., "text")
-   descriptor Ã¢â‚¬â€œ array of category frames, each containing:
+   targetId   - DOM id of the container (e.g., "text")
+   descriptor - array of category frames, each containing:
                   title: string
                   items: [ { name, onClick, hasSubitems? }, ... ]
 ============================================================ */
@@ -182,10 +182,10 @@ export function renderCategories(targetId, descriptor) {
    Arguments:
      groups      - Object with category names as keys, arrays as values
                    e.g. { "Curves": [...], "Polygons": [...] }
-     
+
      itemLabelFn - Function that extracts the display name from an entry
                    e.g. (entry) => entry.title || entry.filename
-     
+
      onClickFn   - Function called when an item is clicked
                    Receives: (categoryName, sortedList, entry, index)
                    This signature allows access to both the category
@@ -349,7 +349,7 @@ export function clearCategoryFrame(targetId) {
    buildCategoryFrame(targetId)
    ------------------------------------------------------------
    Utility: create outer #categories wrapper manually.
-   Rarely used Ã¢â‚¬â€ included for completeness.
+   Rarely used -- included for completeness.
 ============================================================ */
 export function buildCategoryFrame(targetId) {
   const container = document.getElementById(targetId);
