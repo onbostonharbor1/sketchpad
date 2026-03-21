@@ -15,6 +15,7 @@ import { setButtonControl } from "../widgets/buttonWidget.js";
 import { setStaticTextControl, setDefaultControl } from "../widgets/textWidget.js";
 import { setAccordionControl } from "../widgets/accordionWidget.js";
 import { setThumbnailGridControl } from "../widgets/thumbnailWidget.js";
+import { setNumberControl }        from "../widgets/numberWidget.js";
 
 export function renderParameterControls(
   sourceInfo,
@@ -242,6 +243,10 @@ export function buildSingleControl(info, key, def, value, tabId) {
     // case "pointPickerArray":
     //   setPointPickerArrayControl(field, label, def, value, info, key, tabId);
     //   break;
+
+    case "number":
+      setNumberControl(field, label, def, value, info, key, tabId);
+      break;
 
     case "color":
     case "colorPicker":

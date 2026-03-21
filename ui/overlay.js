@@ -84,8 +84,12 @@ export function initOverlay() {
     const overlayPanel = document.getElementById("overlayPanel");
     if (!overlayPanel) throw new Error("initOverlay: #overlayPanel missing");
 
-    // Remove any per-overlay sizing class (safe even if not present)
+    // Remove any per-overlay sizing class and inline styles (safe even if not present)
     overlayPanel.classList.remove("helpBrowserPanel");
+    overlayPanel.style.width    = "";
+    overlayPanel.style.height   = "";
+    overlayPanel.style.maxWidth = "";
+    overlayPanel.style.maxHeight = "";
 
     document.getElementById("overlayContainer").style.display = "none";
     overlayManager.clearAll();  // panel overlays only

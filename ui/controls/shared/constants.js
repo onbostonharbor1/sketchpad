@@ -21,7 +21,8 @@ export const WIDGET_TYPES = {
   ACCORDION: "accordion",
   THUMBNAIL_GRID: "thumbnailGrid",
   POINT_PICKER: "pointPicker",
-  POINT_PICKER_ARRAY: "pointPickerArray"
+  POINT_PICKER_ARRAY: "pointPickerArray",
+  NUMBER: "number"
 };
 
 export const CONTROL_CLASSES = {
@@ -42,5 +43,6 @@ export const CONTROL_CLASSES = {
   ACCORDION_WRAP: "ctrl-accordion-wrap",
   ACCORDION_ITEM: "ctrl-accordion-item",
   ACCORDION_SEP: "ctrl-accordion-sep",
-  THUMBNAIL_GRID: "ctrl-thumbnail-grid"
+  THUMBNAIL_GRID: "ctrl-thumbnail-grid",
+  NUMBER: "ctrl-number"
 };

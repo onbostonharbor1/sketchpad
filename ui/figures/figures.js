@@ -25,6 +25,11 @@
 
 import { setCommandsButtonLabel }    from "/ui/uiUtilities.js";
 import {
+  setFiguresCaption,
+  openCreateFigureDialog,
+  wireFiguresCommandsButton
+}                                    from "/ui/figures/figuresMenuCmds.js";
+import {
   resetFiguresState,
   setCurrentTabId
 }                                    from "/ui/figures/figuresState.js";
@@ -35,7 +40,6 @@ import {
   switchToFigureTab
 }                                    from "/ui/figures/figuresNav.js";
 import { loadFiguresCategories }     from "/ui/figures/figuresDisplay.js";
-import { setFiguresCaption }         from "/ui/figures/figuresMenuCmds.js";
 import { initFigureOverlays }        from "/ui/figuresUI.js";
 import { initFiguresInteraction }    from "/ui/figuresRunner.js";
 
@@ -72,6 +76,9 @@ export function initFiguresTab(restored = false) {
     };
   }
 
+  setCommandsButtonLabel("Figures Commands");
+  wireFiguresCommandsButton();
+
   setFiguresAction();
   setFiguresSubtabs();
   setFiguresCaption();
@@ -105,8 +112,23 @@ export function initFiguresTab(restored = false) {
    ============================================================ */
 
 function setFiguresAction() {
-  const el = document.getElementById("action");
-  if (el) el.innerHTML = "Select an overlay to view controls.";
+  /* Append Create Figure button into #button below Commands.
+     Guard against double-adding on restore.                  */
+  if (document.getElementById("createFigureButton")) return;
+
+  const buttonDiv = document.getElementById("button");
+  if (!buttonDiv) return;
+
+  buttonDiv.appendChild(document.createElement("br"));
+
+  const btn = document.createElement("button");
+  btn.id          = "createFigureButton";
+  btn.className   = "cmdButton";
+  btn.type        = "button";
+  btn.textContent = "Create Figure";
+  btn.onclick     = openCreateFigureDialog;
+  buttonDiv.appendChild(btn);
+
 } // end setFiguresAction
 
 function setFiguresText() {

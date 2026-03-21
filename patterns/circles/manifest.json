@@ -54,8 +54,7 @@
   {
     "filename": "gradientCircularParabola",
     "path": "gradientCircularParabola.js",
-    "title": "Red Gradient Circular Parabola",
-    "status": "fix"
+    "title": "Red Gradient Circular Parabola"
   },
   {
     "filename": "skippingNegative",

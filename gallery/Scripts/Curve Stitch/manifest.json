@@ -2,7 +2,8 @@
   {
     "filename": "arcsAndInner",
     "path": "arcsAndInner.js",
-    "title": "Arcs and Inner"
+    "title": "Arcs and Inner",
+    "status": "fix"
   },
   {
     "filename": "curveStitch",

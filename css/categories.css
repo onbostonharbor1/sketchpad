@@ -68,6 +68,11 @@
   background-color: #e8f0fe;
 } /* end .item:hover */
 
+.item.active {
+  background-color: var(--theme-base) !important;
+  color: #fff !important;
+} /* end .item.active */
+
 /* Optional chevron icon (for future offcanvas use) */
 .item i.bi {
   font-size: 0.9rem;
