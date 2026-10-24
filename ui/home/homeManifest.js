@@ -49,6 +49,11 @@ export function loadHomeManifest() {
 
 /* ============================================================
    loadHomeManifest_async()
+   ============================================================
+   Home's manifest is a flat array at /home/manifest.json with
+   no directoryRegistry.json. It bypasses manifest.get() to
+   avoid the directoryRegistry probe, and stores directly into
+   manifest.cache["home"] so invalidate("home") can clear it.
    ============================================================ */
 export async function loadHomeManifest_async() {
 
@@ -105,7 +110,7 @@ export function groupHomeEntriesByStatus(list) {
    ============================================================ */
 export async function refreshHomeCategoriesFromManifestEdit() {
 
-  manifest.clearCache();
+  manifest.invalidate("home");
 
   await loadHomeManifest_async();
 

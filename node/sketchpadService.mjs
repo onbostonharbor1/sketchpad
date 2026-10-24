@@ -43,6 +43,7 @@
 import fs   from "fs";
 import path from "path";
 import { runManifestMaintenance } from "./maintain_manifests.mjs";
+import { createFigure }           from "./createFigureService.mjs";
 
 
 /* ===========================================================
@@ -88,6 +89,9 @@ case "manifestMaintenance":
 
     case "writePatternThumbnail":
       return await writePatternThumbnail(payload);
+
+    case "createFigure":
+      return await createFigure(payload);
 
     case "editManifestEntry":
       return await editManifestEntry(payload);
@@ -223,26 +227,48 @@ export async function editManifestEntry(payload = {}) {
       newStatus
     });
 
-    // Mirror the change into ./home/manifest.json so the Home tab
-    // stays consistent without requiring a full rebuild.
-    let homeIndexUpdated = -1;
+    // Mirror the change into ./home/manifest.json.
+    // Home only tracks status-bearing entries, so we must handle
+    // three cases: add (newly has status), update (status changed),
+    // remove (status cleared).
+    let homeMirrorResult = "skipped";
     try {
-      const manifestDir  = path.dirname(manifestPath);
-      const editedList   = readJsonFileSync(manifestPath);
-      const editedEntry  = editedList[report.indexUpdated];
-      const rootedPath   = makeRootedPath(manifestDir, editedEntry);
-      console.log("editManifestEntry: mirror rootedPath =", rootedPath);
+      const editedList  = readJsonFileSync(manifestPath);
+      const editedEntry = editedList[report.indexUpdated];
+      const rootedPath  = makeRootedPath(path.dirname(manifestPath), editedEntry);
 
-      const homeReport = editManifestEntryInSingleFile({
-        manifestPath: homeManifestPath,
-        matchField:   "path",
-        matchValue:   rootedPath,
-        newTitle,
-        newStatus
-      });
-      homeIndexUpdated = homeReport.indexUpdated;
+      if (fs.existsSync(homeManifestPath)) {
+        const homeList  = readJsonFileSync(homeManifestPath);
+        const homeIdx   = homeList.findIndex(e => e && e.path === rootedPath);
+        const hasStatus = typeof newStatus === "string" && newStatus.trim() !== "";
+
+        if (hasStatus && homeIdx >= 0) {
+          // Update existing home entry
+          homeList[homeIdx].title  = newTitle;
+          homeList[homeIdx].status = newStatus;
+          writeJsonFileSync(homeManifestPath, homeList);
+          homeMirrorResult = "updated";
+        } else if (hasStatus && homeIdx < 0) {
+          // Add new home entry — item now has a status for the first time
+          homeList.push({
+            file:   String(editedEntry.file || editedEntry.filename || path.posix.basename(rootedPath)),
+            path:   rootedPath,
+            title:  newTitle || String(editedEntry.title || ""),
+            status: newStatus
+          });
+          writeJsonFileSync(homeManifestPath, homeList);
+          homeMirrorResult = "added";
+        } else if (!hasStatus && homeIdx >= 0) {
+          // Remove — status was cleared
+          homeList.splice(homeIdx, 1);
+          writeJsonFileSync(homeManifestPath, homeList);
+          homeMirrorResult = "removed";
+        }
+        // else: no status, not in home — nothing to do
+      }
     } catch (mirrorErr) {
       console.error("editManifestEntry: home mirror FAILED:", mirrorErr.message);
+      homeMirrorResult = "error";
     }
 
     return {
@@ -250,12 +276,11 @@ export async function editManifestEntry(payload = {}) {
       status: "ok",
       manifestPath: report.manifestPath,
       indexUpdated: report.indexUpdated,
-      oldTitle: report.oldTitle,
-      newTitle: report.newTitle,
+      oldTitle:  report.oldTitle,
+      newTitle:  report.newTitle,
       oldStatus: report.oldStatus,
       newStatus: report.newStatus,
-      homeManifestAlsoUpdated: homeIndexUpdated >= 0,
-      homeIndexUpdated
+      homeMirrorResult
     };
   }
 
@@ -2028,6 +2053,28 @@ async function archiveItem(payload) {
     JSON.stringify(afterList, null, 2) + "\n",
     "utf8"
   );
+
+  // Mirror the removal into ./home/manifest.json so the Home tab
+  // stays consistent without requiring a full rebuild.
+  try {
+    const archivedEntry = list.find((e, i) => !afterList.includes(e));
+    if (archivedEntry) {
+      const rootedPath      = makeRootedPath(manifestDir, archivedEntry);
+      const homeManifestPath = path.resolve("./home/manifest.json");
+
+      if (fs.existsSync(homeManifestPath)) {
+        const homeList   = readJsonFileSync(homeManifestPath);
+        const homeAfter  = homeList.filter(e => e && e.path !== rootedPath);
+
+        if (homeAfter.length !== homeList.length) {
+          writeJsonFileSync(homeManifestPath, homeAfter);
+          console.log("archiveItem: removed from home manifest:", rootedPath);
+        }
+      }
+    }
+  } catch (mirrorErr) {
+    console.error("archiveItem: home mirror FAILED:", mirrorErr.message);
+  }
 
   return {
     request: "archiveItem",

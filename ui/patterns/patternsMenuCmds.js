@@ -148,7 +148,7 @@ export async function archivePatternsItem(info) {
   const { ensurePatternsManifestLoaded } = await import("/ui/patterns/patterns.js");
   await ensurePatternsManifestLoaded();
 
-  const list = manifest.cache.patterns?.[category] ?? [];
+  const list = manifest.getCategoryMap("patterns")?.[category] ?? [];
 
   const stayInPatternView = list.length > 1;
   let nextIndex = currentIndex;
@@ -161,13 +161,14 @@ export async function archivePatternsItem(info) {
     showAlert: false
   });
 
-  manifest.clearCache();
+  manifest.invalidate("patterns");
+  manifest.invalidate("home");
 
   const { initPatternsTab, restorePatternsTab } = await import("/ui/patterns/patterns.js");
   await ensurePatternsManifestLoaded();
 
   if (stayInPatternView) {
-    const newList   = manifest.cache.patterns?.[category] ?? [];
+    const newList   = manifest.getCategoryMap("patterns")?.[category] ?? [];
     const safeIndex = Math.min(nextIndex, Math.max(0, newList.length - 1));
 
     uiState.patterns.activeItem = safeIndex;
@@ -223,7 +224,8 @@ export async function editPatternsManifestItem(info) {
 
   if (!ok) return;
 
-  manifest.clearCache();
+  manifest.invalidate("patterns");
+  manifest.invalidate("home");
 
   const { initPatternsTab, restorePatternsTab } = await import("/ui/patterns/patterns.js");
 

@@ -689,11 +689,74 @@ function _updateOkButton() {
 /* ============================================================
    _onPhase3Ok(tabId)
    ============================================================
-   Dispatches to Node service. Step 6 will implement this.
+   Assembles the payload from wizardData, dispatches to the
+   Node createFigure service, then closes the wizard on success
+   or shows an inline error on failure.
    ============================================================ */
-function _onPhase3Ok(tabId) {
+async function _onPhase3Ok(tabId) {
+
   const tab  = uiState.figures.tabs[tabId];
-  console.log("Phase 3 OK:", tab.wizardData);
+  const data = tab?.wizardData;
+  if (!data) return;
+
+  /* Disable OK button while request is in flight */
+  const okBtn = document.getElementById("createFigureOkBtn");
+  if (okBtn) {
+    okBtn.disabled  = true;
+    okBtn.textContent = "Saving…";
+  }
+
+  /* Build objects array — each selected item expanded with registry params */
+  const objects = data.selectedObjects.map(sel => {
+    const entry  = window.drawRegistry?.[sel.key];
+    const params = entry?.params ? Object.assign({}, entry.params) : {};
+    /* Strip non-serialisable fields (functions only).
+       points[] is kept so the service can read points[0] for position offset,
+       then drops it before writing the figure file. */
+    for (const k of Object.keys(params)) {
+      if (typeof params[k] === "function") delete params[k];
+    }
+    return {
+      id:     sel.key,
+      params,
+      count:  typeof sel.count === "number" ? sel.count : 1
+    };
+  });
+
+  const payload = {
+    figureName:    data.figureName,
+    category:      data.category,
+    isNewCategory: data.isNewCategory,
+    objects
+  };
+
+  try {
+    const { nodeDispatch } = await import("/ui/nodeLayer.js");
+    const result = await nodeDispatch("createFigure", payload);
+
+    if (!result || result.status !== "ok") {
+      throw new Error(result?.message || "Unknown error from createFigure service");
+    }
+
+    /* Success — close wizard, invalidate cache, refresh figures tab */
+    delete uiState.figures.tabs[tabId];
+    manifest.invalidate("figures");
+
+  } catch (err) {
+    /* Show error inline — keep dialog open */
+    const listDiv = document.getElementById("reviewList");
+    if (listDiv) {
+      const errMsg = document.createElement("div");
+      errMsg.className   = "create-figure-msg";
+      errMsg.textContent = "Error: " + err.message;
+      listDiv.appendChild(errMsg);
+    }
+    if (okBtn) {
+      okBtn.disabled    = false;
+      okBtn.textContent = "OK";
+    }
+  }
+
 } // end _onPhase3Ok
 
 
@@ -880,12 +943,8 @@ export async function archiveFigureItem(info) {
     showAlert: false
   });
 
-  /* Clear stale manifest cache. */
-  if (manifest.cache) delete manifest.cache.figures;
-
-  /* Navigate back to the figures category list. */
-  const { initFiguresTab } = await import("./figures.js");
-  await initFiguresTab(false);
+  /* Invalidate figures manifest cache and refresh. */
+  manifest.invalidate("figures");
 
 } // end archiveFigureItem
 
@@ -921,11 +980,8 @@ export async function editFigureManifestItem(info) {
 
   if (!ok) return;
 
-  /* Clear stale cache and restore. */
-  if (manifest.cache) delete manifest.cache.figures;
-
-  const { restoreFiguresTab } = await import("./figures.js");
-  await restoreFiguresTab();
+  /* Invalidate figures manifest cache and refresh. */
+  manifest.invalidate("figures");
 
 } // end editFigureManifestItem
 

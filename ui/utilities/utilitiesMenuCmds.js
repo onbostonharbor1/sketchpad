@@ -24,7 +24,6 @@
 
 import { setCaptionBar }          from "/ui/caption.js";
 import { menuManager }            from "/ui/menuManager.js";
-import { manifest }               from "/ui/manifest.js";
 import {
   archiveItem,
   showScriptOffcanvas,
@@ -123,8 +122,6 @@ async function editUtilitiesManifestItem(info) {
 
   if (!ok) return;
 
-  manifest.clearCache();
-
   const { refreshUtilitiesFromManifestEdit } = await import("/ui/utilities/utilities.js");
   await refreshUtilitiesFromManifestEdit();
 
@@ -144,8 +141,6 @@ async function archiveUtilitiesItem(info) {
     payload:   { manifestPath: info.manifestPath, filename: info.filename },
     showAlert: true,
     onSuccess: async () => {
-      manifest.clearCache();
-
       const { refreshUtilitiesFromManifestEdit } = await import("/ui/utilities//utilities.js");
       await refreshUtilitiesFromManifestEdit();
     }

@@ -56,8 +56,8 @@ window.drawRegistry_regularPolygon = {
     // Hard-reset handles to prevent ghosting from previous drawings
     p.points.length = 0;
 
-    // Establish default midpoint if none exists
-    const initialMid = { x: 300, y: 300 };
+    // Establish default midpoint — read from params if present, else use canvas centre
+    const initialMid = p.midpoint || { x: 300, y: 300 };
     p.points.push({ x: initialMid.x, y: initialMid.y });
 
     // The CurveStitch class expects a Point object for its midpoint

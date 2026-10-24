@@ -232,9 +232,10 @@ export async function archiveGalleryItem(info) {
    ============================================================ */
 export async function refreshGalleryFromManifestEdit() {
 
-  if (manifest && typeof manifest.clearCache === "function") {
-    manifest.clearCache();
-  }
+  manifest.invalidate("gallery/Ideabook");
+  manifest.invalidate("gallery/Patterns");
+  manifest.invalidate("gallery/Scripts");
+  manifest.invalidate("home");
 
   const { ensureGalleryCacheLoaded, getGalleryCache } = await import("/ui/gallery/gallery.js");
   await ensureGalleryCacheLoaded();

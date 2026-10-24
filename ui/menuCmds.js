@@ -628,7 +628,7 @@ export async function createGalleryPatternPng(spec = {}) {
   }
 
   // 5. Invalidate manifest cache
-  manifest.clearCache();
+  manifest.invalidate("gallery/Patterns");
 
   // 6. User Feedback
   alert(
@@ -713,7 +713,7 @@ export async function createPatternScript(spec = {}) {
   }
 
   // Invalidate manifest cache so Patterns picks up the new entry deterministically
-  manifest.clearCache();
+  manifest.invalidate("patterns");
 
   alert(
     "Pattern created:\n" +

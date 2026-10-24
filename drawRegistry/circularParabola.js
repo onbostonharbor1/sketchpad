@@ -31,7 +31,6 @@ window.drawRegistry_circularParabola = {
         numSteps:  20,
         rotate:    0,
         shorten:  0,
-        shorten:   0,
         xScale:    1,
         yScale:    1,
         color:     "blue",

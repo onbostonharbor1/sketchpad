@@ -1,17 +1,77 @@
+/* Auto-generated figure */
 export async function runFigure() {
-    const objects = [
+  const objects = [
       {
-        id: "bird",
-        params: { size: 100, x: 200, y: 200, color: "#FFA500" }
+          "id": "parabola",
+          "params": {
+              "line1_pt1": {
+                  "x": 50,
+                  "y": 50
+              },
+              "line1_pt2": {
+                  "x": 50,
+                  "y": 350
+              },
+              "line2_pt1": {
+                  "x": 50,
+                  "y": 350
+              },
+              "line2_pt2": {
+                  "x": 350,
+                  "y": 350
+              },
+              "numSteps": 20,
+              "truncate": 0,
+              "shorten": 0,
+              "color": "#008800",
+              "lineWidth": 1
+          }
       },
       {
-        id: "boxes",
-        params: { numBoxes: 5, size: 50, x: 400, y: 200, color: "#800080" }
+          "id": "parabola",
+          "params": {
+              "line1_pt1": {
+                  "x": 50,
+                  "y": 50
+              },
+              "line1_pt2": {
+                  "x": 50,
+                  "y": 350
+              },
+              "line2_pt1": {
+                  "x": 50,
+                  "y": 350
+              },
+              "line2_pt2": {
+                  "x": 350,
+                  "y": 350
+              },
+              "numSteps": 20,
+              "truncate": 0,
+              "shorten": 0,
+              "color": "#008800",
+              "lineWidth": 1
+          }
       },
       {
-        id: "cycloid",
-        params: { radius: 80, numCycles: 3, x: 600, y: 300, color: "#008080" }
+          "id": "drawLine",
+          "params": {
+              "pt1": {
+                  "x": 200,
+                  "y": 200
+              },
+              "pt2": {
+                  "x": 400,
+                  "y": 400
+              },
+              "midpoint": {
+                  "x": 300,
+                  "y": 300
+              },
+              "color": "#0044cc",
+              "lineWidth": 2
+          }
       }
-    ];
-    return objects;
-  }
+  ];
+  return objects;
+}

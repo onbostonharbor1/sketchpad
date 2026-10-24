@@ -154,6 +154,13 @@ export async function initGalleryTab(restored) {
   activateGallerySubtab(SUBTAB_IDEABOOK);
   clearGalleryCaption();
 
+  if (!initGalleryTab._registered) {
+    manifest.register("gallery/Ideabook", () => restoreGalleryTab());
+    manifest.register("gallery/Patterns", () => restoreGalleryTab());
+    manifest.register("gallery/Scripts",  () => restoreGalleryTab());
+    initGalleryTab._registered = true;
+  }
+
 } // end initGalleryTab
 
 

@@ -10,7 +10,7 @@
   "editor.wordWrap": "on",
   "editor.minimap.enabled": false,
   "workbench.iconTheme": "material-icon-theme",
-  "workbench.colorTheme": "Default Light Modern",
+  "workbench.colorTheme": "Light Modern",
 
   // === Files & saving ===
   "files.autoSave": "off",

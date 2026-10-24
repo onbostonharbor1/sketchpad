@@ -27,8 +27,9 @@
 
 import { clearDivs, setCommandsButtonLabel } from "/ui/uiUtilities.js";
 import { setCaptionBar }                     from "/ui/caption.js";
+import { manifest }                          from "/ui/manifest.js";
 import { resetHomeState }                    from "/ui/home/homeState.js";
-import { loadHomeManifest }                  from "/ui/home/homeManifest.js";
+import { loadHomeManifest, loadHomeManifest_async } from "/ui/home/homeManifest.js";
 import {
   setHomeSubtabs,
   switchHomeView,
@@ -110,6 +111,15 @@ export function initHomeTab(restored = false) {
   switchHomeView(uiState.home.saved.view);
 
   loadHomeManifest();
+
+  if (!initHomeTab._registered) {
+    manifest.register("home", () => {
+      if (uiState.activeTab === "home") {
+        loadHomeManifest_async();
+      }
+    });
+    initHomeTab._registered = true;
+  }
 
 } // end initHomeTab
 

@@ -119,6 +119,11 @@ export async function initPatternsTab(restored) {
 
   await showCategoryList();
 
+  if (!initPatternsTab._registered) {
+    manifest.register("patterns", () => restorePatternsTab());
+    initPatternsTab._registered = true;
+  }
+
 } // end initPatternsTab
 
 

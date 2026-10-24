@@ -1,17 +1,52 @@
+/* Auto-generated figure */
 export async function runFigure() {
-    const objects = [
+  const objects = [
       {
-        id: "regularPolygon",
-        params: { numPoints: 5, radius: 200, centerX: 300, centerY: 300, color: "#FF0000" }
+          "id": "inverseStar",
+          "params": {
+              "midpoint": {
+                  "x": 300,
+                  "y": 300
+              },
+              "radius": 200,
+              "numNodes": 5,
+              "numSteps": 20,
+              "rotate": 0,
+              "shorten": 0,
+              "xScale": 1,
+              "yScale": 1,
+              "color": "blue",
+              "lineWidth": 1
+          }
       },
       {
-        id: "linkedCircles",
-        params: { numCircles: 4, radius: 100, centerX: 500, centerY: 300, color: "#00FF00" }
+          "id": "regularPolygon",
+          "params": {
+              "radius": 300,
+              "numNodes": 5,
+              "numSteps": 20,
+              "rotate": 0,
+              "shorten": 0,
+              "xScale": 1,
+              "yScale": 1,
+              "color": "blue",
+              "lineWidth": 1
+          }
       },
       {
-        id: "nautilus",
-        params: { scale: 1.5, startX: 400, startY: 400, color: "#0000FF" }
+          "id": "regularPolygon",
+          "params": {
+              "radius": 300,
+              "numNodes": 5,
+              "numSteps": 20,
+              "rotate": 0,
+              "shorten": 0,
+              "xScale": 1,
+              "yScale": 1,
+              "color": "blue",
+              "lineWidth": 1
+          }
       }
-    ];
-    return objects;
-  }
+  ];
+  return objects;
+}

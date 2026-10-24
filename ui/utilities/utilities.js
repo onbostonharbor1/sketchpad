@@ -86,8 +86,6 @@ export function getUtilitiesCache() {
    ============================================================ */
 export async function initUtilityTab(restored = false) {
 
-  manifest.clearCache();
-
   clearDivs();
   setCommandsButtonLabel("Utilities Commands");
   wireUtilitiesCommandsButton();
@@ -145,6 +143,12 @@ export async function initUtilityTab(restored = false) {
 
   uiState.utilities.activeUtilityTabId = tabId;
   await switchUtilityTab(tabId);
+
+  if (!initUtilityTab._registered) {
+    manifest.register("utilities/Tools", () => refreshUtilitiesFromManifestEdit());
+    manifest.register("utilities/Lab",   () => refreshUtilitiesFromManifestEdit());
+    initUtilityTab._registered = true;
+  }
 
 } // end initUtilityTab
 
@@ -205,7 +209,9 @@ export function saveUtilityState() {
    ============================================================ */
 export async function refreshUtilitiesFromManifestEdit() {
 
-  manifest.clearCache();
+  manifest.invalidate("utilities/Tools");
+  manifest.invalidate("utilities/Lab");
+  manifest.invalidate("home");
   await ensureUtilitiesCacheLoaded();
 
   const subtab   = uiState.utilities.lastUtilitySubtab;

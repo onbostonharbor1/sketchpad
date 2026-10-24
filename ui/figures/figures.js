@@ -24,6 +24,7 @@
    ============================================================ */
 
 import { setCommandsButtonLabel }    from "/ui/uiUtilities.js";
+import { manifest }                  from "/ui/manifest.js";
 import {
   setFiguresCaption,
   openCreateFigureDialog,
@@ -102,6 +103,11 @@ export function initFiguresTab(restored = false) {
     }
   } else {
     switchToCategories();
+  }
+
+  if (!initFiguresTab._registered) {
+    manifest.register("figures", () => initFiguresTab(false));
+    initFiguresTab._registered = true;
   }
 
 } // end initFiguresTab

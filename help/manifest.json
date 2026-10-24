@@ -1,6 +1,5 @@
 {
   "root": [
-    "coding_simplicity",
     "Index"
   ],
   "draw": [
@@ -45,6 +44,7 @@
   "home": [],
   "Overview": {
     "Design Notes": [
+      "coding_simplicity",
       "ConvertToGallery",
       "dataFlow",
       "drawRegistry",

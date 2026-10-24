@@ -3,7 +3,7 @@
     "filename": "arcsAndInner",
     "path": "arcsAndInner.js",
     "title": "Arcs and Inner",
-    "status": "fix"
+    "status": "Queue"
   },
   {
     "filename": "curveStitch",
@@ -14,7 +14,7 @@
     "filename": "joinedParabs",
     "path": "joinedParabs.js",
     "title": "joinedParabs.js",
-    "status": "new"
+    "status": "Examine"
   },
   {
     "filename": "manyJoinedParabs",

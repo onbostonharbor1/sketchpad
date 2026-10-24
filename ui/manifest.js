@@ -43,6 +43,9 @@ export class ManifestManager {
     // Shaped cache: basedir → { categoryName: [entries] }
     // Computed lazily by getCategoryMap() and cleared with clearCache().
     this.shapedCache = {};
+
+    // Listener registry: basedir → [ callback, ... ]
+    this.listeners = {};
   } // end constructor
 
 
@@ -233,6 +236,43 @@ export class ManifestManager {
     return map;
 
   } // end getCategoryMap
+
+  /* ============================================================
+      register(key, callback)
+      ------------------------------------------------------------
+      Register a callback to be fired when invalidate(key) is
+      called. Multiple tabs may register for the same key.
+
+      key      — basedir string, e.g. "patterns", "figures"
+      callback — zero-argument function that refreshes the tab
+   ============================================================ */
+  register(key, callback) {
+    if (!this.listeners[key]) this.listeners[key] = [];
+    this.listeners[key].push(callback);
+  } // end register
+
+
+  /* ============================================================
+      invalidate(key)
+      ------------------------------------------------------------
+      Clear cache entries for the given key, then fire all
+      registered callbacks for that key.
+
+      Replaces the scattered pattern of:
+        manifest.clearCache();
+        <manual tab refresh call>
+   ============================================================ */
+  invalidate(key) {
+    delete this.cache[key];
+    delete this.registryCache[key];
+    delete this.shapedCache[key];
+
+    console.log(`ManifestManager: invalidated '${key}'`);
+
+    const callbacks = this.listeners[key] || [];
+    callbacks.forEach(cb => cb());
+  } // end invalidate
+
 
   /* ============================================================
       clearCache()
