@@ -175,6 +175,31 @@ const pmenu = await page.evaluate(() =>
   [...document.querySelectorAll(".caption-menu-item")].map(e => e.innerText));
 if (!pmenu.includes("Notes")) problems.push("[patterns menu] no Notes item");
 
+/* ---- Part 4: Figures shell ---------------------------------
+   Create Figure opens an "Untitled 1" subtab with an empty figure; it
+   is still there, and active, after visiting another tab. */
+stage = "figures create";
+await page.click("#figures-tab");
+await page.waitForTimeout(800);
+await page.click("#createFigureButton");
+await page.waitForTimeout(800);
+const before = await snapshot("figures");
+if (!/Untitled 1/.test(before.subtabs)) problems.push(`[figures create] subtabs: ${before.subtabs}`);
+if (before.caption !== "Untitled 1 v")  problems.push(`[figures create] caption: ${before.caption}`);
+stage = "figures return";
+await page.click("#draw-tab");
+await page.waitForTimeout(800);
+await page.click("#figures-tab");
+await page.waitForTimeout(1200);
+const after = await snapshot("figures");
+for (const k of Object.keys(before)) {
+  if (before[k] !== after[k]) problems.push(`[figures return] ${k} changed: "${before[k]}" -> "${after[k]}"`);
+}
+const fig = await page.evaluate(() => uiState.figures.tabs[uiState.figures.activeSubtab].figure);
+if (fig.nextPoint !== 1 || fig.layers.length !== 0 || fig.points.length !== 0) {
+  problems.push("[figures return] figure is not empty: " + JSON.stringify(fig));
+}
+
 await browser.close();
 
 for (const n of notes.slice(0, 5)) console.log("note:", n);
@@ -185,4 +210,4 @@ if (problems.length) {
   for (const p of problems) console.log(" ", p);
   process.exit(1);
 }
-console.log("\nPASS: 6 tabs x 2 passes, plus Draw and Patterns with an open item, plus the Notes menu item, no errors");
+console.log("\nPASS: 6 tabs x 2 passes, plus Draw and Patterns with an open item, plus the Notes menu item, plus the Figures shell, no errors");

@@ -9,10 +9,9 @@
    Architectural rules:
      * Does NOT own the TabSpec, init(), restore(), or save().
        Those live in figures.js.
-     * Does NOT render figure content or execute figure scripts.
-       That lives in figuresDisplay.js and figuresRunner.js.
+     * Does NOT load categories. That lives in figuresDisplay.js.
      * Does NOT build caption bars or menu items.
-       Those live in figuresMenuCmds.js.
+       Those live in figuresCommands.js.
      * Reads figuresRegistry via getters from figuresState.js.
 
    Exports:
@@ -20,10 +19,18 @@
      renderSubtabs()
      switchToCategories()
      switchToFigureTab(tabId)
+     openNewFigureTab()
      closeTab(tabId)
    ============================================================ */
 
-import { getCurrentTabId, setCurrentTabId } from "./figuresState.js";
+import { setCurrentTabId }     from "./figuresState.js";
+import { setFiguresCaption }   from "./figuresCommands.js";
+import { resetCanvas }        from "/draw/drawState.js";
+import {
+  createEmptyFigure,
+  nextUntitledName,
+  nextFigureTabId
+}                             from "./figureModel.js";
 
 
 /* ============================================================
@@ -82,7 +89,7 @@ export function renderSubtabs() {
     if (activeTabId === tabId) btn.classList.add("active");
 
     const label = document.createElement("span");
-    label.textContent = tab.title || tabId.replace("tab-", "");
+    label.textContent = tab.figure?.name || tab.title || tabId.replace("tab-", "");
     btn.appendChild(label);
 
     const close = document.createElement("span");
@@ -120,7 +127,7 @@ export function switchToCategories() {
 
   document.getElementById("action").style.display = "none";
 
-  import("/ui/figures/figuresMenuCmds.js").then(m => m.setFiguresCaption());
+  setFiguresCaption("Figures", false);
 
   const btnContainer = document.getElementById("figure-sidebar");
   if (btnContainer) {
@@ -156,24 +163,39 @@ export function switchToFigureTab(tabId) {
   const sidebar = document.getElementById("figure-sidebar");
   if (sidebar) sidebar.style.display = "flex";
 
-  document.getElementById("action").style.display = "block";
+  const action = document.getElementById("action");
+  action.style.display = "block";
+  action.innerHTML = "";
 
-  import("/ui/figuresRunner.js").then(m => {
-    m.drawFigures();
-    m.updateActionPanel();
-  });
+  // Empty canvas (no layers exist yet). resetCanvas() sizes the shared
+  // canvas from drawState and paints it white.
+  resetCanvas();
 
-  import("/ui/figuresUI.js").then(m => m.updateFigureOverlayButtons());
-
-  import("/ui/figures/figuresMenuCmds.js").then(m => {
-    m.setFiguresCaption(tabState.name, {
-      figureId: tabState.figureId,
-      name:     tabState.name,
-      path:     tabState.path
-    });
-  });
+  setFiguresCaption(tabState.figure.name, true);
 
 } // end switchToFigureTab
+
+
+/* ============================================================
+   openNewFigureTab()
+   ------------------------------------------------------------
+   Creates an empty, unnamed figure in a new subtab and shows it.
+   The figure lives in uiState.figures.tabs[tabId].figure, so it
+   survives switching to another main tab and back.
+   ============================================================ */
+export function openNewFigureTab() {
+
+  const tabs  = uiState.figures.tabs;
+  const tabId = nextFigureTabId(tabs);
+
+  tabs[tabId] = {
+    type:   "figure",
+    figure: createEmptyFigure(nextUntitledName(tabs))
+  };
+
+  switchToFigureTab(tabId);
+
+} // end openNewFigureTab
 
 
 /* ============================================================

@@ -8,8 +8,9 @@
 
    Architectural rules:
      * Does NOT build or activate subtabs. That is figuresNav.js.
-     * Does NOT build the caption bar. That is figuresMenuCmds.js.
-     * Does NOT execute figure scripts directly. Uses figuresRunner.js.
+     * Does NOT build the caption bar. That is figuresCommands.js.
+     * Does NOT build figures. Saved figures open in Phase 10; until then
+       a category item only reports that it cannot be opened yet.
      * Reads and writes figuresState.js via getters and setters.
 
    Data formats:
@@ -23,7 +24,6 @@
 
 import { renderCategories }    from "/ui/categories.js";
 import { setFiguresRegistry }  from "./figuresState.js";
-import { runFigureScript }     from "/ui/figuresRunner.js";
 
 
 /* ============================================================
@@ -66,7 +66,13 @@ export async function loadFiguresCategories() {
       }
     }
 
-    renderCategories("text", categories);
+    if (categories.length === 0) {
+      document.getElementById("text").innerHTML =
+        "<p style='padding:12px'>No saved figures yet. " +
+        "Use Create Figure to start one.</p>";
+    } else {
+      renderCategories("text", categories);
+    }
 
   } catch (e) {
     console.error("Error loading figures categories:", e);
@@ -78,24 +84,12 @@ export async function loadFiguresCategories() {
 
 /* ============================================================
    loadFigure(filename, categoryName, title)
+   ------------------------------------------------------------
+   Opening a saved figure arrives with Save As and reload
+   (Phase 10). Until then there is nothing to open.
    ============================================================ */
 export async function loadFigure(filename, categoryName, title) {
 
-  const path     = `/figures/${categoryName}/${filename}`;
-  const figureId = filename.replace(/\.js$/, "");
-  const tabId    = `tab-${figureId}`;
-
-  if (!uiState.figures.tabs[tabId]) {
-    await runFigureScript(path, figureId);
-
-    if (uiState.figures.tabs[tabId]) {
-      uiState.figures.tabs[tabId].title        = title;
-      uiState.figures.tabs[tabId].categoryName = categoryName;
-      uiState.figures.tabs[tabId].scriptPath   = path;
-    }
-  }
-
-  const { switchToFigureTab } = await import("/ui/figures/figuresNav.js");
-  switchToFigureTab(tabId);
+  console.warn(`loadFigure: saved figures cannot be opened yet (${categoryName}/${filename})`);
 
 } // end loadFigure

@@ -73,7 +73,7 @@ import "/ui/draw/drawNav.js";
 import "/ui/draw/drawRunner.js";
 import "/ui/draw/drawTabState.js";
 import "/ui/figures/figures.js";
-import "/ui/figures/figuresMenuCmds.js";
+import "/ui/figures/figuresCommands.js";
 import "/ui/gallery/gallery.js";
 import "/ui/gallery/galleryMenuCmds.js";
 import "/ui/home/home.js";

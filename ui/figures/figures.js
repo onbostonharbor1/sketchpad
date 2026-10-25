@@ -17,19 +17,17 @@
    What does NOT live here:
      * Subtab construction and navigation    -> figures/figuresNav.js
      * Category loading and figure loading   -> figures/figuresDisplay.js
-     * Caption bar and menu items            -> figures/figuresMenuCmds.js
      * Shared module-level state variables   -> figures/figuresState.js
-     * Figure execution and rendering        -> figuresRunner.js
-     * Overlay UI management                 -> figuresUI.js
+     * The figure data model                 -> figures/figureModel.js
+     * Commands button and caption bar       -> figures/figuresCommands.js
    ============================================================ */
 
 import { setCommandsButtonLabel }    from "/ui/uiUtilities.js";
 import { manifest }                  from "/ui/manifest.js";
 import {
   setFiguresCaption,
-  openCreateFigureDialog,
   wireFiguresCommandsButton
-}                                    from "/ui/figures/figuresMenuCmds.js";
+}                                    from "/ui/figures/figuresCommands.js";
 import {
   resetFiguresState,
   setCurrentTabId
@@ -38,11 +36,10 @@ import {
   setFiguresSubtabs,
   renderSubtabs,
   switchToCategories,
-  switchToFigureTab
+  switchToFigureTab,
+  openNewFigureTab
 }                                    from "/ui/figures/figuresNav.js";
 import { loadFiguresCategories }     from "/ui/figures/figuresDisplay.js";
-import { initFigureOverlays }        from "/ui/figuresUI.js";
-import { initFiguresInteraction }    from "/ui/figuresRunner.js";
 
 
 /* ============================================================
@@ -85,9 +82,6 @@ export function initFiguresTab(restored = false) {
   setFiguresCaption();
   setFiguresText();
   setFiguresSketchpad();
-
-  initFigureOverlays();
-  initFiguresInteraction();
 
   loadFiguresCategories();
 
@@ -132,7 +126,7 @@ function setFiguresAction() {
   btn.className   = "cmdButton";
   btn.type        = "button";
   btn.textContent = "Create Figure";
-  btn.onclick     = openCreateFigureDialog;
+  btn.onclick     = openNewFigureTab;
   buttonDiv.appendChild(btn);
 
 } // end setFiguresAction

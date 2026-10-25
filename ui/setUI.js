@@ -9,7 +9,7 @@ import { DrawTabSpec }     from "/ui/draw/draw.js";
 import { PatternsTabSpec } from "/ui/patterns/patterns.js";
 import { GalleryTabSpec }  from "/ui/gallery/gallery.js";
 import { UtilityTabSpec }  from "/ui/utilities/utilities.js";
-import { FiguresTabSpec }  from "/ui/figures//figures.js";
+import { FiguresTabSpec }  from "/ui/figures/figures.js";
 
 import { clearDivs }        from "/ui/uiUtilities.js";
 import { initMenuManager }  from "./menuManager.js";
