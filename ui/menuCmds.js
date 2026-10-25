@@ -17,7 +17,8 @@
 
 import { nodeDispatch } from "./nodeLayer.js";
 import { overlayManager } from "./overlay.js";
-import { showHelpOverlay } from "./overlay.js";
+import { showHelpOverlay, showNotesOverlay } from "./overlay.js";
+import { extractHeaderNotes, reflowNotes } from "./notes.js";
 import { escapeHtml, buildCanvasThumbnailBase64 } from "/ui/uiUtilities.js";
 import { manifest } from "./manifest.js";
 
@@ -1040,6 +1041,60 @@ export function makeArchiveItem(handler) {
     onClick:  async () => { await handler(); }
   };
 } // end makeArchiveItem
+
+
+/* ------------------------------------------------------------
+   makeNotesItem(scriptPath, label)
+   ------------------------------------------------------------
+   Returns a Notes menu item for a source file.
+     * Fetches the file and extracts its header notes.
+     * Grayed out (disabled) when the file has no notes, the same
+       way Help is grayed out when it has no help page.
+     * The popup offers Show Script and Open in VS Code / Emacs.
+
+   Arguments:
+     scriptPath - URL path of the source, e.g. "/drawRegistry/cycloid.js"
+     label      - display name for the popup title
+   ------------------------------------------------------------ */
+export async function makeNotesItem(scriptPath, label) {
+
+  let notes = "";
+  try {
+    if (!scriptPath) throw new Error("no script path");
+    const resp = await fetch(scriptPath);
+    if (resp.ok) notes = extractHeaderNotes(await resp.text());
+  } catch (e) {
+    notes = "";
+  }
+
+  const enabled = notes !== "";
+
+  const openIn = (editor) => async () => {
+    try {
+      const result = await nodeDispatch("openInEditor", { editor, file: scriptPath });
+      return (result && result.status === "ok") ? "" : "Could not open the editor.";
+    } catch (e) {
+      // nodeDispatch errors embed the server's JSON; show just its message
+      const m = /"error"\s*:\s*"([^"]+)"/.exec(String(e.message || e));
+      return m ? m[1] : String(e.message || e);
+    }
+  };
+
+  return {
+    label:    "Notes",
+    disabled: !enabled,
+    tooltip:  enabled ? "Notes about this file" : "No notes in this file",
+    onClick:  () => {
+      if (!enabled) return;
+      showNotesOverlay((label || scriptPath) + " Notes", reflowNotes(notes), [
+        { label: "Show Script",     onClick: () => { showScriptOffcanvas(scriptPath, label); } },
+        { label: "Open in VS Code", onClick: openIn("vscode") },
+        { label: "Open in Emacs",   onClick: openIn("emacs") }
+      ]);
+    }
+  };
+
+} // end makeNotesItem
 
 
 // end menuCmds.js

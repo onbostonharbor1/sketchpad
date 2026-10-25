@@ -1,4 +1,16 @@
-/* drawRegistry/linkedCircles.js */
+/* drawRegistry/linkedCircles.js
+
+   Linked circles (2 to 7).
+
+   Draws numCircles circles of the same radius, then stitches between
+   neighboring circles: points around one circle are joined to points
+   around the next, offset by numSteps positions. linkMode chooses which
+   circles are linked: pairwise (0-1, 1-2, ...), ring (pairwise plus
+   last-to-first) or allToAll.
+   The circles themselves are always drawn, including in final mode;
+   only the stitches are reduced to endpoints.
+   Drawing is done by drawLinkedCircles() in draw/drawLinkedCircles.js.
+*/
 import { LinkedCircles }     from "/classes/linkedCircles.js";
 import { drawLinkedCircles } from "/draw/drawLinkedCircles.js";
 import { Point }             from "../classes/classes.js";

@@ -1,4 +1,12 @@
-/* drawRegistry/mysticRose.js */
+/* drawRegistry/mysticRose.js
+
+   Mystic Rose on a circle.
+
+   Places numNodes points around a circle and joins every pair of nodes
+   with one line, so n nodes give n*(n-1)/2 lines. High node counts are
+   slow because the line count grows with the square of the node count.
+   Drawing is done by drawMysticRose() in draw/drawUnicorns.js.
+*/
 import { Point, StringThing }       from '../classes/classes.js';
 import { drawMysticRose }           from '../draw/drawUnicorns.js';
 

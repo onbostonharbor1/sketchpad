@@ -1,4 +1,13 @@
-/* drawRegistry/cycloid.js */
+/* drawRegistry/cycloid.js
+
+   Cycloid (cardioid family) on a circle or ellipse.
+
+   Places numNodes points around the ellipse, then draws a chord from
+   each node i to node (i * numCycloids) mod numNodes. numCycloids = 2
+   gives a cardioid; larger values give more loops. The one handle moves
+   the center. Radius sets the size; Width and Height stretch it.
+   Drawing is done by drawCycloid() in draw/drawUnicorns.js.
+*/
 import { Point, StringThing }   from '../classes/classes.js';
 import { drawCycloid }          from '../draw/drawUnicorns.js';
 

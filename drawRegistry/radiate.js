@@ -1,4 +1,13 @@
-/* drawRegistry/radiate.js */
+/* drawRegistry/radiate.js
+
+   Radiate: lines from one point to a segment.
+
+   A base segment (start to end) is divided into evenly spaced nodes,
+   and a line is drawn from the radial point to each node, plus one to
+   the end point. Moving the radial point or either end of the segment
+   changes the fan.
+   Drawing is done by drawRadiate() in draw/drawUnicorns.js.
+*/
 import { Line, Point } from "../classes/classes.js";
 import { Radiate }     from "../classes/radiate.js";
 import { drawALine }   from "../draw/drawUtilities.js";

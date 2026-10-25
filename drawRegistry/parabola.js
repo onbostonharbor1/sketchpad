@@ -1,4 +1,13 @@
-/* drawRegistry/parabola.js */
+/* drawRegistry/parabola.js
+
+   Stitched parabola between two lines.
+
+   Two lines meet at a corner and the stitches between them form the
+   envelope of a parabola. Steps sets the number of stitches. The four
+   line ends are draggable handles. Trim Bottom and Shorten Top cut the
+   pattern short at either end.
+   Drawing is done by drawAParab() in draw/drawRegular.js.
+*/
 import { Line, Point, StringThing } from "../classes/classes.js";
 import { drawAParab }               from "../draw/drawRegular.js";
 

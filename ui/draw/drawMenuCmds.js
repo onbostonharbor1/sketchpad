@@ -34,7 +34,7 @@
 
 import { menuManager }                from "/ui/menuManager.js";
 import { setCaptionBar }              from "/ui/caption.js";
-import { makeHelpItem }               from "/ui/menuCmds.js";
+import { makeHelpItem, makeNotesItem } from "/ui/menuCmds.js";
 import { createGalleryPatternPng }    from "/ui/menuCmds.js";
 import { createPatternScript }        from "/ui/menuCmds.js";
 import { saveSecondary, archiveSecondary } from "/ui/draw/secondaryObjects.js";
@@ -103,8 +103,13 @@ export async function getDrawCaptionMenuItems(entry) {
     category: entry.category || "uncategorized"
   };
 
+  const registryKey = Object.keys(window.drawRegistry).find(
+    (k) => window.drawRegistry[k] === entry
+  );
+
   const items = [
     await makeHelpItem("draw", null),
+    await makeNotesItem(registryKey ? `/drawRegistry/${registryKey}.js` : null, entry.name),
     {
       label:    "Save as PNG",
       disabled: false,

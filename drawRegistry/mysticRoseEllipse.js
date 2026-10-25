@@ -1,4 +1,13 @@
-/* drawRegistry/mysticRoseEllipse.js */
+/* drawRegistry/mysticRoseEllipse.js
+
+   Mystic Rose on an ellipse.
+
+   The same all-pairs pattern as mysticRose.js, but the nodes are spaced
+   around an ellipse whose length (a) and height (b) are separate
+   controls, then scaled by Width and Height. Every node is joined to
+   every other node once.
+   Drawing is done by drawMysticRose() in draw/drawUnicorns.js.
+*/
 import { Point, StringThing }       from '../classes/classes.js';
 import { drawMysticRose }           from '../draw/drawUnicorns.js';
 

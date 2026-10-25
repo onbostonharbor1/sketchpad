@@ -1,4 +1,12 @@
-/* drawRegistry/regularPolygon.js */
+/* drawRegistry/regularPolygon.js
+
+   Regular polygon with curve stitching.
+
+   A regular polygon of numNodes sides on a circle of the given radius,
+   with curve stitching from each node (numSteps stitches). rotate turns
+   the polygon, Shorten trims the stitches, and Width and Height scale
+   it. The one handle moves the center.
+*/
 import { Point }                from "../classes/classes.js";
 import { CurveStitch }           from "../classes/curveStitchClass.js";
 import { drawRegularPolygon }    from "../draw/drawRegular.js";

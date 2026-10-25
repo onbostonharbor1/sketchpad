@@ -113,6 +113,41 @@ async function stateScenario(tab, itemKey) {
 await stateScenario("draw", "Cycloid");
 await stateScenario("patterns", "First Build");
 
+/* ---- Part 3: Notes menu item in Draw ------------------------
+   Cycloid has header notes: Notes is enabled and the popup shows them.
+   Circular Parabola has none: Notes is grayed out. */
+async function drawMenuItems(key) {
+  stage = `draw menu ${key}`;
+  await page.click("#draw-tab");
+  await page.waitForTimeout(800);
+  await page.locator("#subtabs button", { hasText: "Categories" }).first().click();
+  await page.waitForTimeout(600);
+  await page.click(`#text .item[data-key="${key}"] span`);
+  await page.waitForTimeout(1500);
+  await page.locator("#caption .caption-buttons button", { hasText: /^v$/ }).click();
+  await page.waitForTimeout(700);
+  return page.evaluate(() =>
+    [...document.querySelectorAll(".caption-menu-item")].map(e => [e.innerText, e.classList.contains("disabled")]));
+}
+
+let menu = await drawMenuItems("Cycloid");
+const notesItem = menu.find(m => m[0] === "Notes");
+if (!notesItem)          problems.push("[draw menu Cycloid] no Notes item");
+else if (notesItem[1])   problems.push("[draw menu Cycloid] Notes is grayed out");
+else {
+  await page.click(".caption-menu-item:has-text('Notes')");
+  await page.waitForTimeout(800);
+  const shown = await page.evaluate(() => document.querySelector(".overlayHelp")?.innerText || "");
+  if (!/cardioid/i.test(shown)) problems.push("[draw menu Cycloid] popup lacks the header notes");
+  console.log("Notes popup:", JSON.stringify(shown.slice(0, 60)));
+}
+await page.reload({ waitUntil: "networkidle" });
+await page.waitForTimeout(1200);
+
+menu = await drawMenuItems("Circular Parabola");
+const none = menu.find(m => m[0] === "Notes");
+if (!none || !none[1]) problems.push("[draw menu Circular Parabola] Notes should be grayed out");
+
 await browser.close();
 
 for (const n of notes.slice(0, 5)) console.log("note:", n);
@@ -123,4 +158,4 @@ if (problems.length) {
   for (const p of problems) console.log(" ", p);
   process.exit(1);
 }
-console.log("\nPASS: 6 tabs x 2 passes, plus Draw and Patterns with an open item, no errors");
+console.log("\nPASS: 6 tabs x 2 passes, plus Draw and Patterns with an open item, plus the Notes menu item, no errors");

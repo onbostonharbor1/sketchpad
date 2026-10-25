@@ -41,6 +41,7 @@
    =========================================================== */
 
 import fs   from "fs";
+import { spawn } from "child_process";
 import path from "path";
 import { runManifestMaintenance } from "./maintain_manifests.mjs";
 import { createFigure }           from "./createFigureService.mjs";
@@ -110,6 +111,9 @@ case "manifestMaintenance":
 
     case "readLogFile":
       return await readLogFile(payload);
+
+    case "openInEditor":
+      return await openInEditor(payload);
 
     case "archiveItem":
       return await archiveItem(payload);
@@ -603,6 +607,100 @@ export async function readLogFile(payload = {}) {
   };
 
 } // end readLogFile
+
+
+/* ===========================================================
+   TASK: openInEditor
+
+   DESCRIPTION
+   -----------
+   Opens a source file of this project in a desktop editor.
+
+   payload: { editor: "vscode" | "emacs", file: "/drawRegistry/x.js" }
+
+   SAFETY
+   ------
+   The service listens on localhost only, but it still refuses
+   anything that is not an existing file inside the project folder
+   (the current directory), anything under node_modules or .git,
+   and any file name with characters other than letters, digits
+   and  _ . - / space. The editor command comes from a fixed list,
+   never from the request.
+   =========================================================== */
+const EDITOR_COMMANDS = {
+  vscode: ["code"],
+  emacs:  process.platform === "win32" ? ["runemacs", "emacs"] : ["emacs"]
+};
+
+export async function openInEditor(payload = {}) {
+
+  const editor = payload.editor;
+  const file   = payload.file;
+
+  if (!Object.prototype.hasOwnProperty.call(EDITOR_COMMANDS, editor)) {
+    throw new Error("openInEditor: unknown editor: " + editor);
+  }
+  if (typeof file !== "string" || !/^[A-Za-z0-9_.\-\/ ]+$/.test(file)) {
+    throw new Error("openInEditor: invalid file name");
+  }
+  if (file.split("/").includes("..")) {
+    throw new Error("openInEditor: invalid file name");
+  }
+
+  const root = path.resolve(".");
+  const full = path.resolve(root, "." + (file.startsWith("/") ? file : "/" + file));
+  const rel  = path.relative(root, full);
+
+  if (rel.startsWith("..") || path.isAbsolute(rel)) {
+    throw new Error("openInEditor: file is outside the project");
+  }
+  const parts = rel.split(path.sep);
+  if (parts.includes("node_modules") || parts.includes(".git")) {
+    throw new Error("openInEditor: file not allowed: " + rel);
+  }
+  assertFileExists(full, "openInEditor: file missing: " + full);
+
+  // Try each command name in turn; the first one that starts wins.
+  const candidates = EDITOR_COMMANDS[editor];
+  let lastError = null;
+
+  for (const cmd of candidates) {
+    const outcome = await launchDetached(cmd, [full]);
+    if (outcome === "ok") {
+      return { request: "openInEditor", status: "ok", editor, file: rel };
+    }
+    lastError = outcome;
+  }
+
+  throw new Error(
+    "openInEditor: could not start " + candidates.join(" or ") +
+    " (" + lastError + "). Is it on the PATH?"
+  );
+
+} // end openInEditor
+
+
+// Starts a command detached from this service. Resolves "ok" when it
+// started (or is still running after a moment), else a short reason.
+function launchDetached(cmd, args) {
+  return new Promise((resolve) => {
+    let done = false;
+    const finish = (v) => { if (!done) { done = true; resolve(v); } };
+
+    // On Windows, "code" is a .cmd file, which needs a shell. The file
+    // name was validated above, and the command name is from a fixed list.
+    const child = spawn(cmd, args, {
+      detached: true,
+      stdio: "ignore",
+      shell: process.platform === "win32",
+      windowsHide: true
+    });
+
+    child.on("error", (e) => finish(e.code || "error"));
+    child.on("exit", (code) => finish(code === 0 || code === null ? "ok" : "exit code " + code));
+    setTimeout(() => { child.unref(); finish("ok"); }, 1200);
+  });
+}
 
 
 /* ===========================================================

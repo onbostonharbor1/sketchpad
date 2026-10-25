@@ -1,4 +1,13 @@
-/* drawRegistry/inEllipse.js */
+/* drawRegistry/inEllipse.js
+
+   Chord patterns around an ellipse.
+
+   Places numNodes points around an ellipse and draws chords between
+   them. chordLength, startSkip and endSkip control the chord length and
+   the ends that are skipped. Mode chooses how the chords are spread:
+   Start-End, Full, Taper (Both), Start Taper or End Taper.
+   Drawing is done by drawInEllipse() in draw/drawEllipse.js.
+*/
 import { Ellipse, START_END, FULL, TAPER, START_TAPER, END_TAPER }
                                   from "../classes/ellipseClass.js";
 import { Point }                  from "../classes/classes.js";

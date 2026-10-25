@@ -204,5 +204,55 @@ export function showHelpOverlay(helpPath, titleText, options = {}) {
 } // end showHelpOverlay
 
 
+/* ============================================================
+   showNotesOverlay(titleText, notesText, actions)
+   ------------------------------------------------------------
+   Shows a file's header notes in the same "help" overlay layer and
+   with the same toolbar and body classes as showHelpOverlay.
+
+   actions: [{ label, onClick }]. Each becomes a toolbar button.
+   onClick may return (or resolve to) a string; it is shown in a
+   status line under the toolbar (used for editor errors).
+============================================================ */
+export function showNotesOverlay(titleText, notesText, actions = []) {
+
+  if (!titleText) throw new Error("showNotesOverlay: titleText missing");
+
+  const esc = (t) => String(t)
+    .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+
+  let toolbarHtml = "<div class='overlayHelpToolbar'>";
+  for (let i = 0; i < actions.length; i++) {
+    toolbarHtml += "<button id='notesAction" + i + "' type='button'>" +
+                   esc(actions[i].label) + "</button> ";
+  }
+  toolbarHtml += "<span id='notesStatus' style='margin-left:8px'></span></div>";
+
+  const bodyHtml =
+    "<pre style='white-space:pre-wrap; font-family:inherit; margin:10px 0 0'>" +
+    esc(notesText) + "</pre>";
+
+  overlayManager.show("help",
+    toolbarHtml + "<div class='overlayHelp'>" + bodyHtml + "</div>");
+
+  const header = document.getElementById("overlayTitle");
+  if (!header) throw new Error("showNotesOverlay: #overlayTitle missing");
+  header.textContent = titleText;
+
+  document.getElementById("overlayContainer").style.display = "block";
+
+  const status = document.getElementById("notesStatus");
+
+  actions.forEach((action, i) => {
+    document.getElementById("notesAction" + i).onclick = async () => {
+      status.textContent = "";
+      const msg = await action.onClick();
+      if (typeof msg === "string") status.textContent = msg;
+    };
+  });
+
+} // end showNotesOverlay
+
+
 
 
