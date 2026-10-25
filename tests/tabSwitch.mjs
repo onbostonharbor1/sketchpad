@@ -200,6 +200,51 @@ if (fig.nextPoint !== 1 || fig.layers.length !== 0 || fig.points.length !== 0) {
   problems.push("[figures return] figure is not empty: " + JSON.stringify(fig));
 }
 
+/* ---- Part 5: Insert objects (Phase 6a) ---------------------- */
+stage = "figures insert";
+const inked = () => page.evaluate(() => {
+  const c = window.drawCanvas, d = c.getContext("2d").getImageData(0, 0, c.width, c.height).data;
+  let n = 0;
+  for (let i = 0; i < d.length; i += 4) if (d[i] < 200 || d[i + 1] < 200 || d[i + 2] < 200) n++;
+  return n;
+});
+const blank = await inked();
+await page.click("#figureInsert_drawLine");
+await page.waitForTimeout(400);
+const one = await inked();
+await page.click("#figureInsert_parabola");
+await page.waitForTimeout(400);
+await page.selectOption("#figureInsertSelect", { index: 2 });
+await page.waitForTimeout(400);
+await page.click("#figureInsert_parabola");
+await page.waitForTimeout(400);
+const many = await inked();
+const lay = await page.evaluate(() => uiState.figures.tabs[uiState.figures.activeSubtab].figure.layers.map(l => l.id));
+if (lay.length !== 4) problems.push("[figures insert] expected 4 layers: " + lay);
+if (!(one > blank)) problems.push(`[figures insert] line drew nothing (${blank} -> ${one})`);
+if (!(many > one)) problems.push(`[figures insert] more layers did not add ink (${one} -> ${many})`);
+const rows = await page.locator(".figure-layer-row").count();
+if (rows !== 4) problems.push("[figures insert] layer rows: " + rows);
+
+stage = "figures visibility";
+for (let i = 0; i < 4; i++) await page.locator(".figure-layer-row input").nth(i).uncheck();
+await page.waitForTimeout(300);
+const hidden = await inked();
+if (hidden !== blank) problems.push(`[figures visibility] all hidden but ink ${hidden} vs ${blank}`);
+await page.locator(".figure-layer-row input").nth(0).check();
+await page.waitForTimeout(300);
+if (!((await inked()) > blank)) problems.push("[figures visibility] showing layer 1 drew nothing");
+
+stage = "figures return with layers";
+await page.click("#draw-tab");
+await page.waitForTimeout(800);
+const btnOnDraw = await page.locator("#createFigureButton").count();
+if (btnOnDraw !== 0) problems.push("[figures button] Create Figure still present on Draw");
+await page.click("#figures-tab");
+await page.waitForTimeout(1200);
+if ((await page.locator(".figure-layer-row").count()) !== 4) problems.push("[figures return] layer rows lost");
+if (!((await inked()) > blank)) problems.push("[figures return] picture not redrawn");
+
 await browser.close();
 
 for (const n of notes.slice(0, 5)) console.log("note:", n);
@@ -210,4 +255,4 @@ if (problems.length) {
   for (const p of problems) console.log(" ", p);
   process.exit(1);
 }
-console.log("\nPASS: 6 tabs x 2 passes, plus Draw and Patterns with an open item, plus the Notes menu item, plus the Figures shell, no errors");
+console.log("\nPASS: 6 tabs x 2 passes, plus Draw and Patterns with an open item, plus the Notes menu item, plus the Figures shell and insert, no errors");

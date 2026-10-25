@@ -32,6 +32,9 @@ function clearDivs(args = "") {
         sidebar.style.display = "none";
     }
 
+    // Remove per-tab additions to the permanent #button div.
+    document.querySelectorAll("#button .tab-extra").forEach(el => el.remove());
+
     const ifc = document.getElementById("interface-controls");
     if (ifc) {
         ifc.innerHTML = "";

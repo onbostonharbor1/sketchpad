@@ -119,11 +119,15 @@ function setFiguresAction() {
   const buttonDiv = document.getElementById("button");
   if (!buttonDiv) return;
 
-  buttonDiv.appendChild(document.createElement("br"));
+  // Tagged "tab-extra": #button is permanent, so clearDivs() removes
+  // everything tagged this way on each tab switch.
+  const br = document.createElement("br");
+  br.className = "tab-extra";
+  buttonDiv.appendChild(br);
 
   const btn = document.createElement("button");
   btn.id          = "createFigureButton";
-  btn.className   = "cmdButton";
+  btn.className   = "cmdButton tab-extra";
   btn.type        = "button";
   btn.textContent = "Create Figure";
   btn.onclick     = openNewFigureTab;

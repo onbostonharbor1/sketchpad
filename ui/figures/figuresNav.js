@@ -25,7 +25,12 @@
 
 import { setCurrentTabId }     from "./figuresState.js";
 import { setFiguresCaption }   from "./figuresCommands.js";
-import { resetCanvas }        from "/draw/drawState.js";
+import {
+  listInsertableObjects,
+  insertLayer,
+  redrawFigure,
+  renderLayerPanel
+}                             from "./figureLayers.js";
 import {
   createEmptyFigure,
   nextUntitledName,
@@ -108,7 +113,61 @@ export function renderSubtabs() {
     bar.appendChild(li);
   }
 
+  // Insert tools, only while a figure tab is active
+  if (activeTabId !== "tab-categories" && uiState.figures.tabs[activeTabId]?.figure) {
+    appendInsertTools(bar, activeTabId);
+  }
+
 } // end renderSubtabs
+
+
+/* ============================================================
+   appendInsertTools(bar, tabId)
+   ------------------------------------------------------------
+   Registry pulldown plus Line and Parabola shortcut buttons.
+   ============================================================ */
+function appendInsertTools(bar, tabId) {
+
+  const li = document.createElement("li");
+  li.className = "nav-item ms-auto d-flex align-items-center gap-2";
+
+  const select = document.createElement("select");
+  select.id = "figureInsertSelect";
+  select.className = "form-select form-select-sm";
+  select.style.width = "auto";
+  select.title = "Insert a registry object as a new layer";
+
+  const first = document.createElement("option");
+  first.value = "";
+  first.textContent = "Insert...";
+  select.appendChild(first);
+
+  for (const obj of listInsertableObjects()) {
+    const opt = document.createElement("option");
+    opt.value = obj.key;
+    opt.textContent = obj.name;
+    select.appendChild(opt);
+  }
+
+  select.onchange = () => {
+    if (select.value) insertLayer(tabId, select.value);
+    select.value = "";
+  };
+  li.appendChild(select);
+
+  for (const [label, key] of [["Line", "drawLine"], ["Parabola", "parabola"]]) {
+    const b = document.createElement("button");
+    b.type = "button";
+    b.id = "figureInsert_" + key;
+    b.className = "btn btn-sm btn-outline-secondary";
+    b.textContent = label;
+    b.onclick = () => insertLayer(tabId, key);
+    li.appendChild(b);
+  }
+
+  bar.appendChild(li);
+
+} // end appendInsertTools
 
 
 /* ============================================================
@@ -165,13 +224,12 @@ export function switchToFigureTab(tabId) {
 
   const action = document.getElementById("action");
   action.style.display = "block";
-  action.innerHTML = "";
-
-  // Empty canvas (no layers exist yet). resetCanvas() sizes the shared
-  // canvas from drawState and paints it white.
-  resetCanvas();
 
   setFiguresCaption(tabState.figure.name, true);
+
+  // Layer list, controls of the active layer, and the picture.
+  renderLayerPanel(tabId);
+  redrawFigure(tabId);
 
 } // end switchToFigureTab
 
@@ -204,6 +262,7 @@ export function openNewFigureTab() {
 export function closeTab(tabId) {
 
   delete uiState.figures.tabs[tabId];
+  if (window.disarmInteractor) window.disarmInteractor();
 
   if (uiState.figures.activeSubtab === tabId) {
     switchToCategories();
