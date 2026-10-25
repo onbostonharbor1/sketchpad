@@ -10,6 +10,8 @@ export let drawState = {
   canvasHeight: 800,
   debug: false,
   final: false,
+  pointsOnly: false,   // true: drawLine draws no stroke; the Figures tab
+                       // points mode reads endpoints instead (slice 3)
   pts: [],
   ctr: 0
 };

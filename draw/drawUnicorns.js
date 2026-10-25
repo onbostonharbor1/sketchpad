@@ -27,23 +27,18 @@ export function drawCycloid(thing) {
     // 1. Draw the perimeter frame first (optional, but usually desired for context)
     drawNodes(thing, nodes);
 
-    // 2. Draw the Cycloid Chords
+    // 2. Draw the Cycloid Chords, one drawLine per chord so that
+    //    final mode and points-only mode apply to every line.
+    //    drawLine saves and restores ctx, so the round cap set here holds.
     ctx.save();
-    ctx.beginPath();
-    ctx.strokeStyle = color;
-    ctx.lineWidth   = lineWidth;
-    ctx.lineCap     = 'round';
+    ctx.lineCap = 'round';
 
     for (let i = 0; i < numNodes; i++) {
         // The core cycloid/cardioid math: node i connects to (i * multiplier)
         let j = (i * numCycloids) % numNodes;
-
-        // Use drawLine or direct canvas calls, but keep them as distinct segments
-        ctx.moveTo(nodes[i].x, nodes[i].y);
-        ctx.lineTo(nodes[j].x, nodes[j].y);
+        drawLine(nodes[i], nodes[j], color, lineWidth);
     }
 
-    ctx.stroke();
     ctx.restore();
 }
 
@@ -53,35 +48,21 @@ export function drawCycloid(thing) {
 /////////////////////////////////////////////////////////////////
 export function drawMysticRose(thing){
     let nodes = createNodes(thing);
-	ctx.save();
-	ctx.strokeStyle = thing.color;
-	ctx.lineWidth   = thing.lineWidth;
-   	ctx.beginPath();
+    // Every pair of nodes is joined once. (The earlier nested loop drew
+    // each chord twice into one path, which looked the same when stroked
+    // once but would darken antialiased edges if stroked per chord.)
     for (let i=0; i < nodes.length; i++) {
-        for (let j=0; j < nodes.length -1; j++) {
-	        if (j != i) {
-	            ctx.moveTo(nodes[i].x,nodes[i].y);
-	            ctx.lineTo(nodes[j].x,nodes[j].y);
-	        }
-	    }
-	}
-	ctx.stroke();
-    ctx.closePath();
-	ctx.restore();
+        for (let j=i+1; j < nodes.length; j++) {
+            drawLine(nodes[i], nodes[j], thing.color, thing.lineWidth);
+        }
+    }
 } // end drawMysticRose
 
 export function drawRadiate(thing){
-	ctx.save();
-	ctx.strokeStyle = thing.color;
-	ctx.lineWidth   = thing.lineWidth;
 	let line = new Line(thing.start, thing.end);
 	thing.nodes  = ptsOnLine(thing,line);
 	for (let i=0; i < thing.nodes.length-1; i++) {
-	      ctx.moveTo(thing.radialPt.x, thing.radialPt.y);
-	      ctx.lineTo(thing.nodes[i].x, thing.nodes[i].y);
+	      drawLine(thing.radialPt, thing.nodes[i], thing.color, thing.lineWidth);
 	  }
-	ctx.moveTo(thing.radialPt.x, thing.radialPt.y);
-	ctx.lineTo(thing.end.x, thing.end.y);
-	ctx.stroke();
-	ctx.restore();
+	drawLine(thing.radialPt, thing.end, thing.color, thing.lineWidth);
 } // end drawRadiate

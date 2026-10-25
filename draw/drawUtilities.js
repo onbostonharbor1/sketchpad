@@ -15,8 +15,10 @@ drawLines(thing, lines, close)
 
 drawLine(arg1, arg2, arg3, arg4)
 - The core polyfilled drawing method. Handles Line objects, Point
-  objects, or numeric indices. Supports "final" mode to draw only
-  endpoints for draft visualization.
+  objects, or numeric indices. Supports "final" mode (lines drawn at
+  reduced alpha) and "pointsOnly" mode (no stroke at all).
+  Rule: registry draw code draws lines only through drawLine, never
+  with raw ctx.moveTo/lineTo/stroke.
 
 drawALine(color, lineWidth, line)
 - A specialized wrapper that renders a single Line object with
@@ -396,6 +398,15 @@ function drawLine(arg1, arg2, arg3 = "blue", arg4 = 1) {
 
         color     = arg3;
         lineWidth = arg4;
+    }
+
+    // ------------------------------------------------------------
+    // Points-only mode: draw no stroke at all. This is separate from
+    // final mode (which dims lines). Registry draw code must reach the
+    // canvas through drawLine so this flag covers every line.
+    // ------------------------------------------------------------
+    if (drawState.pointsOnly === true) {
+        return;
     }
 
     // ------------------------------------------------------------

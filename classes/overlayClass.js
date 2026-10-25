@@ -1,4 +1,13 @@
-/* classes/linkedCircles.js
+/* classes/overlayClass.js
+
+   NOTE: this file is currently a byte-for-byte copy of
+   classes/linkedCircles.js (it defines the same LinkedCircles class).
+   It is imported by main.js and drawMain.js as a side-effect import.
+   Its contents have not yet been changed to an overlay class.
+
+   Original header follows.
+   ------------------------------------------------------------
+   classes/linkedCircles.js
    ------------------------------------------------------------
    LinkedCircles
 

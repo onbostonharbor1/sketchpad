@@ -9,6 +9,12 @@
    - Uses ctx directly (fail-fast)
    ------------------------------------------------------------ */
 
+import { drawLine } from "./drawUtilities.js";
+import { Point }    from "/classes/classes.js";
+
+// Circles use ctx.arc, so they have no endpoints to number. They are
+// still drawn in points-only mode until it is decided what points mode
+// should show for them (open item in the Figures tab spec).
 function drawOneCircle(ctx, center, radius) {
   ctx.beginPath();
   ctx.arc(center.x, center.y, radius, 0, 2 * Math.PI);
@@ -131,9 +137,6 @@ export function drawLinkedCircles(thing) {
 
   const stepAngle = (2 * Math.PI) / thing.numPoints;
 
-  // We collect ALL stitch segments into one path for efficiency.
-  ctx.beginPath();
-
   // ------------------------------------------------------------
   // For each pair of circles...
   // ------------------------------------------------------------
@@ -169,26 +172,13 @@ export function drawLinkedCircles(thing) {
       const y2 = c2.y - thing.radius * Math.cos(h);
 
       // --------------------------------------------------------
-      // IMPORTANT:
-      //
-      // We explicitly start each stitch with moveTo(),
-      // then draw the stitch with lineTo().
-      //
-      // This guarantees that EVERY stitch is drawn and
-      // avoids the missing-line gap caused by relying on
-      // a previous pen position.
+      // Each stitch goes through drawLine, so final mode and
+      // points-only mode apply to it like every other line.
       // --------------------------------------------------------
 
-      ctx.moveTo(x1, y1);
-      ctx.lineTo(x2, y2);
+      drawLine(new Point(x1, y1), new Point(x2, y2), thing.color, thing.lineWidth);
     }
   }
-
-  // ------------------------------------------------------------
-  // Render all stitches at once
-  // ------------------------------------------------------------
-
-  ctx.stroke();
 
 } // end drawLinkedCircles
 
