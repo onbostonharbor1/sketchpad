@@ -329,6 +329,17 @@ function wireEditManifestHandlers(spec, resolve) {
   // Events
   // ------------------------------------------------------------
 
+  // Clicking or typing in the custom status box selects its radio.
+  // (The text input sits inside the radio's label, but a click on a
+  // nested input does not activate the label's control.)
+  const selectCustomRadio = () => {
+    for (let i = 0; i < radios.length; i++) {
+      if (String(radios[i].value) === "__custom__") radios[i].checked = true;
+    }
+  };
+  customInput.addEventListener("focus", selectCustomRadio);
+  customInput.addEventListener("input", selectCustomRadio);
+
   cancelBtn.onclick = () => {
     closeFormsOverlay();
     resolve(false);
@@ -422,6 +433,10 @@ export async function applyEditManifest(spec, resolve) {
   if (result.request !== "editManifestEntry") {
     throw new Error("applyEditManifest: unexpected response: " + JSON.stringify(result));
   }
+
+  // The manifest on disk changed; drop the cached category/status maps
+  // so Home, Gallery and the other tabs read the edited entry.
+  manifest.clearCache();
 
   spec._resultTitle  = newTitle;
   spec._resultStatus = newStatus;

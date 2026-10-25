@@ -19,7 +19,9 @@
     "open:draw": "wait-on http://localhost:5173/ && start http://localhost:5173/draw.html",
     "start:draw": "concurrently -n VITE,OPEN \"npm run dev:draw\" \"npm run open:draw\"",
     "build": "vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "lint:globals": "eslint --no-error-on-unmatched-pattern ui draw classes drawRegistry utilities home gallery patterns help main.js drawMain.js",
+    "test:tabs": "node tests/tabSwitch.mjs"
   },
   "dependencies": {
     "@jaames/iro": "^5.5.2",
@@ -32,6 +34,9 @@
   },
   "devDependencies": {
     "concurrently": "^9.2.1",
+    "eslint": "^9.39.5",
+    "globals": "^17.13.0",
+    "playwright": "^1.63.0",
     "vite": "^7.1.12",
     "wait-on": "^9.0.3"
   }

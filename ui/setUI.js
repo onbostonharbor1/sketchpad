@@ -139,6 +139,23 @@ async function activateTab(tab) {
    PUBLIC ENTRY
 ============================================================ */
 export async function setUI(tab) {
+
+  // Stage names the step that was running if something throws, so a
+  // failure at startup says where, not just what.
+  const progress = { stage: "start" };
+
+  try {
+    await runSetUI(tab, progress);
+  } catch (e) {
+    console.error(`setUI("${tab}") failed during stage "${progress.stage}":`, e);
+    throw e;
+  }
+
+} // end setUI
+
+
+async function runSetUI(tab, progress) {
+  progress.stage = "disable overlays";
   disableAllNextPrevOverlays();
 
   let tabName = (tab === START) ? START : tab;
@@ -148,6 +165,7 @@ export async function setUI(tab) {
   }
 
   // 1. Persist the tab selection
+  progress.stage = "persist tab selection";
   if (tabName !== START) {
     sessionStorage.setItem(LAST_TAB_KEY, tabName);
   }
@@ -165,17 +183,20 @@ export async function setUI(tab) {
   // }
 
   // 3. Apply theme
+  progress.stage = "apply theme";
   applyTheme(tabName === START ? "home" : tabName);
 
   // 4. Activate
+  progress.stage = "activate " + tabName;
   await activateTab(tabName);
 
   // 5. Handle Launch Intents
+  progress.stage = "launch intent";
   if (!uiState.launch || uiState.launch.pending !== true) return;
   const targetTab = uiState.launch.targetTab;
   uiState.launch.pending = false;
   if (uiState.activeTab !== targetTab) setUI(targetTab);
-}
+} // end runSetUI
 
 /* --- Tab Handling Logic --- */
 function handleTabChange(eventOrId) {
@@ -211,8 +232,17 @@ async function onDomContentLoaded() {
     });
   });
 
-  // 4. Determine the landing tab
-  setUI(START);
+  // 4. Determine the landing tab. A failure here would otherwise leave a
+  // blank page, so show the stage that failed (also logged by setUI).
+  try {
+    await setUI(START);
+  } catch (e) {
+    const box = document.getElementById("text");
+    if (box) {
+      box.style.display = "block";
+      box.textContent = "Sketchpad failed to start. See the console for the stage that failed: " + e.message;
+    }
+  }
   // const lastTab = sessionStorage.getItem(LAST_TAB_KEY);
   // if (lastTab && TabRegistry[lastTab]) {
   //   setUI(lastTab);
