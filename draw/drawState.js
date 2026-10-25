@@ -2,6 +2,16 @@
 // ===========================================================
 // Canvas setup and global context getter
 // ===========================================================
+//
+// Window globals declared here (set below or elsewhere; read by name):
+//   window.drawCanvas   the shared canvas element       (set below)
+//   window.drawCtx      its 2d context                  (set below, resetCanvas)
+//   window.ctx          getter: active layer ctx, else drawCtx (set below)
+//   window.drawRegistry draw objects by id    (drawRegistry/drawRegistry.js)
+//   window.armInteractor, window.disarmInteractor
+//                       canvas point dragging           (ui/interactor.js)
+// Gallery scripts use drawCanvas and armInteractor as bare names.
+// ===========================================================
 
 export let drawState = {
   title: "",

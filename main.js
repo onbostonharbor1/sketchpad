@@ -46,7 +46,6 @@ import "./drawRegistry/drawRegistry.js";
 
 // === UI subsystem ===
 import "/ui/uiState.js";
-import "/ui/uiCallbacks.js";
 
 import "/ui/actionRegistry.js";
 import "/ui/canvasLayerManager.js"

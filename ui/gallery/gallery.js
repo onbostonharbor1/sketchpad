@@ -225,11 +225,8 @@ export async function restoreGalleryTab() {
    ============================================================ */
 export function saveGalleryState() {
 
-  return {
-    domain:   getCurrentDomain(),
-    category: getCurrentCategory(),
-    index:    getCurrentIndex()
-  };
+  // The gallery writes uiState.gallery.saved itself as it navigates.
+  return uiState.gallery.saved;
 
 } // end saveGalleryState
 

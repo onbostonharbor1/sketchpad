@@ -18,7 +18,7 @@
 import { nodeDispatch } from "./nodeLayer.js";
 import { overlayManager } from "./overlay.js";
 import { showHelpOverlay } from "./overlay.js";
-import { escapeHtml } from "/ui/uiUtilities.js";
+import { escapeHtml, buildCanvasThumbnailBase64 } from "/ui/uiUtilities.js";
 import { manifest } from "./manifest.js";
 
 /* ============================================================
