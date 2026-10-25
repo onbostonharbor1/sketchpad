@@ -70,6 +70,10 @@ window.drawRegistry_cycloid = {
                 const p = this.params.points[0];
                 s.midpoint.x = p.x;
                 s.midpoint.y = p.y;
+            } else if (key === "radius") {
+                // createNodes() reads ellipse.a and ellipse.b, not radius
+                s.ellipse.a = value*2;
+                s.ellipse.b = value*2;
             } else if (Object.hasOwn(s, key)) {
                 s[key] = value;
             }
