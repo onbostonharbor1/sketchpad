@@ -37,6 +37,7 @@ import {
   makeHelpItem,
   makeShowScriptItem,
   makeEditManifestItem,
+  makeNotesItem,
   makeArchiveItem
 }                                          from "/ui/menuCmds.js";
 import {
@@ -131,6 +132,7 @@ export async function getGalleryCaptionMenuItems(info) {
   return [
     await makeHelpItem("gallery", info.helpKey, { subdirs: info.helpSubdirs }),
     makeShowScriptItem(info, (path, label) => showGalleryScriptSource({ ...info, scriptPath: path })),
+    await makeNotesItem(info.isScript ? info.scriptPath : null, info.filename || info.title),
     makeEditManifestItem(() => editGalleryManifestItem(info)),
     makeArchiveItem(() => archiveGalleryItem(info))
   ];

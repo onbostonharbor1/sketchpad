@@ -140,6 +140,20 @@ else {
   const shown = await page.evaluate(() => document.querySelector(".overlayHelp")?.innerText || "");
   if (!/cardioid/i.test(shown)) problems.push("[draw menu Cycloid] popup lacks the header notes");
   console.log("Notes popup:", JSON.stringify(shown.slice(0, 60)));
+  const buttons = await page.evaluate(() =>
+    [...document.querySelectorAll(".overlayHelpToolbar button")].map(b => b.innerText));
+  if (buttons.join("|") !== "Show Script|Open in VS Code") {
+    problems.push(`[draw menu Cycloid] popup buttons are: ${buttons.join("|")}`);
+  }
+  // Show Script must tear the popup down and show the script panel
+  await page.click("#notesAction0");
+  await page.waitForTimeout(1200);
+  const state = await page.evaluate(() => ({
+    overlay: document.getElementById("overlayContainer").style.display,
+    panel:   document.getElementById("offcanvasPanel").classList.contains("show")
+  }));
+  if (state.overlay !== "none") problems.push("[show script] notes popup was not closed");
+  if (!state.panel)             problems.push("[show script] script panel not shown");
 }
 await page.reload({ waitUntil: "networkidle" });
 await page.waitForTimeout(1200);
@@ -147,6 +161,19 @@ await page.waitForTimeout(1200);
 menu = await drawMenuItems("Circular Parabola");
 const none = menu.find(m => m[0] === "Notes");
 if (!none || !none[1]) problems.push("[draw menu Circular Parabola] Notes should be grayed out");
+
+/* Patterns scripts get the same Notes item */
+await page.click("#patterns-tab");
+await page.waitForTimeout(800);
+await page.locator("#subtabs button", { hasText: "Categories" }).first().click();
+await page.waitForTimeout(600);
+await page.click('#text .item[data-key="First Build"] span');
+await page.waitForTimeout(1500);
+await page.locator("#caption .caption-buttons button", { hasText: /^v$/ }).click();
+await page.waitForTimeout(700);
+const pmenu = await page.evaluate(() =>
+  [...document.querySelectorAll(".caption-menu-item")].map(e => e.innerText));
+if (!pmenu.includes("Notes")) problems.push("[patterns menu] no Notes item");
 
 await browser.close();
 

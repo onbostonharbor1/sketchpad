@@ -254,5 +254,12 @@ export function showNotesOverlay(titleText, notesText, actions = []) {
 } // end showNotesOverlay
 
 
+/* Tears the notes popup down exactly as its close (x) button does. */
+export function closeNotesOverlay() {
+  const btn = document.getElementById("overlayClose");
+  if (btn) btn.click();
+} // end closeNotesOverlay
+
+
 
 

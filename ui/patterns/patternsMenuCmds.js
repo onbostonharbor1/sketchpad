@@ -39,6 +39,7 @@ import {
   openEditManifestDialog,
   makeHelpItem,
   makeShowScriptItem,
+  makeNotesItem,
   makeThumbnailItem,
   makeEditManifestItem,
   makeArchiveItem
@@ -247,6 +248,7 @@ export async function getPatternsCaptionMenuItems(info) {
   return [
     await makeHelpItem("patterns", info.helpKey),
     makeShowScriptItem(info, showScriptOffcanvas),
+    await makeNotesItem(info.isScript ? info.scriptPath : null, info.filename || info.title),
     makeThumbnailItem(() => createPatternThumbnail(info)),
     makeEditManifestItem(() => editPatternsManifestItem(info)),
     makeArchiveItem(() => archivePatternsItem(info))

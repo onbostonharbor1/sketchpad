@@ -17,7 +17,7 @@
 
 import { nodeDispatch } from "./nodeLayer.js";
 import { overlayManager } from "./overlay.js";
-import { showHelpOverlay, showNotesOverlay } from "./overlay.js";
+import { showHelpOverlay, showNotesOverlay, closeNotesOverlay } from "./overlay.js";
 import { extractHeaderNotes, reflowNotes } from "./notes.js";
 import { escapeHtml, buildCanvasThumbnailBase64 } from "/ui/uiUtilities.js";
 import { manifest } from "./manifest.js";
@@ -1050,7 +1050,8 @@ export function makeArchiveItem(handler) {
      * Fetches the file and extracts its header notes.
      * Grayed out (disabled) when the file has no notes, the same
        way Help is grayed out when it has no help page.
-     * The popup offers Show Script and Open in VS Code / Emacs.
+     * The popup offers Show Script (closes the popup first) and
+       Open in VS Code.
 
    Arguments:
      scriptPath - URL path of the source, e.g. "/drawRegistry/cycloid.js"
@@ -1087,9 +1088,8 @@ export async function makeNotesItem(scriptPath, label) {
     onClick:  () => {
       if (!enabled) return;
       showNotesOverlay((label || scriptPath) + " Notes", reflowNotes(notes), [
-        { label: "Show Script",     onClick: () => { showScriptOffcanvas(scriptPath, label); } },
-        { label: "Open in VS Code", onClick: openIn("vscode") },
-        { label: "Open in Emacs",   onClick: openIn("emacs") }
+        { label: "Show Script",     onClick: () => { closeNotesOverlay(); showScriptOffcanvas(scriptPath, label); } },
+        { label: "Open in VS Code", onClick: openIn("vscode") }
       ]);
     }
   };

@@ -616,7 +616,7 @@ export async function readLogFile(payload = {}) {
    -----------
    Opens a source file of this project in a desktop editor.
 
-   payload: { editor: "vscode" | "emacs", file: "/drawRegistry/x.js" }
+   payload: { editor: "vscode", file: "/drawRegistry/x.js" }
 
    SAFETY
    ------
@@ -627,9 +627,10 @@ export async function readLogFile(payload = {}) {
    and  _ . - / space. The editor command comes from a fixed list,
    never from the request.
    =========================================================== */
+// To offer another editor, add its command name(s) here and a button
+// in makeNotesItem (ui/menuCmds.js).
 const EDITOR_COMMANDS = {
-  vscode: ["code"],
-  emacs:  process.platform === "win32" ? ["runemacs", "emacs"] : ["emacs"]
+  vscode: ["code"]
 };
 
 export async function openInEditor(payload = {}) {

@@ -30,6 +30,7 @@ import {
   openEditManifestDialog,
   makeHelpItem,
   makeShowScriptItem,
+  makeNotesItem,
   makeEditManifestItem,
   makeArchiveItem
 }                                 from "/ui/menuCmds.js";
@@ -90,6 +91,7 @@ export async function getUtilitiesCaptionMenuItems(info) {
   return [
     await makeHelpItem("utilities", info.helpKey),
     makeShowScriptItem(info, showScriptOffcanvas),
+    await makeNotesItem(info.isScript ? info.scriptPath : null, info.filename || info.title),
     makeEditManifestItem(() => editUtilitiesManifestItem(info)),
     makeArchiveItem(() => archiveUtilitiesItem(info))
   ];
