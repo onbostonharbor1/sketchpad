@@ -15,8 +15,8 @@ drawLines(thing, lines, close)
 
 drawLine(arg1, arg2, arg3, arg4)
 - The core polyfilled drawing method. Handles Line objects, Point
-  objects, or numeric indices. Supports "final" mode (lines drawn at
-  reduced alpha) and "pointsOnly" mode (no stroke at all).
+  objects, or numeric indices. In "final" mode (drawState.final) it
+  draws just the two endpoints and no line.
   Rule: registry draw code draws lines only through drawLine, never
   with raw ctx.moveTo/lineTo/stroke.
 
@@ -401,27 +401,14 @@ function drawLine(arg1, arg2, arg3 = "blue", arg4 = 1) {
     }
 
     // ------------------------------------------------------------
-    // Points-only mode: draw no stroke at all. This is separate from
-    // final mode (which dims lines). Registry draw code must reach the
-    // canvas through drawLine so this flag covers every line.
-    // ------------------------------------------------------------
-    if (drawState.pointsOnly === true) {
-        return;
-    }
-
-    // ------------------------------------------------------------
-    // Final mode: draw line with reduced alpha for light visibility
+    // Final mode (drawState.final): draw just the points, no line.
+    // Registry draw code must reach the canvas through drawLine so
+    // this one flag covers every line.
     // ------------------------------------------------------------
     if (drawState.final === true) {
         ctx.save();
-        ctx.globalAlpha = 0.15;  // Reduced alpha for light visibility
-        ctx.beginPath();
-        ctx.strokeStyle = color;
-        ctx.lineWidth = lineWidth;
-        ctx.moveTo(pt1.x, pt1.y);
-        ctx.lineTo(pt2.x, pt2.y);
-        ctx.stroke();
-        ctx.closePath();
+        displayPoint(pt1, color);
+        displayPoint(pt2, color);
         ctx.restore();
         return;
     }

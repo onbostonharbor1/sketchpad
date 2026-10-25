@@ -28,7 +28,7 @@ export function drawCycloid(thing) {
     drawNodes(thing, nodes);
 
     // 2. Draw the Cycloid Chords, one drawLine per chord so that
-    //    final mode and points-only mode apply to every line.
+    //    final mode (points only) applies to every line.
     //    drawLine saves and restores ctx, so the round cap set here holds.
     ctx.save();
     ctx.lineCap = 'round';

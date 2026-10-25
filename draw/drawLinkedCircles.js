@@ -12,9 +12,8 @@
 import { drawLine } from "./drawUtilities.js";
 import { Point }    from "/classes/classes.js";
 
-// Circles use ctx.arc, so they have no endpoints to number. They are
-// still drawn in points-only mode until it is decided what points mode
-// should show for them (open item in the Figures tab spec).
+// Circles use ctx.arc, so they have no endpoints. They are still drawn
+// in final mode; the stitches below follow drawState.final through drawLine.
 function drawOneCircle(ctx, center, radius) {
   ctx.beginPath();
   ctx.arc(center.x, center.y, radius, 0, 2 * Math.PI);
@@ -172,8 +171,8 @@ export function drawLinkedCircles(thing) {
       const y2 = c2.y - thing.radius * Math.cos(h);
 
       // --------------------------------------------------------
-      // Each stitch goes through drawLine, so final mode and
-      // points-only mode apply to it like every other line.
+      // Each stitch goes through drawLine, so final mode (points
+      // only) applies to it like every other line.
       // --------------------------------------------------------
 
       drawLine(new Point(x1, y1), new Point(x2, y2), thing.color, thing.lineWidth);
