@@ -11,11 +11,11 @@
 
 import { buildParameterControls } from "/ui/parameterControls.js";
 import { Ellipse, TAPER, START_END, FULL, START_TAPER, END_TAPER } from "/classes/ellipseClass.js";
-import { Point } from "/classes/classes.js";
+import { Point }         from "/classes/classes.js";
 import { drawInEllipse } from "/draw/drawEllipse.js";
 
 export const scriptInfo = {
-  title: "Varied Ellipse Chords",
+  title: "Varied Ellipse Chords with jitter",
 
   params: {
     midpoint: { x: 350, y: 350 },
