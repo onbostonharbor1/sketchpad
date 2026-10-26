@@ -15,6 +15,7 @@ Do one phase at a time. After each, stop and wait for him to review, play with i
 | 6c | Layer colors: each layer has a color, shown on its number in the strip and changeable there; that layer's numbered points are drawn as circled numbers in the same color. Retire the old coded-number display (printCircNum and `drawState.ctr`), which only existed to name join points when numbers were coded by hand | Added by Barry; placed after 6b, can move |
 | 7 | Handle and drag: arrow-key nudging, 1 px, 10 px with Shift; drag a numbered point; nudge a point's number label | |
 | 7b | Centroid and bounding box: every object has a visible centroid. Drag the centroid to move the object anywhere. Selecting a centroid shows a bounding box; grabbing handles on the box rotates the object about the centroid. Open: one handle or several on the box | |
+| 7c | Break apart an object into its pieces (own phase: it changes existing drawing code). A composite object, such as a polygon of stitched parabolas, is replaced by separate layers (Lines, Parabolas) that can be moved, welded and deleted on their own. Needs a `decompose()` on each object that supports it | Added; placed before welds because weld-drag on composite objects depends on it |
 | 8 | Welds | |
 | 8b | Magic points: more candidate kinds (midpoints, tops of loops, cusps), needed as weld targets and for parametric objects | |
 | 9 | Print aids: scale bar; minimum nail-spacing check (needs nail size and highlight-vs-list answers from Barry) | |
@@ -113,6 +114,18 @@ reproduced above.
 
 - 6c: is the number display he calls no longer needed the old coded numbers (printCircNum, `drawState.ctr`), the
   Numbers button, or both?
+- 7b mechanism (accepted: Option A, refined): no canvas operations (no ctx move or rotate). Each layer has a
+  transform (move, rotate, later scale) held in `drawState` while that layer draws, and `drawLine` maps its two
+  end points through it (and `displayPoint` for dots). Nearly all drawing already goes through `drawLine`. The
+  exceptions are `draw/drawSpirals.js` (24 direct ctx calls), `draw/drawLinkedCircles.js` (4) and the circle and
+  text helpers, which need small changes. One function maps object space to canvas space for everything else
+  (infrastructure, drag circles, picking, welds), so no layer is special and different transforms can coexist.
+  Welds compare points in canvas space.
+- 8 / 7c: dragging a welded point. Proposed rule: a weld has one leader (the object that was there first) and one
+  follower. Only the leader's circle drags, and the follower's end moves with it; the follower's other points keep
+  their place. The follower's circle at the weld is locked. To change that, use Unweld, or Break apart (7c). A
+  rigid composite leader (a pentagon) cannot deform at one vertex, so it must be broken apart first. Unwelded
+  objects never move each other.
 - 7b: how to rotate. Option A: every layer gets a transform (move, rotate, later scale) applied around its
   centroid when it draws, so all objects work without changes; the cost is that drag circles and infrastructure
   positions must be mapped through the same transform. Option B: rewrite each object's own params. Option A is
