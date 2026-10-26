@@ -223,3 +223,17 @@ reproduced above.
 - Hiding the active layer leaves it active (nothing changes `activeLayer`), and every other layer stays dimmed.
   Barry saw the layer underneath become active and undimmed; not reproduced. Proposed rule: hiding the active
   layer makes the next visible layer down (in `drawOrder`) active.
+
+## Weld hubs (Barry, 2026-10-26: e.g. 8 parabolas welded to one center point)
+
+- Model a weld as a group (one record listing every disc at that point), not as pairwise welds. Dragging any
+  member's handle moves all members; each object moves once per drag.
+- Revises the ring rule: joining a group is always consistent, since the points coincide. Reject only a weld that
+  would tie two different places into one loop.
+- A group is one nail on the printed template. Phase 9's nail-spacing check counts each group once. This also
+  answers the Phase 8 question about merged numbers (one hole per group).
+- Display: the stacked discs show only the top layer's color; a group probably wants its own marker.
+- A Parabola corner is two handles at one spot (end of arm 1, start of arm 2). Welding a corner means both arm
+  ends get a disc and join the group.
+- 7b: moving a hub member by its centroid breaks the hub, is blocked, or pulls the others' hub points. Decide in 7b.
+
