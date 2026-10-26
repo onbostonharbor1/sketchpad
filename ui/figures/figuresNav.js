@@ -114,27 +114,35 @@ export function renderSubtabs() {
     bar.appendChild(li);
   }
 
-  // Insert tools, only while a figure tab is active
-  if (activeTabId !== "tab-categories" && uiState.figures.tabs[activeTabId]?.figure) {
-    appendInsertTools(bar, activeTabId);
-  }
-
-  updateInsertSelect();
+  updateFigureButtons();
 
 } // end renderSubtabs
 
 
 /* ============================================================
-   appendInsertTools(bar, tabId)
+   addCaptionTools(tabId)
    ------------------------------------------------------------
-   Line and Parabola shortcut buttons, centered in the bar. The
-   full registry list is the Insert Object button in the left
-   command area (see updateInsertSelect).
-   ============================================================ */
-function appendInsertTools(bar, tabId) {
+   Puts the figure's tools in the gray caption bar (same row as the
+   title and the "v" menu button). Call after setFiguresCaption(),
+   which rebuilds the bar.
 
-  const li = document.createElement("li");
-  li.className = "nav-item ms-auto me-auto d-flex align-items-center gap-2";
+     middle : Line and Parabola shortcut buttons
+     right  : "Layer N . Name" and the Show checkbox (filled in by
+              figureLayers.js), just left of the "v" button
+
+   The full registry list is the Insert Object list in the left
+   command area (see updateFigureButtons).
+   ============================================================ */
+function addCaptionTools(tabId) {
+
+  const caption = document.getElementById("caption");
+  const btnRow  = caption?.querySelector(".caption-buttons");
+  if (!caption || !btnRow) return;
+
+  // ---- middle: Line, Parabola ----------------------------------
+  const mid = document.createElement("div");
+  mid.id = "figureCaptionTools";
+  mid.style.cssText = "display:flex; gap:8px; flex-grow:1; justify-content:center;";
 
   const tools = [
     ["Line",     "drawLine", "Insert a line as a new layer"],
@@ -145,25 +153,23 @@ function appendInsertTools(bar, tabId) {
     const b = document.createElement("button");
     b.type = "button";
     b.id = "figureInsert_" + key;
-    b.className = "btn btn-sm btn-outline-secondary";
     b.textContent = label;
     b.title = tip;
     b.onclick = () => insertLayer(tabId, key);
-    li.appendChild(b);
+    mid.appendChild(b);
   }
+  caption.insertBefore(mid, btnRow);
 
-  bar.appendChild(li);
-
-  // Active layer: name and a Show checkbox (filled in by figureLayers.js)
-  const info = document.createElement("li");
-  info.className = "nav-item d-flex align-items-center gap-2 ms-2";
+  // ---- right: active layer name and Show checkbox ----------------
+  const info = document.createElement("span");
+  info.style.cssText = "display:inline-flex; align-items:center; gap:8px; margin-right:10px;";
 
   const label = document.createElement("span");
   label.id = "figureLayerLabel";
   info.appendChild(label);
 
   const showLabel = document.createElement("label");
-  showLabel.className = "d-flex align-items-center gap-1";
+  showLabel.style.cssText = "display:inline-flex; align-items:center; gap:3px; margin:0;";
   showLabel.title = "Show or hide the active layer while editing. The final drawing always shows everything.";
   const box = document.createElement("input");
   box.type = "checkbox";
@@ -176,25 +182,34 @@ function appendInsertTools(bar, tabId) {
   showLabel.appendChild(document.createTextNode("Show"));
   info.appendChild(showLabel);
 
-  bar.appendChild(info);
+  btnRow.insertBefore(info, btnRow.firstChild);
 
-} // end appendInsertTools
+} // end addCaptionTools
 
 
 /* ============================================================
-   updateInsertSelect()
+   updateFigureButtons()
    ------------------------------------------------------------
-   The "Insert Object" list in the left command area. It is created
-   by figures.js (setFiguresAction); this fills it and enables it
-   only while a figure tab is active.
+   The left command area. Create Figure shows only on the
+   Categories tab; the Insert Object list shows only on a figure
+   tab. Both are created by figures.js (setFiguresAction).
    ============================================================ */
-export function updateInsertSelect() {
-
-  const select = document.getElementById("figureInsertSelect");
-  if (!select) return;
+export function updateFigureButtons() {
 
   const tabId = uiState.figures.activeSubtab;
   const live  = !!uiState.figures.tabs[tabId]?.figure;
+
+  const show = (id, on) => {
+    const el = document.getElementById(id);
+    if (el) el.style.display = on ? "" : "none";
+  };
+  show("createFigureButton", !live);
+  show("figureBr1",          !live);
+  show("figureInsertSelect", live);
+  show("figureBr2",          live);
+
+  const select = document.getElementById("figureInsertSelect");
+  if (!select) return;
 
   select.innerHTML = "";
   const first = document.createElement("option");
@@ -209,14 +224,13 @@ export function updateInsertSelect() {
     select.appendChild(opt);
   }
 
-  select.disabled = !live;
   select.onchange = () => {
     const key = select.value;
     select.value = "";
     if (key && live) insertLayer(tabId, key);
   };
 
-} // end updateInsertSelect
+} // end updateFigureButtons
 
 
 /* ============================================================
@@ -275,6 +289,7 @@ export function switchToFigureTab(tabId) {
   action.style.display = "block";
 
   setFiguresCaption(tabState.figure.name, true);
+  addCaptionTools(tabId);
 
   // Layer list, controls of the active layer, and the picture.
   renderLayerPanel(tabId);

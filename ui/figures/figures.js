@@ -122,6 +122,7 @@ function setFiguresAction() {
   // Tagged "tab-extra": #button is permanent, so clearDivs() removes
   // everything tagged this way on each tab switch.
   const br = document.createElement("br");
+  br.id = "figureBr1";
   br.className = "tab-extra";
   buttonDiv.appendChild(br);
 
@@ -134,8 +135,10 @@ function setFiguresAction() {
   buttonDiv.appendChild(btn);
 
   // Insert Object: a list of every registry object. Filled and enabled
-  // by updateInsertSelect() in figuresNav.js.
+  // by updateFigureButtons() in figuresNav.js. Create Figure shows only
+  // on the Categories tab; Insert Object only on a figure tab.
   const br2 = document.createElement("br");
+  br2.id = "figureBr2";
   br2.className = "tab-extra";
   buttonDiv.appendChild(br2);
 
