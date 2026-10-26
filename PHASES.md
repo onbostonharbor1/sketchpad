@@ -20,7 +20,7 @@ Do one phase at a time. After each, stop and wait for him to review, play with i
 | 8b | Magic points: more candidate kinds (midpoints, tops of loops, cusps), needed as weld targets and for parametric objects | |
 | 9 | Print aids: scale bar; minimum nail-spacing check (needs nail size and highlight-vs-list answers from Barry) | |
 | 10 | Save and recovery (Save As, category and manifest creation, reload) | |
-| 11 | Figure follow-ups (includes the possible show/hide numbers control, to be discussed) | |
+| 11 | Figure follow-ups  | |
 | 12 | Thumbnails (the Insert list becomes icons with a larger preview on mouseover) | |
 | 13 | Sweep tool | |
 | 14 | Filesystem boundary refactor (C3) | |
@@ -50,7 +50,12 @@ reproduced above.
   stay as they are, dimmed.
 - Entering points mode lets him click straight away to insert a drag circle (no second command).
 - Showing every layer's points in points mode stays as built, for now. Barry is unsure it is a good idea.
-- Possible later addition, needs discussion: a control to show or hide the numbers (Phase 11 follow-ups).
+- Numbers are no longer displayed (Barry does not expect to need them). They stay as hidden identity (global
+  `nextPoint`, never reused) for welds and saving. The circles are drawn unnumbered, filled with the layer color
+  (6c). The show/hide numbers control is dropped unless he asks for it again.
+- REVERSAL under discussion: drag circles (the object's own handles and the placed circles) are always visible in
+  both modes and may be draggable in both modes. Points mode then only adds click-to-create. This reverses
+  "only points draggable in points mode". Design it in Phase 7 as one picker for handles and placed circles.
 
 ## Phase 6a as built
 
@@ -122,7 +127,6 @@ reproduced above.
 
 ## Open design questions
 
-- 6b: with the Numbers button gone, are the numbers drawn only in points mode (as I assume), or also in line mode?
 
 - 6c: is the number display he calls no longer needed the old coded numbers (printCircNum, `drawState.ctr`), the
   Numbers button, or both?
