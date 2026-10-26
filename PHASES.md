@@ -12,6 +12,7 @@ Do one phase at a time. After each, stop and wait for him to review, play with i
 | 5 | Figures shell: Create Figure, Untitled N subtabs, caption menu | Done, merged |
 | 6a | Insert objects (see below) | Done, merged |
 | 6b | Points mode: click-to-place numbered points (anchored or free), global `nextPoint`, numbers toggle in line mode, final display in points mode, a "Hit radius" subcommand (default 5 px) for tuning. Model below | Done, on `claude/phase-6b`, awaiting his review |
+| 6c | Layer colors: each layer has a color, shown on its number in the strip and changeable there; that layer's numbered points are drawn as circled numbers in the same color. Retire the old coded-number display (printCircNum and `drawState.ctr`), which only existed to name join points when numbers were coded by hand | Added by Barry; placed after 6b, can move |
 | 7 | Handle and drag: arrow-key nudging, 1 px, 10 px with Shift; drag a numbered point; nudge a point's number label | |
 | 8 | Welds | |
 | 8b | Magic points: more candidate kinds (midpoints, tops of loops, cusps), needed as weld targets and for parametric objects | |
@@ -87,7 +88,10 @@ reproduced above.
 - A point's label can be nudged slightly without moving the point (offset stored with the point; Phase 7).
 - Registry objects must say which of their lines are infrastructure. 6b covers Line and Parabola only.
 
-## Open design questions (decide when the phase arrives)
+## Open design questions
+
+- 6c: is the number display he calls no longer needed the old coded numbers (printCircNum, `drawState.ctr`), the
+  Numbers button, or both? Free points belong to no layer, so what color are they? (decide when the phase arrives)
 
 - Phase 8: weld rule (which layer moves, freezing, automatic or asked), weldable objects (line types first).
 - Merge: always the top two layers; which number the merged layer keeps; frozen weld points hold it together.
