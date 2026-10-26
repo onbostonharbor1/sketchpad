@@ -53,9 +53,15 @@ reproduced above.
 - Numbers are no longer displayed (Barry does not expect to need them). They stay as hidden identity (global
   `nextPoint`, never reused) for welds and saving. The circles are drawn unnumbered, filled with the layer color
   (6c). The show/hide numbers control is dropped unless he asks for it again.
-- REVERSAL under discussion: drag circles (the object's own handles and the placed circles) are always visible in
-  both modes and may be draggable in both modes. Points mode then only adds click-to-create. This reverses
-  "only points draggable in points mode". Design it in Phase 7 as one picker for handles and placed circles.
+- Settled: in points mode, dragging a drag circle moves that circle and nothing more. In lines mode the object's
+  own handles reshape the object (as in 6a). 6b as built does this.
+- Open: are the object's own red handles also "drag circles", visible but inert in points mode? Today they are
+  hidden in points mode.
+- Welds are made only between points that have placed drag circles. An object's end point is not weldable until
+  a circle has been placed on it. (Retracted: an earlier suggestion that handles are automatically weldable.)
+- Numbers are ids. Existing code already resolves a point given as a number: `numbersToPoints` in
+  `draw/drawUtilities.js` looks the number up as an index into `drawState.pts`. Figure point numbers should
+  plug into the same kind of lookup when welds and saving arrive, so a point can be given as just a number.
 
 ## Phase 6a as built
 
