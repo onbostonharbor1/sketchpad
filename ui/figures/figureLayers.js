@@ -198,9 +198,10 @@ export function redrawFigure(tabId, { dim = true } = {}) {
 
   drawState.final = wasFinal;
 
-  // Numbered points: anchored ones follow their layers, so refresh first.
+  // Numbered points are always shown, in both modes, at full strength
+  // whatever the dimming. Anchored ones follow their layers, so refresh first.
   refreshPoints(tabState);
-  if (pointsMode || tabState.showNumbers) drawFigurePoints(tabState);
+  drawFigurePoints(tabState);
 
 } // end redrawFigure
 
@@ -213,7 +214,9 @@ export function redrawFigure(tabId, { dim = true } = {}) {
    grayed and struck through. The action panel gets the active
    layer's controls. The subtab bar item for the active layer
    (name and Show checkbox) is refreshed. Arms the point
-   interactor on the active layer when it is visible.
+   interactor (the object's handles) on the active layer when it is
+   visible, or always in points mode, and the points-mode mouse
+   input as well in points mode.
    ============================================================ */
 export function renderLayerPanel(tabId) {
 
@@ -280,14 +283,18 @@ export function renderLayerPanel(tabId) {
     syncOverlayToCanvas("guides", canvas);
   }
 
-  // Points mode: only points are draggable, so the object handles are off
-  // and the mouse goes to figurePointer.js. Otherwise: object handles.
+  // The active object's own handles are the only draggable points, in both
+  // modes. In points mode figurePointer.js also takes clicks (place, select,
+  // delete) and must be set up first: it sizes the interaction layer that
+  // the interactor then draws the handles on. Points mode draws hidden
+  // layers, so their handles are live too.
   if (window.disarmInteractor) window.disarmInteractor();
   deactivatePointsInput();
 
-  if (tabState.mode === "points") {
-    activatePointsInput(tabId, () => redrawFigure(tabId));
-  } else if (active && figure.layers[figure.activeLayer].visible) {
+  const pointsMode = tabState.mode === "points";
+  if (pointsMode) activatePointsInput(tabId, () => redrawFigure(tabId));
+
+  if (active && (pointsMode || figure.layers[figure.activeLayer].visible)) {
     if (window.armInteractor) window.armInteractor(active);
   }
 
@@ -334,6 +341,7 @@ export function selectLayer(tabId, index) {
 
   const figure = tabState.figure;
   figure.activeLayer = index;
+  tabState.selectedPoint = null;   // only the active layer's points can be selected
 
   if (MOVE_TO_FRONT_ON_SELECT) {
     figure.drawOrder = [index, ...figure.drawOrder.filter((n) => n !== index)];

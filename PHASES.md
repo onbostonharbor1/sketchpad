@@ -11,7 +11,7 @@ Do one phase at a time. After each, stop and wait for him to review, play with i
 | 4 | Draw prerequisites: final flag, `drawLine` routing | Done, merged |
 | 5 | Figures shell: Create Figure, Untitled N subtabs, caption menu | Done, merged |
 | 6a | Insert objects (see below) | Done, merged |
-| 6b | Points mode: click-to-place numbered points (anchored or free), global `nextPoint`, numbers toggle in line mode, final display in points mode, a "Hit radius" subcommand (default 5 px) for tuning. Model below | Done, on `claude/phase-6b`, awaiting his review |
+| 6b | Points mode: click-to-place discs (anchored or free) on the active layer, global `nextPoint`, Points Mode checkbox, final display in points mode, a "Hit radius" subcommand (default 5 px) for tuning. Model below | Done, revised per his comments, on `claude/phase-6b`, awaiting his review |
 | 6c | Layer colors: each layer has a color, shown on its number in the strip and changeable there; that layer's numbered points are drawn as circled numbers in the same color. Retire the old coded-number display (printCircNum and `drawState.ctr`), which only existed to name join points when numbers were coded by hand | Added by Barry; placed after 6b, can move |
 | 7 | Handle and drag: arrow-key nudging, 1 px, 10 px with Shift, of the object's own handles; nudge a circle's number label (placed circles are not themselves dragged, see revision below) | |
 | 7b | Centroid and bounding box: every object has a visible centroid. Drag the centroid to move the object anywhere. Selecting a centroid shows a bounding box; grabbing handles on the box rotates the object about the centroid. Open: one handle or several on the box | |
@@ -30,25 +30,32 @@ reproduced above.
 
 ## Phase 6b as built
 
-- Left column: Show All, Points Mode, Numbers, Insert Object. Points Mode shows only points (it sets
-  `drawState.final` while the layers draw) and turns the mouse over to `figurePointer.js`.
-- Click on a numbered marker selects it (reach is the larger of the hit radius and the 9 px marker). Click within
-  the hit radius of an infrastructure point makes an anchored point. Click anywhere else makes a free point.
-  Drag moves a point (anchored points slide along their arm). Delete or Backspace, or "Delete selected point" in
-  the caption menu, removes it. Numbers are never reused.
-- Anchored points keep their exact fraction along the arm when the step count or the object changes.
-- Numbers (left button) draws the numbered points over the lines in line mode.
+- Left column: Show All, a Points Mode checkbox, Insert Object. Points Mode shows only the layers' points (it
+  sets `drawState.final` while the layers draw) and adds click handling from `figurePointer.js`.
+- Only the active layer can be changed. A click (press and release without moving) on a disc of the active layer
+  selects it (reach is the larger of the hit radius and the 9 px marker). A click within the hit radius of an
+  infrastructure point of the active layer makes an anchored disc. A click anywhere else makes a free disc,
+  which belongs to the active layer. Delete or Backspace, or "Delete selected point" in the caption menu,
+  removes the selected disc. Numbers are never reused. Changing layer or mode clears the selection.
+- Discs are not dragged. The only draggable things are the object's own handles (red dots), live on the active
+  layer in both modes through the existing interactor. A press that moves is a handle drag; a press that does not
+  move is a click, so a disc can be placed on a handle (an end point).
+- The selected disc has a thick red rim plus a second red ring just outside it.
+- Anchored discs keep their exact fraction along the arm when the step count or the object changes, and ride
+  along when a handle is dragged.
+- Discs are drawn in both modes, at full strength on every layer, with their numbers inside for now (6c makes
+  them unnumbered and colored). The Numbers button is gone.
 - Caption menu "Hit radius (N px)..." sets `uiState.figures.hitRadius` (default 5; one value for now, not saved).
 - Line and Parabola define `infrastructure()`; other registry objects have none yet, so on them only free points.
 - Files: `figurePoints.js` (data, picking, drawing), `figurePointer.js` (mouse, keyboard).
 
-## 6b revisions requested by Barry (not built yet)
+## 6b revisions requested by Barry (built; the wording below is his original request)
 
 - Points mode becomes one checkbox. Remove the Numbers button; one command only.
 - In points mode only the active layer can be changed: clicks pick candidates on the active layer only, a new
   free point belongs to the active layer, and points of other layers cannot be selected or dragged. Other layers
   stay as they are, dimmed.
-- Entering points mode lets him click straight away to insert a drag circle (no second command).
+- Entering points mode lets him click straight away to insert a disc (no second command).
 - Showing every layer's points in points mode stays as built, for now. Barry is unsure it is a good idea.
 - Numbers are no longer displayed (Barry does not expect to need them). They stay as hidden identity (global
   `nextPoint`, never reused) for welds and saving. The circles are drawn unnumbered, filled with the layer color
@@ -57,12 +64,11 @@ reproduced above.
   that existed before Figures. Placed circles come along for the ride: an anchored circle follows its
   infrastructure line proportionally, and nothing drags a circle itself. Reason: any arbitrary draggable point
   would force every drawing routine to know how to respond, which is much more design work.
-  Consequences for the code (6b as built still lets circles be dragged and hides the handles in points mode):
-  the object handles stay active in both modes on the active layer; circle dragging comes out; points mode only
-  adds click-to-place and delete.
-- Open: a free circle (tied to nothing) then cannot be moved. Delete and place it again, or keep dragging for
-  free circles only?
-- Welds are made only between points that have placed drag circles. An object's end point is not weldable until
+  Built: the object handles stay active in both modes on the active layer; circle dragging is removed; points
+  mode only adds click-to-place and delete.
+- Open: a free disc (tied to nothing) cannot be moved now. Delete it and place it again. Plan: after 7b, store a
+  free disc as an offset from its layer's centroid so it travels with the object.
+- Welds are made only between points that have placed discs. An object's end point is not weldable until
   a circle has been placed on it. (Retracted: an earlier suggestion that handles are automatically weldable.)
 - Numbers are ids. Existing code already resolves a point given as a number: `numbersToPoints` in
   `draw/drawUtilities.js` looks the number up as an index into `drawState.pts`. Figure point numbers should
@@ -119,18 +125,20 @@ reproduced above.
 
 ## Vocabulary
 
-- **Drag circle**: the small unnumbered circle on a layer that can be dragged (the red dots on the active
-  object). Not to be confused with a numbered point.
-- **Numbered point**: a numbered, filled circle; anchored or free (see the point model).
-- **Infrastructure line**: a line that carries drag circles and numbered points. Stitch lines do not.
+- **Handle**: one of the object's own draggable red dots (`params.points`). The only draggable points.
+- **Disc**: Barry's working name for the filled circle placed on a layer (formerly "drag circle"). Not draggable;
+  it rides along with its object.
+- **Numbered point**: the data record behind a disc; anchored or free (see the point model).
+- **Infrastructure line**: a line that carries discs. Stitch lines do not.
 - **Centroid**: the visible center of an object (Phase 7b).
 
-## Drag circle rules (Barry)
+## Disc rules (Barry)
 
-- A drag circle tied to a point on an infrastructure line stays at that point. It can be deleted, or it can move
-  to follow changes in the line (staying proportional), e.g. a middle drag circle stays in the middle when the
-  line gets longer or shorter.
-- A free drag circle moves only when dragged. It can be deleted.
+- A disc tied to a point on an infrastructure line stays at that point. It can be deleted, or it can move to
+  follow changes in the line (staying proportional), e.g. a middle disc stays in the middle when the line gets
+  longer or shorter.
+- A free disc stays where it was placed (superseded: it used to move when dragged; discs are no longer dragged).
+  It can be deleted.
 - Attachment between objects: both ends of the green parabola in his example follow the blue object when it is
   rotated or enlarged. Rules are needed for what happens when the blue object gets more or fewer sides or
   end points, so that an attached end still has a place to stay. Formalize before Phase 8.
@@ -181,4 +189,3 @@ reproduced above.
 - Open: the leader's disc disappears (fewer steps or sides) or is deleted: what happens to the weld?
 - Open: cycles and a follower with two leaders: proposed rule is reject both.
 - Open: discs of non-active layers drawn at full strength so weld candidates are visible (6c detail).
-- Vocabulary: "disc" is Barry's working name for the filled circle; CLAUDE.md still says "drag circle".

@@ -315,9 +315,12 @@ if ((await page.locator("#figure-sidebar .figure-layer-row").count()) !== 4) pro
 if (!((await inked()) > blank)) problems.push("[figures return] picture not redrawn");
 
 /* ---- Part 6: Points mode (Phase 6b) -------------------------
-   Click numbers points, anchored (on an infrastructure point) or free;
-   anchored points keep their fraction when the step count changes; a
-   point can be dragged and deleted; numbers are never reused. */
+   Points mode is a checkbox. A click places a disc on the ACTIVE layer
+   only: anchored (on an infrastructure point) or free. Discs are never
+   dragged; the object's own handles are the only draggable things, in
+   both modes, and anchored discs ride along. Anchored discs keep their
+   fraction when the step count changes. A disc can be deleted; numbers
+   are never reused. The selected disc is drawn with a red ring. */
 stage = "points mode";
 await page.click("#figures-tab");
 await page.waitForTimeout(800);
@@ -328,22 +331,22 @@ await page.waitForTimeout(500);
 await page.click("#figureInsert_drawLine");
 await page.click("#figureInsert_parabola");
 await page.waitForTimeout(400);
-await page.click("#figureModeButton");
+if ((await page.locator("#figureNumbersButton").count()) !== 0) problems.push("[points mode] Numbers button still present");
+if ((await page.locator("#figureModeButton").count()) !== 0) problems.push("[points mode] old Points Mode button still present");
+await page.check("#figureModeCheck");
 await page.waitForTimeout(400);
 
+const rect = () => page.evaluate(() => {
+  const b = document.getElementById("interaction-layer").getBoundingClientRect();
+  return [b.left, b.top, b.width, b.height];
+});
 const clickAt = async (x, y) => {
-  const r = await page.evaluate(() => {
-    const b = document.getElementById("interaction-layer").getBoundingClientRect();
-    return [b.left, b.top, b.width, b.height];
-  });
+  const r = await rect();
   await page.mouse.click(r[0] + x * r[2] / 800, r[1] + y * r[3] / 800);
   await page.waitForTimeout(150);
 };
 const dragTo = async (x0, y0, x1, y1) => {
-  const r = await page.evaluate(() => {
-    const b = document.getElementById("interaction-layer").getBoundingClientRect();
-    return [b.left, b.top, b.width, b.height];
-  });
+  const r = await rect();
   const sx = (x) => r[0] + x * r[2] / 800, sy = (y) => r[1] + y * r[3] / 800;
   await page.mouse.move(sx(x0), sy(y0));
   await page.mouse.down();
@@ -353,20 +356,48 @@ const dragTo = async (x0, y0, x1, y1) => {
 };
 const points = () => page.evaluate(() =>
   uiState.figures.tabs[uiState.figures.activeSubtab].figure.points.map(p => ({ ...p })));
+const selected = () => page.evaluate(() =>
+  uiState.figures.tabs[uiState.figures.activeSubtab].selectedPoint);
+const pickLayer = async (i) => {
+  await page.locator("#figure-sidebar .figure-layer-row span").nth(i).click();
+  await page.waitForTimeout(250);
+};
+const px = (x, y) => page.evaluate(([x, y]) =>
+  Array.from(window.drawCanvas.getContext("2d").getImageData(x, y, 1, 1).data), [x, y]);
+const isRed = (c) => c[0] > 150 && c[1] < 70 && c[2] < 70;
 
-await clickAt(203, 198);          // near the line's start (200,200): anchored
-await clickAt(700, 100);          // empty canvas: free
-await clickAt(52, 125);           // parabola arm 1, division 5 of 20 (t = 0.25)
+await pickLayer(0);               // layer 1, the line (handles at 200,200 / 400,400 / 300,300)
+await clickAt(203, 198);          // on the line's start handle: a click places an anchored disc
+await clickAt(700, 100);          // empty canvas: free, on layer 1
+await clickAt(203, 198);          // same spot again selects disc 1, makes no new one
 let pl = await points();
+if (pl.length !== 2) problems.push("[points] clicking an existing disc made a new one: " + JSON.stringify(pl));
+await pickLayer(1);               // layer 2, the parabola
+await clickAt(52, 125);           // parabola arm 1, division 5 of 20 (t = 0.25)
+pl = await points();
 if (pl.length !== 3 || pl.map(p => p.n).join() !== "1,2,3") problems.push("[points] numbers: " + JSON.stringify(pl));
-if (pl[0].kind !== "anchored" || pl[1].kind !== "free" || pl[2].kind !== "anchored") {
-  problems.push("[points] kinds: " + pl.map(p => p.kind));
-}
-await clickAt(203, 198);          // same spot again selects point 1, makes no new one
-if ((await points()).length !== 3) problems.push("[points] clicking an existing point made a new one");
+if (pl.map(p => p.kind).join() !== "anchored,free,anchored") problems.push("[points] kinds: " + pl.map(p => p.kind));
+if (pl.map(p => p.layer).join() !== "0,0,1") problems.push("[points] layers: " + pl.map(p => p.layer));
+
+stage = "points active layer only";
+// Layer 2 is active. Disc 1 belongs to layer 1 and sits at the line's start:
+// clicking there must not select it, and must not anchor to the line either.
+await clickAt(203, 198);
+pl = await points();
+const stray = pl.find(p => p.n === 4);
+if (!stray || stray.kind !== "free" || stray.layer !== 1) problems.push("[points active layer] expected free disc 4 on layer 2: " + JSON.stringify(pl));
+if ((await selected()) !== 4) problems.push("[points active layer] selected: " + (await selected()));
+await page.keyboard.press("Delete");
+await page.waitForTimeout(200);
+if ((await points()).some(p => p.n === 4)) problems.push("[points active layer] disc 4 not deleted");
+await clickAt(52, 125);           // select disc 3 on layer 2
+if ((await selected()) !== 3) problems.push("[points active layer] disc 3 not selected: " + (await selected()));
+await pickLayer(0);
+if ((await selected()) !== null) problems.push("[points active layer] selection survived a layer change");
+await pickLayer(1);
 
 stage = "points proportional";
-// Steps 20 -> 30 (and back to 12): the anchored point keeps t = 0.25 exactly.
+// Steps 20 -> 30 (and back to 12): the anchored disc keeps t = 0.25 exactly.
 for (const steps of [30, 12]) {
   await page.evaluate((v) => {
     const el = [...document.querySelectorAll("#drawControls input[type=range]")].find(i => i.max === "30");
@@ -380,46 +411,67 @@ for (const steps of [30, 12]) {
   }
 }
 
-stage = "points drag";
-await dragTo(700, 100, 600, 300);
-const moved = (await points()).find(p => p.n === 2);
-if (Math.abs(moved.x - 600) > 2 || Math.abs(moved.y - 300) > 2) problems.push("[points drag] free point: " + JSON.stringify(moved));
-await dragTo(52, 125, 90, 275);   // anchored point slides along arm 1 (x stays 50)
-const slid = (await points()).find(p => p.n === 3);
-if (Math.abs(slid.x - 50) > 0.01 || !(slid.t > 0.6 && slid.t < 0.8)) problems.push("[points drag] anchored point: " + JSON.stringify(slid));
+stage = "points not dragged";
+await pickLayer(0);
+const before2 = (await points()).find(p => p.n === 2);
+await dragTo(700, 100, 600, 300); // a drag that starts on free disc 2
+const stayed = (await points()).find(p => p.n === 2);
+if (Math.abs(stayed.x - before2.x) > 0.01 || Math.abs(stayed.y - before2.y) > 0.01) problems.push("[points not dragged] free disc moved: " + JSON.stringify(stayed));
+if ((await points()).length !== 3) problems.push("[points not dragged] a drag made or removed a disc");
+
+stage = "points handles drag";
+// Handles still drag in points mode, and the anchored disc 1 rides along.
+await dragTo(200, 200, 230, 250);
+const handle0 = await page.evaluate(() => {
+  const t = uiState.figures.tabs[uiState.figures.activeSubtab];
+  return { ...t.instances[0].params.points[0] };
+});
+if (Math.abs(handle0.x - 230) > 3 || Math.abs(handle0.y - 250) > 3) problems.push("[points handles] handle did not drag: " + JSON.stringify(handle0));
+const rode = (await points()).find(p => p.n === 1);
+if (Math.abs(rode.x - handle0.x) > 0.5 || Math.abs(rode.y - handle0.y) > 0.5) problems.push("[points handles] anchored disc did not follow: " + JSON.stringify(rode));
+if ((await points()).length !== 3) problems.push("[points handles] dragging a handle made a disc");
 
 stage = "points delete";
-await clickAt(600, 300);          // select point 2
+await clickAt(700, 100);          // select disc 2 (free, layer 1)
+if ((await selected()) !== 2) problems.push("[points delete] disc 2 not selected");
 await page.keyboard.press("Delete");
 await page.waitForTimeout(200);
 pl = await points();
-if (pl.some(p => p.n === 2)) problems.push("[points delete] point 2 still there");
-await clickAt(500, 500);          // empty canvas: a new free point
+if (pl.some(p => p.n === 2)) problems.push("[points delete] disc 2 still there");
+await clickAt(500, 500);          // empty canvas: a new free disc
 pl = await points();
-if (!pl.some(p => p.n === 4) || pl.some(p => p.n === 2)) problems.push("[points delete] number reuse: " + pl.map(p => p.n));
+if (!pl.some(p => p.n === 5) || pl.some(p => p.n === 2 || p.n === 4)) problems.push("[points delete] number reuse: " + pl.map(p => p.n));
+
+stage = "points selected shown";
+// Disc 5 is selected and drawn with an outer red ring 13 px from its center.
+if (!isRed(await px(513, 500))) problems.push("[points selected] no red ring on the selected disc: " + (await px(513, 500)));
+await clickAt(500, 400);          // another free disc takes the selection
+if (isRed(await px(513, 500))) problems.push("[points selected] old disc still shows selected");
+await page.keyboard.press("Delete");
+await page.waitForTimeout(200);
 
 stage = "points hit radius";
-await clickAt(505, 503);          // inside point 4's marker: selects it, makes nothing
-if ((await points()).length !== pl.length) problems.push("[points hit radius] click on a marker made a new point");
+await clickAt(505, 503);          // inside disc 5's marker: selects it, makes nothing
+if ((await points()).length !== pl.length) problems.push("[points hit radius] click on a marker made a new disc");
+await pickLayer(1);
 // Arm 2 of the parabola has divisions every 25 px (12 steps), e.g. (125,350).
 await page.evaluate(() => { uiState.figures.hitRadius = 1; });
-await clickAt(125, 354);          // 4 px off the division: outside radius 1 -> free point
+await clickAt(125, 354);          // 4 px off the division: outside radius 1 -> free disc
 let last = (await points()).at(-1);
-if (last.kind !== "free") problems.push("[points hit radius] radius 1 should give a free point: " + JSON.stringify(last));
+if (last.kind !== "free") problems.push("[points hit radius] radius 1 should give a free disc: " + JSON.stringify(last));
 await page.evaluate(() => { uiState.figures.hitRadius = 5; });
 await clickAt(175, 354);          // 4 px off the division at 175: inside radius 5 -> anchored
 last = (await points()).at(-1);
 if (last.kind !== "anchored" || last.arm !== "arm2") problems.push("[points hit radius] radius 5 should anchor: " + JSON.stringify(last));
 
 stage = "points back to lines";
-await page.click("#figureModeButton");
+await page.uncheck("#figureModeCheck");
 await page.waitForTimeout(300);
-await page.click("#figureNumbersButton");
-await page.waitForTimeout(300);
-const markers = await page.evaluate(() => window.drawCanvas.getContext("2d").getImageData(0, 0, 1, 1).data[0]);
-if (markers === undefined) problems.push("[points] canvas unreadable");
 const mode = await page.evaluate(() => uiState.figures.tabs[uiState.figures.activeSubtab].mode);
 if (mode !== "lines") problems.push("[points back to lines] mode: " + mode);
+// Discs stay visible in lines mode: disc 5 (500,500) has a white face.
+const face = await px(506, 500);
+if (!(face[0] > 240 && face[1] > 240 && face[2] > 240)) problems.push("[points back to lines] disc not shown in lines mode: " + face);
 if (!(await page.locator("#figureInsert_parabola").isVisible())) problems.push("[points back to lines] caption tools missing");
 
 await browser.close();

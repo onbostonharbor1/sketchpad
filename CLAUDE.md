@@ -19,9 +19,10 @@ Phase order and status are in PHASES.md. Read it before starting work.
 
 ## Vocabulary
 
-- Drag circle: the small unnumbered circle on a layer that can be dragged.
-- Numbered point: a numbered, filled circle, anchored to an infrastructure line or free.
-- Infrastructure line: carries drag circles and numbered points. Stitch lines do not.
+- Handle: one of an object's own draggable red dots (`params.points`). The only draggable points.
+- Disc: the filled circle placed on a layer, anchored to an infrastructure line or free. Not draggable; it rides
+  along with its object. (Formerly "drag circle".)
+- Infrastructure line: carries discs. Stitch lines do not.
 
 ## Design rules (his, hard)
 

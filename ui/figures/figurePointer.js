@@ -4,18 +4,27 @@
    ============================================================
    Role:
      While a figure is in points mode, the (transparent) interaction
-     layer over the canvas receives the mouse:
+     layer over the canvas receives the mouse. Only the active layer
+     can be changed. A click (press and release without moving):
 
-       press on a numbered point  select it, and drag to move it
-       press near a candidate     number that infrastructure point
-                                  (anchored point) and select it
-       press anywhere else        a free point, numbered where you
-                                  clicked
-       Delete / Backspace         delete the selected point
+       on a numbered point         select it
+       near a candidate            number that infrastructure point
+                                   (anchored point) and select it
+       anywhere else               a free point, numbered where you
+                                   clicked
+       Delete / Backspace          delete the selected point
+
+     Numbered points are never dragged. The only draggable things are
+     the object's own handles; an anchored point rides along with its
+     object. Both this file and the interactor (interactor.js) listen
+     at the same time in points mode. What keeps one press from doing
+     both is that this file acts only on a click: a press that moves
+     is the interactor dragging a handle, and does nothing here. A
+     click on a handle does not move it, so a point can be placed on
+     an end point.
 
      "Near" means within the hit radius, uiState.figures.hitRadius
-     canvas pixels. Numbers are never reused. Object handles are off
-     in points mode; only points can be dragged.
+     canvas pixels. Numbers are never reused.
 
    Exports:
      activatePointsInput(tabId, redraw)
@@ -29,9 +38,10 @@ import {
   findPoint,
   addAnchoredPoint,
   addFreePoint,
-  movePoint,
   deletePoint
 } from "./figurePoints.js";
+
+const CLICK_SLOP = 4;    // canvas pixels a press may move and still be a click
 
 let controller = null;   // AbortController of the active listeners
 
@@ -40,7 +50,9 @@ let controller = null;   // AbortController of the active listeners
    activatePointsInput(tabId, redraw)
    ------------------------------------------------------------
    redraw() redraws the whole figure. Replaces any earlier
-   activation.
+   activation. Call this before armInteractor(): both size the
+   same interaction layer, and the interactor draws the handles
+   on it.
    ============================================================ */
 export function activatePointsInput(tabId, redraw) {
 
@@ -59,8 +71,6 @@ export function activatePointsInput(tabId, redraw) {
   controller = new AbortController();
   const { signal } = controller;
 
-  let dragging = null;     // the point being dragged
-
   const tabState = () => uiState.figures.tabs[tabId];
 
   const coords = (e) => {
@@ -71,11 +81,22 @@ export function activatePointsInput(tabId, redraw) {
     };
   };
 
+  let pressedAt = null;    // where the mouse went down, or null
+
   layer.addEventListener("mousedown", (e) => {
+    pressedAt = coords(e);
+  }, { signal });
+
+  window.addEventListener("mouseup", (e) => {
+    if (!pressedAt) return;
+    const m = coords(e);
+    const moved = Math.hypot(m.x - pressedAt.x, m.y - pressedAt.y);
+    pressedAt = null;
+    if (moved > CLICK_SLOP) return;           // a drag, not a click
+
     const ts = tabState();
     if (!ts) return;
 
-    const m      = coords(e);
     const radius = uiState.figures.hitRadius;
     const figure = ts.figure;
 
@@ -88,21 +109,8 @@ export function activatePointsInput(tabId, redraw) {
     }
 
     ts.selectedPoint = point.n;
-    dragging = point;
     redraw();
   }, { signal });
-
-  window.addEventListener("mousemove", (e) => {
-    if (!dragging) return;
-    const ts = tabState();
-    if (!ts) return;
-
-    const m = coords(e);
-    movePoint(ts, dragging, m.x, m.y);
-    redraw();
-  }, { signal });
-
-  window.addEventListener("mouseup", () => { dragging = null; }, { signal });
 
   document.addEventListener("keydown", (e) => {
     if (e.key !== "Delete" && e.key !== "Backspace") return;

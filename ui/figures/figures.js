@@ -136,32 +136,24 @@ function setFiguresAction() {
   prev.title       = "Preview: every layer at full strength, hidden layers included, as the final drawing will look";
   buttonDiv.appendChild(prev);
 
-  // Points Mode and Numbers toggles (figure tabs only; wired in figuresNav.js)
+  // Points Mode checkbox (figure tabs only; wired in figuresNav.js). A label
+  // wraps the checkbox so the text is clickable too.
   const brM = document.createElement("br");
   brM.id = "figureBrMode";
   brM.className = "tab-extra";
   buttonDiv.appendChild(brM);
 
-  const modeBtn = document.createElement("button");
-  modeBtn.id          = "figureModeButton";
-  modeBtn.className   = "cmdButton tab-extra";
-  modeBtn.type        = "button";
-  modeBtn.textContent = "Points Mode";
-  modeBtn.title       = "Show only points. Click to number a point; drag to move it; Delete removes it";
-  buttonDiv.appendChild(modeBtn);
+  const modeLabel = document.createElement("label");
+  modeLabel.id        = "figureModeLabel";
+  modeLabel.className = "tab-extra";
+  modeLabel.title     = "Show only points. Click to place a point on the active layer; Delete removes the selected one. The object's handles still drag.";
 
-  const brN = document.createElement("br");
-  brN.id = "figureBrNumbers";
-  brN.className = "tab-extra";
-  buttonDiv.appendChild(brN);
-
-  const numBtn = document.createElement("button");
-  numBtn.id          = "figureNumbersButton";
-  numBtn.className   = "cmdButton tab-extra";
-  numBtn.type        = "button";
-  numBtn.textContent = "Numbers";
-  numBtn.title       = "Show the point numbers over the lines (points mode always shows them)";
-  buttonDiv.appendChild(numBtn);
+  const modeCheck = document.createElement("input");
+  modeCheck.type = "checkbox";
+  modeCheck.id   = "figureModeCheck";
+  modeLabel.appendChild(modeCheck);
+  modeLabel.appendChild(document.createTextNode(" Points Mode"));
+  buttonDiv.appendChild(modeLabel);
 
   const br = document.createElement("br");
   br.id = "figureBr1";

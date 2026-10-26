@@ -210,40 +210,21 @@ export function updateFigureButtons() {
   show("figureBr2",          live);
   show("figurePreviewButton", live);
   show("figureBrPreview",     live);
-  show("figureModeButton",    live);
+  show("figureModeLabel",     live);
   show("figureBrMode",        live);
-  show("figureNumbersButton", live);
-  show("figureBrNumbers",     live);
 
   const ts = uiState.figures.tabs[tabId];
   const pointsMode = !!ts?.mode && ts.mode === "points";
 
-  const pressed = (btn, on) => {
-    if (!btn) return;
-    btn.style.fontWeight = on ? "bold" : "";
-    btn.style.boxShadow  = on ? "inset 0 0 0 2px #060" : "";
-  };
-
-  const modeBtn = document.getElementById("figureModeButton");
-  pressed(modeBtn, pointsMode);
-  if (modeBtn) modeBtn.onclick = () => {
-    const t = uiState.figures.tabs[uiState.figures.activeSubtab];
-    if (!t || !t.figure) return;
-    t.mode = t.mode === "points" ? "lines" : "points";
-    updateFigureButtons();
-    renderLayerPanel(uiState.figures.activeSubtab);
-    redrawFigure(uiState.figures.activeSubtab);
-  };
-
-  const numBtn = document.getElementById("figureNumbersButton");
-  pressed(numBtn, !!ts?.showNumbers || pointsMode);
-  if (numBtn) {
-    numBtn.disabled = pointsMode;      // points mode always shows numbers
-    numBtn.onclick = () => {
+  const modeCheck = document.getElementById("figureModeCheck");
+  if (modeCheck) {
+    modeCheck.checked = pointsMode;
+    modeCheck.onchange = () => {
       const t = uiState.figures.tabs[uiState.figures.activeSubtab];
       if (!t || !t.figure) return;
-      t.showNumbers = !t.showNumbers;
-      updateFigureButtons();
+      t.mode = modeCheck.checked ? "points" : "lines";
+      t.selectedPoint = null;
+      renderLayerPanel(uiState.figures.activeSubtab);
       redrawFigure(uiState.figures.activeSubtab);
     };
   }
@@ -368,7 +349,6 @@ export function openNewFigureTab() {
     type:        "figure",
     figure:      createEmptyFigure(nextUntitledName(tabs)),
     mode:        "lines",     // "lines" or "points" (view state, not saved)
-    showNumbers: false,
     selectedPoint: null
   };
 

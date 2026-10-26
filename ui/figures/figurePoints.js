@@ -9,19 +9,28 @@
 
    Point record, in figure.points:
      { n, kind: "anchored", layer, arm, t, x, y, dx, dy }
-     { n, kind: "free",                     x, y, dx, dy }
+     { n, kind: "free",     layer,          x, y, dx, dy }
 
      n        permanent number, taken from figure.nextPoint. Never
               reused, even after the point is deleted.
-     layer    index into figure.layers (layer numbers never change)
+     layer    index into figure.layers (layer numbers never change). A
+              free point belongs to the layer that was active when it
+              was placed. Only the active layer's points can be selected,
+              added or deleted.
      arm, t   an anchored point sits on an infrastructure line of its
               layer (arm id) at fraction t of its length. It always
               keeps exactly that fraction, so it follows its object
               when the object is moved or its step count changes.
      x, y     where the point is now. For an anchored point this is
-              recomputed from layer, arm and t on every redraw.
+              recomputed from layer, arm and t on every redraw. Points
+              are never dragged: an anchored point rides along with its
+              object, a free point stays where it was placed. Only the
+              object's own handles are dragged (interactor.js).
      dx, dy   offset of the number label from the point (used from
               Phase 7; always 0 for now).
+
+   Vocabulary: Barry's working name for a drawn point is "disc" (a filled
+   circle). Code and tests still say "point".
 
    Infrastructure: a registry object may define infrastructure(),
    returning arms { id, a, b, steps, from, to }. The candidate points
@@ -33,13 +42,13 @@
      findPoint(figure, x, y, radius)
      addAnchoredPoint(figure, candidate)
      addFreePoint(figure, x, y)
-     movePoint(tabState, point, x, y)
      deletePoint(figure, n)
      refreshPoints(tabState)
      drawFigurePoints(tabState)
    ============================================================ */
 
 const MARKER_RADIUS = 9;   // drawn size of a numbered point
+const HALO_GAP      = 4;   // selected point: gap from the marker to its outer ring
 
 
 /* ------------------------------------------------------------
@@ -64,28 +73,26 @@ function armPoint(arm, t) {
    findCandidate(tabState, x, y, radius)
    ------------------------------------------------------------
    The infrastructure point nearest to (x, y) within radius, or
-   null. Searches every layer, the top of the stack first, so on
-   a tie the top layer wins.
+   null. Only the active layer is searched.
    Returns { layer, arm, t, x, y }.
    ============================================================ */
 export function findCandidate(tabState, x, y, radius) {
 
   const figure    = tabState.figure;
   const instances = tabState.instances || [];
+  const layer     = figure.activeLayer;
 
   let best     = null;
   let bestDist = radius;
 
-  for (const layer of figure.drawOrder) {
-    for (const arm of armsOf(instances[layer])) {
-      for (let i = arm.from; i <= arm.to; i++) {
-        const t  = i / arm.steps;
-        const pt = armPoint(arm, t);
-        const d  = Math.hypot(pt.x - x, pt.y - y);
-        if (d < bestDist) {
-          bestDist = d;
-          best = { layer, arm: arm.id, t, x: pt.x, y: pt.y };
-        }
+  for (const arm of armsOf(instances[layer])) {
+    for (let i = arm.from; i <= arm.to; i++) {
+      const t  = i / arm.steps;
+      const pt = armPoint(arm, t);
+      const d  = Math.hypot(pt.x - x, pt.y - y);
+      if (d < bestDist) {
+        bestDist = d;
+        best = { layer, arm: arm.id, t, x: pt.x, y: pt.y };
       }
     }
   }
@@ -98,9 +105,10 @@ export function findCandidate(tabState, x, y, radius) {
 /* ============================================================
    findPoint(figure, x, y, radius)
    ------------------------------------------------------------
-   The numbered point nearest to (x, y) within radius, or null.
-   The radius is never smaller than the drawn marker, so a click
-   anywhere on a marker finds it.
+   The numbered point of the active layer nearest to (x, y) within
+   radius, or null. The radius is never smaller than the drawn
+   marker, so a click anywhere on a marker finds it. Points of other
+   layers are ignored.
    ============================================================ */
 export function findPoint(figure, x, y, radius) {
 
@@ -110,6 +118,7 @@ export function findPoint(figure, x, y, radius) {
   let bestDist = reach;
 
   for (const p of figure.points) {
+    if (p.layer !== figure.activeLayer) continue;
     const d = Math.hypot(p.x - x, p.y - y);
     if (d < bestDist) {
       bestDist = d;
@@ -125,7 +134,8 @@ export function findPoint(figure, x, y, radius) {
 /* ============================================================
    addAnchoredPoint(figure, candidate) / addFreePoint(figure, x, y)
    ------------------------------------------------------------
-   Allocate the next number and add the point. Returns the point.
+   Allocate the next number and add the point. Returns the point. A
+   free point goes on the active layer.
    ============================================================ */
 export function addAnchoredPoint(figure, c) {
 
@@ -142,45 +152,14 @@ export function addAnchoredPoint(figure, c) {
 
 export function addFreePoint(figure, x, y) {
 
-  const p = { n: figure.nextPoint++, kind: "free", x, y, dx: 0, dy: 0 };
+  const p = {
+    n: figure.nextPoint++, kind: "free", layer: figure.activeLayer,
+    x, y, dx: 0, dy: 0
+  };
   figure.points.push(p);
   return p;
 
 } // end addFreePoint
-
-
-/* ============================================================
-   movePoint(tabState, point, x, y)
-   ------------------------------------------------------------
-   Drag a point toward (x, y). A free point goes there. An
-   anchored point slides along its arm to the closest place, as an
-   exact fraction (no snapping to divisions).
-   ============================================================ */
-export function movePoint(tabState, point, x, y) {
-
-  if (point.kind === "free") {
-    point.x = x;
-    point.y = y;
-    return;
-  }
-
-  const arm = armsOf(tabState.instances[point.layer]).find((a) => a.id === point.arm);
-  if (!arm) return;
-
-  const vx  = arm.b.x - arm.a.x;
-  const vy  = arm.b.y - arm.a.y;
-  const len2 = vx * vx + vy * vy;
-  if (len2 === 0) return;
-
-  let t = ((x - arm.a.x) * vx + (y - arm.a.y) * vy) / len2;
-  t = Math.max(0, Math.min(1, t));
-
-  point.t = t;
-  const pt = armPoint(arm, t);
-  point.x = pt.x;
-  point.y = pt.y;
-
-} // end movePoint
 
 
 /* ============================================================
@@ -225,7 +204,9 @@ export function refreshPoints(tabState) {
    drawFigurePoints(tabState)
    ------------------------------------------------------------
    Draws every numbered point on the main canvas: a white disc, a
-   black rim and the number. The selected point has a red rim.
+   black rim and the number. The selected point is marked by a thick
+   red rim and a second red ring just outside it, so it stands out
+   from the others even when it sits on a handle or a stitch line.
    ============================================================ */
 export function drawFigurePoints(tabState) {
 
@@ -244,6 +225,14 @@ export function drawFigurePoints(tabState) {
     ctx.lineWidth   = selected ? 3 : 1.5;
     ctx.strokeStyle = selected ? "#d00000" : "#000000";
     ctx.stroke();
+
+    if (selected) {
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, MARKER_RADIUS + HALO_GAP, 0, Math.PI * 2);
+      ctx.lineWidth   = 2;
+      ctx.strokeStyle = "#d00000";
+      ctx.stroke();
+    }
 
     ctx.fillStyle = "#000000";
     ctx.fillText(String(p.n), p.x + p.dx, p.y + p.dy);
