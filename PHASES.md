@@ -86,12 +86,19 @@ reproduced above.
 - A point can be dragged and deleted. Near points are not welded; only an explicit weld (Phase 8) makes
   two points one.
 - A point's label can be nudged slightly without moving the point (offset stored with the point; Phase 7).
+- A free point belongs to a layer: the topmost layer (`drawOrder[0]`) when it was clicked. It does not follow
+  that layer, but it takes the layer's color (6c). Point circles may be filled with the layer color.
 - Registry objects must say which of their lines are infrastructure. 6b covers Line and Parabola only.
 
 ## Open design questions
 
 - 6c: is the number display he calls no longer needed the old coded numbers (printCircNum, `drawState.ctr`), the
-  Numbers button, or both? Free points belong to no layer, so what color are they? (decide when the phase arrives)
+  Numbers button, or both?
+- Dragging an anchored point: today it slides only along its arm. He said circles can be dragged to where they
+  are needed. Should a drag off the arm detach it and turn it into a free point (keeping number and layer)?
+- Phase 8: dragging point 10 onto point 20 leaves two numbers at one place. Does a printed template need one
+  number per hole (so a weld still has to merge numbers), or are two numbers at one spot acceptable? Revisit
+  the scope of Phase 8 when it arrives. (decide when the phase arrives)
 
 - Phase 8: weld rule (which layer moves, freezing, automatic or asked), weldable objects (line types first).
 - Merge: always the top two layers; which number the merged layer keeps; frozen weld points hold it together.
