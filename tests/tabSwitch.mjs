@@ -291,6 +291,19 @@ await setVis(0, true);
 await page.waitForTimeout(300);
 if (!((await inked()) > blank)) problems.push("[figures visibility] showing layer 1 drew nothing");
 
+stage = "figures preview";
+await setVis(0, true);
+for (let i = 1; i < 4; i++) await setVis(i, false);
+const editInk = await inked();
+await page.click("#figurePreviewButton");
+await page.waitForTimeout(300);
+const previewInk = await inked();
+if (!(previewInk > editInk)) problems.push(`[figures preview] preview did not show hidden layers (${editInk} -> ${previewInk})`);
+await page.click("#figurePreviewButton");
+await page.waitForTimeout(300);
+if ((await inked()) !== editInk) problems.push("[figures preview] leaving preview did not restore the edit view");
+for (let i = 0; i < 4; i++) await setVis(i, true);
+
 stage = "figures return with layers";
 await page.click("#draw-tab");
 await page.waitForTimeout(800);

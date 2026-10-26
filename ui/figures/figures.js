@@ -121,6 +121,20 @@ function setFiguresAction() {
 
   // Tagged "tab-extra": #button is permanent, so clearDivs() removes
   // everything tagged this way on each tab switch.
+  // Show All (preview) toggle, figure tabs only; wired in figuresNav.js.
+  const brP = document.createElement("br");
+  brP.id = "figureBrPreview";
+  brP.className = "tab-extra";
+  buttonDiv.appendChild(brP);
+
+  const prev = document.createElement("button");
+  prev.id          = "figurePreviewButton";
+  prev.className   = "cmdButton tab-extra";
+  prev.type        = "button";
+  prev.textContent = "Show All";
+  prev.title       = "Preview: every layer at full strength, hidden layers included, as the final drawing will look";
+  buttonDiv.appendChild(prev);
+
   const br = document.createElement("br");
   br.id = "figureBr1";
   br.className = "tab-extra";

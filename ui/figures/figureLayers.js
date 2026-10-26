@@ -23,8 +23,9 @@
 
    Drawing: visible layers bottom to top, i.e. drawOrder backwards.
    Every layer except the active one is dimmed (DIM_ALPHA) while
-   editing. Dimming is skipped when drawState.final is set or when
-   redrawFigure is called with { dim: false }.
+   editing. Dimming is skipped, and hidden layers are drawn, when
+   drawState.final is set or the tab is in preview (Show All), or
+   when redrawFigure is called with { dim: false }.
 
    Controls: the active layer's controls are built with the same
    buildParameterControls() the Draw tab uses.
@@ -164,13 +165,16 @@ export function redrawFigure(tabId, { dim = true } = {}) {
 
   const figure    = tabState.figure;
   const instances = tabState.instances || [];
-  const dimming   = dim && !drawState.final;
-  // Hiding is an editing aid; the final drawing always shows everything.
-  const showAll   = drawState.final;
+  // Preview (the Show All button, not saved) and final mode draw every
+  // layer at full strength, hidden ones included. Layers of kind
+  // "template" (guides, a later phase) are left out of both.
+  const showAll   = drawState.final || !!tabState.preview;
+  const dimming   = dim && !showAll;
 
   // drawOrder is top first; paint bottom to top.
   for (let k = figure.drawOrder.length - 1; k >= 0; k--) {
     const i = figure.drawOrder[k];
+    if (showAll && figure.layers[i].kind === "template") continue;
     if (!figure.layers[i].visible && !showAll) continue;
 
     const inst = instances[i];

@@ -207,6 +207,22 @@ export function updateFigureButtons() {
   show("figureBr1",          !live);
   show("figureInsertSelect", live);
   show("figureBr2",          live);
+  show("figurePreviewButton", live);
+  show("figureBrPreview",     live);
+
+  const prev = document.getElementById("figurePreviewButton");
+  if (prev) {
+    const on = !!uiState.figures.tabs[tabId]?.preview;
+    prev.style.fontWeight = on ? "bold" : "";
+    prev.style.boxShadow  = on ? "inset 0 0 0 2px #060" : "";
+    prev.onclick = () => {
+      const t = uiState.figures.tabs[uiState.figures.activeSubtab];
+      if (!t || !t.figure) return;
+      t.preview = !t.preview;
+      updateFigureButtons();
+      redrawFigure(uiState.figures.activeSubtab);
+    };
+  }
 
   const select = document.getElementById("figureInsertSelect");
   if (!select) return;
