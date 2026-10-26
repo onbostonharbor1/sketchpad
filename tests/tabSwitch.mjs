@@ -202,6 +202,12 @@ if (fig.nextPoint !== 1 || fig.layers.length !== 0 || fig.points.length !== 0) {
 
 /* ---- Part 5: Insert objects (Phase 6a) ---------------------- */
 stage = "figures insert";
+// Show or hide layer i (0-based): select it, then use the Show checkbox.
+const setVis = async (i, on) => {
+  await page.locator("#figure-sidebar .figure-layer-row span").nth(i).click();
+  await page.locator("#figureLayerShow").setChecked(on);
+  await page.waitForTimeout(150);
+};
 const inked = () => page.evaluate(() => {
   const c = window.drawCanvas, d = c.getContext("2d").getImageData(0, 0, c.width, c.height).data;
   let n = 0;
@@ -246,14 +252,12 @@ if ((await order()) !== "0,3,2,1") problems.push("[figures order] after clicking
 await page.locator("#figure-sidebar .figure-layer-row span").nth(1).click();
 await page.waitForTimeout(300);
 if ((await order()) !== "1,0,3,2") problems.push("[figures order] after clicking 2: " + await order());
-const heading = await page.locator("#figureLayerHeading").innerText();
-if (!/^Layer 2/.test(heading)) problems.push("[figures order] heading: " + heading);
+const heading = await page.locator("#figureLayerLabel").innerText();
+if (!/^Layer 2/.test(heading)) problems.push("[figures order] layer label: " + heading);
+if ((await page.locator("#figureLayerHeading").count()) !== 0) problems.push("[figures order] heading still in the left panel");
 
 stage = "figures dim";
-for (let i = 0; i < 4; i++) {
-  const box = page.locator("#figure-sidebar .figure-layer-row input").nth(i);
-  if (i === 0 || i === 1) await box.check(); else await box.uncheck();
-}
+for (let i = 0; i < 4; i++) await setVis(i, i === 0 || i === 1);
 await page.waitForTimeout(300);
 await page.locator("#figure-sidebar .figure-layer-row span").nth(0).click();   // layer 1 (line) active
 await page.waitForTimeout(300);
@@ -261,19 +265,19 @@ const lineActive = await inked();
 await page.locator("#figure-sidebar .figure-layer-row span").nth(1).click();   // layer 2 active, line dimmed
 await page.waitForTimeout(300);
 if (!(lineActive > 0)) problems.push("[figures dim] nothing drawn");
-await page.locator("#figure-sidebar .figure-layer-row input").nth(1).uncheck();
+await setVis(1, false);
 await page.waitForTimeout(300);
 const dimmedOnly = await inked();
 if (!(dimmedOnly < lineActive)) problems.push(`[figures dim] dimmed line not lighter (${dimmedOnly} vs ${lineActive})`);
-for (let i = 0; i < 4; i++) await page.locator("#figure-sidebar .figure-layer-row input").nth(i).check();
+for (let i = 0; i < 4; i++) await setVis(i, true);
 await page.waitForTimeout(300);
 
 stage = "figures visibility";
-for (let i = 0; i < 4; i++) await page.locator("#figure-sidebar .figure-layer-row input").nth(i).uncheck();
+for (let i = 0; i < 4; i++) await setVis(i, false);
 await page.waitForTimeout(300);
 const hidden = await inked();
 if (hidden !== blank) problems.push(`[figures visibility] all hidden but ink ${hidden} vs ${blank}`);
-await page.locator("#figure-sidebar .figure-layer-row input").nth(0).check();
+await setVis(0, true);
 await page.waitForTimeout(300);
 if (!((await inked()) > blank)) problems.push("[figures visibility] showing layer 1 drew nothing");
 

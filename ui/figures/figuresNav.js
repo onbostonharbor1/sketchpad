@@ -28,6 +28,7 @@ import { setFiguresCaption }   from "./figuresCommands.js";
 import {
   listInsertableObjects,
   insertLayer,
+  setLayerVisible,
   redrawFigure,
   renderLayerPanel
 }                             from "./figureLayers.js";
@@ -152,6 +153,30 @@ function appendInsertTools(bar, tabId) {
   }
 
   bar.appendChild(li);
+
+  // Active layer: name and a Show checkbox (filled in by figureLayers.js)
+  const info = document.createElement("li");
+  info.className = "nav-item d-flex align-items-center gap-2 ms-2";
+
+  const label = document.createElement("span");
+  label.id = "figureLayerLabel";
+  info.appendChild(label);
+
+  const showLabel = document.createElement("label");
+  showLabel.className = "d-flex align-items-center gap-1";
+  showLabel.title = "Show or hide the active layer while editing. The final drawing always shows everything.";
+  const box = document.createElement("input");
+  box.type = "checkbox";
+  box.id   = "figureLayerShow";
+  box.onchange = () => {
+    const fig = uiState.figures.tabs[tabId]?.figure;
+    if (fig && fig.activeLayer >= 0) setLayerVisible(tabId, fig.activeLayer, box.checked);
+  };
+  showLabel.appendChild(box);
+  showLabel.appendChild(document.createTextNode("Show"));
+  info.appendChild(showLabel);
+
+  bar.appendChild(info);
 
 } // end appendInsertTools
 

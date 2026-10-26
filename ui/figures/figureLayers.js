@@ -165,11 +165,13 @@ export function redrawFigure(tabId, { dim = true } = {}) {
   const figure    = tabState.figure;
   const instances = tabState.instances || [];
   const dimming   = dim && !drawState.final;
+  // Hiding is an editing aid; the final drawing always shows everything.
+  const showAll   = drawState.final;
 
   // drawOrder is top first; paint bottom to top.
   for (let k = figure.drawOrder.length - 1; k >= 0; k--) {
     const i = figure.drawOrder[k];
-    if (!figure.layers[i].visible) continue;
+    if (!figure.layers[i].visible && !showAll) continue;
 
     const inst = instances[i];
     ctx.save();
@@ -189,9 +191,11 @@ export function redrawFigure(tabId, { dim = true } = {}) {
 /* ============================================================
    renderLayerPanel(tabId)
    ------------------------------------------------------------
-   Layer numbers (with visibility checkboxes) go in the gray strip
-   left of the canvas (#figure-sidebar). The action panel gets a
-   one-line heading and the active layer's controls. Arms the point
+   Layer numbers go in the gray strip
+   left of the canvas (#figure-sidebar); a hidden layer's number is
+   grayed and struck through. The action panel gets the active
+   layer's controls. The subtab bar item for the active layer
+   (name and Show checkbox) is refreshed. Arms the point
    interactor on the active layer when it is visible.
    ============================================================ */
 export function renderLayerPanel(tabId) {
@@ -216,23 +220,19 @@ export function renderLayerPanel(tabId) {
       row.className = "figure-layer-row";
       row.title = reg?.name || layer.id;
       row.style.cssText =
-        "display:flex; align-items:center; gap:3px; padding:1px 4px; cursor:pointer;" +
+        "display:flex; align-items:center; justify-content:center; width:100%; padding:1px 4px; cursor:pointer;" +
         (i === figure.activeLayer ? " background:rgba(0,0,0,0.18); font-weight:bold;" : "");
-
-      const box = document.createElement("input");
-      box.type    = "checkbox";
-      box.checked = layer.visible;
-      box.title   = "Show or hide layer " + (i + 1);
-      box.onclick = (e) => {
-        e.stopPropagation();
-        setLayerVisible(tabId, i, box.checked);
-      };
 
       const num = document.createElement("span");
       num.textContent = String(i + 1);
 
+      if (!layer.visible) {
+        row.style.opacity = "0.4";
+        num.style.textDecoration = "line-through";
+        row.title += " (hidden)";
+      }
+
       row.onclick = () => selectLayer(tabId, i);
-      row.appendChild(box);
       row.appendChild(num);
       strip.appendChild(row);
     });
@@ -245,13 +245,6 @@ export function renderLayerPanel(tabId) {
   if (!active) {
     action.textContent = "Use Insert Object, Line or Parabola to begin.";
   } else {
-    const reg = window.drawRegistry?.[figure.layers[figure.activeLayer].id];
-    const heading = document.createElement("div");
-    heading.id = "figureLayerHeading";
-    heading.style.cssText = "font-weight:bold; margin-bottom:8px;";
-    heading.textContent = "Layer " + (figure.activeLayer + 1) + " \u00b7 " + (reg?.name || "");
-    action.appendChild(heading);
-
     const info = {
       drawRegistry:  active,           // controls come from the registry entry
       parameters:    active.params,
@@ -260,6 +253,8 @@ export function renderLayerPanel(tabId) {
     };
     buildParameterControls(info, "tab-draw", true);
   }
+
+  updateLayerInfo(tabId);
 
   // ---- interactor (drag handles) ------------------------------------
   const canvas = window.drawCanvas;
@@ -275,6 +270,36 @@ export function renderLayerPanel(tabId) {
   }
 
 } // end renderLayerPanel
+
+
+/* ============================================================
+   updateLayerInfo(tabId)
+   ------------------------------------------------------------
+   Fills the "Layer N . Name  [x] Show" item in the subtab bar
+   (built by figuresNav.js) for the active layer.
+   ============================================================ */
+function updateLayerInfo(tabId) {
+
+  const label = document.getElementById("figureLayerLabel");
+  const box   = document.getElementById("figureLayerShow");
+  if (!label || !box) return;
+
+  const figure = uiState.figures.tabs[tabId].figure;
+  const layer  = figure.layers[figure.activeLayer];
+
+  if (!layer) {
+    label.textContent = "";
+    box.checked  = true;
+    box.disabled = true;
+    return;
+  }
+
+  const reg = window.drawRegistry?.[layer.id];
+  label.textContent = "Layer " + (figure.activeLayer + 1) + " \u00b7 " + (reg?.name || layer.id);
+  box.checked  = layer.visible;
+  box.disabled = false;
+
+} // end updateLayerInfo
 
 
 /* ============================================================
