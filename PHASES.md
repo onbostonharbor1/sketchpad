@@ -15,7 +15,7 @@ Do one phase at a time. After each, stop and wait for him to review, play with i
 | 6c | Layer colors: each layer has a color, shown on its number in the strip and changeable there; that layer's numbered points are drawn as circled numbers in the same color. Retire the old coded-number display (printCircNum and `drawState.ctr`), which only existed to name join points when numbers were coded by hand | Built on `claude/phase-6c`, awaiting his review (see "Phase 6c as built"). The old coded-number display is NOT retired: see the note there |
 | 7 | Handle and drag: arrow-key nudging, 1 px, 10 px with Shift, of the object's own handles; nudge a circle's number label (placed circles are not themselves dragged, see revision below) | |
 | 7b | Centroid and bounding box: every object has a visible centroid. Drag the centroid to move the object anywhere. Selecting a centroid shows a bounding box; grabbing handles on the box rotates the object about the centroid. Open: one handle or several on the box | |
-| 7c | Break apart an object into its pieces (own phase: it changes existing drawing code). A composite object, such as a polygon of stitched parabolas, is replaced by separate layers (Lines, Parabolas) that can be moved, welded and deleted on their own. Needs a `decompose()` on each object that supports it | Added; placed before welds because weld-drag on composite objects depends on it |
+| 7c | Break apart an object into its pieces (own phase: it changes existing drawing code). A composite object, such as a polygon of stitched parabolas, is replaced by separate layers (Lines, Parabolas) that can be moved, welded and deleted on their own. Needs a `decompose()` on each object that supports it. Barry's route: redo the drawing commands so they can produce their objects as separate segments, and break apart uses that | Added; placed before welds because weld-drag on composite objects depends on it |
 | 8 | Welds | |
 | 8b | Magic points: more candidate kinds (midpoints, tops of loops, cusps), needed as weld targets and for parametric objects | |
 | 9 | Print aids: scale bar; minimum nail-spacing check (needs nail size and highlight-vs-list answers from Barry) | |
@@ -210,3 +210,16 @@ reproduced above.
 - Open: the leader's disc disappears (fewer steps or sides) or is deleted: what happens to the weld?
 - Open: cycles and a follower with two leaders: proposed rule is reject both.
 - Decided in 6c: discs of non-active layers are drawn at 50%, so weld candidates stay visible but quiet.
+
+## 6c review findings (Barry's testing, 2026-10-26; found by probing, not yet fixed)
+
+- Points mode, first click did nothing for Barry and he could not reproduce it. Three causes found:
+  1. A press that moves more than 4 canvas px (`CLICK_SLOP` in `figurePointer.js`) counts as a drag, and a drag
+     on empty canvas does nothing, silently. A 6 px slip makes no disc; a 2 px slip does.
+  2. With the active layer hidden, a click makes a disc on that hidden layer, and discs of hidden layers are not
+     drawn, so it looks like nothing happened.
+  3. Registry objects with no `params.points` (`parametrics`, `regularPursuit`): `armInteractor` hides the shared
+     interaction layer and returns, so points mode gets no mouse at all on those layers.
+- Hiding the active layer leaves it active (nothing changes `activeLayer`), and every other layer stays dimmed.
+  Barry saw the layer underneath become active and undimmed; not reproduced. Proposed rule: hiding the active
+  layer makes the next visible layer down (in `drawOrder`) active.
