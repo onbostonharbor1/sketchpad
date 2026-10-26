@@ -169,3 +169,16 @@ reproduced above.
   (new category directory, help mirror, manifest) and need exclusive create, temp-then-rename manifest,
   empty-slug rejection and duplicate-name suffixes.
 - Parametric objects have no draggable points yet; lobe numbering is the first idea.
+
+## Weld behavior: open questions (to discuss before Phase 8)
+
+- Settled direction: discs are explicit only (nothing is added to the numbered array automatically). A move
+  flows one way, leader to follower; a follower never moves its leader. A weld is a pair of discs on different
+  layers, referenced by layer number and disc number, so stacking order and "adjacent layers" do not matter.
+- Open: chains (A leads B leads C): does C follow A?
+- Open: moving a follower as a whole (7b centroid drag): block, break the weld, or move the rest while the
+  welded handle stays?
+- Open: the leader's disc disappears (fewer steps or sides) or is deleted: what happens to the weld?
+- Open: cycles and a follower with two leaders: proposed rule is reject both.
+- Open: discs of non-active layers drawn at full strength so weld candidates are visible (6c detail).
+- Vocabulary: "disc" is Barry's working name for the filled circle; CLAUDE.md still says "drag circle".
