@@ -47,6 +47,8 @@
 import { resetCanvas, drawState }    from "/draw/drawState.js";
 import { buildParameterControls }   from "/ui/parameterControls.js";
 import { syncOverlayToCanvas }      from "/ui/uiUtilities.js";
+import { refreshPoints, drawFigurePoints } from "./figurePoints.js";
+import { activatePointsInput, deactivatePointsInput } from "./figurePointer.js";
 
 // Experiment switch: true = the last layer clicked goes on top.
 const MOVE_TO_FRONT_ON_SELECT = true;
@@ -165,11 +167,16 @@ export function redrawFigure(tabId, { dim = true } = {}) {
 
   const figure    = tabState.figure;
   const instances = tabState.instances || [];
-  // Preview (the Show All button, not saved) and final mode draw every
-  // layer at full strength, hidden ones included. Layers of kind
-  // "template" (guides, a later phase) are left out of both.
-  const showAll   = drawState.final || !!tabState.preview;
-  const dimming   = dim && !showAll;
+  // Preview (the Show All button, not saved), points mode and final mode
+  // draw every layer at full strength, hidden ones included. Layers of
+  // kind "template" (guides, a later phase) are left out of all three.
+  // Points mode also sets drawState.final while the layers draw, so they
+  // show only their points (one flag, set here, restored below).
+  const pointsMode = tabState.mode === "points";
+  const showAll    = drawState.final || !!tabState.preview || pointsMode;
+  const dimming    = dim && !showAll;
+  const wasFinal   = drawState.final;
+  if (pointsMode) drawState.final = true;
 
   // drawOrder is top first; paint bottom to top.
   for (let k = figure.drawOrder.length - 1; k >= 0; k--) {
@@ -188,6 +195,12 @@ export function redrawFigure(tabId, { dim = true } = {}) {
     }
     ctx.restore();
   }
+
+  drawState.final = wasFinal;
+
+  // Numbered points: anchored ones follow their layers, so refresh first.
+  refreshPoints(tabState);
+  if (pointsMode || tabState.showNumbers) drawFigurePoints(tabState);
 
 } // end redrawFigure
 
@@ -267,10 +280,15 @@ export function renderLayerPanel(tabId) {
     syncOverlayToCanvas("guides", canvas);
   }
 
-  if (active && figure.layers[figure.activeLayer].visible) {
+  // Points mode: only points are draggable, so the object handles are off
+  // and the mouse goes to figurePointer.js. Otherwise: object handles.
+  if (window.disarmInteractor) window.disarmInteractor();
+  deactivatePointsInput();
+
+  if (tabState.mode === "points") {
+    activatePointsInput(tabId, () => redrawFigure(tabId));
+  } else if (active && figure.layers[figure.activeLayer].visible) {
     if (window.armInteractor) window.armInteractor(active);
-  } else if (window.disarmInteractor) {
-    window.disarmInteractor();
   }
 
 } // end renderLayerPanel

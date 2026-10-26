@@ -108,6 +108,9 @@ export const uiState = {
         "tab-categories": { type: "categories" }
     }, // added
 
+    // Click tolerance, in canvas pixels, for picking points in points mode.
+    hitRadius: 5,
+
     saved: null
   },
 

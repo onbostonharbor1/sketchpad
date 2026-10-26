@@ -86,6 +86,32 @@ window.drawRegistry_parabola = {
   },
 
   /**
+   * Infrastructure for Figures points mode: the two arms. Stitches run
+   * between the division points of the arms, so those are the candidate
+   * points. Arm 1 may be trimmed at either end (Trim Bottom, Shorten Top);
+   * the trimming below mirrors changeLine() in draw/drawRegular.js.
+   * Each arm: { id, a, b, steps, from, to }; candidates are t = i / steps.
+   */
+  infrastructure() {
+    const p = this.params;
+    const steps = Number(p.numSteps);
+
+    let truncate = Number(p.truncate) || 0;
+    let shorten  = Number(p.shorten)  || 0;
+    const available = Math.max(0, (steps + 1) - 2);
+    if (truncate + shorten > available) {
+      const ratio = available / (truncate + shorten);
+      truncate = Math.floor(truncate * ratio);
+      shorten  = Math.floor(shorten * ratio);
+    }
+
+    return [
+      { id: "arm1", a: p.line1_pt1, b: p.line1_pt2, steps, from: shorten, to: steps - truncate },
+      { id: "arm2", a: p.line2_pt1, b: p.line2_pt2, steps, from: 0,       to: steps }
+    ];
+  },
+
+  /**
    * Processes changes from the interaction layer and UI controls,
    * updating the master geometry and styles without breaking references.
    */

@@ -9,9 +9,9 @@ Do one phase at a time. After each, stop and wait for him to review, play with i
 | 2 | Hygiene | Done, merged |
 | 3 | Help and script viewing (the Notes popup only) | Done, merged |
 | 4 | Draw prerequisites: final flag, `drawLine` routing | Done, merged |
-| 5 | Figures shell: Create Figure, Untitled N subtabs, caption menu | Done, on `claude/phase-5-figures-shell` |
-| 6a | Insert objects (see below) | Done, on `claude/phase-5-figures-shell`, awaiting his review |
-| 6b | Points mode: click-to-place numbered points (anchored or free), global `nextPoint`, numbers toggle in line mode, final display in points mode, a "Hit radius" subcommand (default 5 px) for tuning. Model below | Next, design settled; waits for his go |
+| 5 | Figures shell: Create Figure, Untitled N subtabs, caption menu | Done, merged |
+| 6a | Insert objects (see below) | Done, merged |
+| 6b | Points mode: click-to-place numbered points (anchored or free), global `nextPoint`, numbers toggle in line mode, final display in points mode, a "Hit radius" subcommand (default 5 px) for tuning. Model below | Done, on `claude/phase-6b`, awaiting his review |
 | 7 | Handle and drag: arrow-key nudging, 1 px, 10 px with Shift; drag a numbered point; nudge a point's number label | |
 | 8 | Welds | |
 | 8b | Magic points: more candidate kinds (midpoints, tops of loops, cusps), needed as weld targets and for parametric objects | |
@@ -24,6 +24,20 @@ Do one phase at a time. After each, stop and wait for him to review, play with i
 
 Barry's "Deferred" and "Dropped" lists belong here too. Paste them in from his original list; they are not
 reproduced above.
+
+## Phase 6b as built
+
+- Left column: Show All, Points Mode, Numbers, Insert Object. Points Mode shows only points (it sets
+  `drawState.final` while the layers draw) and turns the mouse over to `figurePointer.js`.
+- Click on a numbered marker selects it (reach is the larger of the hit radius and the 9 px marker). Click within
+  the hit radius of an infrastructure point makes an anchored point. Click anywhere else makes a free point.
+  Drag moves a point (anchored points slide along their arm). Delete or Backspace, or "Delete selected point" in
+  the caption menu, removes it. Numbers are never reused.
+- Anchored points keep their exact fraction along the arm when the step count or the object changes.
+- Numbers (left button) draws the numbered points over the lines in line mode.
+- Caption menu "Hit radius (N px)..." sets `uiState.figures.hitRadius` (default 5; one value for now, not saved).
+- Line and Parabola define `infrastructure()`; other registry objects have none yet, so on them only free points.
+- Files: `figurePoints.js` (data, picking, drawing), `figurePointer.js` (mouse, keyboard).
 
 ## Phase 6a as built
 

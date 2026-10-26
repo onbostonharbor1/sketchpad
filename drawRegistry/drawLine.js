@@ -63,6 +63,17 @@ window.drawRegistry_line = {
     p.points[2] = { x: mid.x, y: mid.y };
   },
 
+  /**
+   * Infrastructure for Figures points mode: the lines that can carry
+   * numbered points. A Line is one arm with just its two end points.
+   * Each arm: { id, a, b, steps, from, to }. Candidate points sit at
+   * t = i / steps for i = from..to along a -> b.
+   */
+  infrastructure() {
+    const p = this.params;
+    return [{ id: "line", a: p.pt1, b: p.pt2, steps: 1, from: 0, to: 1 }];
+  },
+
   update(incoming) {
     const p = this.params;
     const { line, thing } = this.elements;

@@ -314,6 +314,114 @@ await page.waitForTimeout(1200);
 if ((await page.locator("#figure-sidebar .figure-layer-row").count()) !== 4) problems.push("[figures return] layer rows lost");
 if (!((await inked()) > blank)) problems.push("[figures return] picture not redrawn");
 
+/* ---- Part 6: Points mode (Phase 6b) -------------------------
+   Click numbers points, anchored (on an infrastructure point) or free;
+   anchored points keep their fraction when the step count changes; a
+   point can be dragged and deleted; numbers are never reused. */
+stage = "points mode";
+await page.click("#figures-tab");
+await page.waitForTimeout(800);
+await page.locator("#subtabs button", { hasText: "Categories" }).click();
+await page.waitForTimeout(300);
+await page.click("#createFigureButton");
+await page.waitForTimeout(500);
+await page.click("#figureInsert_drawLine");
+await page.click("#figureInsert_parabola");
+await page.waitForTimeout(400);
+await page.click("#figureModeButton");
+await page.waitForTimeout(400);
+
+const clickAt = async (x, y) => {
+  const r = await page.evaluate(() => {
+    const b = document.getElementById("interaction-layer").getBoundingClientRect();
+    return [b.left, b.top, b.width, b.height];
+  });
+  await page.mouse.click(r[0] + x * r[2] / 800, r[1] + y * r[3] / 800);
+  await page.waitForTimeout(150);
+};
+const dragTo = async (x0, y0, x1, y1) => {
+  const r = await page.evaluate(() => {
+    const b = document.getElementById("interaction-layer").getBoundingClientRect();
+    return [b.left, b.top, b.width, b.height];
+  });
+  const sx = (x) => r[0] + x * r[2] / 800, sy = (y) => r[1] + y * r[3] / 800;
+  await page.mouse.move(sx(x0), sy(y0));
+  await page.mouse.down();
+  await page.mouse.move(sx(x1), sy(y1), { steps: 4 });
+  await page.mouse.up();
+  await page.waitForTimeout(150);
+};
+const points = () => page.evaluate(() =>
+  uiState.figures.tabs[uiState.figures.activeSubtab].figure.points.map(p => ({ ...p })));
+
+await clickAt(203, 198);          // near the line's start (200,200): anchored
+await clickAt(700, 100);          // empty canvas: free
+await clickAt(52, 125);           // parabola arm 1, division 5 of 20 (t = 0.25)
+let pl = await points();
+if (pl.length !== 3 || pl.map(p => p.n).join() !== "1,2,3") problems.push("[points] numbers: " + JSON.stringify(pl));
+if (pl[0].kind !== "anchored" || pl[1].kind !== "free" || pl[2].kind !== "anchored") {
+  problems.push("[points] kinds: " + pl.map(p => p.kind));
+}
+await clickAt(203, 198);          // same spot again selects point 1, makes no new one
+if ((await points()).length !== 3) problems.push("[points] clicking an existing point made a new one");
+
+stage = "points proportional";
+// Steps 20 -> 30 (and back to 12): the anchored point keeps t = 0.25 exactly.
+for (const steps of [30, 12]) {
+  await page.evaluate((v) => {
+    const el = [...document.querySelectorAll("#drawControls input[type=range]")].find(i => i.max === "30");
+    el.value = String(v);
+    el.dispatchEvent(new Event("input", { bubbles: true }));
+  }, steps);
+  await page.waitForTimeout(250);
+  const q = (await points()).find(p => p.n === 3);
+  if (Math.abs(q.t - 0.25) > 1e-9 || Math.abs(q.x - 50) > 0.01 || Math.abs(q.y - 125) > 0.01) {
+    problems.push(`[points proportional] steps ${steps}: ${JSON.stringify(q)}`);
+  }
+}
+
+stage = "points drag";
+await dragTo(700, 100, 600, 300);
+const moved = (await points()).find(p => p.n === 2);
+if (Math.abs(moved.x - 600) > 2 || Math.abs(moved.y - 300) > 2) problems.push("[points drag] free point: " + JSON.stringify(moved));
+await dragTo(52, 125, 90, 275);   // anchored point slides along arm 1 (x stays 50)
+const slid = (await points()).find(p => p.n === 3);
+if (Math.abs(slid.x - 50) > 0.01 || !(slid.t > 0.6 && slid.t < 0.8)) problems.push("[points drag] anchored point: " + JSON.stringify(slid));
+
+stage = "points delete";
+await clickAt(600, 300);          // select point 2
+await page.keyboard.press("Delete");
+await page.waitForTimeout(200);
+pl = await points();
+if (pl.some(p => p.n === 2)) problems.push("[points delete] point 2 still there");
+await clickAt(500, 500);          // empty canvas: a new free point
+pl = await points();
+if (!pl.some(p => p.n === 4) || pl.some(p => p.n === 2)) problems.push("[points delete] number reuse: " + pl.map(p => p.n));
+
+stage = "points hit radius";
+await clickAt(505, 503);          // inside point 4's marker: selects it, makes nothing
+if ((await points()).length !== pl.length) problems.push("[points hit radius] click on a marker made a new point");
+// Arm 2 of the parabola has divisions every 25 px (12 steps), e.g. (125,350).
+await page.evaluate(() => { uiState.figures.hitRadius = 1; });
+await clickAt(125, 354);          // 4 px off the division: outside radius 1 -> free point
+let last = (await points()).at(-1);
+if (last.kind !== "free") problems.push("[points hit radius] radius 1 should give a free point: " + JSON.stringify(last));
+await page.evaluate(() => { uiState.figures.hitRadius = 5; });
+await clickAt(175, 354);          // 4 px off the division at 175: inside radius 5 -> anchored
+last = (await points()).at(-1);
+if (last.kind !== "anchored" || last.arm !== "arm2") problems.push("[points hit radius] radius 5 should anchor: " + JSON.stringify(last));
+
+stage = "points back to lines";
+await page.click("#figureModeButton");
+await page.waitForTimeout(300);
+await page.click("#figureNumbersButton");
+await page.waitForTimeout(300);
+const markers = await page.evaluate(() => window.drawCanvas.getContext("2d").getImageData(0, 0, 1, 1).data[0]);
+if (markers === undefined) problems.push("[points] canvas unreadable");
+const mode = await page.evaluate(() => uiState.figures.tabs[uiState.figures.activeSubtab].mode);
+if (mode !== "lines") problems.push("[points back to lines] mode: " + mode);
+if (!(await page.locator("#figureInsert_parabola").isVisible())) problems.push("[points back to lines] caption tools missing");
+
 await browser.close();
 
 for (const n of notes.slice(0, 5)) console.log("note:", n);
@@ -324,4 +432,4 @@ if (problems.length) {
   for (const p of problems) console.log(" ", p);
   process.exit(1);
 }
-console.log("\nPASS: 6 tabs x 2 passes, plus Draw and Patterns with an open item, plus the Notes menu item, plus the Figures shell and insert, no errors");
+console.log("\nPASS: 6 tabs x 2 passes, plus Draw and Patterns with an open item, plus the Notes menu item, plus the Figures shell, insert and points mode, no errors");

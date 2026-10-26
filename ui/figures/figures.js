@@ -70,6 +70,7 @@ export function initFiguresTab(restored = false) {
       tabs: {
         "tab-categories": { type: "categories" }
       },
+      hitRadius: 5,
       saved: null
     };
   }
@@ -134,6 +135,33 @@ function setFiguresAction() {
   prev.textContent = "Show All";
   prev.title       = "Preview: every layer at full strength, hidden layers included, as the final drawing will look";
   buttonDiv.appendChild(prev);
+
+  // Points Mode and Numbers toggles (figure tabs only; wired in figuresNav.js)
+  const brM = document.createElement("br");
+  brM.id = "figureBrMode";
+  brM.className = "tab-extra";
+  buttonDiv.appendChild(brM);
+
+  const modeBtn = document.createElement("button");
+  modeBtn.id          = "figureModeButton";
+  modeBtn.className   = "cmdButton tab-extra";
+  modeBtn.type        = "button";
+  modeBtn.textContent = "Points Mode";
+  modeBtn.title       = "Show only points. Click to number a point; drag to move it; Delete removes it";
+  buttonDiv.appendChild(modeBtn);
+
+  const brN = document.createElement("br");
+  brN.id = "figureBrNumbers";
+  brN.className = "tab-extra";
+  buttonDiv.appendChild(brN);
+
+  const numBtn = document.createElement("button");
+  numBtn.id          = "figureNumbersButton";
+  numBtn.className   = "cmdButton tab-extra";
+  numBtn.type        = "button";
+  numBtn.textContent = "Numbers";
+  numBtn.title       = "Show the point numbers over the lines (points mode always shows them)";
+  buttonDiv.appendChild(numBtn);
 
   const br = document.createElement("br");
   br.id = "figureBr1";

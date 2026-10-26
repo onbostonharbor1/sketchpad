@@ -32,6 +32,9 @@ import {
 }                                   from "/ui/uiUtilities.js";
 import { nodeRebuildAndValidateManifests } from "/ui/nodeLayer.js";
 import { openHelpHomeOverlay }      from "/ui/help.js";
+import { uiState }                  from "/ui/uiState.js";
+import { redrawFigure }             from "./figureLayers.js";
+import { deletePoint }              from "./figurePoints.js";
 
 
 /* ============================================================
@@ -123,9 +126,38 @@ export async function getFiguresCaptionMenuItems(title) {
     onClick:  () => {}
   });
 
+  // The active figure tab, read when the item is clicked.
+  const activeTab = () => uiState.figures.tabs[uiState.figures.activeSubtab];
+
+  const hitRadiusItem = {
+    label:   "Hit radius (" + uiState.figures.hitRadius + " px)...",
+    tooltip: "How close a click must be to pick a point in points mode",
+    onClick: () => {
+      const answer = window.prompt(
+        "Hit radius in canvas pixels (1 to 50):", String(uiState.figures.hitRadius));
+      if (answer === null) return;
+      const n = Number(answer);
+      if (Number.isFinite(n) && n >= 1 && n <= 50) uiState.figures.hitRadius = n;
+    }
+  };
+
+  const deletePointItem = {
+    label:   "Delete selected point",
+    tooltip: "Removes the selected numbered point. Its number is never reused.",
+    onClick: () => {
+      const ts = activeTab();
+      if (!ts || !ts.figure || ts.selectedPoint == null) return;
+      deletePoint(ts.figure, ts.selectedPoint);
+      ts.selectedPoint = null;
+      redrawFigure(uiState.figures.activeSubtab);
+    }
+  };
+
   return [
     await makeHelpItem("figures", null),
     await makeNotesItem(null, title),
+    hitRadiusItem,
+    deletePointItem,
     later("Show Script"),
     later("Copy"),
     later("Archive"),
