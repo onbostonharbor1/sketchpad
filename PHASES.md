@@ -11,8 +11,8 @@ Do one phase at a time. After each, stop and wait for him to review, play with i
 | 4 | Draw prerequisites: final flag, `drawLine` routing | Done, merged |
 | 5 | Figures shell: Create Figure, Untitled N subtabs, caption menu | Done, merged |
 | 6a | Insert objects (see below) | Done, merged |
-| 6b | Points mode: click-to-place discs (anchored or free) on the active layer, global `nextPoint`, Points Mode checkbox, final display in points mode, a "Hit radius" subcommand (default 5 px) for tuning. Model below | Done, revised per his comments, on `claude/phase-6b`, awaiting his review |
-| 6c | Layer colors: each layer has a color, shown on its number in the strip and changeable there; that layer's numbered points are drawn as circled numbers in the same color. Retire the old coded-number display (printCircNum and `drawState.ctr`), which only existed to name join points when numbers were coded by hand | Added by Barry; placed after 6b, can move |
+| 6b | Points mode: click-to-place discs (anchored or free) on the active layer, global `nextPoint`, Points Mode checkbox, final display in points mode, a "Hit radius" subcommand (default 5 px) for tuning. Model below | Done, merged |
+| 6c | Layer colors: each layer has a color, shown on its number in the strip and changeable there; that layer's numbered points are drawn as circled numbers in the same color. Retire the old coded-number display (printCircNum and `drawState.ctr`), which only existed to name join points when numbers were coded by hand | Built on `claude/phase-6c`, awaiting his review (see "Phase 6c as built"). The old coded-number display is NOT retired: see the note there |
 | 7 | Handle and drag: arrow-key nudging, 1 px, 10 px with Shift, of the object's own handles; nudge a circle's number label (placed circles are not themselves dragged, see revision below) | |
 | 7b | Centroid and bounding box: every object has a visible centroid. Drag the centroid to move the object anywhere. Selecting a centroid shows a bounding box; grabbing handles on the box rotates the object about the centroid. Open: one handle or several on the box | |
 | 7c | Break apart an object into its pieces (own phase: it changes existing drawing code). A composite object, such as a polygon of stitched parabolas, is replaced by separate layers (Lines, Parabolas) that can be moved, welded and deleted on their own. Needs a `decompose()` on each object that supports it | Added; placed before welds because weld-drag on composite objects depends on it |
@@ -30,16 +30,16 @@ reproduced above.
 
 ## Phase 6b as built
 
-- Left column: Show All, a Points Mode checkbox, Insert Object. Points Mode shows only the layers' points (it
+- Left column: Show All, a Points Mode checkbox, Insert Object (6c made Show All a checkbox). Points Mode shows only the layers' points (it
   sets `drawState.final` while the layers draw) and adds click handling from `figurePointer.js`.
 - Only the active layer can be changed. A click (press and release without moving) on a disc of the active layer
   selects it (reach is the larger of the hit radius and the 9 px marker). A click within the hit radius of an
   infrastructure point of the active layer makes an anchored disc. A click anywhere else makes a free disc,
   which belongs to the active layer. Delete or Backspace, or "Delete selected point" in the caption menu,
   removes the selected disc. Numbers are never reused. Changing layer or mode clears the selection.
-- Discs are not dragged. The only draggable things are the object's own handles (red dots), live on the active
-  layer in both modes through the existing interactor. A press that moves is a handle drag; a press that does not
-  move is a click, so a disc can be placed on a handle (an end point).
+- Anchored discs are not dragged. The object's own handles (red dots) are live on the active layer in both
+  modes through the existing interactor. A press that moves is a drag; a press that does not move is a click,
+  so a disc can be placed on a handle (an end point). (6c lets free discs be dragged.)
 - The selected disc has a thick red rim plus a second red ring just outside it.
 - Anchored discs keep their exact fraction along the arm when the step count or the object changes, and ride
   along when a handle is dragged.
@@ -48,6 +48,28 @@ reproduced above.
 - Caption menu "Hit radius (N px)..." sets `uiState.figures.hitRadius` (default 5; one value for now, not saved).
 - Line and Parabola define `infrastructure()`; other registry objects have none yet, so on them only free points.
 - Files: `figurePoints.js` (data, picking, drawing), `figurePointer.js` (mouse, keyboard).
+
+## Phase 6c as built
+
+- Each layer has `color` in its layer data (`figure.layers[i].color`), handed out in turn from `LAYER_COLORS` in
+  `figureLayers.js`. The layer's number in the strip sits on a chip in that color. Right-click the chip to pick a
+  color (a hidden native color input; Coloris was not used).
+- Discs are filled with their layer's color and drawn without numbers. Numbers stay as hidden ids.
+- Discs of layers other than the active one are drawn at 50% (`DISC_DIM_ALPHA` in `figurePoints.js`; layers
+  themselves stay at 20%). A hidden layer's discs are hidden unless Show All.
+- Points mode now follows the same visibility and dimming rules as lines mode. It only changes what a layer
+  draws (just its points) and what a click does.
+- Show All is a checkbox. In points mode the Line, Parabola and Insert Object tools are grayed and inactive.
+  Layer buttons, the Show checkbox and the object controls stay active. "Delete selected point" is enabled only
+  in points mode with a disc selected.
+- A free disc can be dragged in points mode (press clear of the handles, move). An anchored disc cannot. A press
+  on a handle still belongs to the interactor.
+- Hit radius stays 5.
+- Not done, on purpose: `printCircNum` and `drawState.ctr` are still in `draw/drawUtilities.js`. No registry
+  object (nothing a Figure layer can be) calls them, so Figures never shows coded numbers. They are called by
+  pattern and gallery scripts (`patterns/circles/armsInCircles.js`, `patterns/stuff/*`, `OverlappingStars.js`,
+  `overlappingStars1.js` and others), so deleting them would break those. Retire them when those scripts are
+  rewritten or dropped.
 
 ## 6b revisions requested by Barry (built; the wording below is his original request)
 
@@ -66,8 +88,8 @@ reproduced above.
   would force every drawing routine to know how to respond, which is much more design work.
   Built: the object handles stay active in both modes on the active layer; circle dragging is removed; points
   mode only adds click-to-place and delete.
-- Open: a free disc (tied to nothing) cannot be moved now. Delete it and place it again. Plan: after 7b, store a
-  free disc as an offset from its layer's centroid so it travels with the object.
+- Free discs drag (6c). Plan: after 7b, store a free disc as an offset from its layer's centroid so it also
+  travels with the object.
 - Welds are made only between points that have placed discs. An object's end point is not weldable until
   a circle has been placed on it. (Retracted: an earlier suggestion that handles are automatically weldable.)
 - Numbers are ids. Existing code already resolves a point given as a number: `numbersToPoints` in
@@ -137,8 +159,7 @@ reproduced above.
 - A disc tied to a point on an infrastructure line stays at that point. It can be deleted, or it can move to
   follow changes in the line (staying proportional), e.g. a middle disc stays in the middle when the line gets
   longer or shorter.
-- A free disc stays where it was placed (superseded: it used to move when dragged; discs are no longer dragged).
-  It can be deleted.
+- A free disc moves only when dragged (points mode, 6c). It can be deleted. Anchored discs are not dragged.
 - Attachment between objects: both ends of the green parabola in his example follow the blue object when it is
   rotated or enlarged. Rules are needed for what happens when the blue object gets more or fewer sides or
   end points, so that an attached end still has a place to stay. Formalize before Phase 8.
@@ -146,8 +167,8 @@ reproduced above.
 ## Open design questions
 
 
-- 6c: is the number display he calls no longer needed the old coded numbers (printCircNum, `drawState.ctr`), the
-  Numbers button, or both?
+- 6c: answered. Discs have no numbers and the Numbers button is gone; the old coded numbers remain in the draw
+  utilities for his pattern scripts (see Phase 6c as built).
 - 7b mechanism (accepted: Option A, refined): no canvas operations (no ctx move or rotate). Each layer has a
   transform (move, rotate, later scale) held in `drawState` while that layer draws, and `drawLine` maps its two
   end points through it (and `displayPoint` for dots). Nearly all drawing already goes through `drawLine`. The
@@ -188,4 +209,4 @@ reproduced above.
   welded handle stays?
 - Open: the leader's disc disappears (fewer steps or sides) or is deleted: what happens to the weld?
 - Open: cycles and a follower with two leaders: proposed rule is reject both.
-- Open: discs of non-active layers drawn at full strength so weld candidates are visible (6c detail).
+- Decided in 6c: discs of non-active layers are drawn at 50%, so weld candidates stay visible but quiet.

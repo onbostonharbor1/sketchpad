@@ -208,7 +208,7 @@ export function updateFigureButtons() {
   show("figureBr1",          !live);
   show("figureInsertSelect", live);
   show("figureBr2",          live);
-  show("figurePreviewButton", live);
+  show("figurePreviewLabel",  live);
   show("figureBrPreview",     live);
   show("figureModeLabel",     live);
   show("figureBrMode",        live);
@@ -224,23 +224,28 @@ export function updateFigureButtons() {
       if (!t || !t.figure) return;
       t.mode = modeCheck.checked ? "points" : "lines";
       t.selectedPoint = null;
+      updateFigureButtons();
       renderLayerPanel(uiState.figures.activeSubtab);
       redrawFigure(uiState.figures.activeSubtab);
     };
   }
 
-  const prev = document.getElementById("figurePreviewButton");
+  const prev = document.getElementById("figurePreviewCheck");
   if (prev) {
-    const on = !!uiState.figures.tabs[tabId]?.preview;
-    prev.style.fontWeight = on ? "bold" : "";
-    prev.style.boxShadow  = on ? "inset 0 0 0 2px #060" : "";
-    prev.onclick = () => {
+    prev.checked = !!uiState.figures.tabs[tabId]?.preview;
+    prev.onchange = () => {
       const t = uiState.figures.tabs[uiState.figures.activeSubtab];
       if (!t || !t.figure) return;
-      t.preview = !t.preview;
-      updateFigureButtons();
+      t.preview = prev.checked;
       redrawFigure(uiState.figures.activeSubtab);
     };
+  }
+
+  // Points mode places discs on the active layer only, so the tools that
+  // add layers are grayed out and inactive until it is turned off.
+  for (const id of ["figureInsert_drawLine", "figureInsert_parabola", "figureInsertSelect"]) {
+    const el = document.getElementById(id);
+    if (el) el.disabled = pointsMode;
   }
 
   const select = document.getElementById("figureInsertSelect");
@@ -325,6 +330,7 @@ export function switchToFigureTab(tabId) {
 
   setFiguresCaption(tabState.figure.name, true);
   addCaptionTools(tabId);
+  updateFigureButtons();     // again: the caption tools exist only now
 
   // Layer list, controls of the active layer, and the picture.
   renderLayerPanel(tabId);

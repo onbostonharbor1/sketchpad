@@ -6,7 +6,13 @@
      Turns the layer data in a figure into pictures and controls.
 
    A layer (data, in figure.layers[i]):
-     { kind: "draw", id: "<registry key>", visible: true, params: {...} }
+     { kind: "draw", id: "<registry key>", visible: true, color: "#rrggbb",
+       params: {...} }
+
+   color is the layer's identity color: it fills the layer's number in the
+   strip and the layer's discs. It is not the color of the drawing. A new
+   layer takes the next color of LAYER_COLORS; right-click the number of
+   a layer in the strip to pick another.
 
    Each layer also has a live instance, kept in
    uiState.figures.tabs[tabId].instances[i] (same index). The instance
@@ -23,9 +29,12 @@
 
    Drawing: visible layers bottom to top, i.e. drawOrder backwards.
    Every layer except the active one is dimmed (DIM_ALPHA) while
-   editing. Dimming is skipped, and hidden layers are drawn, when
+   editing, and so are its discs (DISC_DIM_ALPHA in figurePoints.js).
+   Dimming is skipped, and hidden layers are drawn, when
    drawState.final is set or the tab is in preview (Show All), or
-   when redrawFigure is called with { dim: false }.
+   when redrawFigure is called with { dim: false }. Points mode obeys
+   the same rules; it only changes what each layer draws (just its
+   points) and what a click does.
 
    Controls: the active layer's controls are built with the same
    buildParameterControls() the Draw tab uses.
@@ -54,6 +63,11 @@ import { activatePointsInput, deactivatePointsInput } from "./figurePointer.js";
 const MOVE_TO_FRONT_ON_SELECT = true;
 // Alpha for layers that are not the active one.
 const DIM_ALPHA   = 0.2;
+// Identity colors handed out to layers in turn (dark enough for white text).
+const LAYER_COLORS = [
+  "#c0392b", "#2471a3", "#1e8449", "#d68910",
+  "#7d3c98", "#117a8b", "#a04000", "#566573"
+];
 // Offset in canvas pixels per earlier layer of the same object.
 const INSERT_STEP = 20;
 
@@ -96,9 +110,9 @@ export function insertLayer(tabId, registryKey) {
   instance.elements = null;
 
   const figure = tabState.figure;
+  const color  = LAYER_COLORS[figure.layers.length % LAYER_COLORS.length];
 
   instance.init();
-
   // Identical objects must not land on the same spot. init() fills in
   // the default positions, so the shift comes after it.
   const same = figure.layers.filter((l) => l.id === registryKey).length;
@@ -110,6 +124,7 @@ export function insertLayer(tabId, registryKey) {
     kind:    "draw",
     id:      registryKey,
     visible: true,
+    color:   color,
     params:  instance.params
   });
   tabState.instances.push(instance);
@@ -167,13 +182,14 @@ export function redrawFigure(tabId, { dim = true } = {}) {
 
   const figure    = tabState.figure;
   const instances = tabState.instances || [];
-  // Preview (the Show All button, not saved), points mode and final mode
-  // draw every layer at full strength, hidden ones included. Layers of
-  // kind "template" (guides, a later phase) are left out of all three.
-  // Points mode also sets drawState.final while the layers draw, so they
-  // show only their points (one flag, set here, restored below).
+  // Preview (the Show All checkbox, not saved) and final mode draw every
+  // layer at full strength, hidden ones included. Layers of kind "template"
+  // (guides, a later phase) are left out of both. Points mode sets
+  // drawState.final while the layers draw, so they show only their points
+  // (one flag, set here, restored below), but it follows the same
+  // visibility and dimming rules as lines mode.
   const pointsMode = tabState.mode === "points";
-  const showAll    = drawState.final || !!tabState.preview || pointsMode;
+  const showAll    = drawState.final || !!tabState.preview;
   const dimming    = dim && !showAll;
   const wasFinal   = drawState.final;
   if (pointsMode) drawState.final = true;
@@ -198,10 +214,10 @@ export function redrawFigure(tabId, { dim = true } = {}) {
 
   drawState.final = wasFinal;
 
-  // Numbered points are always shown, in both modes, at full strength
-  // whatever the dimming. Anchored ones follow their layers, so refresh first.
+  // Discs are always shown, in both modes, by the same visibility and dimming
+  // rules as the layers. Anchored ones follow their layers, so refresh first.
   refreshPoints(tabState);
-  drawFigurePoints(tabState);
+  drawFigurePoints(tabState, { showAll, dimming });
 
 } // end redrawFigure
 
@@ -243,8 +259,32 @@ export function renderLayerPanel(tabId) {
         "display:flex; align-items:center; justify-content:center; width:100%; padding:1px 4px; cursor:pointer;" +
         (i === figure.activeLayer ? " background:rgba(0,0,0,0.18); font-weight:bold;" : "");
 
+      // The number sits on a chip in the layer's color, the same color as the
+      // layer's discs. Right-click it to choose another color.
+      if (!layer.color) layer.color = LAYER_COLORS[i % LAYER_COLORS.length];
+
       const num = document.createElement("span");
       num.textContent = String(i + 1);
+      num.style.cssText =
+        "display:inline-block; min-width:22px; padding:1px 0; border-radius:11px; text-align:center;" +
+        " background:" + layer.color + "; color:" + textColorOn(layer.color) + ";";
+      num.title = "Right-click to change this layer's color";
+
+      // Hidden native color picker, opened by the right-click.
+      const picker = document.createElement("input");
+      picker.type  = "color";
+      picker.value = layer.color;
+      picker.style.cssText = "position:absolute; width:0; height:0; opacity:0; pointer-events:none;";
+      picker.oninput = () => {
+        layer.color = picker.value;
+        num.style.background = layer.color;
+        num.style.color      = textColorOn(layer.color);
+        redrawFigure(tabId);
+      };
+      num.oncontextmenu = (e) => {
+        e.preventDefault();
+        picker.click();
+      };
 
       if (!layer.visible) {
         row.style.opacity = "0.4";
@@ -254,6 +294,7 @@ export function renderLayerPanel(tabId) {
 
       row.onclick = () => selectLayer(tabId, i);
       row.appendChild(num);
+      row.appendChild(picker);
       strip.appendChild(row);
     });
   }
@@ -299,6 +340,21 @@ export function renderLayerPanel(tabId) {
   }
 
 } // end renderLayerPanel
+
+
+/* ------------------------------------------------------------
+   textColorOn(hex)
+   Black or white, whichever reads better on the given background.
+   ------------------------------------------------------------ */
+function textColorOn(hex) {
+
+  const n = parseInt(hex.slice(1), 16);
+  const r = (n >> 16) & 255;
+  const g = (n >> 8)  & 255;
+  const b = n & 255;
+  return (0.299 * r + 0.587 * g + 0.114 * b) > 150 ? "#000000" : "#ffffff";
+
+} // end textColorOn
 
 
 /* ============================================================

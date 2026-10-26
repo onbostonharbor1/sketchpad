@@ -295,11 +295,11 @@ stage = "figures preview";
 await setVis(0, true);
 for (let i = 1; i < 4; i++) await setVis(i, false);
 const editInk = await inked();
-await page.click("#figurePreviewButton");
+await page.click("#figurePreviewCheck");
 await page.waitForTimeout(300);
 const previewInk = await inked();
 if (!(previewInk > editInk)) problems.push(`[figures preview] preview did not show hidden layers (${editInk} -> ${previewInk})`);
-await page.click("#figurePreviewButton");
+await page.click("#figurePreviewCheck");
 await page.waitForTimeout(300);
 if ((await inked()) !== editInk) problems.push("[figures preview] leaving preview did not restore the edit view");
 for (let i = 0; i < 4; i++) await setVis(i, true);
@@ -314,13 +314,15 @@ await page.waitForTimeout(1200);
 if ((await page.locator("#figure-sidebar .figure-layer-row").count()) !== 4) problems.push("[figures return] layer rows lost");
 if (!((await inked()) > blank)) problems.push("[figures return] picture not redrawn");
 
-/* ---- Part 6: Points mode (Phase 6b) -------------------------
+/* ---- Part 6: Points mode (Phase 6b, 6c) ---------------------
    Points mode is a checkbox. A click places a disc on the ACTIVE layer
-   only: anchored (on an infrastructure point) or free. Discs are never
-   dragged; the object's own handles are the only draggable things, in
-   both modes, and anchored discs ride along. Anchored discs keep their
-   fraction when the step count changes. A disc can be deleted; numbers
-   are never reused. The selected disc is drawn with a red ring. */
+   only: anchored (on an infrastructure point) or free. Only free discs
+   can be dragged; the object's own handles are draggable in both modes,
+   and anchored discs ride along. Anchored discs keep their fraction when
+   the step count changes. A disc can be deleted; numbers are never
+   reused. The selected disc is drawn with a red ring. Discs take their
+   layer's color and are dimmed (50%) on layers that are not active.
+   The tools that add layers are grayed out in points mode. */
 stage = "points mode";
 await page.click("#figures-tab");
 await page.waitForTimeout(800);
@@ -365,7 +367,26 @@ const pickLayer = async (i) => {
 const px = (x, y) => page.evaluate(([x, y]) =>
   Array.from(window.drawCanvas.getContext("2d").getImageData(x, y, 1, 1).data), [x, y]);
 const isRed = (c) => c[0] > 150 && c[1] < 70 && c[2] < 70;
+const menuItems = async () => {
+  await page.locator("#caption .caption-buttons button", { hasText: /^v$/ }).click();
+  await page.waitForTimeout(500);
+  const items = await page.evaluate(() =>
+    [...document.querySelectorAll(".caption-menu-item")].map(e => [e.innerText, e.classList.contains("disabled")]));
+  await page.keyboard.press("Escape");
+  await page.waitForTimeout(200);
+  if (await page.locator(".caption-menu-item").count()) {
+    await page.mouse.click(5, 5);
+    await page.waitForTimeout(200);
+  }
+  return items;
+};
 
+stage = "points tools grayed";
+for (const id of ["figureInsert_drawLine", "figureInsert_parabola", "figureInsertSelect"]) {
+  if (!(await page.locator("#" + id).isDisabled())) problems.push(`[points tools] ${id} should be disabled in points mode`);
+}
+
+stage = "points mode";
 await pickLayer(0);               // layer 1, the line (handles at 200,200 / 400,400 / 300,300)
 await clickAt(203, 198);          // on the line's start handle: a click places an anchored disc
 await clickAt(700, 100);          // empty canvas: free, on layer 1
@@ -411,13 +432,45 @@ for (const steps of [30, 12]) {
   }
 }
 
-stage = "points not dragged";
+stage = "points colors and dimming";
+// Layer 1 is red (#c0392b), layer 2 blue (#2471a3). Free disc 2 (layer 1) sits at 700,100.
+const chip = await page.locator("#figure-sidebar .figure-layer-row span").nth(0).evaluate(e => getComputedStyle(e).backgroundColor);
+if (chip !== "rgb(192, 57, 43)") problems.push("[points colors] layer 1 chip color: " + chip);
+const dimmedDisc = await px(705, 100);          // layer 2 is active: disc 2 is dimmed
 await pickLayer(0);
-const before2 = (await points()).find(p => p.n === 2);
-await dragTo(700, 100, 600, 300); // a drag that starts on free disc 2
-const stayed = (await points()).find(p => p.n === 2);
-if (Math.abs(stayed.x - before2.x) > 0.01 || Math.abs(stayed.y - before2.y) > 0.01) problems.push("[points not dragged] free disc moved: " + JSON.stringify(stayed));
-if ((await points()).length !== 3) problems.push("[points not dragged] a drag made or removed a disc");
+const fullDisc = await px(705, 100);
+if (!(fullDisc[1] < 80 && fullDisc[0] > 150)) problems.push("[points colors] active disc not layer 1 red: " + fullDisc);
+if (!(dimmedDisc[1] > fullDisc[1] + 50)) problems.push(`[points colors] dimmed disc not lighter: ${dimmedDisc} vs ${fullDisc}`);
+// A new color from the strip's picker repaints the disc.
+await page.evaluate(() => {
+  const input = document.querySelector("#figure-sidebar .figure-layer-row input[type=color]");
+  input.value = "#00aa00";
+  input.dispatchEvent(new Event("input", { bubbles: true }));
+});
+await page.waitForTimeout(200);
+const green = await px(705, 100);
+if (!(green[1] > 120 && green[0] < 60)) problems.push("[points colors] changed layer color not applied to disc: " + green);
+// Hiding a layer hides its discs, in points mode too.
+await page.uncheck("#figureLayerShow");
+await page.waitForTimeout(250);
+const gone = await px(705, 100);
+if (!(gone[0] > 240 && gone[1] > 240 && gone[2] > 240)) problems.push("[points colors] disc of a hidden layer still shown: " + gone);
+await page.check("#figureLayerShow");
+await page.waitForTimeout(250);
+
+stage = "points drag";
+// A free disc drags. An anchored disc does not.
+await dragTo(700, 100, 600, 300);
+const dragged = (await points()).find(p => p.n === 2);
+if (Math.abs(dragged.x - 600) > 2 || Math.abs(dragged.y - 300) > 2) problems.push("[points drag] free disc: " + JSON.stringify(dragged));
+await dragTo(600, 300, 700, 100);   // back to where later tests expect it
+await pickLayer(1);
+const before3 = (await points()).find(p => p.n === 3);
+await dragTo(50, 125, 90, 275);
+const after3 = (await points()).find(p => p.n === 3);
+if (Math.abs(after3.x - before3.x) > 0.01 || Math.abs(after3.y - before3.y) > 0.01 || after3.t !== before3.t) problems.push("[points drag] anchored disc moved: " + JSON.stringify(after3));
+if ((await points()).length !== 3) problems.push("[points drag] a drag made or removed a disc");
+await pickLayer(0);
 
 stage = "points handles drag";
 // Handles still drag in points mode, and the anchored disc 1 rides along.
@@ -464,14 +517,28 @@ await clickAt(175, 354);          // 4 px off the division at 175: inside radius
 last = (await points()).at(-1);
 if (last.kind !== "anchored" || last.arm !== "arm2") problems.push("[points hit radius] radius 5 should anchor: " + JSON.stringify(last));
 
+stage = "points menu";
+await pickLayer(1);
+await clickAt(175, 354);          // a disc of layer 2 is selected
+let items = await menuItems();
+let del = items.find(m => /Delete selected/.test(m[0]));
+if (!del || del[1]) problems.push("[points menu] Delete selected point should be enabled in points mode with a disc selected: " + JSON.stringify(del));
+
 stage = "points back to lines";
 await page.uncheck("#figureModeCheck");
 await page.waitForTimeout(300);
+items = await menuItems();
+del = items.find(m => /Delete selected/.test(m[0]));
+if (!del || !del[1]) problems.push("[points menu] Delete selected point should be grayed in lines mode: " + JSON.stringify(del));
+for (const id of ["figureInsert_drawLine", "figureInsert_parabola", "figureInsertSelect"]) {
+  if (await page.locator("#" + id).isDisabled()) problems.push(`[points tools] ${id} still disabled in lines mode`);
+}
 const mode = await page.evaluate(() => uiState.figures.tabs[uiState.figures.activeSubtab].mode);
 if (mode !== "lines") problems.push("[points back to lines] mode: " + mode);
-// Discs stay visible in lines mode: disc 5 (500,500) has a white face.
+// Discs stay visible in lines mode, in their layer's color (disc 5, layer 1, is dimmed
+// because layer 2 is active, so it is a light tint of the color chosen above: green).
 const face = await px(506, 500);
-if (!(face[0] > 240 && face[1] > 240 && face[2] > 240)) problems.push("[points back to lines] disc not shown in lines mode: " + face);
+if (!(face[1] > face[0] + 30 && face[1] > 120 && face[1] < 250)) problems.push("[points back to lines] disc not shown in lines mode: " + face);
 if (!(await page.locator("#figureInsert_parabola").isVisible())) problems.push("[points back to lines] caption tools missing");
 
 await browser.close();

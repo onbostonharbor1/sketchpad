@@ -12,7 +12,8 @@
      { n, kind: "free",     layer,          x, y, dx, dy }
 
      n        permanent number, taken from figure.nextPoint. Never
-              reused, even after the point is deleted.
+              reused, even after the point is deleted. It is an id only:
+              the disc is drawn without it.
      layer    index into figure.layers (layer numbers never change). A
               free point belongs to the layer that was active when it
               was placed. Only the active layer's points can be selected,
@@ -23,14 +24,16 @@
               when the object is moved or its step count changes.
      x, y     where the point is now. For an anchored point this is
               recomputed from layer, arm and t on every redraw. Points
-              are never dragged: an anchored point rides along with its
-              object, a free point stays where it was placed. Only the
-              object's own handles are dragged (interactor.js).
-     dx, dy   offset of the number label from the point (used from
-              Phase 7; always 0 for now).
+              are never dragged except free ones (moveFreePoint): an
+              anchored point rides along with its object. The object's own
+              handles are dragged by interactor.js.
+     dx, dy   offset of a number label from the point. Discs are drawn
+              without numbers now, so this is always 0; kept for
+              Phase 7, which may drop it.
 
-   Vocabulary: Barry's working name for a drawn point is "disc" (a filled
-   circle). Code and tests still say "point".
+   Vocabulary: Barry's name for a drawn point is "disc" (a filled circle,
+   in the color of its layer, drawn without its number). Code and tests
+   still say "point".
 
    Infrastructure: a registry object may define infrastructure(),
    returning arms { id, a, b, steps, from, to }. The candidate points
@@ -42,13 +45,17 @@
      findPoint(figure, x, y, radius)
      addAnchoredPoint(figure, candidate)
      addFreePoint(figure, x, y)
+     moveFreePoint(point, x, y)
      deletePoint(figure, n)
      refreshPoints(tabState)
-     drawFigurePoints(tabState)
+     drawFigurePoints(tabState, { showAll, dimming })
    ============================================================ */
 
 const MARKER_RADIUS = 9;   // drawn size of a numbered point
 const HALO_GAP      = 4;   // selected point: gap from the marker to its outer ring
+// Alpha for the discs of layers that are not the active one, while editing.
+// Layers themselves are dimmed harder (DIM_ALPHA in figureLayers.js).
+const DISC_DIM_ALPHA = 0.5;
 
 
 /* ------------------------------------------------------------
@@ -163,6 +170,23 @@ export function addFreePoint(figure, x, y) {
 
 
 /* ============================================================
+   moveFreePoint(point, x, y)
+   ------------------------------------------------------------
+   Drags a free point to (x, y). An anchored point is never moved
+   this way (it rides along with its object); returns false for it.
+   ============================================================ */
+export function moveFreePoint(point, x, y) {
+
+  if (point.kind !== "free") return false;
+
+  point.x = x;
+  point.y = y;
+  return true;
+
+} // end moveFreePoint
+
+
+/* ============================================================
    deletePoint(figure, n)
    ------------------------------------------------------------
    Removes the point. Its number stays used: nextPoint never
@@ -201,26 +225,34 @@ export function refreshPoints(tabState) {
 
 
 /* ============================================================
-   drawFigurePoints(tabState)
+   drawFigurePoints(tabState, { showAll, dimming })
    ------------------------------------------------------------
-   Draws every numbered point on the main canvas: a white disc, a
-   black rim and the number. The selected point is marked by a thick
-   red rim and a second red ring just outside it, so it stands out
-   from the others even when it sits on a handle or a stitch line.
+   Draws every disc on the main canvas: a filled circle in the color
+   of its layer with a black rim, no number. The same visibility
+   rules as the layers apply: a disc of a hidden layer is left out
+   unless showAll. While dimming, the discs of layers other than the
+   active one are drawn at DISC_DIM_ALPHA. The selected disc has a
+   thick red rim and a second red ring just outside it, so it stands
+   out even when it sits on a handle or a stitch line.
    ============================================================ */
-export function drawFigurePoints(tabState) {
+export function drawFigurePoints(tabState, { showAll = false, dimming = false } = {}) {
+
+  const figure = tabState.figure;
 
   ctx.save();
-  ctx.font         = "bold 11px sans-serif";
-  ctx.textAlign    = "center";
-  ctx.textBaseline = "middle";
 
-  for (const p of tabState.figure.points) {
+  for (const p of figure.points) {
+    const layer = figure.layers[p.layer];
+    if (!layer) continue;
+    if (!layer.visible && !showAll) continue;
+
     const selected = p.n === tabState.selectedPoint;
+
+    ctx.globalAlpha = (dimming && p.layer !== figure.activeLayer) ? DISC_DIM_ALPHA : 1;
 
     ctx.beginPath();
     ctx.arc(p.x, p.y, MARKER_RADIUS, 0, Math.PI * 2);
-    ctx.fillStyle   = "#ffffff";
+    ctx.fillStyle   = layer.color || "#888888";
     ctx.fill();
     ctx.lineWidth   = selected ? 3 : 1.5;
     ctx.strokeStyle = selected ? "#d00000" : "#000000";
@@ -233,9 +265,6 @@ export function drawFigurePoints(tabState) {
       ctx.strokeStyle = "#d00000";
       ctx.stroke();
     }
-
-    ctx.fillStyle = "#000000";
-    ctx.fillText(String(p.n), p.x + p.dx, p.y + p.dy);
   }
 
   ctx.restore();

@@ -128,13 +128,17 @@ function setFiguresAction() {
   brP.className = "tab-extra";
   buttonDiv.appendChild(brP);
 
-  const prev = document.createElement("button");
-  prev.id          = "figurePreviewButton";
-  prev.className   = "cmdButton tab-extra";
-  prev.type        = "button";
-  prev.textContent = "Show All";
-  prev.title       = "Preview: every layer at full strength, hidden layers included, as the final drawing will look";
-  buttonDiv.appendChild(prev);
+  const prevLabel = document.createElement("label");
+  prevLabel.id        = "figurePreviewLabel";
+  prevLabel.className = "tab-extra";
+  prevLabel.title     = "Preview: every layer at full strength, hidden layers included, as the final drawing will look";
+
+  const prevCheck = document.createElement("input");
+  prevCheck.type = "checkbox";
+  prevCheck.id   = "figurePreviewCheck";
+  prevLabel.appendChild(prevCheck);
+  prevLabel.appendChild(document.createTextNode(" Show All"));
+  buttonDiv.appendChild(prevLabel);
 
   // Points Mode checkbox (figure tabs only; wired in figuresNav.js). A label
   // wraps the checkbox so the text is clickable too.

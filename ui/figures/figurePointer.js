@@ -5,7 +5,20 @@
    Role:
      While a figure is in points mode, the (transparent) interaction
      layer over the canvas receives the mouse. Only the active layer
-     can be changed. A click (press and release without moving):
+     can be changed.
+
+     Drag (press, move, release):
+       on a free disc              moves it. This is the one thing in
+                                   Figures that drags a disc: a free
+                                   disc depends on nothing, so no
+                                   drawing routine has to know about it
+       on an anchored disc         nothing (it rides along with its
+                                   object)
+       on a handle of the object   the interactor drags the handle
+                                   (interactor.js); a free disc under
+                                   the handle stays put
+
+     Click (press and release without moving):
 
        on a numbered point         select it
        near a candidate            number that infrastructure point
@@ -14,13 +27,10 @@
                                    clicked
        Delete / Backspace          delete the selected point
 
-     Numbered points are never dragged. The only draggable things are
-     the object's own handles; an anchored point rides along with its
-     object. Both this file and the interactor (interactor.js) listen
-     at the same time in points mode. What keeps one press from doing
-     both is that this file acts only on a click: a press that moves
-     is the interactor dragging a handle, and does nothing here. A
-     click on a handle does not move it, so a point can be placed on
+     Both this file and the interactor listen at the same time in
+     points mode. A press on a handle belongs to the interactor, so a
+     disc is dragged only when the press is clear of the handles. A
+     click on a handle does not move it, so a disc can be placed on
      an end point.
 
      "Near" means within the hit radius, uiState.figures.hitRadius
@@ -33,11 +43,13 @@
 
 import { canvasLayerManager } from "/ui/canvasLayerManager.js";
 import { uiState }            from "/ui/uiState.js";
+import { PointPickerPresets } from "/ui/interactor.js";
 import {
   findCandidate,
   findPoint,
   addAnchoredPoint,
   addFreePoint,
+  moveFreePoint,
   deletePoint
 } from "./figurePoints.js";
 
@@ -81,18 +93,53 @@ export function activatePointsInput(tabId, redraw) {
     };
   };
 
+  // True when (x, y) is within grab range of a handle of the active
+  // object, the same range the interactor uses.
+  const onHandle = (ts, x, y) => {
+    const pts = ts.instances?.[ts.figure.activeLayer]?.params?.points;
+    if (!pts) return false;
+    return pts.some((p) => Math.hypot(p.x - x, p.y - y) < PointPickerPresets.hitTolerance);
+  };
+
   let pressedAt = null;    // where the mouse went down, or null
+  let dragged   = null;    // the free disc being dragged, or null
+  let moved     = false;   // true once the press has moved more than a click
 
   layer.addEventListener("mousedown", (e) => {
+    const ts = tabState();
+    if (!ts) return;
+
     pressedAt = coords(e);
+    moved     = false;
+    dragged   = null;
+
+    if (onHandle(ts, pressedAt.x, pressedAt.y)) return;   // the interactor's
+
+    const hit = findPoint(ts.figure, pressedAt.x, pressedAt.y, uiState.figures.hitRadius);
+    if (hit && hit.kind === "free") dragged = hit;
+  }, { signal });
+
+  window.addEventListener("mousemove", (e) => {
+    if (!pressedAt) return;
+    const m = coords(e);
+    if (!moved && Math.hypot(m.x - pressedAt.x, m.y - pressedAt.y) <= CLICK_SLOP) return;
+    moved = true;
+
+    if (!dragged) return;
+    const ts = tabState();
+    if (!ts) return;
+    moveFreePoint(dragged, m.x, m.y);
+    ts.selectedPoint = dragged.n;
+    redraw();
   }, { signal });
 
   window.addEventListener("mouseup", (e) => {
     if (!pressedAt) return;
     const m = coords(e);
-    const moved = Math.hypot(m.x - pressedAt.x, m.y - pressedAt.y);
+    const wasDrag = moved;
     pressedAt = null;
-    if (moved > CLICK_SLOP) return;           // a drag, not a click
+    dragged   = null;
+    if (wasDrag) return;                      // a drag, not a click
 
     const ts = tabState();
     if (!ts) return;

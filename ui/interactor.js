@@ -4,7 +4,7 @@
 import { canvasLayerManager } from "./canvasLayerManager.js";
 import { uiState } from "/ui/uiState.js";
 
-const PointPickerPresets = {
+export const PointPickerPresets = {
     handleRadius: 5,        // Normal size
     hitTolerance: 10,       // Grab tolerance
     idleColor: "#C91A09",   // LEGO Bright Red

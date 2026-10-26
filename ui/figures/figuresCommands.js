@@ -141,9 +141,13 @@ export async function getFiguresCaptionMenuItems(title) {
     }
   };
 
+  // Usable only in points mode with a disc selected (the menu is rebuilt
+  // each time it opens, so this is read fresh).
+  const ts0 = activeTab();
   const deletePointItem = {
-    label:   "Delete selected point",
-    tooltip: "Removes the selected numbered point. Its number is never reused.",
+    label:    "Delete selected point",
+    disabled: !(ts0 && ts0.mode === "points" && ts0.selectedPoint != null),
+    tooltip:  "Removes the selected disc (points mode). Its number is never reused.",
     onClick: () => {
       const ts = activeTab();
       if (!ts || !ts.figure || ts.selectedPoint == null) return;
