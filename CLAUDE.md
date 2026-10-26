@@ -17,6 +17,12 @@ Phase order and status are in PHASES.md. Read it before starting work.
 - He works on Windows in VS Code (repo at C:\Users\barry\Desktop\sketchpad). Open-in-editor means VS Code only.
 - Do not end every reply with a question.
 
+## Vocabulary
+
+- Drag circle: the small unnumbered circle on a layer that can be dragged.
+- Numbered point: a numbered, filled circle, anchored to an infrastructure line or free.
+- Infrastructure line: carries drag circles and numbered points. Stitch lines do not.
+
 ## Design rules (his, hard)
 
 - Resist globals. A global value must be declared in its state object (`uiState` or `drawState`), never implicit.

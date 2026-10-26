@@ -14,6 +14,7 @@ Do one phase at a time. After each, stop and wait for him to review, play with i
 | 6b | Points mode: click-to-place numbered points (anchored or free), global `nextPoint`, numbers toggle in line mode, final display in points mode, a "Hit radius" subcommand (default 5 px) for tuning. Model below | Done, on `claude/phase-6b`, awaiting his review |
 | 6c | Layer colors: each layer has a color, shown on its number in the strip and changeable there; that layer's numbered points are drawn as circled numbers in the same color. Retire the old coded-number display (printCircNum and `drawState.ctr`), which only existed to name join points when numbers were coded by hand | Added by Barry; placed after 6b, can move |
 | 7 | Handle and drag: arrow-key nudging, 1 px, 10 px with Shift; drag a numbered point; nudge a point's number label | |
+| 7b | Centroid and bounding box: every object has a visible centroid. Drag the centroid to move the object anywhere. Selecting a centroid shows a bounding box; grabbing handles on the box rotates the object about the centroid. Open: one handle or several on the box | |
 | 8 | Welds | |
 | 8b | Magic points: more candidate kinds (midpoints, tops of loops, cusps), needed as weld targets and for parametric objects | |
 | 9 | Print aids: scale bar; minimum nail-spacing check (needs nail size and highlight-vs-list answers from Barry) | |
@@ -90,10 +91,33 @@ reproduced above.
   that layer, but it takes the layer's color (6c). Point circles may be filled with the layer color.
 - Registry objects must say which of their lines are infrastructure. 6b covers Line and Parabola only.
 
+## Vocabulary
+
+- **Drag circle**: the small unnumbered circle on a layer that can be dragged (the red dots on the active
+  object). Not to be confused with a numbered point.
+- **Numbered point**: a numbered, filled circle; anchored or free (see the point model).
+- **Infrastructure line**: a line that carries drag circles and numbered points. Stitch lines do not.
+- **Centroid**: the visible center of an object (Phase 7b).
+
+## Drag circle rules (Barry)
+
+- A drag circle tied to a point on an infrastructure line stays at that point. It can be deleted, or it can move
+  to follow changes in the line (staying proportional), e.g. a middle drag circle stays in the middle when the
+  line gets longer or shorter.
+- A free drag circle moves only when dragged. It can be deleted.
+- Attachment between objects: both ends of the green parabola in his example follow the blue object when it is
+  rotated or enlarged. Rules are needed for what happens when the blue object gets more or fewer sides or
+  end points, so that an attached end still has a place to stay. Formalize before Phase 8.
+
 ## Open design questions
 
 - 6c: is the number display he calls no longer needed the old coded numbers (printCircNum, `drawState.ctr`), the
   Numbers button, or both?
+- 7b: how to rotate. Option A: every layer gets a transform (move, rotate, later scale) applied around its
+  centroid when it draws, so all objects work without changes; the cost is that drag circles and infrastructure
+  positions must be mapped through the same transform. Option B: rewrite each object's own params. Option A is
+  proposed.
+- 7b: one rotation handle on the bounding box, or several? Corner handles could scale instead.
 - Dragging an anchored point: today it slides only along its arm. He said circles can be dragged to where they
   are needed. Should a drag off the arm detach it and turn it into a free point (keeping number and layer)?
 - Phase 8: dragging point 10 onto point 20 leaves two numbers at one place. Does a printed template need one
