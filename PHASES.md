@@ -20,7 +20,7 @@ Do one phase at a time. After each, stop and wait for him to review, play with i
 | 8b | Magic points: more candidate kinds (midpoints, tops of loops, cusps), needed as weld targets and for parametric objects | |
 | 9 | Print aids: scale bar; minimum nail-spacing check (needs nail size and highlight-vs-list answers from Barry) | |
 | 10 | Save and recovery (Save As, category and manifest creation, reload) | |
-| 11 | Figure follow-ups | |
+| 11 | Figure follow-ups (includes the possible show/hide numbers control, to be discussed) | |
 | 12 | Thumbnails (the Insert list becomes icons with a larger preview on mouseover) | |
 | 13 | Sweep tool | |
 | 14 | Filesystem boundary refactor (C3) | |
@@ -41,6 +41,16 @@ reproduced above.
 - Caption menu "Hit radius (N px)..." sets `uiState.figures.hitRadius` (default 5; one value for now, not saved).
 - Line and Parabola define `infrastructure()`; other registry objects have none yet, so on them only free points.
 - Files: `figurePoints.js` (data, picking, drawing), `figurePointer.js` (mouse, keyboard).
+
+## 6b revisions requested by Barry (not built yet)
+
+- Points mode becomes one checkbox. Remove the Numbers button; one command only.
+- In points mode only the active layer can be changed: clicks pick candidates on the active layer only, a new
+  free point belongs to the active layer, and points of other layers cannot be selected or dragged. Other layers
+  stay as they are, dimmed.
+- Entering points mode lets him click straight away to insert a drag circle (no second command).
+- Showing every layer's points in points mode stays as built, for now. Barry is unsure it is a good idea.
+- Possible later addition, needs discussion: a control to show or hide the numbers (Phase 11 follow-ups).
 
 ## Phase 6a as built
 
@@ -111,6 +121,8 @@ reproduced above.
   end points, so that an attached end still has a place to stay. Formalize before Phase 8.
 
 ## Open design questions
+
+- 6b: with the Numbers button gone, are the numbers drawn only in points mode (as I assume), or also in line mode?
 
 - 6c: is the number display he calls no longer needed the old coded numbers (printCircNum, `drawState.ctr`), the
   Numbers button, or both?
