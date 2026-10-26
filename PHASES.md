@@ -13,7 +13,7 @@ Do one phase at a time. After each, stop and wait for him to review, play with i
 | 6a | Insert objects (see below) | Done, merged |
 | 6b | Points mode: click-to-place numbered points (anchored or free), global `nextPoint`, numbers toggle in line mode, final display in points mode, a "Hit radius" subcommand (default 5 px) for tuning. Model below | Done, on `claude/phase-6b`, awaiting his review |
 | 6c | Layer colors: each layer has a color, shown on its number in the strip and changeable there; that layer's numbered points are drawn as circled numbers in the same color. Retire the old coded-number display (printCircNum and `drawState.ctr`), which only existed to name join points when numbers were coded by hand | Added by Barry; placed after 6b, can move |
-| 7 | Handle and drag: arrow-key nudging, 1 px, 10 px with Shift; drag a numbered point; nudge a point's number label | |
+| 7 | Handle and drag: arrow-key nudging, 1 px, 10 px with Shift, of the object's own handles; nudge a circle's number label (placed circles are not themselves dragged, see revision below) | |
 | 7b | Centroid and bounding box: every object has a visible centroid. Drag the centroid to move the object anywhere. Selecting a centroid shows a bounding box; grabbing handles on the box rotates the object about the centroid. Open: one handle or several on the box | |
 | 7c | Break apart an object into its pieces (own phase: it changes existing drawing code). A composite object, such as a polygon of stitched parabolas, is replaced by separate layers (Lines, Parabolas) that can be moved, welded and deleted on their own. Needs a `decompose()` on each object that supports it | Added; placed before welds because weld-drag on composite objects depends on it |
 | 8 | Welds | |
@@ -53,10 +53,15 @@ reproduced above.
 - Numbers are no longer displayed (Barry does not expect to need them). They stay as hidden identity (global
   `nextPoint`, never reused) for welds and saving. The circles are drawn unnumbered, filled with the layer color
   (6c). The show/hide numbers control is dropped unless he asks for it again.
-- Settled: in points mode, dragging a drag circle moves that circle and nothing more. In lines mode the object's
-  own handles reshape the object (as in 6a). 6b as built does this.
-- Open: are the object's own red handles also "drag circles", visible but inert in points mode? Today they are
-  hidden in points mode.
+- LATEST (supersedes the drag items above): the only draggable points are the object's own handles, the ones
+  that existed before Figures. Placed circles come along for the ride: an anchored circle follows its
+  infrastructure line proportionally, and nothing drags a circle itself. Reason: any arbitrary draggable point
+  would force every drawing routine to know how to respond, which is much more design work.
+  Consequences for the code (6b as built still lets circles be dragged and hides the handles in points mode):
+  the object handles stay active in both modes on the active layer; circle dragging comes out; points mode only
+  adds click-to-place and delete.
+- Open: a free circle (tied to nothing) then cannot be moved. Delete and place it again, or keep dragging for
+  free circles only?
 - Welds are made only between points that have placed drag circles. An object's end point is not weldable until
   a circle has been placed on it. (Retracted: an earlier suggestion that handles are automatically weldable.)
 - Numbers are ids. Existing code already resolves a point given as a number: `numbersToPoints` in
@@ -105,8 +110,7 @@ reproduced above.
 - Free point: an arbitrary place on the canvas, tied to nothing. Barry drags it to where it belongs.
 - A click in points mode takes the nearest candidate (an infrastructure point) within the hit radius. A click
   outside every hit radius, on empty canvas, makes a free point. No modifier key.
-- In points mode only points are draggable; object handles are off.
-- A point can be dragged and deleted. Near points are not welded; only an explicit weld (Phase 8) makes
+- Placed circles are not dragged. They ride along with the object (see the latest revision below). A circle can be deleted. Near points are not welded; only an explicit weld (Phase 8) makes
   two points one.
 - A point's label can be nudged slightly without moving the point (offset stored with the point; Phase 7).
 - A free point belongs to a layer: the topmost layer (`drawOrder[0]`) when it was clicked. It does not follow
