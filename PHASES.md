@@ -11,9 +11,10 @@ Do one phase at a time. After each, stop and wait for him to review, play with i
 | 4 | Draw prerequisites: final flag, `drawLine` routing | Done, merged |
 | 5 | Figures shell: Create Figure, Untitled N subtabs, caption menu | Done, on `claude/phase-5-figures-shell` |
 | 6a | Insert objects (see below) | Done, on `claude/phase-5-figures-shell`, awaiting his review |
-| 6b | Points mode: numbered unique points, global `nextPoint`, numbers toggle in line mode, final display in points mode | Next, waits for his go |
-| 7 | Handle and drag: arrow-key nudging, 1 px, 10 px with Shift | |
+| 6b | Points mode: click-to-place numbered points (anchored or free), global `nextPoint`, numbers toggle in line mode, final display in points mode. Model below | Next, design settled except the open items below; waits for his go |
+| 7 | Handle and drag: arrow-key nudging, 1 px, 10 px with Shift; drag a numbered point; nudge a point's number label | |
 | 8 | Welds | |
+| 8b | Magic points: more candidate kinds (midpoints, tops of loops, cusps), needed as weld targets and for parametric objects | |
 | 9 | Print aids: scale bar; minimum nail-spacing check (needs nail size and highlight-vs-list answers from Barry) | |
 | 10 | Save and recovery (Save As, category and manifest creation, reload) | |
 | 11 | Figure follow-ups | |
@@ -47,11 +48,33 @@ reproduced above.
 6. One restore shape: delete dead save/restore code, document one convention. Do it after item 5. Do not make
    Draw and Utilities restore without live testing.
 7. Figure templates: ready-made guide shapes (rectangles, circles) inserted as `template` layers, excluded from
-   Show All and the final drawing. Design with Barry first.
-8. HTML help files. Always the very last item, after anything added later. Ask which pages to write.
+   Show All and the final drawing. Includes a temporary ruler drawn between any two places, to measure where a
+   point should go. Design with Barry first.
+8. Utilities command that sets a global hit radius. A figure always opens with the global value. Optional; drop
+   it if unused.
+9. HTML help files. Always the very last item, after anything added later. Ask which pages to write.
+
+## Point model (Phase 6b onward; Barry's design)
+
+- Points are created only in points mode, by clicking. Never automatic. Hit radius is 5 canvas pixels (a
+  constant in the state object; the setting command is item 8 of the end list).
+- Numbers come from `figure.nextPoint`, stick to their point forever, and are never reused, even after delete.
+- Two kinds of lines: infrastructure lines (the skeleton of an object) and stitch lines drawn between points on
+  the infrastructure. Numbers can only go on infrastructure points. Stitch lines cannot be numbered.
+- Anchored point: sits on an infrastructure line at a fraction t of its length. It follows its object.
+  When the step count changes, the point keeps its percentage along the line (see open items).
+- Free point: an arbitrary place on the canvas, tied to nothing. Barry drags it to where it belongs.
+- A point can be dragged and deleted. Near points are not welded; only an explicit weld (Phase 8) makes
+  two points one.
+- A point's label can be nudged slightly without moving the point (offset stored with the point; Phase 7).
+- Registry objects must say which of their lines are infrastructure. 6b covers Line and Parabola only.
 
 ## Open design questions (decide when the phase arrives)
 
+- 6b rule when steps change: one rule for increase and decrease (keep the percentage along the line, then snap to
+  the nearest division) or index kept on increase and percentage on decrease? Snap, or sit at the exact percentage?
+- 6b: does a click on empty canvas create a free point, or does that need a modifier?
+- 6b: in points mode are only points draggable (object handles off)?
 - Phase 8: weld rule (which layer moves, freezing, automatic or asked), weldable objects (line types first).
 - Merge: always the top two layers; which number the merged layer keeps; frozen weld points hold it together.
 - Phase 10: whether `visible` is saved; the Save As filesystem steps are in `node/createFigureService.mjs`
