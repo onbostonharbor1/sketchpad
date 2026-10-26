@@ -13,7 +13,7 @@ Do one phase at a time. After each, stop and wait for him to review, play with i
 | 6a | Insert objects (see below) | Done, merged |
 | 6b | Points mode: click-to-place discs (anchored or free) on the active layer, global `nextPoint`, Points Mode checkbox, final display in points mode, a "Hit radius" subcommand (default 5 px) for tuning. Model below | Done, merged |
 | 6c | Layer colors: each layer has a color, shown on its number in the strip and changeable there; that layer's numbered points are drawn as circled numbers in the same color. Retire the old coded-number display (printCircNum and `drawState.ctr`), which only existed to name join points when numbers were coded by hand | Built on `claude/phase-6c`, awaiting his review (see "Phase 6c as built"). The old coded-number display is NOT retired: see the note there |
-| 7 | Handle and drag: arrow-key nudging, 1 px, 10 px with Shift, of the object's own handles; nudge a circle's number label (placed circles are not themselves dragged, see revision below) | |
+| 7 | Handle and drag: arrow-key nudging, 1 px, 10 px with Shift, of the object's own handles. (The "nudge a number label" part is dropped: discs have no visible numbers.) | Built on `claude/phase-7`, awaiting his review (see "Phase 7 as built") |
 | 7b | Centroid and bounding box: every object has a visible centroid. Drag the centroid to move the object anywhere. Selecting a centroid shows a bounding box; grabbing handles on the box rotates the object about the centroid. Open: one handle or several on the box | |
 | 7c | Break apart an object into its pieces (own phase: it changes existing drawing code). A composite object, such as a polygon of stitched parabolas, is replaced by separate layers (Lines, Parabolas) that can be moved, welded and deleted on their own. Needs a `decompose()` on each object that supports it. Barry's route: redo the drawing commands so they can produce their objects as separate segments, and break apart uses that | Added; placed before welds because weld-drag on composite objects depends on it |
 | 8 | Welds | |
@@ -211,7 +211,23 @@ reproduced above.
 - Open: cycles and a follower with two leaders: proposed rule is reject both.
 - Decided in 6c: discs of non-active layers are drawn at 50%, so weld candidates stay visible but quiet.
 
-## 6c review findings (Barry's testing, 2026-10-26; found by probing, not yet fixed)
+## Phase 7 as built
+
+- A press on a handle selects it (orange with an outer ring); a press anywhere else clears the selection. The arrow
+  keys then move it 1 px, or 10 px with Shift, in lines mode and points mode, on the active layer. Ignored while
+  the keyboard is in a slider, list or text box. The interactor is shared, so the Draw tab nudges handles too.
+- Dragging and nudging both go through one function, `moveHandle` in `ui/interactor.js`. Phase 8's weld
+  propagation hooks in there.
+- Selecting a handle does not move it. In points mode, clicking a handle also places a disc on it.
+- Fixes from the 6c review findings (below): a press on empty canvas is always a click where it went down, even
+  if it slips; only a press on a handle must stay still to count as a click. Hiding the active layer makes the
+  next visible layer down active (stacking untouched); a hidden active layer ignores clicks in points mode and
+  shows a not-allowed cursor, and its handles are off. Objects without `params.points` (`parametrics`,
+  `regularPursuit`) get a working click layer in points mode.
+- Test helper note: hiding the active layer changes the Show checkbox to the next layer, so tests click it
+  instead of using `setChecked`.
+
+## 6c review findings (Barry's testing, 2026-10-26; fixed in Phase 7)
 
 - Points mode, first click did nothing for Barry and he could not reproduce it. Three causes found:
   1. A press that moves more than 4 canvas px (`CLICK_SLOP` in `figurePointer.js`) counts as a drag, and a drag

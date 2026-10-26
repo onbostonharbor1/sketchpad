@@ -102,8 +102,9 @@ function activatePointPicker(points, config = {}) {
         canvas.style.pointerEvents = "auto";
     }
 
-    let draggedIndex = null;
-    let hoverIndex = null;
+    let draggedIndex  = null;
+    let hoverIndex    = null;
+    let selectedIndex = null;   // the handle the arrow keys nudge
 
     // Use AbortController for clean, one-shot listener removal
     const controller = new AbortController();
@@ -119,6 +120,14 @@ function activatePointPicker(points, config = {}) {
         };
     }
 
+    // The one place a handle is moved, by drag or by arrow key. Anything that
+    // must follow a handle (welds, in Phase 8) hooks in here.
+    function moveHandle(i, x, y) {
+        points[i].x = x;
+        points[i].y = y;
+        if (settings.onUpdate) settings.onUpdate();
+    }
+
     function render() {
         // CRITICAL SAFETY: If the interactor is disarmed, the signal is aborted.
         // Returning here prevents the "ghost draw" when UI controls are touched.
@@ -127,7 +136,7 @@ function activatePointPicker(points, config = {}) {
         ctx.clearRect(0, 0, canvas.width, canvas.height);
 
         points.forEach((pt, i) => {
-            const isActive = (i === draggedIndex || i === hoverIndex);
+            const isActive = (i === draggedIndex || i === hoverIndex || i === selectedIndex);
 
             ctx.beginPath();
             ctx.arc(pt.x, pt.y, settings.handleRadius, 0, Math.PI * 2);
@@ -140,6 +149,15 @@ function activatePointPicker(points, config = {}) {
             ctx.strokeStyle = "white";
             ctx.lineWidth = 1.5;
             ctx.stroke();
+
+            // The selected handle (the one the arrow keys move) gets an outer ring.
+            if (i === selectedIndex) {
+                ctx.beginPath();
+                ctx.arc(pt.x, pt.y, settings.handleRadius + 4, 0, Math.PI * 2);
+                ctx.strokeStyle = "black";
+                ctx.lineWidth = 1.5;
+                ctx.stroke();
+            }
         });
     }
 
@@ -149,10 +167,16 @@ function activatePointPicker(points, config = {}) {
             const pt = points[i];
             const dist = Math.sqrt((mouse.x - pt.x) ** 2 + (mouse.y - pt.y) ** 2);
             if (dist < settings.hitTolerance) {
-                draggedIndex = i;
+                draggedIndex  = i;
+                selectedIndex = i;
                 render();
                 return;
             }
+        }
+        // A press anywhere else clears the selection.
+        if (selectedIndex !== null) {
+            selectedIndex = null;
+            render();
         }
     };
 
@@ -172,9 +196,7 @@ function activatePointPicker(points, config = {}) {
         if (currentHover !== hoverIndex || draggedIndex !== null) {
             hoverIndex = currentHover;
             if (draggedIndex !== null) {
-                points[draggedIndex].x = mouse.x;
-                points[draggedIndex].y = mouse.y;
-                if (settings.onUpdate) settings.onUpdate();
+                moveHandle(draggedIndex, mouse.x, mouse.y);
             }
             render();
         }
@@ -185,7 +207,33 @@ function activatePointPicker(points, config = {}) {
         render();
     };
 
+    // Arrow keys nudge the selected handle 1 px, or 10 px with Shift. Ignored
+    // while the keyboard is in a slider, list or text box.
+    const handleKeyDown = (e) => {
+        if (selectedIndex === null) return;
+
+        const tag = (e.target && e.target.tagName) || "";
+        if (tag === "INPUT" || tag === "SELECT" || tag === "TEXTAREA") return;
+
+        const step = e.shiftKey ? 10 : 1;
+        let dx = 0;
+        let dy = 0;
+        switch (e.key) {
+            case "ArrowLeft":  dx = -step; break;
+            case "ArrowRight": dx =  step; break;
+            case "ArrowUp":    dy = -step; break;
+            case "ArrowDown":  dy =  step; break;
+            default: return;
+        }
+
+        e.preventDefault();
+        const pt = points[selectedIndex];
+        moveHandle(selectedIndex, pt.x + dx, pt.y + dy);
+        render();
+    };
+
     // Attach listeners to window to ensure we don't lose the drag if mouse leaves canvas
+    window.addEventListener("keydown",   handleKeyDown,   { signal });
     window.addEventListener("mousedown", handleMouseDown, { signal });
     window.addEventListener("mousemove", handleMouseMove, { signal });
     window.addEventListener("mouseup",   handleMouseUp,   { signal });

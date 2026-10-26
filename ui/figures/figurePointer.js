@@ -18,7 +18,7 @@
                                    (interactor.js); a free disc under
                                    the handle stays put
 
-     Click (press and release without moving):
+     Click (a press that is not a drag; see below):
 
        on a numbered point         select it
        near a candidate            number that infrastructure point
@@ -32,6 +32,16 @@
      disc is dragged only when the press is clear of the handles. A
      click on a handle does not move it, so a disc can be placed on
      an end point.
+
+     What counts as a click: a press on a handle is a click only if it
+     does not move (more than CLICK_SLOP), because a moving press is the
+     handle being dragged. A press anywhere else is always a click at the
+     spot where it went down, even if the hand slips, since dragging on
+     empty canvas means nothing else. A press that dragged a free disc
+     only selects it.
+
+     A hidden active layer cannot be edited: its discs would not be
+     drawn. Clicks are ignored then and the pointer shows "not-allowed".
 
      "Near" means within the hit radius, uiState.figures.hitRadius
      canvas pixels. Numbers are never reused.
@@ -74,11 +84,19 @@ export function activatePointsInput(tabId, redraw) {
   const main  = window.drawCanvas;
   if (!layer || !main) return;
 
-  layer.width  = main.width;
-  layer.height = main.height;
-  layer.getContext("2d").clearRect(0, 0, layer.width, layer.height);
+  // Resizing a canvas clears it, and the interactor may already have drawn
+  // the handles here, so only resize when the size really differs.
+  if (layer.width  !== main.width)  layer.width  = main.width;
+  if (layer.height !== main.height) layer.height = main.height;
   layer.style.display       = "block";
   layer.style.pointerEvents = "auto";
+
+  // True when the active layer is visible, so a disc placed on it can be seen.
+  const editable = () => {
+    const f = uiState.figures.tabs[tabId]?.figure;
+    return !!f && !!f.layers[f.activeLayer]?.visible;
+  };
+  layer.style.cursor = editable() ? "crosshair" : "not-allowed";
 
   controller = new AbortController();
   const { signal } = controller;
@@ -104,6 +122,7 @@ export function activatePointsInput(tabId, redraw) {
   let pressedAt = null;    // where the mouse went down, or null
   let dragged   = null;    // the free disc being dragged, or null
   let moved     = false;   // true once the press has moved more than a click
+  let onHandleAtPress = false;   // the press began on a handle of the object
 
   layer.addEventListener("mousedown", (e) => {
     const ts = tabState();
@@ -113,7 +132,8 @@ export function activatePointsInput(tabId, redraw) {
     moved     = false;
     dragged   = null;
 
-    if (onHandle(ts, pressedAt.x, pressedAt.y)) return;   // the interactor's
+    onHandleAtPress = onHandle(ts, pressedAt.x, pressedAt.y);
+    if (onHandleAtPress) return;               // the interactor's
 
     const hit = findPoint(ts.figure, pressedAt.x, pressedAt.y, uiState.figures.hitRadius);
     if (hit && hit.kind === "free") dragged = hit;
@@ -135,14 +155,22 @@ export function activatePointsInput(tabId, redraw) {
 
   window.addEventListener("mouseup", (e) => {
     if (!pressedAt) return;
-    const m = coords(e);
-    const wasDrag = moved;
+    const wasDrag  = moved;
+    const wasFree  = dragged;
+    const m        = pressedAt;               // a click happens where it went down
     pressedAt = null;
     dragged   = null;
-    if (wasDrag) return;                      // a drag, not a click
 
     const ts = tabState();
     if (!ts) return;
+    if (!editable()) return;                  // hidden active layer
+
+    if (wasFree) {                            // on a free disc (maybe dragged): select it
+      ts.selectedPoint = wasFree.n;
+      redraw();
+      return;
+    }
+    if (wasDrag && onHandleAtPress) return;   // the interactor dragged a handle
 
     const radius = uiState.figures.hitRadius;
     const figure = ts.figure;

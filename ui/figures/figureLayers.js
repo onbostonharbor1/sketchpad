@@ -325,19 +325,18 @@ export function renderLayerPanel(tabId) {
   }
 
   // The active object's own handles are the only draggable points, in both
-  // modes. In points mode figurePointer.js also takes clicks (place, select,
-  // delete) and must be set up first: it sizes the interaction layer that
-  // the interactor then draws the handles on. Points mode draws hidden
-  // layers, so their handles are live too.
+  // modes, and a hidden layer has none. In points mode figurePointer.js also
+  // takes clicks (place, select, delete). It is set up after the interactor:
+  // an object with no handles makes the interactor hide the interaction
+  // layer, and the pointer input has to show it again.
   if (window.disarmInteractor) window.disarmInteractor();
   deactivatePointsInput();
 
   const pointsMode = tabState.mode === "points";
-  if (pointsMode) activatePointsInput(tabId, () => redrawFigure(tabId));
-
-  if (active && (pointsMode || figure.layers[figure.activeLayer].visible)) {
+  if (active && figure.layers[figure.activeLayer].visible) {
     if (window.armInteractor) window.armInteractor(active);
   }
+  if (pointsMode) activatePointsInput(tabId, () => redrawFigure(tabId));
 
 } // end renderLayerPanel
 
@@ -417,9 +416,23 @@ export function setLayerVisible(tabId, index, visible) {
   const tabState = uiState.figures.tabs[tabId];
   if (!tabState) return;
 
-  tabState.figure.layers[index].visible = !!visible;
+  const figure = tabState.figure;
+  figure.layers[index].visible = !!visible;
 
-  // Hiding the active layer also removes its drag handles.
+  // A hidden layer has nothing to edit, so hiding the active layer makes the
+  // next visible layer down the stack active (or, if none is below, any
+  // visible layer). The stacking itself is left alone (unlike selectLayer,
+  // which moves the layer to the front).
+  if (!visible && index === figure.activeLayer) {
+    const order = figure.drawOrder;
+    const isVisible = (i) => figure.layers[i].visible;
+    const next  = order.slice(order.indexOf(index) + 1).find(isVisible) ?? order.find(isVisible);
+    if (next !== undefined) {
+      figure.activeLayer = next;
+      tabState.selectedPoint = null;
+    }
+  }
+
   renderLayerPanel(tabId);
   redrawFigure(tabId);
 

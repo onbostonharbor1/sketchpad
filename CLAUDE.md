@@ -50,7 +50,8 @@ Phase order and status are in PHASES.md. Read it before starting work.
   `update`, `draw`. Assembled in `drawRegistry/drawRegistry.js`. For several independent copies (figure layers),
   use `Object.create(entry)` with `structuredClone(entry.params)` and call `init()`.
 - `ui/controls`: `buildParameterControls(info, "tab-draw", true)` renders an object's sliders into `#action`.
-- `ui/interactor.js`: drag handles on `params.points` for one armed object at a time.
+- `ui/interactor.js`: drag handles on `params.points` for one armed object at a time. A pressed handle is selected
+  and the arrow keys nudge it (1 px, 10 with Shift). All handle moves go through `moveHandle`.
 - Figures (`ui/figures/`): `figureModel.js` (data), `figuresNav.js` (subtabs, caption tools, left buttons),
   `figureLayers.js` (insert, draw, dim, select), `figuresCommands.js`, `figuresDisplay.js`, `figures.js` (TabSpec).
   A figure is `{name, category, nextPoint, points[], layers[], drawOrder[], activeLayer}` in

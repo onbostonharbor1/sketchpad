@@ -215,7 +215,11 @@ stage = "figures insert";
 // Show or hide layer i (0-based): select it, then use the Show checkbox.
 const setVis = async (i, on) => {
   await page.locator("#figure-sidebar .figure-layer-row span").nth(i).click();
-  await page.locator("#figureLayerShow").setChecked(on);
+  // Click only if the state differs. Not setChecked: hiding the active layer
+  // makes another layer active, so the box then shows that layer's state.
+  if ((await page.locator("#figureLayerShow").isChecked()) !== on) {
+    await page.locator("#figureLayerShow").click();
+  }
   await page.waitForTimeout(150);
 };
 const inked = () => page.evaluate(() => {
@@ -450,12 +454,14 @@ await page.evaluate(() => {
 await page.waitForTimeout(200);
 const green = await px(705, 100);
 if (!(green[1] > 120 && green[0] < 60)) problems.push("[points colors] changed layer color not applied to disc: " + green);
-// Hiding a layer hides its discs, in points mode too.
-await page.uncheck("#figureLayerShow");
+// Hiding a layer hides its discs, in points mode too. (Hiding the active layer
+// makes the other layer active, so show it again by selecting it first.)
+await page.locator("#figureLayerShow").click();
 await page.waitForTimeout(250);
 const gone = await px(705, 100);
 if (!(gone[0] > 240 && gone[1] > 240 && gone[2] > 240)) problems.push("[points colors] disc of a hidden layer still shown: " + gone);
-await page.check("#figureLayerShow");
+await pickLayer(0);
+await page.locator("#figureLayerShow").check();
 await page.waitForTimeout(250);
 
 stage = "points drag";
@@ -540,6 +546,114 @@ if (mode !== "lines") problems.push("[points back to lines] mode: " + mode);
 const face = await px(506, 500);
 if (!(face[1] > face[0] + 30 && face[1] > 120 && face[1] < 250)) problems.push("[points back to lines] disc not shown in lines mode: " + face);
 if (!(await page.locator("#figureInsert_parabola").isVisible())) problems.push("[points back to lines] caption tools missing");
+
+/* ---- Part 7: Handle nudging (Phase 7) and the 6c review fixes ----
+   A press on a handle selects it. The arrow keys then move it 1 px, or 10 px
+   with Shift, in both modes; a press elsewhere clears the selection. A
+   click that slips still places a disc. Hiding the active layer makes the
+   next visible layer active. Points mode works on objects with no handles. */
+const newFigure = async () => {
+  await page.locator("#subtabs button", { hasText: "Categories" }).click();
+  await page.waitForTimeout(300);
+  await page.click("#createFigureButton");
+  await page.waitForTimeout(500);
+};
+const handles = () => page.evaluate(() => {
+  const t = uiState.figures.tabs[uiState.figures.activeSubtab];
+  return t.instances[t.figure.activeLayer].params.points.map(p => ({ x: p.x, y: p.y }));
+});
+const near = (a, b) => Math.abs(a - b) < 0.01;
+
+stage = "nudge";
+await newFigure();
+await page.click("#figureInsert_drawLine");
+await page.waitForTimeout(300);
+let h = await handles();                    // [0] start 200,200  [1] end 400,400  [2] midpoint 300,300
+await page.keyboard.press("ArrowRight");    // nothing selected: nothing moves
+if (!near((await handles())[0].x, h[0].x)) problems.push("[nudge] moved with no handle selected");
+await clickAt(200, 200);                    // a click selects the start handle without moving it
+h = await handles();
+if (!near(h[0].x, 200) || !near(h[0].y, 200)) problems.push("[nudge] the click moved the handle: " + JSON.stringify(h[0]));
+await page.keyboard.press("ArrowRight");
+await page.keyboard.press("Shift+ArrowDown");
+h = await handles();
+if (!near(h[0].x, 201) || !near(h[0].y, 210)) problems.push("[nudge] 1 px right, 10 px down: " + JSON.stringify(h[0]));
+await page.keyboard.press("ArrowLeft");
+await page.keyboard.press("Shift+ArrowUp");
+h = await handles();
+if (!near(h[0].x, 200) || !near(h[0].y, 200)) problems.push("[nudge] back again: " + JSON.stringify(h[0]));
+if (!near(h[1].x, 400) || !near(h[1].y, 400)) problems.push("[nudge] the other end moved: " + JSON.stringify(h[1]));
+
+await clickAt(300, 300);                    // the midpoint handle moves the whole line
+await page.keyboard.press("Shift+ArrowRight");
+h = await handles();
+if (!near(h[0].x, 210) || !near(h[1].x, 410)) problems.push("[nudge] midpoint did not move the line: " + JSON.stringify(h));
+
+await clickAt(600, 600);                    // a press elsewhere clears the selection
+await page.keyboard.press("ArrowRight");
+if (!near((await handles())[0].x, 210)) problems.push("[nudge] moved after the selection was cleared");
+
+stage = "nudge in points mode";
+await page.check("#figureModeCheck");
+await page.waitForTimeout(300);
+await clickAt(210, 200);                    // the start handle again (and a disc placed on it)
+await page.keyboard.press("ArrowRight");
+h = await handles();
+if (!near(h[0].x, 211)) problems.push("[nudge points mode] " + JSON.stringify(h[0]));
+const rider = (await points()).find(p => p.kind === "anchored");
+if (!rider || Math.abs(rider.x - h[0].x) > 0.5) problems.push("[nudge points mode] the disc did not ride along: " + JSON.stringify(rider));
+
+stage = "points click slip";
+const nDiscs = (await points()).length;
+{
+  const r = await rect();
+  const sx = (x) => r[0] + x * r[2] / 800, sy = (y) => r[1] + y * r[3] / 800;
+  await page.mouse.move(sx(600), sy(600));
+  await page.mouse.down();
+  await page.mouse.move(sx(610), sy(600));    // a 10 px slip
+  await page.mouse.up();
+  await page.waitForTimeout(150);
+}
+if ((await points()).length !== nDiscs + 1) problems.push("[points slip] a click that slipped placed no disc");
+
+stage = "hide active layer";
+await page.uncheck("#figureModeCheck");
+await page.waitForTimeout(300);
+await page.click("#figureInsert_parabola");
+await page.waitForTimeout(300);
+const layerState = () => page.evaluate(() => {
+  const f = uiState.figures.tabs[uiState.figures.activeSubtab].figure;
+  return { active: f.activeLayer, order: f.drawOrder.join(), vis: f.layers.map(l => l.visible).join() };
+});
+let ls = await layerState();
+if (ls.active !== 1 || ls.order !== "1,0") problems.push("[hide active] setup: " + JSON.stringify(ls));
+await page.locator("#figureLayerShow").click();
+await page.waitForTimeout(250);
+ls = await layerState();
+if (ls.active !== 0 || ls.order !== "1,0" || ls.vis !== "true,false") problems.push("[hide active] layer 1 should become active, order unchanged: " + JSON.stringify(ls));
+await page.check("#figureModeCheck");
+await page.waitForTimeout(300);
+const discsBefore = (await points()).length;
+await clickAt(500, 700);
+if ((await points()).length !== discsBefore + 1) problems.push("[hide active] click on the new active layer placed no disc");
+await page.locator("#figureLayerShow").click();   // now every layer is hidden
+await page.waitForTimeout(250);
+await clickAt(450, 700);
+if ((await points()).length !== discsBefore + 1) problems.push("[hide active] a disc was placed on a hidden layer");
+const cursor = await page.evaluate(() => getComputedStyle(document.getElementById("interaction-layer")).cursor);
+if (cursor !== "not-allowed") problems.push("[hide active] cursor over a hidden layer: " + cursor);
+
+stage = "points on objects without handles";
+for (const key of ["parametrics", "regularPursuit"]) {
+  await newFigure();
+  await page.selectOption("#figureInsertSelect", key);
+  await page.waitForTimeout(300);
+  await page.check("#figureModeCheck");
+  await page.waitForTimeout(300);
+  await clickAt(700, 700);
+  const got = (await points()).length;
+  if (got !== 1) problems.push(`[no handles] ${key}: first click in points mode made ${got} discs`);
+}
 
 await browser.close();
 
