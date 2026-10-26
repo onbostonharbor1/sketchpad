@@ -118,28 +118,63 @@ export function renderSubtabs() {
     appendInsertTools(bar, activeTabId);
   }
 
+  updateInsertSelect();
+
 } // end renderSubtabs
 
 
 /* ============================================================
    appendInsertTools(bar, tabId)
    ------------------------------------------------------------
-   Registry pulldown plus Line and Parabola shortcut buttons.
+   Line and Parabola shortcut buttons, centered in the bar. The
+   full registry list is the Insert Object button in the left
+   command area (see updateInsertSelect).
    ============================================================ */
 function appendInsertTools(bar, tabId) {
 
   const li = document.createElement("li");
-  li.className = "nav-item ms-auto d-flex align-items-center gap-2";
+  li.className = "nav-item ms-auto me-auto d-flex align-items-center gap-2";
 
-  const select = document.createElement("select");
-  select.id = "figureInsertSelect";
-  select.className = "form-select form-select-sm";
-  select.style.width = "auto";
-  select.title = "Insert a registry object as a new layer";
+  const tools = [
+    ["Line",     "drawLine", "Insert a line as a new layer"],
+    ["Parabola", "parabola", "Insert a parabola (curve-stitch between two arms) as a new layer"]
+  ];
 
+  for (const [label, key, tip] of tools) {
+    const b = document.createElement("button");
+    b.type = "button";
+    b.id = "figureInsert_" + key;
+    b.className = "btn btn-sm btn-outline-secondary";
+    b.textContent = label;
+    b.title = tip;
+    b.onclick = () => insertLayer(tabId, key);
+    li.appendChild(b);
+  }
+
+  bar.appendChild(li);
+
+} // end appendInsertTools
+
+
+/* ============================================================
+   updateInsertSelect()
+   ------------------------------------------------------------
+   The "Insert Object" list in the left command area. It is created
+   by figures.js (setFiguresAction); this fills it and enables it
+   only while a figure tab is active.
+   ============================================================ */
+export function updateInsertSelect() {
+
+  const select = document.getElementById("figureInsertSelect");
+  if (!select) return;
+
+  const tabId = uiState.figures.activeSubtab;
+  const live  = !!uiState.figures.tabs[tabId]?.figure;
+
+  select.innerHTML = "";
   const first = document.createElement("option");
   first.value = "";
-  first.textContent = "Insert...";
+  first.textContent = "Insert Object";
   select.appendChild(first);
 
   for (const obj of listInsertableObjects()) {
@@ -149,25 +184,14 @@ function appendInsertTools(bar, tabId) {
     select.appendChild(opt);
   }
 
+  select.disabled = !live;
   select.onchange = () => {
-    if (select.value) insertLayer(tabId, select.value);
+    const key = select.value;
     select.value = "";
+    if (key && live) insertLayer(tabId, key);
   };
-  li.appendChild(select);
 
-  for (const [label, key] of [["Line", "drawLine"], ["Parabola", "parabola"]]) {
-    const b = document.createElement("button");
-    b.type = "button";
-    b.id = "figureInsert_" + key;
-    b.className = "btn btn-sm btn-outline-secondary";
-    b.textContent = label;
-    b.onclick = () => insertLayer(tabId, key);
-    li.appendChild(b);
-  }
-
-  bar.appendChild(li);
-
-} // end appendInsertTools
+} // end updateInsertSelect
 
 
 /* ============================================================

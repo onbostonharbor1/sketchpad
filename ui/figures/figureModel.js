@@ -29,6 +29,7 @@ export function createEmptyFigure(name) {
     nextPoint:   1,
     points:      [],
     layers:      [],
+    drawOrder:   [],   // layer indices, top of the stack first
     activeLayer: -1
   };
 } // end createEmptyFigure

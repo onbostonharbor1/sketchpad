@@ -133,6 +133,18 @@ function setFiguresAction() {
   btn.onclick     = openNewFigureTab;
   buttonDiv.appendChild(btn);
 
+  // Insert Object: a list of every registry object. Filled and enabled
+  // by updateInsertSelect() in figuresNav.js.
+  const br2 = document.createElement("br");
+  br2.className = "tab-extra";
+  buttonDiv.appendChild(br2);
+
+  const sel = document.createElement("select");
+  sel.id        = "figureInsertSelect";
+  sel.className = "cmdButton tab-extra";
+  sel.title     = "Insert any registry object as a new layer";
+  buttonDiv.appendChild(sel);
+
 } // end setFiguresAction
 
 function setFiguresText() {

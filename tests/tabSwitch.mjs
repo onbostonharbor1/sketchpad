@@ -205,7 +205,7 @@ stage = "figures insert";
 const inked = () => page.evaluate(() => {
   const c = window.drawCanvas, d = c.getContext("2d").getImageData(0, 0, c.width, c.height).data;
   let n = 0;
-  for (let i = 0; i < d.length; i += 4) if (d[i] < 200 || d[i + 1] < 200 || d[i + 2] < 200) n++;
+  for (let i = 0; i < d.length; i += 4) n += 765 - d[i] - d[i + 1] - d[i + 2];   // total darkness
   return n;
 });
 const blank = await inked();
@@ -223,15 +223,57 @@ const lay = await page.evaluate(() => uiState.figures.tabs[uiState.figures.activ
 if (lay.length !== 4) problems.push("[figures insert] expected 4 layers: " + lay);
 if (!(one > blank)) problems.push(`[figures insert] line drew nothing (${blank} -> ${one})`);
 if (!(many > one)) problems.push(`[figures insert] more layers did not add ink (${one} -> ${many})`);
-const rows = await page.locator(".figure-layer-row").count();
-if (rows !== 4) problems.push("[figures insert] layer rows: " + rows);
+const rows = await page.locator("#figure-sidebar .figure-layer-row").count();
+if (rows !== 4) problems.push("[figures insert] layer rows in the strip: " + rows);
+if ((await page.locator("#action .figure-layer-row").count()) !== 0) problems.push("[figures insert] layer rows left in the action panel");
+
+stage = "figures offset";
+const pts = await page.evaluate(() => {
+  const t = uiState.figures.tabs[uiState.figures.activeSubtab];
+  return t.figure.layers.map(l => ({ id: l.id, p: (l.params.points || []).map(q => [q.x, q.y]) }));
+});
+const parab = pts.filter(q => q.id === "parabola");
+if (parab.length !== 2 || JSON.stringify(parab[0].p) === JSON.stringify(parab[1].p)) {
+  problems.push("[figures offset] two parabolas share the same points: " + JSON.stringify(parab));
+}
+
+stage = "figures order";
+const order = () => page.evaluate(() => uiState.figures.tabs[uiState.figures.activeSubtab].figure.drawOrder.join(","));
+if ((await order()) !== "3,2,1,0") problems.push("[figures order] after inserts: " + await order());
+await page.locator("#figure-sidebar .figure-layer-row span").nth(0).click();
+await page.waitForTimeout(300);
+if ((await order()) !== "0,3,2,1") problems.push("[figures order] after clicking 1: " + await order());
+await page.locator("#figure-sidebar .figure-layer-row span").nth(1).click();
+await page.waitForTimeout(300);
+if ((await order()) !== "1,0,3,2") problems.push("[figures order] after clicking 2: " + await order());
+const heading = await page.locator("#figureLayerHeading").innerText();
+if (!/^Layer 2/.test(heading)) problems.push("[figures order] heading: " + heading);
+
+stage = "figures dim";
+for (let i = 0; i < 4; i++) {
+  const box = page.locator("#figure-sidebar .figure-layer-row input").nth(i);
+  if (i === 0 || i === 1) await box.check(); else await box.uncheck();
+}
+await page.waitForTimeout(300);
+await page.locator("#figure-sidebar .figure-layer-row span").nth(0).click();   // layer 1 (line) active
+await page.waitForTimeout(300);
+const lineActive = await inked();
+await page.locator("#figure-sidebar .figure-layer-row span").nth(1).click();   // layer 2 active, line dimmed
+await page.waitForTimeout(300);
+if (!(lineActive > 0)) problems.push("[figures dim] nothing drawn");
+await page.locator("#figure-sidebar .figure-layer-row input").nth(1).uncheck();
+await page.waitForTimeout(300);
+const dimmedOnly = await inked();
+if (!(dimmedOnly < lineActive)) problems.push(`[figures dim] dimmed line not lighter (${dimmedOnly} vs ${lineActive})`);
+for (let i = 0; i < 4; i++) await page.locator("#figure-sidebar .figure-layer-row input").nth(i).check();
+await page.waitForTimeout(300);
 
 stage = "figures visibility";
-for (let i = 0; i < 4; i++) await page.locator(".figure-layer-row input").nth(i).uncheck();
+for (let i = 0; i < 4; i++) await page.locator("#figure-sidebar .figure-layer-row input").nth(i).uncheck();
 await page.waitForTimeout(300);
 const hidden = await inked();
 if (hidden !== blank) problems.push(`[figures visibility] all hidden but ink ${hidden} vs ${blank}`);
-await page.locator(".figure-layer-row input").nth(0).check();
+await page.locator("#figure-sidebar .figure-layer-row input").nth(0).check();
 await page.waitForTimeout(300);
 if (!((await inked()) > blank)) problems.push("[figures visibility] showing layer 1 drew nothing");
 
@@ -242,7 +284,7 @@ const btnOnDraw = await page.locator("#createFigureButton").count();
 if (btnOnDraw !== 0) problems.push("[figures button] Create Figure still present on Draw");
 await page.click("#figures-tab");
 await page.waitForTimeout(1200);
-if ((await page.locator(".figure-layer-row").count()) !== 4) problems.push("[figures return] layer rows lost");
+if ((await page.locator("#figure-sidebar .figure-layer-row").count()) !== 4) problems.push("[figures return] layer rows lost");
 if (!((await inked()) > blank)) problems.push("[figures return] picture not redrawn");
 
 await browser.close();
