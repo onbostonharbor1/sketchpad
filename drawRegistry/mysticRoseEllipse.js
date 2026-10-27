@@ -10,6 +10,7 @@
 */
 import { Point, StringThing }       from '../classes/classes.js';
 import { drawMysticRose }           from '../draw/drawUnicorns.js';
+import { createNodes }              from '../draw/createNodes.js';
 
 window.drawRegistry_mysticRoseEllipse = {
     name:         "Mystic Rose (ellipse)",
@@ -92,5 +93,16 @@ window.drawRegistry_mysticRoseEllipse = {
     draw() {
         const thing = this.elements.thing;
         drawMysticRose(thing);
+    },
+
+    /* ==========================================================
+       infrastructure()  (Figures points mode, Phase 7d)
+       ----------------------------------------------------------
+       Same reasoning as mysticRose.js: node-to-node chords, no arm to
+       subdivide, so the node ring is the one infrastructure arm.
+       ========================================================== */
+    infrastructure() {
+        const nodes = createNodes(this.elements.thing);
+        return [{ id: "ring", points: nodes, steps: nodes.length - 1, from: 0, to: nodes.length - 1 }];
     }
 };

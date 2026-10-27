@@ -45,7 +45,10 @@
    still say "point".
 
    Infrastructure: a registry object may define infrastructure(),
-   returning arms { id, a, b, steps, from, to }. The candidate points
+   returning arms. An arm is either { id, a, b, steps, from, to } (a
+   straight run between two points) or { id, points, from, to } (an
+   explicit array, for an arc or a ring of nodes; steps = points.length - 1
+   so the same t = i/steps still picks out index i). The candidate points
    (the places a click can pick) are t = i / steps for i = from..to.
    Stitch lines are not infrastructure and cannot carry points.
 
@@ -80,12 +83,18 @@ function armsOf(instance) {
 
 
 // The point at fraction t along an arm, in canvas space. transform is the
-// layer's transform, or null/undefined for none.
+// layer's transform, or null/undefined for none. Two arm shapes (Phase 7d):
+// a straight run between a and b (the original shape), or an explicit
+// points array for an arc or a ring of nodes -- t = i/steps still picks
+// index i, since steps = points.length - 1 for that shape.
 function armPoint(arm, t, transform) {
-  return applyTransform(transform, {
-    x: arm.a.x + (arm.b.x - arm.a.x) * t,
-    y: arm.a.y + (arm.b.y - arm.a.y) * t
-  });
+  const pt = arm.points
+    ? arm.points[Math.round(t * arm.steps)]
+    : {
+        x: arm.a.x + (arm.b.x - arm.a.x) * t,
+        y: arm.a.y + (arm.b.y - arm.a.y) * t
+      };
+  return applyTransform(transform, pt);
 } // end armPoint
 
 

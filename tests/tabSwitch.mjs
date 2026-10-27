@@ -916,6 +916,55 @@ if (!near(arms[0].a.x, 20) || !near(arms[0].a.y, 150) || !near(arms[0].b.x, 500)
 }
 if (arms[0].steps !== 20 || arms[0].from !== 0 || arms[0].to !== 20) problems.push("[7d radiate] range: " + JSON.stringify(arms[0]));
 
+stage = "7d mystic rose";
+await newFigure();
+await page.selectOption("#figureInsertSelect", "mysticRose");
+await page.waitForTimeout(300);
+arms = await infra();
+mid = await page.evaluate(() => uiState.figures.tabs[uiState.figures.activeSubtab].instances[0].elements.thing.midpoint);
+if (arms.length !== 1 || arms[0].id !== "ring") problems.push("[7d mystic rose] arms: " + JSON.stringify(arms));
+if (arms[0].points.length !== 20 || arms[0].steps !== 19 || arms[0].from !== 0 || arms[0].to !== 19) problems.push("[7d mystic rose] range: " + JSON.stringify({ n: arms[0].points.length, steps: arms[0].steps, from: arms[0].from, to: arms[0].to }));
+let node0 = arms[0].points[0];
+if (!near(node0.x, mid.x + 200) || !near(node0.y, mid.y)) problems.push("[7d mystic rose] node 0: " + JSON.stringify(node0));
+// Real click: node 0, same end-to-end check as the polygon one above.
+await page.check("#figureModeCheck");
+await page.waitForTimeout(300);
+await clickAt(node0.x, node0.y);
+disc = (await points()).find(p => p.kind === "anchored");
+if (!disc || disc.arm !== "ring" || Math.abs(disc.t) > 1e-6) problems.push("[7d mystic rose] click at node 0: " + JSON.stringify(disc));
+// Cursor: the points-mode layer should use the custom offset cursor, not the plain system crosshair.
+const cursorValue = await page.evaluate(() => document.getElementById("interaction-layer")?.style.cursor || "");
+if (!cursorValue.startsWith("url(")) problems.push("[7d cursor] points-mode cursor not the custom one: " + cursorValue);
+await page.uncheck("#figureModeCheck");
+
+stage = "7d mystic rose ellipse";
+await newFigure();
+await page.selectOption("#figureInsertSelect", "mysticRoseEllipse");
+await page.waitForTimeout(300);
+arms = await infra();
+if (arms.length !== 1 || arms[0].id !== "ring" || arms[0].points.length !== 20) problems.push("[7d mystic rose ellipse] arms: " + JSON.stringify({ len: arms.length, id: arms[0]?.id, n: arms[0]?.points.length }));
+
+stage = "7d cycloid";
+await newFigure();
+await page.selectOption("#figureInsertSelect", "cycloid");
+await page.waitForTimeout(300);
+arms = await infra();
+mid = await page.evaluate(() => uiState.figures.tabs[uiState.figures.activeSubtab].instances[0].elements.thing.midpoint);
+if (arms.length !== 1 || arms[0].id !== "ring" || arms[0].points.length !== 240) problems.push("[7d cycloid] arms: " + JSON.stringify({ len: arms.length, id: arms[0]?.id, n: arms[0]?.points.length }));
+node0 = arms[0].points[0];
+if (!near(node0.x, mid.x + 250) || !near(node0.y, mid.y)) problems.push("[7d cycloid] node 0: " + JSON.stringify(node0));
+
+stage = "7d linked circles";
+await newFigure();
+await page.selectOption("#figureInsertSelect", "linkedCircles");
+await page.waitForTimeout(300);
+arms = await infra();
+const centers = await page.evaluate(() => uiState.figures.tabs[uiState.figures.activeSubtab].instances[0].elements.thing.midpoints);
+if (arms.length !== 2 || arms[0].id !== "circle0" || arms[1].id !== "circle1") problems.push("[7d linked circles] arm ids: " + arms.map(a => a.id).join());
+if (arms[0].points.length !== 80 || arms[1].points.length !== 80) problems.push("[7d linked circles] point counts: " + arms.map(a => a.points.length).join());
+node0 = arms[0].points[0];
+if (!near(node0.x, centers[0].x) || !near(node0.y, centers[0].y - 100)) problems.push("[7d linked circles] circle0 node 0: " + JSON.stringify(node0));
+
 await browser.close();
 
 for (const n of notes.slice(0, 5)) console.log("note:", n);

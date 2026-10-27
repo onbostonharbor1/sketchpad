@@ -204,9 +204,9 @@ reproduced above.
   empty-slug rejection and duplicate-name suffixes.
 - Parametric objects have no draggable points yet; lobe numbering is the first idea.
 
-## Phase 8 spec (Barry's corrections, 2026-10-26; replaces the old leader and follower wording)
+## Phase 8 spec (revised 2026-10-27, after the array/infrastructure() critique; replaces the 2026-10-26 version)
 
-Decided:
+Carried over unchanged from the 2026-10-26 spec:
 - A weld joins discs on different layers. Discs are explicit only; nothing is added to the numbered array
   automatically. A weld is a group of two or more discs at one place (8 parabolas on one center is one group).
   Joining a group means welding to any member. Groups are stored in the figure data as lists of
@@ -220,29 +220,54 @@ Decided:
   each layer moves at most once per drag. Followers reshape (their other handles stay). Hooks into `moveHandle`.
 - Moving a welded object as a whole (7b centroid drag) pulls its partners.
 - A weld that cannot be satisfied (both ends already moved) is left alone and drawn in red.
-- Ring rule: reject a weld that would tie two different places into one loop. Joining a group is always allowed.
-  Every rejection must be reported to Barry in some visible way (not silent).
 - Unweld: remove a disc from a group or dissolve the group. A group down to one disc dissolves.
-- If a member disc disappears (a step change or trim removes it, or it is deleted), it leaves the weld.
+- If a member disc disappears (a step change or trim removes it, or it is deleted), it leaves the weld. If the
+  point a disc is anchored to disappears, the disc disappears too (Barry, 2026-10-26: a disc and its point are
+  two objects, and he calls this a debatable feature). Today an anchored disc whose arm disappears still keeps
+  its last position (`refreshPoints`); Phase 8 changes that to removing the disc.
 - A weld group is one nail on the printed template (Phase 9 counts a group once). Merged numbers: one hole per group.
 - A weld group has its own symbol, not the stacked disc colors. Barry's first idea is a plus sign. Proposed: a
   black plus on a white halo, so it reads over any layer color and doubles as the nail-center mark.
-- A Parabola corner is two handles at one spot; welding a corner joins both arm ends to the group.
 - Welds are saved with the figure (Phase 10).
 
-Open:
-- A driven weld end meeting a mid-arm disc (position derived from two handles): which handles move? Proposed:
-  the arm that carries the disc translates by the same amount; the object's other handles stay. Handle discs move
-  just that handle.
-- How a weld is created. Proposed: select a disc in points mode and run a Weld command (caption menu); it joins
-  the disc with every disc on other layers within the hit radius, so a hub is made in one step. If none is
-  near, say so. Not a click on a disc of another layer (points mode edits the active layer only).
-- Where rejections and notices appear. Proposed: a short message in the caption bar, plus a mark on the discs.
-- DECIDED (Barry, 2026-10-26): if the point a disc is anchored to disappears, the disc disappears too. A disc and
-  its point are two objects, and he calls this a debatable feature. Applies when Phase 8 (or a later delete)
-  removes an arm or point. Today an anchored disc whose arm disappears still keeps its last position
-  (`refreshPoints`); Phase 8 changes that to removing the disc.
-- Order: 7b, then 7c, then 8, then 8b. 7c is no longer a prerequisite for welds.
+Revised by the critique (my reconstruction of that discussion — Barry to confirm or correct, since it was never
+written down at the time):
+- Ring rule dropped. The 2026-10-26 spec rejected any weld that would close a loop of welds. Discussion concluded
+  this was unnecessary: since a weld only ever joins discs that already coincide, a "loop" of welds just means
+  several objects sharing one point, which is exactly what a hub is. Nothing is rejected for topology; a weld is
+  only ever rejected for not coinciding (see "Creating a weld" above).
+- Corner handling, replacing "a Parabola corner is two handles at one spot; welding a corner joins both arm ends
+  to the group": the Parabola's two corner handles (arm1 end, arm2 start) stay independent by default — this is
+  deliberate (Barry's fan and bowtie drawings, Phase 7 finding) and is not touched. A weld group may include two
+  members from the *same* layer, which is how a corner gets tied on purpose: welding one corner handle to the
+  other creates a group of two same-layer members. Unwelding separates them again. Nothing about an unwelded
+  object changes.
+
+New (2026-10-27):
+- How a weld is created: right-click. Left-click already owns disc placement/selection/drag in points mode, so
+  right-click is free and unambiguous. A right-click on or near a disc toggles its weld membership:
+  - Not welded, and another layer's disc is within hit radius: join them into a group (creating the anchored disc
+    first, same as a left-click would, if the click landed on a bare infrastructure point with no disc there yet).
+    This also covers tying a Parabola corner to itself, per the point above.
+  - Already welded: remove just that disc from its group (the group dissolves at one member, per "Unweld" above).
+  - Nothing within hit radius and no disc under the click: nothing to weld; report it (see below), place no disc.
+  Needs `event.preventDefault()` on the interaction layer's `contextmenu` (and the right mousedown) so the browser's
+  own context menu doesn't appear.
+- Mid-arm disc rule stands as proposed and is good enough to build: a driven weld end meeting a mid-arm disc
+  (its position derived from two handles) translates the arm that carries it by the move; the object's other
+  handles stay. Barry: "sounds correct, but usage will determine if kept" — build it, expect it may change once
+  it's actually used.
+- Notices: a short message in the caption bar (as before) *and* a mark drawn on the disc itself, so a red
+  unsatisfiable weld or a rejected attempt is visible without reading the caption bar first.
+
+Scope: `infrastructure()` exists today for Line, Parabola, Regular Polygon, Inverse Star, Radiate (Phase 7d).
+Mystic Rose, Mystic Rose (Ellipse), Cycloid, and Linked Circles stitch single node to single node with no
+subdivided arm — their candidates are just the already-computed node array, no new arc math needed, and giving
+them `infrastructure()` is a small addition once welds are otherwise working. Circular Parabola / Circular
+Parabola (Multi) need real arc math for their perimeter arms (see the three-point/curvature-arc discussion,
+2026-10-27) and stay deferred. Parametrics has no node array yet at all and is its own future phase.
+
+Order: 7b, 7c, 7d done. 8 next.
 
 ## Phase 7 as built
 
@@ -373,6 +398,48 @@ Decisions I'm making (Barry to confirm or reverse):
   follow-up pass once this group is tested and reviewed — same scoping discipline as 7c's decompose() rollout.
   No jitter control is exposed on any object today (checked every registry file), so none of this is a live bug
   yet — it would become one the moment a Jitter slider is added to a `createNodes()`-based object.
+
+### 7d, second pass (2026-10-27, same phase, before Phase 8): Barry caught an overgeneralization in the survey
+above. The real split isn't "curved vs. straight," it's whether a stitch runs along a subdivided arm or connects
+two single nodes directly. Mystic Rose, Mystic Rose (Ellipse), Cycloid, and Linked Circles all stitch node to
+node — every "arm" is just the already-computed node array, nothing to subdivide, no arc math needed. Only
+Circular Parabola / Circular Parabola (Multi) actually need the deferred arc-math work, because their perimeter
+side is a genuine subdivided envelope. Built in this pass:
+- The explicit-points arm shape from the "Decisions" section above is now real: `armPoint()` in
+  `ui/figures/figurePoints.js` resolves `arm.points[Math.round(t * arm.steps)]` when an arm has `points`, falling
+  back to the straight-line formula otherwise. No jitter risk for any of these four (confirmed: none exposes a
+  Jitter control), so `infrastructure()` calls `createNodes()` fresh, same as Regular Polygon and Inverse Star.
+- `infrastructure()` on Mystic Rose, Mystic Rose (Ellipse), Cycloid: one `"ring"` arm, `points` = the full node
+  array from `createNodes()`.
+- `infrastructure()` on Linked Circles: one arm per circle (`"circle0"`, `"circle1"`, ...), `points` = that
+  circle's rim, via a new exported `circlePoints(center, radius, numPoints)` in `draw/drawLinkedCircles.js` (the
+  same angle formula the stitching loop already used inline, pulled out so it isn't duplicated).
+- Also built, unrelated to infrastructure() but placed in the same phase per Barry: the points-mode cursor
+  (`ui/figures/figurePointer.js`). The system crosshair sits dead center on the real cursor position, burying the
+  disc being dragged right when you need to see it land near another one. Replaced with a small custom cursor (an
+  inline SVG data URI, no new asset file) — a dot joined by a thin line to the actual cursor position, with the
+  CSS cursor hotspot set to the blank end of the line so nothing is drawn over the point you're actually
+  pointing at. `CURSOR_OFFSET` (14px) is how far away the visible dot sits; chosen to clear a disc's drawn radius
+  (9px) plus its selected halo (4px). Tune by eye; it's one constant.
+- Still deferred, unchanged: Circular Parabola / Circular Parabola (Multi) (needs real arc math — see the
+  three-point/curvature-arc discussion below), Parametrics (no node array yet), Boxes and Pursuit (temp, skipped
+  per the first pass above).
+- Tests: new "7d mystic rose / mystic rose ellipse / cycloid / linked circles" blocks in `tests/tabSwitch.mjs`
+  check arm shape, point counts, and node 0's position against each object's live params; one real click (Mystic
+  Rose, node 0) confirms the click-to-disc pipeline end to end, same as the Regular Polygon check in the first
+  pass; one check confirms the points-mode interaction layer's cursor is the custom one, not the plain crosshair.
+
+### Three-point / curvature-arc discussion (2026-10-27, for the deferred Circular Parabola work)
+Barry recalled a StringThing-era utility, `arcPoints(a, b, r_frac, n)` (with `getCenter`/`getP3`/`midpoint`/
+`slope`/`inverseSlope`/`yIntercept`), that defines a circular arc from two endpoints plus one curvature fraction
+and samples n points — simpler than a three-point circumcenter fit (one fewer free value, no near-collinear
+degenerate case). This is the right shape for an eventual Arc primitive: two draggable endpoints plus a
+curvature control, regenerated under dragging the way Parabola's straight arms already are. Caveat: it's a
+circular arc, one curvature value, so it only covers Circular Parabola's perimeter when Width and Height are
+equal; an independently-scaled ellipse isn't reachable this way (same boundary the three-point idea had).
+Unlike 7c's Break apart, there's no existing registry object an arc piece could reuse — Parabola only knows
+straight arms — so this is a new primitive to design, not a reuse. Not built; kept here for whenever the curved
+group is picked back up.
 
 ## 6c review findings (Barry's testing, 2026-10-26; fixed in Phase 7)
 

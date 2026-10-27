@@ -10,6 +10,7 @@
 */
 import { Point, StringThing }   from '../classes/classes.js';
 import { drawCycloid }          from '../draw/drawUnicorns.js';
+import { createNodes }          from '../draw/createNodes.js';
 
 window.drawRegistry_cycloid = {
     name:         "Cycloid",
@@ -92,5 +93,16 @@ window.drawRegistry_cycloid = {
     draw() {
         const thing = this.elements.thing;
         drawCycloid(thing);
+    },
+
+    /* ==========================================================
+       infrastructure()  (Figures points mode, Phase 7d)
+       ----------------------------------------------------------
+       Each chord joins node i to node (i * numCycloids) mod numNodes --
+       single nodes, no arm to subdivide. The node ring is the one arm.
+       ========================================================== */
+    infrastructure() {
+        const nodes = createNodes(this.elements.thing);
+        return [{ id: "ring", points: nodes, steps: nodes.length - 1, from: 0, to: nodes.length - 1 }];
     }
 };

@@ -26,6 +26,22 @@ function drawOneCircle(ctx, center, radius) {
   ctx.stroke();
 } // end drawOneCircle
 
+/* circlePoints(center, radius, numPoints)
+   ------------------------------------------------------------
+   The numPoints points evenly spaced around one circle, in the same
+   order and starting angle drawLinkedCircles() stitches from. Used by
+   infrastructure() (Phase 7d) so discs can anchor to a circle's rim;
+   kept here instead of duplicating the angle formula a second time. */
+export function circlePoints(center, radius, numPoints) {
+  const stepAngle = (2 * Math.PI) / numPoints;
+  const pts = [];
+  for (let i = 0; i < numPoints; i++) {
+    const a = i * stepAngle;
+    pts.push(new Point(center.x + radius * Math.sin(a), center.y - radius * Math.cos(a)));
+  }
+  return pts;
+}
+
 function buildAllToAllPairs(n) {
   const pairs = [];
 

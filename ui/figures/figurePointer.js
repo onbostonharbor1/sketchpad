@@ -66,6 +66,29 @@ import {
 
 const CLICK_SLOP = 4;    // canvas pixels a press may move and still be a click
 
+// Points-mode cursor (Barry, 2026-10-27): the system crosshair sits dead
+// center on the real cursor position, which buries the disc you're
+// dragging right when you need to see it land on or near another one.
+// This is a custom cursor instead: a dot, offset from the actual pointer
+// position, joined to it by a thin line. The "2 2" after the url() is the
+// hotspot -- the pixel of the SVG that the browser treats as the real
+// cursor position -- and (2,2) is blank, so nothing is drawn over the
+// point you're actually pointing at. CURSOR_OFFSET is how far away the
+// visible dot sits; 14px clears a disc's own 9px radius plus its selected
+// halo. Tune by eye and re-measure against MARKER_RADIUS/HALO_GAP in
+// figurePoints.js if those ever change.
+const CURSOR_OFFSET = 14;
+const CURSOR_HOT = 2;
+const CURSOR_SVG =
+  `<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32">` +
+  `<line x1="${CURSOR_HOT}" y1="${CURSOR_HOT}" x2="${CURSOR_HOT + CURSOR_OFFSET}" y2="${CURSOR_HOT + CURSOR_OFFSET}" ` +
+  `stroke="#1565c0" stroke-width="1.5"/>` +
+  `<circle cx="${CURSOR_HOT + CURSOR_OFFSET}" cy="${CURSOR_HOT + CURSOR_OFFSET}" r="4" ` +
+  `fill="#1565c0" stroke="white" stroke-width="1"/>` +
+  `</svg>`;
+const POINTS_CURSOR =
+  `url("data:image/svg+xml,${encodeURIComponent(CURSOR_SVG)}") ${CURSOR_HOT} ${CURSOR_HOT}, crosshair`;
+
 let controller = null;   // AbortController of the active listeners
 
 
@@ -97,7 +120,7 @@ export function activatePointsInput(tabId, redraw) {
     const f = uiState.figures.tabs[tabId]?.figure;
     return !!f && !!f.layers[f.activeLayer]?.visible;
   };
-  layer.style.cursor = editable() ? "crosshair" : "not-allowed";
+  layer.style.cursor = editable() ? POINTS_CURSOR : "not-allowed";
 
   controller = new AbortController();
   const { signal } = controller;

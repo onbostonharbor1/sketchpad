@@ -12,7 +12,7 @@
    Drawing is done by drawLinkedCircles() in draw/drawLinkedCircles.js.
 */
 import { LinkedCircles }     from "/classes/linkedCircles.js";
-import { drawLinkedCircles } from "/draw/drawLinkedCircles.js";
+import { drawLinkedCircles, circlePoints } from "/draw/drawLinkedCircles.js";
 import { Point }             from "../classes/classes.js";
 
 window.drawRegistry_linkedCircles = {
@@ -125,5 +125,19 @@ window.drawRegistry_linkedCircles = {
 
   draw() {
     drawLinkedCircles(this.elements.thing);
+  },
+
+  /* ==========================================================
+     infrastructure()  (Figures points mode, Phase 7d)
+     ----------------------------------------------------------
+     One ring per circle. Every linking stitch runs between two single
+     rim points (no arm to subdivide), same as Mystic Rose and Cycloid.
+     ========================================================== */
+  infrastructure() {
+    const thing = this.elements.thing;
+    return thing.midpoints.map((center, i) => {
+      const pts = circlePoints(center, thing.radius, thing.numPoints);
+      return { id: "circle" + i, points: pts, steps: pts.length - 1, from: 0, to: pts.length - 1 };
+    });
   }
 };

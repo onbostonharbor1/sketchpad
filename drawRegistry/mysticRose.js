@@ -9,6 +9,7 @@
 */
 import { Point, StringThing }       from '../classes/classes.js';
 import { drawMysticRose }           from '../draw/drawUnicorns.js';
+import { createNodes }              from '../draw/createNodes.js';
 
 window.drawRegistry_mysticRose = {
     name:         "Mystic Rose (circle)",
@@ -88,5 +89,17 @@ window.drawRegistry_mysticRose = {
     draw() {
         const thing = this.elements.thing;
         drawMysticRose(thing);
+    },
+
+    /* ==========================================================
+       infrastructure()  (Figures points mode, Phase 7d)
+       ----------------------------------------------------------
+       Every stitch here joins two single nodes directly -- there is no
+       arm to subdivide, so the whole node ring is the one infrastructure
+       arm and every node is a candidate.
+       ========================================================== */
+    infrastructure() {
+        const nodes = createNodes(this.elements.thing);
+        return [{ id: "ring", points: nodes, steps: nodes.length - 1, from: 0, to: nodes.length - 1 }];
     }
 };
