@@ -25,9 +25,24 @@
      within hit radius, join or start a group with it. Right-click a
      bare infrastructure point: numbers it first (the same as a left
      click would), but only if that creates a disc that lands on an
-     existing one -- otherwise nothing happens, so right-clicking empty
+     existing one, or on another arm of its own object at the same
+     spot -- otherwise nothing happens, so right-clicking empty
      infrastructure cannot litter the figure with lone discs.
      Creating a weld never moves anything: discs must already coincide.
+
+     cornerPartners(): an object's own corner handles (a Parabola's
+     line1_pt2 and line2_pt1, say) are separate fields, independent by
+     default (Phase 7's "fan/bowtie" finding) -- only one of them is
+     ever the disc a corner click lands on (findCandidate's own tie-
+     break always prefers the first arm), so welding just that one to
+     something else leaves the object's OTHER corner handle behind,
+     splitting the object's own corner the moment the weld moves it.
+     toggleWeldAt() calls cornerPartners() on every weld it makes, so
+     reaching another arm's matching candidate at the same spot numbers
+     it too and pulls it into the same group -- this is what actually
+     makes "two members on the same layer, for a corner" (the spec's
+     own words) reachable from a single right-click, not just a shape
+     the data model happens to allow.
 
    Moving a weld (propagateAfterChange(), the move-propagation rule):
      Hooked into moveHandle() (ui/interactor.js, drag and the arrow
@@ -44,9 +59,12 @@
          reshapes and the object's other handles stay still;
        - anywhere else (the arm's ends are not handles at all, as for
          Regular Polygon or a node ring) -> translate the whole layer.
-     A layer moves at most once per drag; a second weld edge that would
-     move it again is left alone, which is how an unsatisfiable weld
-     (two paths disagreeing about where a layer should land) shows up.
+     Each handle moves at most once per drag (two different handles of
+     one layer can each move once, which is how a corner's two members
+     travel together); a second weld edge that would move the same
+     handle again, or a whole layer that has already moved in pieces or
+     as a whole, is left alone, which is how an unsatisfiable weld
+     (two paths disagreeing about where something should land) shows up.
 
    Exports:
      weldOf(figure, n)
@@ -59,7 +77,7 @@
 
 import { uiState } from "/ui/uiState.js";
 import { applyTransform, inverseTransform, translateTransform } from "/draw/drawTransform.js";
-import { findCandidate, addAnchoredPoint, moveFreePoint, refreshPoints } from "./figurePoints.js";
+import { findCandidate, addAnchoredPoint, moveFreePoint, refreshPoints, armsOf, armPoint } from "./figurePoints.js";
 // figureLayers.js imports this module too (for snapshotWeldMembers,
 // propagateAfterChange and drawWeldMarks); importing redrawFigure back
 // from it here is a circular import, but it is fine -- this binding is
@@ -145,6 +163,53 @@ export function removeFromWeld(figure, n) {
 } // end removeFromWeld
 
 
+/* ------------------------------------------------------------
+   cornerPartners(tabState, point)
+   ------------------------------------------------------------
+   A Parabola's two corner handles (line1_pt2 and line2_pt1, say) are
+   two separate fields, independent by default (Phase 7's "fan/bowtie"
+   finding): they only start out at the same spot, nothing keeps them
+   there. So a weld made on just one of them does not, by itself, tie
+   the object's own corner together -- the spot found here is arm1's
+   end; arm2's start is a different field entirely, untouched by
+   anything that moves arm1's. This finds the other arm(s) of the
+   SAME layer that also have a candidate sitting exactly on point's
+   spot, numbering one there (figurePoints.js already has a disc there
+   only by coincidence, never by sharing a number) if none exists yet.
+   Returns the discs found, so the caller can weld them in too -- this
+   is what actually makes "weld a corner" (same-layer members) reachable
+   from a single right-click, since right-clicking an already-anchored
+   spot otherwise only ever finds the ONE disc already sitting there.
+   ------------------------------------------------------------ */
+function cornerPartners(tabState, point) {
+
+  const figure   = tabState.figure;
+  const instance = tabState.instances?.[point.layer];
+  if (!instance) return [];
+
+  const xform = figure.layers[point.layer]?.transform || null;
+  const found = [];
+
+  for (const arm of armsOf(instance)) {
+    if (arm.id === point.arm) continue;
+
+    for (let i = arm.from; i <= arm.to; i++) {
+      const t  = i / arm.steps;
+      const pt = armPoint(arm, t, xform);
+      if (Math.hypot(pt.x - point.x, pt.y - point.y) > EPS) continue;
+
+      let disc = figure.points.find((p) =>
+        p.layer === point.layer && p.arm === arm.id && Math.abs(p.t - t) < 1e-9);
+      if (!disc) disc = addAnchoredPoint(figure, { layer: point.layer, arm: arm.id, t, x: pt.x, y: pt.y });
+      found.push(disc);
+      break;   // one candidate on this arm is enough
+    }
+  }
+
+  return found;
+} // end cornerPartners
+
+
 /* ============================================================
    toggleWeldAt(tabState, x, y, radius)
    ------------------------------------------------------------
@@ -171,13 +236,18 @@ export function toggleWeldAt(tabState, x, y, radius) {
 
   if (!clicked) {
     // No disc there yet. A bare infrastructure point is only numbered
-    // if doing so lands it on a disc that is already there -- otherwise
-    // there is nothing to weld, and nothing is created.
+    // if doing so lands it on a disc that is already there, or on
+    // another arm of its own object's candidates at the same spot (a
+    // Parabola corner reached from its empty side) -- otherwise there
+    // is nothing to weld, and nothing is created.
     const candidate = findCandidate(tabState, x, y, radius);
     if (!candidate) return { kind: "none", message: "Nothing to weld here." };
 
     const partner = discAt(candidate.x, candidate.y);
-    if (!partner) return { kind: "none", message: "Nothing to weld here." };
+    const probe   = { layer: candidate.layer, arm: candidate.arm, x: candidate.x, y: candidate.y };
+    if (!partner && !cornerPartners(tabState, probe).length) {
+      return { kind: "none", message: "Nothing to weld here." };
+    }
 
     clicked = addAnchoredPoint(figure, candidate);
   }
@@ -188,14 +258,22 @@ export function toggleWeldAt(tabState, x, y, radius) {
   }
 
   // Same-layer partners are allowed on purpose: that is how two corner
-  // handles of one object get tied together.
+  // handles of one object get tied together. corners finds them even
+  // when clicked is the only one of them with a disc of its own yet.
   const partner = discAt(clicked.x, clicked.y, clicked.n);
-  if (!partner) {
+  const corners = cornerPartners(tabState, clicked);
+
+  if (!partner && !corners.length) {
     return { kind: "none", point: clicked, message: "Nothing to weld here." };
   }
 
-  createOrJoinWeld(figure, clicked.n, partner.n);
-  return { kind: "weld", point: clicked, message: "Welded." };
+  if (partner) createOrJoinWeld(figure, clicked.n, partner.n);
+  for (const c of corners) createOrJoinWeld(figure, clicked.n, c.n);
+
+  return {
+    kind: "weld", point: clicked,
+    message: corners.length ? "Welded (corner tied)." : "Welded."
+  };
 
 } // end toggleWeldAt
 
@@ -263,37 +341,65 @@ function translateWholeLayer(figure, layerIndex, dx, dy) {
 
 
 /* ------------------------------------------------------------
-   applyFollowerMove(tabState, point, dx, dy)
+   applyFollowerMove(tabState, point, dx, dy, moved)
    Moves one follower disc's layer by the canvas delta, choosing
    handle-move, arm-translate, or whole-layer-translate as described
    in the header. True if something moved.
+
+   moved tracks what has already been done to each layer THIS drag, at
+   the right grain to tell a real conflict from two independent moves
+   that just happen to land on the same layer: moved.get(layerIndex) =
+   { whole: bool, handles: Set<index> }. A second whole-layer-translate
+   of the same layer is refused (that IS a conflict -- the unsatisfiable
+   case), and so is moving the same handle index twice, but two
+   DIFFERENT handle indices on one layer are both allowed -- that is
+   exactly how a weld ties two of an object's own corner handles
+   together (cornerPartners(), above) and moves them as one.
    ------------------------------------------------------------ */
-function applyFollowerMove(tabState, point, dx, dy) {
+function applyFollowerMove(tabState, point, dx, dy, moved) {
 
   const figure = tabState.figure;
   const xform  = figure.layers[point.layer]?.transform || null;
 
   if (point.kind === "free") {
+    // Not a layer move at all -- its own point, independent of anything
+    // else on its layer -- so there is no conflict to guard here.
     return moveFreePoint(point, point.x + dx, point.y + dy, xform);
   }
 
+  let layerMoved = moved.get(point.layer);
+  if (!layerMoved) { layerMoved = { whole: false, handles: new Set() }; moved.set(point.layer, layerMoved); }
+  if (layerMoved.whole) return false;   // already moved as a whole; nothing more to add
+
   const instance = tabState.instances?.[point.layer];
   if (!instance || typeof instance.infrastructure !== "function") return false;
-
   const arm = instance.infrastructure().find((a) => a.id === point.arm);
   if (!arm) return false;
 
+  const applyWhole = () => {
+    if (layerMoved.handles.size) return false;   // handles already moved piecemeal; a whole move now would double them
+    if (!translateWholeLayer(figure, point.layer, dx, dy)) return false;
+    layerMoved.whole = true;
+    return true;
+  };
+  const applyHandle = (idx) => {
+    if (layerMoved.handles.has(idx)) return false;   // this exact handle already moved this pass
+    if (!moveFollowerHandle(instance, idx, xform, dx, dy)) return false;
+    layerMoved.handles.add(idx);
+    return true;
+  };
+
   // An arc or ring (Phase 7d's explicit-points arm shape) has no handle
   // at either end to move on its own.
-  if (arm.points) return translateWholeLayer(figure, point.layer, dx, dy);
+  if (arm.points) return applyWhole();
 
   const atStart = Math.abs(point.t) < 1e-9;
   const atEnd   = Math.abs(point.t - 1) < 1e-9;
 
   if (atStart || atEnd) {
     const idx = findHandleIndex(instance, atStart ? arm.a : arm.b);
-    if (idx >= 0) return moveFollowerHandle(instance, idx, xform, dx, dy);
-    return translateWholeLayer(figure, point.layer, dx, dy);
+    if (idx >= 0) return applyHandle(idx);
+    return applyWhole();
   }
 
   // Mid-arm: the arm translates (its own two ends move) if both ends
@@ -302,12 +408,12 @@ function applyFollowerMove(tabState, point, dx, dy) {
   const idxA = findHandleIndex(instance, arm.a);
   const idxB = findHandleIndex(instance, arm.b);
   if (idxA >= 0 && idxB >= 0) {
-    moveFollowerHandle(instance, idxA, xform, dx, dy);
-    moveFollowerHandle(instance, idxB, xform, dx, dy);
-    return true;
+    const okA = applyHandle(idxA);
+    const okB = applyHandle(idxB);
+    return okA || okB;
   }
 
-  return translateWholeLayer(figure, point.layer, dx, dy);
+  return applyWhole();
 
 } // end applyFollowerMove
 
@@ -326,7 +432,12 @@ export function propagateAfterChange(tabId, layerIndex, snapshot) {
   if (!tabState || !snapshot || !snapshot.size) return;
   const figure = tabState.figure;
 
-  const movedLayers = new Set([layerIndex]);
+  // What has already been done to each layer this call -- see
+  // applyFollowerMove's own header for why this is per-handle, not just
+  // per-layer. The driving layer itself counts as fully spoken for
+  // (whole: true blocks it from being touched again by a path that
+  // loops back to it), since the user's own drag already moved it.
+  const moved = new Map([[layerIndex, { whole: true, handles: new Set() }]]);
   const queue = [];
   const queued = new Set();
 
@@ -348,11 +459,9 @@ export function propagateAfterChange(tabId, layerIndex, snapshot) {
       if (m.n === n || queued.has(m.n)) continue;
       const mp = pointByN(figure, m.n);
       if (!mp) continue;
-      if (movedLayers.has(mp.layer)) continue;   // left for the consistency check
 
-      if (!applyFollowerMove(tabState, mp, dx, dy)) continue;
+      if (!applyFollowerMove(tabState, mp, dx, dy, moved)) continue;
 
-      movedLayers.add(mp.layer);
       queued.add(m.n);
       followed = true;
       queue.push({ n: m.n, dx, dy });   // chain onward, same delta

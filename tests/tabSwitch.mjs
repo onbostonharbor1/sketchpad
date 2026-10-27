@@ -1092,6 +1092,43 @@ if (w.length !== 0) problems.push("[8 disappear] the weld should have dissolved 
 if ((await points()).some(p => near(p.x, 200) && near(p.y, 200) && p.layer === 1)) problems.push("[8 disappear] the disc should have disappeared, not just the weld");
 await page.uncheck("#figureModeCheck");
 
+stage = "8 corner tie (a Parabola's two corner handles are separate fields)";
+await newFigure();
+// Layer 0: a Parabola whose corner (line1_pt2 == line2_pt1) sits at 200,200.
+await insertExact("parabola", {
+  line1_pt1: { x: 50, y: 50 },   line1_pt2: { x: 200, y: 200 },
+  line2_pt1: { x: 200, y: 200 }, line2_pt2: { x: 350, y: 350 }
+});
+// Layer 1: a Line starting at the same spot.
+await insertExact("drawLine", { pt1: { x: 200, y: 200 }, pt2: { x: 400, y: 500 } });
+await page.waitForTimeout(300);
+
+await page.check("#figureModeCheck");
+await page.waitForTimeout(300);
+await pickLayer(0);
+await clickAt(200, 200);                                   // findCandidate's tie-break always lands this on arm1 (line1_pt2)
+await pickLayer(1);
+await clickAt(200, 200);                                   // the Line's pt1
+let cornerSetup = await points();
+if (cornerSetup.filter(p => near(p.x, 200) && near(p.y, 200)).length !== 2) problems.push("[8 corner] setup: " + JSON.stringify(cornerSetup));
+
+await rightClickAt(200, 200);
+w = await welds();
+// A single right-click here should also have reached across to arm2's
+// matching candidate (line2_pt1) on the SAME layer and pulled it into
+// the same group -- otherwise welding the Line to just one of the
+// Parabola's two corner handles would split the Parabola's own corner
+// the moment the weld moves it (the bug this stage exists to catch).
+if (w.length !== 1 || w[0].members.length !== 3) problems.push("[8 corner] weld should have three members (both corner handles, plus the line): " + JSON.stringify(w));
+
+await page.uncheck("#figureModeCheck");
+await page.waitForTimeout(300);
+await pickLayer(1);
+await dragTo(200, 200, 250, 260);                           // drag the Line's end, the weld's driving end
+let pp = await page.evaluate(() => uiState.figures.tabs[uiState.figures.activeSubtab].instances[0].params);
+if (Math.abs(pp.line1_pt2.x - 250) > 1 || Math.abs(pp.line1_pt2.y - 260) > 1) problems.push("[8 corner] line1_pt2 did not follow: " + JSON.stringify(pp.line1_pt2));
+if (Math.abs(pp.line2_pt1.x - 250) > 1 || Math.abs(pp.line2_pt1.y - 260) > 1) problems.push("[8 corner] line2_pt1 did not follow -- the Parabola's own corner split: " + JSON.stringify(pp.line2_pt1));
+
 await browser.close();
 
 for (const n of notes.slice(0, 5)) console.log("note:", n);

@@ -59,6 +59,8 @@
    leaves its weld, the same as deletePoint().
 
    Exports:
+     armsOf(instance)
+     armPoint(arm, t, transform)
      findCandidate(tabState, x, y, radius)
      findPoint(figure, x, y, radius)
      addAnchoredPoint(figure, candidate)
@@ -81,8 +83,11 @@ const DISC_DIM_ALPHA = 0.5;
 
 /* ------------------------------------------------------------
    armsOf(instance) -- infrastructure of one layer ([] if none)
+   Exported for figureWelds.js (Phase 8), which has to look across an
+   object's own other arms -- a Parabola's two corner handles, say --
+   when a weld is made at a spot more than one arm touches.
    ------------------------------------------------------------ */
-function armsOf(instance) {
+export function armsOf(instance) {
   return (instance && typeof instance.infrastructure === "function")
     ? instance.infrastructure()
     : [];
@@ -93,8 +98,9 @@ function armsOf(instance) {
 // layer's transform, or null/undefined for none. Two arm shapes (Phase 7d):
 // a straight run between a and b (the original shape), or an explicit
 // points array for an arc or a ring of nodes -- t = i/steps still picks
-// index i, since steps = points.length - 1 for that shape.
-function armPoint(arm, t, transform) {
+// index i, since steps = points.length - 1 for that shape. Exported for
+// figureWelds.js, same reason as armsOf() above.
+export function armPoint(arm, t, transform) {
   const pt = arm.points
     ? arm.points[Math.round(t * arm.steps)]
     : {

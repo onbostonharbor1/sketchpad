@@ -329,10 +329,45 @@ longer coincide" check, never a topological one, matching "ring rule dropped").
 
 Tests (`tests/tabSwitch.mjs`, "8 ..." stages): weld creation and direct handle-to-handle propagation (two
 Lines joined end to end), the independence of the follower's other end, unweld, a right-click on empty
-canvas doing nothing, the whole-layer-translate fallback (a Line welded to a Regular Polygon node), and a
-disc (and its weld) disappearing when Shorten Top trims its arm away. Two of the drag-derived assertions
-use a 1 px tolerance (`Math.abs(...) > 1`) rather than the stricter `near()`, the same reasoning the
-existing 7b rotate test already uses: a real mouse-driven drag, not a computed position.
+canvas doing nothing, the whole-layer-translate fallback (a Line welded to a Regular Polygon node), a
+disc (and its weld) disappearing when Shorten Top trims its arm away, and the corner-tie fix below. Two of
+the drag-derived assertions use a 1 px tolerance (`Math.abs(...) > 1`) rather than the stricter `near()`,
+the same reasoning the existing 7b rotate test already uses: a real mouse-driven drag, not a computed
+position.
+
+### Bug found in real use (2026-10-27, same day, same branch): a Parabola corner welded to something else split
+
+Barry built a Parabola and a Line, welded them at the shared corner, went back to lines mode and dragged
+the welded end -- and the two objects separated instead of staying joined. Two separate things were
+actually wrong, found by reproducing it directly rather than guessing from the screenshots:
+
+1. **Reachability.** A Parabola's two corner handles (`line1_pt2` and `line2_pt1`, say) are separate
+   fields, independent by default (Phase 7's "fan/bowtie" finding) -- only one of them is ever the disc a
+   corner click lands on, because `findCandidate`'s own tie-break always prefers the first arm it checks.
+   So welding "the corner" only ever grabbed `line1_pt2`; `line2_pt1` was a different field entirely and
+   nothing told it to move. The spec's own words ("a weld group may contain two members from the same
+   layer, which is how a corner gets tied on purpose") described the fix but there was no way to actually
+   reach it from one right-click, since right-clicking an already-anchored spot only ever finds the ONE
+   disc sitting there. Fixed with `cornerPartners()` in `figureWelds.js`: whenever `toggleWeldAt()` makes a
+   weld, it also checks the clicked disc's own layer for another arm with a candidate at the exact same
+   spot, numbers it if it isn't already (the same rule as a bare infrastructure point: only when it has
+   something to join), and welds it into the same group. One right-click on a corner now reaches both of
+   its handles, not just the one `findCandidate` happens to prefer.
+2. **A real propagation bug, found while fixing (1).** Once the weld correctly had three members (the
+   Line's end plus both of the Parabola's corner handles), only the Line's end and ONE of the two Parabola
+   handles actually moved on drag -- confirmed by direct reproduction, not supposition. Cause: the "a layer
+   moves at most once per drag" guard (meant to catch a real conflict -- two different weld paths both
+   wanting to move the same layer, possibly to different places) was keyed on the layer alone, so the
+   SECOND corner handle on the SAME layer was refused just because the first one had already touched that
+   layer, even though they are two different, non-conflicting handles. `applyFollowerMove()`'s guard is now
+   keyed on what was actually touched -- `moved.get(layerIndex) = { whole, handles: Set<index> }` -- so a
+   second whole-layer-translate or a second move of the SAME handle index is still refused (the real
+   conflict case, unchanged), but two different handle indices on one layer are both allowed. This is also
+   the mechanism that will let an N-way weld hub (Barry's "8 parabolas sharing one center" example from the
+   spec discussion) move all N without this same guard getting in the way.
+
+Regression test added ("8 corner tie"): the exact repro -- a Parabola and a Line sharing a corner, one
+right-click, drag the Line, check that BOTH of the Parabola's own corner fields followed, not just one.
 
 ## Phase 7 as built
 
