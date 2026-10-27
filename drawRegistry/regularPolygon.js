@@ -10,7 +10,9 @@
 */
 import { Point }                from "../classes/classes.js";
 import { CurveStitch }           from "../classes/curveStitchClass.js";
-import { drawRegularPolygon, regularPolygonParabolas } from "../draw/drawRegular.js";
+import { createNodes }          from "../draw/createNodes.js";
+import { drawRegularPolygon, regularPolygonParabolas,
+         createLinesFromNodesOuter, trimmedRange } from "../draw/drawRegular.js";
 
 window.drawRegistry_regularPolygon = {
   name:         "Regular Polygon",
@@ -132,6 +134,40 @@ window.drawRegistry_regularPolygon = {
         lineWidth: e.lineWidth
       }
     }));
+  },
+
+  /* ==========================================================
+     infrastructure()  (Figures points mode, Phase 7d)
+     ----------------------------------------------------------
+     One arm per side of the polygon, matching the outer edges
+     regularPolygonParabolas() pairs up for Break apart. Shorten trims
+     the start of every side the same way changeLine() does in
+     draw/drawRegular.js; there is no separate truncate control here,
+     but trimmedRange() reads it as 0 if it's ever added.
+     ========================================================== */
+  infrastructure() {
+    const e = this.elements.element;
+    const nodes = createNodes(e);
+    const lines = createLinesFromNodesOuter(nodes);
+    const steps = Number(e.numSteps);
+    const { from, to } = trimmedRange(steps, e.truncate, e.shorten);
+
+    return lines.map((line, i) => ({
+      id: "side" + i, a: line.start, b: line.end, steps, from, to
+    }));
+  },
+
+  /* ==========================================================
+     center()  (Phase 7d)
+     ----------------------------------------------------------
+     The polygon's true center is the handle the user drags, not an
+     average of its drawn points. For an odd-sided polygon (a pentagon,
+     say) those aren't the same point as the bounding box's center,
+     which is what the 7b centroid still uses.
+     ========================================================== */
+  center() {
+    const m = this.elements.element.midpoint;
+    return { x: m.x, y: m.y };
   },
 
   /* ==========================================================

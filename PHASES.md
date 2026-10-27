@@ -322,6 +322,58 @@ Barry's route: the object already has all its points, so hand them to the Parabo
 - Not done: the other composite objects (inner star, inverse star, circular parabola, mystic rose and the rest).
   Each needs its own `decompose()` the same way; the Parabola ones are the same few lines.
 
+## Phase 7d: infrastructure() widened to every array-built object
+
+Discussion before Phase 8 (2026-10-27) surfaced the bigger pattern behind welds: most registry objects build an
+array (nodes, or arms derived from lines) and then operate on it generically, shape-blind. `infrastructure()`
+(Phase 6b, scoped to Line and Parabola only) is the existing, narrow instance of exactly this. Before welds reach
+into every object, candidate points should come from one widened `infrastructure()`, not a pile of per-object
+methods. This phase does that widening. It is preliminary work, not Phase 8 itself.
+
+Survey (`draw/drawRegular.js`, `draw/drawUnicorns.js`, `draw/drawLinkedCircles.js`):
+- Already array-built, straight arms (fit the existing `{id, a, b, steps, from, to}` shape as-is):
+  Regular Polygon (outer arms), Inverse Star (radial and outer arms), Radiate (the base segment).
+- Already array-built, but the arm is a run of actual points along a curve, not a formula between two ends
+  (needs the new explicit-points shape below): Circular Parabola / Circular Parabola (Multi) (the perimeter arms),
+  Linked Circles (points around each circle), Mystic Rose / Mystic Rose (Ellipse), Cycloid (both are a full ring
+  of nodes, not split into arms at all).
+- Not array-built yet: Parametrics. Points mode there draws every raw sample because there is no node array to
+  draw instead (Barry's screenshot). Building one is its own future phase (the "internal model vs. simplified
+  display model" discussion, lobe numbering, snap-to-nodes) — out of scope here.
+- Boxes (temp) and Pursuit (temp) are skipped. Boxes shares the registry id `inverseStar` with the real Inverse
+  Star object (a leftover collision, not touched). Pursuit has no `params.points` at all, so it already gets no
+  mouse in points mode (6c review finding, Phase 7) — `infrastructure()` would have nothing to attach to until
+  that's given handles, which is a different fix.
+
+Found doing this survey, not yet fixed: `createNodes()` calls `Math.random()` directly when Jitter is nonzero, so
+two calls with the same params return different points. Every object above that uses `createNodes()` would get an
+`infrastructure()` that doesn't match what was actually drawn, whenever Jitter is on. Fix: the draw function
+caches the node/arm array it just built (on `this.elements`, the way Line and Parabola already cache their Line
+objects); `infrastructure()` reads that cache instead of recomputing. This also stops `infrastructure()` from
+doing the geometry twice per redraw.
+
+Decisions I'm making (Barry to confirm or reverse):
+- Widened shape (designed now, built in the follow-up pass with its first real user): an infrastructure arm is
+  either `{id, a, b, steps, from, to}` (today's formula, for a straight run) or `{id, points, from, to}` (an
+  explicit array, for an arc or a ring), with `steps = points.length - 1` so `t = i/steps` still maps back to
+  index `i`. This phase does not add the second shape or touch `armPoint()` in `figurePoints.js`, since nothing
+  built here would exercise it; untested code for a shape no object uses yet is a liability, not a head start.
+- A full ring (Mystic Rose, Cycloid) is one arm whose `points` is the whole node array and whose `a`/`b` don't
+  apply; `from`/`to` cover the whole ring since there's no trim control on these objects today.
+- New optional registry method `center()`: the object's own true center, for the pentagon question Barry raised
+  (its bounding box isn't centered on the drag handle, because a pentagon has no point opposite its one
+  flat-topped vertex). Regular Polygon and Inverse Star get one: it's just the handle the user already drags, so
+  it's a one-line win. This phase adds the method but does not wire it into `figureCentroid.js` — the 7b diamond
+  still uses the bounding box center for every object, unchanged. Whether the diamond should switch to `center()`
+  when an object has one, and what that does to the rotation pivot and the box/stem drawn around a center that's
+  no longer the box's own middle, is a 7b-behavior change and is Barry's call, not folded in here silently.
+- This phase builds `infrastructure()` (and `center()` where it's a one-line win) for the straight-arm group:
+  Regular Polygon, Inverse Star, Radiate. The curved/ring group (Circular Parabola family, Linked Circles, Mystic
+  Rose family, Cycloid) needs the explicit-points shape and the jitter-cache fix together and is left for a
+  follow-up pass once this group is tested and reviewed — same scoping discipline as 7c's decompose() rollout.
+  No jitter control is exposed on any object today (checked every registry file), so none of this is a live bug
+  yet — it would become one the moment a Jitter slider is added to a `createNodes()`-based object.
+
 ## 6c review findings (Barry's testing, 2026-10-26; fixed in Phase 7)
 
 - Points mode, first click did nothing for Barry and he could not reproduce it. Three causes found:

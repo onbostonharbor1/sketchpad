@@ -850,6 +850,72 @@ await page.evaluate(() => {
   if (d > 0) problems.push(`[7c transform] the moved and turned picture changed: ${d} values differ`);
 }
 
+// ---------------------------------------------------------------------------
+// Phase 7d: infrastructure() widened to Regular Polygon, Inverse Star, Radiate
+// ---------------------------------------------------------------------------
+stage = "7d infrastructure shapes";
+const infra = () => page.evaluate(() => {
+  const t = uiState.figures.tabs[uiState.figures.activeSubtab];
+  return t.instances[0].infrastructure();
+});
+const center = () => page.evaluate(() => {
+  const t = uiState.figures.tabs[uiState.figures.activeSubtab];
+  return t.instances[0].center();
+});
+
+await newFigure();
+await page.selectOption("#figureInsertSelect", "regularPolygon");
+await page.waitForTimeout(300);
+let arms = await infra();
+if (arms.length !== 5) problems.push("[7d polygon] arm count: " + arms.length);
+if (arms.some(a => a.steps !== 20 || a.from !== 0 || a.to !== 20)) problems.push("[7d polygon] arm range: " + JSON.stringify(arms));
+// node 0 sits at (midpoint.x + radius, midpoint.y) with rotate 0; side0 starts there.
+let mid = await page.evaluate(() => uiState.figures.tabs[uiState.figures.activeSubtab].instances[0].elements.element.midpoint);
+let side0 = arms.find(a => a.id === "side0");
+if (!side0 || !near(side0.a.x, mid.x + 300) || !near(side0.a.y, mid.y)) problems.push("[7d polygon] side0 start: " + JSON.stringify(side0));
+let c = await center();
+if (!near(c.x, mid.x) || !near(c.y, mid.y)) problems.push("[7d polygon] center(): " + JSON.stringify(c));
+// Click right on node 0: an anchored disc on side0 at t = 0.
+await page.check("#figureModeCheck");
+await page.waitForTimeout(300);
+await clickAt(side0.a.x, side0.a.y);
+let disc = (await points()).find(p => p.kind === "anchored");
+if (!disc || disc.arm !== "side0" || Math.abs(disc.t) > 1e-6) problems.push("[7d polygon] click at node 0: " + JSON.stringify(disc));
+if (Math.abs(disc.x - side0.a.x) > 1 || Math.abs(disc.y - side0.a.y) > 1) problems.push("[7d polygon] disc position: " + JSON.stringify(disc));
+await page.uncheck("#figureModeCheck");
+
+// Shorten trims the start of every side the same way Break apart already relies on.
+await page.evaluate(() => {
+  const t = uiState.figures.tabs[uiState.figures.activeSubtab];
+  const p = t.instances[0].params;
+  p.shorten = 4;
+  t.instances[0].update(p);
+});
+arms = await infra();
+if (arms.some(a => a.from !== 4 || a.to !== 20)) problems.push("[7d polygon] shortened range: " + JSON.stringify(arms));
+
+stage = "7d inverse star";
+await newFigure();
+await page.selectOption("#figureInsertSelect", "inverseStar");
+await page.waitForTimeout(300);
+arms = await infra();
+if (arms.length !== 10) problems.push("[7d inverse star] arm count: " + arms.length);
+if (!arms.some(a => a.id === "radial0") || !arms.some(a => a.id === "outer0")) problems.push("[7d inverse star] arm ids: " + arms.map(a => a.id).join());
+c = await center();
+mid = await page.evaluate(() => uiState.figures.tabs[uiState.figures.activeSubtab].instances[0].elements.thing.midpoint);
+if (!near(c.x, mid.x) || !near(c.y, mid.y)) problems.push("[7d inverse star] center(): " + JSON.stringify(c));
+
+stage = "7d radiate";
+await newFigure();
+await page.selectOption("#figureInsertSelect", "radiate");
+await page.waitForTimeout(300);
+arms = await infra();
+if (arms.length !== 1 || arms[0].id !== "base") problems.push("[7d radiate] arms: " + JSON.stringify(arms));
+if (!near(arms[0].a.x, 20) || !near(arms[0].a.y, 150) || !near(arms[0].b.x, 500) || !near(arms[0].b.y, 450)) {
+  problems.push("[7d radiate] base endpoints: " + JSON.stringify(arms[0]));
+}
+if (arms[0].steps !== 20 || arms[0].from !== 0 || arms[0].to !== 20) problems.push("[7d radiate] range: " + JSON.stringify(arms[0]));
+
 await browser.close();
 
 for (const n of notes.slice(0, 5)) console.log("note:", n);
@@ -860,4 +926,4 @@ if (problems.length) {
   for (const p of problems) console.log(" ", p);
   process.exit(1);
 }
-console.log("\nPASS: 6 tabs x 2 passes, plus Draw and Patterns with an open item, plus the Notes menu item, plus the Figures shell, insert, points mode and 7b centroid, move and rotate, 7c break apart, no errors");
+console.log("\nPASS: 6 tabs x 2 passes, plus Draw and Patterns with an open item, plus the Notes menu item, plus the Figures shell, insert, points mode and 7b centroid, move and rotate, 7c break apart, 7d infrastructure, no errors");

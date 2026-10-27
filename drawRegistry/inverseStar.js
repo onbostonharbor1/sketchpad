@@ -1,7 +1,9 @@
 /* drawRegistry/inverseStar.js */
 import { Point }          from "../classes/classes.js";
 import { CurveStitch }     from "../classes/curveStitchClass.js";
-import { drawInverseStar } from "../draw/drawRegular.js";
+import { createNodes }     from "../draw/createNodes.js";
+import { drawInverseStar, createLinesFromNodesMiddle,
+         createLinesFromNodesOuter, trimmedRange } from "../draw/drawRegular.js";
 
 window.drawRegistry_inverseStar = {
     name:         "Inverse Star",
@@ -91,5 +93,39 @@ window.drawRegistry_inverseStar = {
     draw() {
         const thing = this.elements.thing;
         drawInverseStar(thing);
+    },
+
+    /* ==========================================================
+       infrastructure()  (Figures points mode, Phase 7d)
+       ----------------------------------------------------------
+       drawInverseStar() draws two arm sets from the same nodes: radial
+       (midpoint to each node) and outer (node to node). Both get the
+       same Shorten/truncate trim, applied once here.
+       ========================================================== */
+    infrastructure() {
+        const thing = this.elements.thing;
+        const nodes = createNodes(thing);
+        const radialLines = createLinesFromNodesMiddle(nodes, thing.midpoint);
+        const outerLines  = createLinesFromNodesOuter(nodes);
+        const steps = Number(thing.numSteps);
+        const { from, to } = trimmedRange(steps, thing.truncate, thing.shorten);
+
+        const radial = radialLines.map((line, i) => ({
+            id: "radial" + i, a: line.start, b: line.end, steps, from, to
+        }));
+        const outer = outerLines.map((line, i) => ({
+            id: "outer" + i, a: line.start, b: line.end, steps, from, to
+        }));
+        return [...radial, ...outer];
+    },
+
+    /* ==========================================================
+       center()  (Phase 7d)
+       ----------------------------------------------------------
+       The handle the user drags; same reasoning as Regular Polygon.
+       ========================================================== */
+    center() {
+        const m = this.elements.thing.midpoint;
+        return { x: m.x, y: m.y };
     }
 };

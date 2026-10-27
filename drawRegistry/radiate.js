@@ -123,6 +123,19 @@ window.drawRegistry_radiate = {
   },
 
   /* ==========================================================
+     infrastructure()  (Figures points mode, Phase 7d)
+     ----------------------------------------------------------
+     Only the base segment carries points; the fan lines from the
+     radial point are stitch lines, same rule as everywhere else.
+     No Trim or Shorten here, so the full 0..numSteps range stands.
+     ========================================================== */
+  infrastructure() {
+    const p = this.params;
+    const steps = Number(p.numSteps);
+    return [{ id: "base", a: p.points[1], b: p.points[2], steps, from: 0, to: steps }];
+  },
+
+  /* ==========================================================
      3. draw()
      ========================================================== */
   draw() {

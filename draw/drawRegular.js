@@ -353,5 +353,29 @@ export {
     drawRegularPolygon,
     regularPolygonParabolas,
     drawRegularPolygonCorner,
-    drawRegularPolygonTouch
+    drawRegularPolygonTouch,
+    createLinesFromNodesMiddle,
+    createLinesFromNodesOuter,
+    trimmedRange
 };
+
+/* ============================================================
+   trimmedRange(steps, truncate, shorten)
+   ------------------------------------------------------------
+   The same clamp changeLine() applies, but returning the index window
+   { from, to } instead of a cut-down array. Used by infrastructure()
+   methods (Phase 7d) that need the trimmed range of an arm without
+   building its points: candidates are t = i/steps for i = from..to,
+   matching Parabola's own infrastructure().
+   ============================================================ */
+function trimmedRange(steps, truncate, shorten) {
+  truncate = Number(truncate) || 0;
+  shorten  = Number(shorten)  || 0;
+  const available = Math.max(0, (steps + 1) - 2);
+  if (truncate + shorten > available) {
+    const ratio = available / (truncate + shorten);
+    truncate = Math.floor(truncate * ratio);
+    shorten  = Math.floor(shorten * ratio);
+  }
+  return { from: shorten, to: steps - truncate };
+}

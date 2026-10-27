@@ -9,7 +9,7 @@
    Drawing is done by drawAParab() in draw/drawRegular.js.
 */
 import { Line, Point, StringThing } from "../classes/classes.js";
-import { drawAParab }               from "../draw/drawRegular.js";
+import { drawAParab, trimmedRange } from "../draw/drawRegular.js";
 
 window.drawRegistry_parabola = {
   name:         "Parabola",
@@ -95,19 +95,11 @@ window.drawRegistry_parabola = {
   infrastructure() {
     const p = this.params;
     const steps = Number(p.numSteps);
-
-    let truncate = Number(p.truncate) || 0;
-    let shorten  = Number(p.shorten)  || 0;
-    const available = Math.max(0, (steps + 1) - 2);
-    if (truncate + shorten > available) {
-      const ratio = available / (truncate + shorten);
-      truncate = Math.floor(truncate * ratio);
-      shorten  = Math.floor(shorten * ratio);
-    }
+    const { from, to } = trimmedRange(steps, p.truncate, p.shorten);
 
     return [
-      { id: "arm1", a: p.line1_pt1, b: p.line1_pt2, steps, from: shorten, to: steps - truncate },
-      { id: "arm2", a: p.line2_pt1, b: p.line2_pt2, steps, from: 0,       to: steps }
+      { id: "arm1", a: p.line1_pt1, b: p.line1_pt2, steps, from, to },
+      { id: "arm2", a: p.line2_pt1, b: p.line2_pt2, steps, from: 0, to: steps }
     ];
   },
 
