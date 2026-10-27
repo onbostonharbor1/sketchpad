@@ -33,7 +33,7 @@ import {
 import { nodeRebuildAndValidateManifests } from "/ui/nodeLayer.js";
 import { openHelpHomeOverlay }      from "/ui/help.js";
 import { uiState }                  from "/ui/uiState.js";
-import { redrawFigure }             from "./figureLayers.js";
+import { redrawFigure, canBreakApart, breakApartLayer } from "./figureLayers.js";
 import { deletePoint }              from "./figurePoints.js";
 
 
@@ -157,11 +157,21 @@ export async function getFiguresCaptionMenuItems(title) {
     }
   };
 
+  // The active layer's object comes apart into separate layers (Phase 7c).
+  // Like Insert, not offered in points mode.
+  const breakApartItem = {
+    label:    "Break apart",
+    disabled: !(ts0 && ts0.mode !== "points" && canBreakApart(uiState.figures.activeSubtab)),
+    tooltip:  "Replaces the active object with its pieces, each on its own layer. The original is hidden.",
+    onClick: () => breakApartLayer(uiState.figures.activeSubtab)
+  };
+
   return [
     await makeHelpItem("figures", null),
     await makeNotesItem(null, title),
     hitRadiusItem,
     deletePointItem,
+    breakApartItem,
     later("Show Script"),
     later("Copy"),
     later("Archive"),

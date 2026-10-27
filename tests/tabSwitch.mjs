@@ -766,6 +766,90 @@ for (const key of Object.keys(await page.evaluate(() => window.drawRegistry))) {
   if (!info) notes.push(`[7b] ${key}: drew nothing, so it has no centroid`);
 }
 
+
+// ---------------------------------------------------------------------------
+// Phase 7c: Break apart
+// ---------------------------------------------------------------------------
+stage = "7c break apart";
+await newFigure();
+await page.selectOption("#figureInsertSelect", "regularPolygon");
+await page.waitForTimeout(300);
+const canvasShot = () => page.evaluate(async () => {
+  const t = uiState.figures.tabs[uiState.figures.activeSubtab];
+  const m = await import("/ui/figures/figureLayers.js");
+  m.redrawFigure(uiState.figures.activeSubtab, { dim: false });   // every visible layer at full strength
+  const c = window.drawCanvas;
+  return Array.from(c.getContext("2d").getImageData(0, 0, c.width, c.height).data);
+});
+const diffCount = (a, b) => { let n = 0; for (let i = 0; i < a.length; i++) if (a[i] !== b[i]) n++; return n; };
+const layerSummary = () => page.evaluate(() => {
+  const f = uiState.figures.tabs[uiState.figures.activeSubtab].figure;
+  return { ids: f.layers.map(l => l.id).join(), vis: f.layers.map(l => l.visible).join(), active: f.activeLayer };
+});
+
+for (const setup of [
+  { name: "default", shorten: 0, nodes: 5 },
+  { name: "shortened, 7 nodes", shorten: 4, nodes: 7 }
+]) {
+  stage = "7c break apart " + setup.name;
+  await newFigure();
+  await page.selectOption("#figureInsertSelect", "regularPolygon");
+  await page.waitForTimeout(300);
+  await page.evaluate(([shorten, nodes]) => {
+    const t = uiState.figures.tabs[uiState.figures.activeSubtab];
+    const p = t.instances[0].params;
+    p.shorten = shorten; p.numNodes = nodes;
+    t.instances[0].update(p);
+  }, [setup.shorten, setup.nodes]);
+  const before = await canvasShot();
+  let items = await menuItems();
+  const item = items.find(i => /Break apart/.test(i[0]));
+  if (!item || item[1]) problems.push("[7c] Break apart should be enabled for a polygon: " + JSON.stringify(item));
+
+  await page.locator("#caption .caption-buttons button", { hasText: /^v$/ }).click();
+  await page.waitForTimeout(400);
+  await page.locator(".caption-menu-item", { hasText: "Break apart" }).click();
+  await page.waitForTimeout(600);
+
+  const ls = await layerSummary();
+  const want = "regularPolygon," + Array(setup.nodes).fill("parabola").join();
+  if (ls.ids !== want) problems.push(`[7c ${setup.name}] layers: ${ls.ids}`);
+  if (ls.vis.split(",")[0] !== "false" || ls.vis.indexOf("false", 6) !== -1) problems.push(`[7c ${setup.name}] visibility: ${ls.vis}`);
+  if (ls.active !== setup.nodes) problems.push(`[7c ${setup.name}] active layer: ${ls.active}`);
+  const after = await canvasShot();
+  if (!before.some(v => v !== 0)) problems.push(`[7c ${setup.name}] the polygon drew nothing, so the comparison proves nothing`);
+  const d = diffCount(before, after);
+  if (d > 0) problems.push(`[7c ${setup.name}] the picture changed: ${d} channel values differ`);
+}
+
+stage = "7c not offered";
+await newFigure();
+await page.click("#figureInsert_drawLine");
+await page.waitForTimeout(300);
+{
+  const item = (await menuItems()).find(i => /Break apart/.test(i[0]));
+  if (!item || !item[1]) problems.push("[7c] Break apart should be grayed out for a Line: " + JSON.stringify(item));
+}
+
+stage = "7c transform carried";
+await newFigure();
+await page.selectOption("#figureInsertSelect", "regularPolygon");
+await page.waitForTimeout(300);
+await page.evaluate(() => {
+  const t = uiState.figures.tabs[uiState.figures.activeSubtab];
+  Object.assign(t.figure.layers[0].transform, { angle: 0.4, tx: 30, ty: -20 });
+  t.instances[0].update(t.instances[0].params);
+});
+{
+  const before = await canvasShot();
+  await page.locator("#caption .caption-buttons button", { hasText: /^v$/ }).click();
+  await page.waitForTimeout(400);
+  await page.locator(".caption-menu-item", { hasText: "Break apart" }).click();
+  await page.waitForTimeout(600);
+  const d = diffCount(before, await canvasShot());
+  if (d > 0) problems.push(`[7c transform] the moved and turned picture changed: ${d} values differ`);
+}
+
 await browser.close();
 
 for (const n of notes.slice(0, 5)) console.log("note:", n);
@@ -776,4 +860,4 @@ if (problems.length) {
   for (const p of problems) console.log(" ", p);
   process.exit(1);
 }
-console.log("\nPASS: 6 tabs x 2 passes, plus Draw and Patterns with an open item, plus the Notes menu item, plus the Figures shell, insert, points mode and 7b centroid, move and rotate, no errors");
+console.log("\nPASS: 6 tabs x 2 passes, plus Draw and Patterns with an open item, plus the Notes menu item, plus the Figures shell, insert, points mode and 7b centroid, move and rotate, 7c break apart, no errors");

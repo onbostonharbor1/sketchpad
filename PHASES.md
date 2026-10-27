@@ -15,7 +15,7 @@ Do one phase at a time. After each, stop and wait for him to review, play with i
 | 6c | Layer colors: each layer has a color, shown on its number in the strip and changeable there; that layer's numbered points are drawn as circled numbers in the same color. Retire the old coded-number display (printCircNum and `drawState.ctr`), which only existed to name join points when numbers were coded by hand | Built on `claude/phase-6c`, awaiting his review (see "Phase 6c as built"). The old coded-number display is NOT retired: see the note there |
 | 7 | Handle and drag: arrow-key nudging, 1 px, 10 px with Shift, of the object's own handles. (The "nudge a number label" part is dropped: discs have no visible numbers.) | Built on `claude/phase-7`, awaiting his review (see "Phase 7 as built") |
 | 7b | Centroid and bounding box: every object has a visible centroid. Drag the centroid to move the object anywhere. Selecting a centroid shows a bounding box; grabbing the handle on the box rotates the object about the centroid | Built on `claude1` (no branch, Barry 2026-10-26), awaiting his review (see "Phase 7b as built") |
-| 7c | Break apart an object into its pieces (own phase: it changes existing drawing code). A composite object, such as a polygon of stitched parabolas, is replaced by separate layers (Lines, Parabolas) that can be moved, welded and deleted on their own. Needs a `decompose()` on each object that supports it. Barry's route: redo the drawing commands so they can produce their objects as separate segments, and break apart uses that | Added; placed before welds because weld-drag on composite objects depends on it |
+| 7c | Break apart an object into its pieces (own phase: it changes existing drawing code). A composite object, such as a polygon of stitched parabolas, is replaced by separate layers (Lines, Parabolas) that can be moved, welded and deleted on their own. Needs a `decompose()` on each object that supports it. Barry's route: redo the drawing commands so they can produce their objects as separate segments, and break apart uses that | Built on `claude/phase-7c`, awaiting his review (see "Phase 7c as built") |
 | 8 | Welds (see "Phase 8 spec"). Order stays 7b, 7c, then 8 (Barry, 2026-10-26) | |
 | 8b | Magic points: more candidate kinds (midpoints, tops of loops, cusps), needed as weld targets and for parametric objects | |
 | 9 | Print aids: scale bar; minimum nail-spacing check (needs nail size and highlight-vs-list answers from Barry) | |
@@ -298,6 +298,29 @@ Built directly on `claude1` (Barry: Phase 7 was already merged, no new branch).
 - Tests: Part 7b in `tests/tabSwitch.mjs` (identity at first, bounds, move, rotate a quarter turn about the
   centroid, handle drag after rotation, free and anchored discs travel, points mode hides the centroid, deselect,
   every registry object produces bounds). Two older nudge checks changed because of the Line midpoint rule above.
+
+## Phase 7c as built
+
+Barry's route: the object already has all its points, so hand them to the Parabola and give each its own layer.
+
+- Caption "v" menu, **Break apart**: enabled when the active layer is visible, its object has a `decompose()`, and
+  the tab is in lines mode (like Insert). It replaces the object with its pieces.
+- `decompose()` on a registry object returns `[{ key, params }]` (registry key and full params for that piece).
+  Only `regularPolygon` has one so far: one Parabola per pair of neighboring sides. The points come from
+  `regularPolygonParabolas(thing)` in `draw/drawRegular.js`, which uses the same nodes, lines and arms as
+  `drawRegularPolygon`, minus the drawing. Shorten is built into the points and step count (the pieces start with
+  Trim and Shorten at 0), so each Parabola draws exactly the stitches the polygon drew. Color and line width carry over.
+- `breakApartLayer(tabId)` in `figureLayers.js`: each piece goes in through `insertLayer(tabId, key, { params,
+  transform })`, on top of the stack, with a copy of the layer's transform, so a moved or rotated polygon breaks
+  apart in place. The last piece becomes active.
+- The original layer is hidden, not deleted (layer numbers are never reused; delete-layer is Phase 11). Its discs
+  stay with it. Show it again from its number to get it back; Show All draws it too, on top of the pieces.
+- Pieces start at the polygon's step count. A Parabola's Steps slider stops at 30 and a polygon's at 64, so a piece
+  of a 64-step polygon draws 64 until the slider is touched.
+- Test: the picture is compared pixel for pixel before and after (default polygon, and a shortened 7-node one),
+  and again for a moved and turned layer. All identical.
+- Not done: the other composite objects (inner star, inverse star, circular parabola, mystic rose and the rest).
+  Each needs its own `decompose()` the same way; the Parabola ones are the same few lines.
 
 ## 6c review findings (Barry's testing, 2026-10-26; fixed in Phase 7)
 

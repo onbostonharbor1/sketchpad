@@ -52,7 +52,9 @@
 
    Exports:
      listInsertableObjects()
-     insertLayer(tabId, registryKey)
+     insertLayer(tabId, registryKey, { params, transform })
+     canBreakApart(tabId)
+     breakApartLayer(tabId)
      redrawFigure(tabId)
      renderLayerPanel(tabId)  (layer numbers in the sidebar, heading and
                                controls in the action panel)
@@ -105,7 +107,7 @@ export function listInsertableObjects() {
    Appends a new layer at the top of the stack with the object's
    default parameters, makes it active, and redraws.
    ============================================================ */
-export function insertLayer(tabId, registryKey) {
+export function insertLayer(tabId, registryKey, { params = null, transform = null } = {}) {
 
   const tabState = uiState.figures.tabs[tabId];
   if (!tabState || !tabState.figure) throw new Error("insertLayer: no figure for " + tabId);
@@ -117,6 +119,8 @@ export function insertLayer(tabId, registryKey) {
   const instance    = Object.create(entry);
   instance.params   = structuredClone(entry.params);
   instance.elements = null;
+  // Break apart hands over the exact values the piece needs.
+  if (params) Object.assign(instance.params, structuredClone(params));
 
   const figure = tabState.figure;
   const color  = LAYER_COLORS[figure.layers.length % LAYER_COLORS.length];
@@ -125,7 +129,7 @@ export function insertLayer(tabId, registryKey) {
   // Identical objects must not land on the same spot. init() fills in
   // the default positions, so the shift comes after it.
   const same = figure.layers.filter((l) => l.id === registryKey).length;
-  if (same > 0) offsetParams(instance.params, same * INSERT_STEP);
+  if (same > 0 && !params) offsetParams(instance.params, same * INSERT_STEP);
 
   if (!tabState.instances) tabState.instances = [];
 
@@ -135,7 +139,7 @@ export function insertLayer(tabId, registryKey) {
     visible:   true,
     color:     color,
     params:    instance.params,
-    transform: newTransform()
+    transform: transform ? { ...transform } : newTransform()
   };
   figure.layers.push(layer);
   tabState.instances.push(instance);
@@ -154,6 +158,54 @@ export function insertLayer(tabId, registryKey) {
   redrawFigure(tabId);
 
 } // end insertLayer
+
+
+/* ============================================================
+   canBreakApart(tabId)
+   ------------------------------------------------------------
+   True when the active layer is visible and its object can come apart
+   (its registry entry has a decompose()).
+   ============================================================ */
+export function canBreakApart(tabId) {
+
+  const ts = uiState.figures.tabs[tabId];
+  const f  = ts?.figure;
+  if (!f || f.activeLayer < 0) return false;
+  return !!f.layers[f.activeLayer].visible &&
+         typeof ts.instances?.[f.activeLayer]?.decompose === "function";
+
+} // end canBreakApart
+
+
+/* ============================================================
+   breakApartLayer(tabId)
+   ------------------------------------------------------------
+   Replaces the active layer's object with its pieces (Phase 7c). The
+   object's decompose() returns [{ key, params }]; each piece becomes a
+   new layer of its own, on top of the stack, with the same transform, so
+   the picture does not change. The original layer is hidden, not deleted:
+   layer numbers are never reused and deleting layers waits for Phase 11.
+   Its discs stay with it. The last piece becomes the active layer.
+   ============================================================ */
+export function breakApartLayer(tabId) {
+
+  if (!canBreakApart(tabId)) return;
+
+  const ts     = uiState.figures.tabs[tabId];
+  const figure = ts.figure;
+  const index  = figure.activeLayer;
+  const layer  = figure.layers[index];
+  const pieces = ts.instances[index].decompose();
+
+  layer.visible          = false;
+  ts.selectedPoint       = null;
+  ts.centroidSelected    = false;
+
+  for (const piece of pieces) {
+    insertLayer(tabId, piece.key, { params: piece.params, transform: layer.transform });
+  }
+
+} // end breakApartLayer
 
 
 /* ------------------------------------------------------------

@@ -261,6 +261,35 @@ function drawInverseStar(thing) {
   // displayPoint(thing.midpoint);
 }
 
+/* ============================================================
+   regularPolygonParabolas(thing)
+   ------------------------------------------------------------
+   The parts drawRegularPolygon draws, as data instead of pixels
+   (Phase 7c, Break apart). One entry per parabola:
+     { line1: [start, end], line2: [start, end], numSteps }
+   Each line is the stretch of a polygon side that is actually stitched,
+   i.e. after Shorten/Trim have cut the arm, so a Parabola given these four
+   points and numSteps draws exactly the same stitches. Same nodes, lines
+   and arms as drawRegularPolygon; only the drawing is left out.
+   ============================================================ */
+function regularPolygonParabolas(thing) {
+  const nodes = createNodes(thing);
+  const lines = createLinesFromNodesOuter(nodes);
+  const arms  = createArms(thing, lines);
+  const parts = [];
+  for (let i = 0; i < arms.length; i++) {
+    const a = arms[i];
+    const b = arms[(i + 1) % arms.length];
+    parts.push({
+      line1:    [a[0], a[a.length - 1]],
+      line2:    [b[0], b[b.length - 1]],
+      numSteps: a.length - 1
+    });
+  }
+  return parts;
+} // end regularPolygonParabolas
+
+
 function drawRegularPolygon(thing) {
   const nodes = createNodes(thing);
   const lines = createLinesFromNodesOuter(nodes);
@@ -322,6 +351,7 @@ export {
     drawManyParabs,
     drawParab,
     drawRegularPolygon,
+    regularPolygonParabolas,
     drawRegularPolygonCorner,
     drawRegularPolygonTouch
 };

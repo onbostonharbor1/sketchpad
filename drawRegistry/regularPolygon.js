@@ -6,10 +6,11 @@
    with curve stitching from each node (numSteps stitches). rotate turns
    the polygon, Shorten trims the stitches, and Width and Height scale
    it. The one handle moves the center.
+   Break apart (Figures): decompose() gives one Parabola per side pair.
 */
 import { Point }                from "../classes/classes.js";
 import { CurveStitch }           from "../classes/curveStitchClass.js";
-import { drawRegularPolygon }    from "../draw/drawRegular.js";
+import { drawRegularPolygon, regularPolygonParabolas } from "../draw/drawRegular.js";
 
 window.drawRegistry_regularPolygon = {
   name:         "Regular Polygon",
@@ -104,6 +105,33 @@ window.drawRegistry_regularPolygon = {
         p[key] = e[key];
       }
     }
+  },
+
+  /* ==========================================================
+     decompose()  (Figures, Break apart)
+     ----------------------------------------------------------
+     The polygon as separate registry objects: one Parabola for each
+     pair of neighboring sides, with the same stitches, color and line
+     width. Returns [{ key, params }], key being the registry key.
+     Shorten and Trim are already built into the points and the step
+     count, so the pieces start with none.
+     ========================================================== */
+  decompose() {
+    const e = this.elements.element;
+    return regularPolygonParabolas(e).map((part) => ({
+      key: "parabola",
+      params: {
+        line1_pt1: { x: part.line1[0].x, y: part.line1[0].y },
+        line1_pt2: { x: part.line1[1].x, y: part.line1[1].y },
+        line2_pt1: { x: part.line2[0].x, y: part.line2[0].y },
+        line2_pt2: { x: part.line2[1].x, y: part.line2[1].y },
+        numSteps:  part.numSteps,
+        truncate:  0,
+        shorten:   0,
+        color:     e.color,
+        lineWidth: e.lineWidth
+      }
+    }));
   },
 
   /* ==========================================================
