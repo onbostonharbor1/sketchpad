@@ -121,6 +121,12 @@ reproduced above.
 7. Figure templates: ready-made guide shapes (rectangles, circles) inserted as `template` layers, excluded from
    Show All and the final drawing. Includes a temporary ruler drawn between any two places, to measure where a
    point should go. Design with Barry first.
+   Also in this item (Barry, 2026-10-26):
+   - A "Create bounding box" command: makes a template layer showing the bounding box of an object. Not the
+     transient rotation box that 7b shows when a centroid is selected.
+   - UI: a pulldown list to insert a template, on the caption-bar line next to the Line and Parabola buttons.
+   - Every template layer carries an X that dismisses it. Open: does dismiss hide or destroy? Recommended: hide
+     (see the note below).
 8. Utilities command that sets a global hit radius. A figure always opens with the global value. Optional; drop
    it if unused.
 9. HTML help files. Always the very last item, after anything added later. Ask which pages to write.
@@ -252,4 +258,13 @@ reproduced above.
 - A Parabola corner is two handles at one spot (end of arm 1, start of arm 2). Welding a corner means both arm
   ends get a disc and join the group.
 - 7b: moving a hub member by its centroid breaks the hub, is blocked, or pulls the others' hub points. Decide in 7b.
+
+## Dismissing a template (X on a template layer): open
+
+- Recommended: the X hides the layer (`visible = false`). Layer numbers never change and layers are never deleted
+  yet, so a destroy would need delete-layer rules first (numbers never reused, discs on the layer, welds to it).
+  A template is already left out of Show All and the final drawing, so a hidden one costs nothing and can be
+  shown again from its number in the strip. Delete-layer belongs with Phase 11 follow-ups.
+- Open: inserting the same template again while a hidden copy exists: show the hidden one or add a new layer.
+  Other inserts add a new layer offset 20 px.
 
