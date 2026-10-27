@@ -33,6 +33,7 @@ import {
   renderLayerPanel
 }                             from "./figureLayers.js";
 import { deactivatePointsInput } from "./figurePointer.js";
+import { deactivateCentroid }    from "./figureCentroid.js";
 import {
   createEmptyFigure,
   nextUntitledName,
@@ -224,6 +225,7 @@ export function updateFigureButtons() {
       if (!t || !t.figure) return;
       t.mode = modeCheck.checked ? "points" : "lines";
       t.selectedPoint = null;
+      t.centroidSelected = false;
       updateFigureButtons();
       renderLayerPanel(uiState.figures.activeSubtab);
       redrawFigure(uiState.figures.activeSubtab);
@@ -355,7 +357,8 @@ export function openNewFigureTab() {
     type:        "figure",
     figure:      createEmptyFigure(nextUntitledName(tabs)),
     mode:        "lines",     // "lines" or "points" (view state, not saved)
-    selectedPoint: null
+    selectedPoint: null,
+    centroidSelected: false   // the active layer's centroid is selected (view state)
   };
 
   switchToFigureTab(tabId);
@@ -371,6 +374,7 @@ export function closeTab(tabId) {
   delete uiState.figures.tabs[tabId];
   if (window.disarmInteractor) window.disarmInteractor();
   deactivatePointsInput();
+  deactivateCentroid();
 
   if (uiState.figures.activeSubtab === tabId) {
     switchToCategories();

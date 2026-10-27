@@ -7,7 +7,14 @@
 
    A layer (data, in figure.layers[i]):
      { kind: "draw", id: "<registry key>", visible: true, color: "#rrggbb",
-       params: {...} }
+       params: {...}, transform: { angle, tx, ty } }
+
+   transform moves and turns the whole layer (Phase 7b, figureCentroid.js).
+   The object keeps drawing in its own coordinates; drawLine maps them to the
+   canvas through the transform of the layer being drawn (set here in
+   redrawFigure, in drawState.transform). The same pass records the extent of
+   what was drawn in instance.bounds, which gives the layer its centroid
+   and bounding box.
 
    color is the layer's identity color: it fills the layer's number in the
    strip and the layer's discs. It is not the color of the drawing. A new
@@ -58,6 +65,8 @@ import { buildParameterControls }   from "/ui/parameterControls.js";
 import { syncOverlayToCanvas }      from "/ui/uiUtilities.js";
 import { refreshPoints, drawFigurePoints } from "./figurePoints.js";
 import { activatePointsInput, deactivatePointsInput } from "./figurePointer.js";
+import { activateCentroid, centroidHit, drawCentroid } from "./figureCentroid.js";
+import { newTransform, newBounds } from "/draw/drawTransform.js";
 
 // Experiment switch: true = the last layer clicked goes on top.
 const MOVE_TO_FRONT_ON_SELECT = true;
@@ -120,17 +129,24 @@ export function insertLayer(tabId, registryKey) {
 
   if (!tabState.instances) tabState.instances = [];
 
-  figure.layers.push({
-    kind:    "draw",
-    id:      registryKey,
-    visible: true,
-    color:   color,
-    params:  instance.params
-  });
+  const layer = {
+    kind:      "draw",
+    id:        registryKey,
+    visible:   true,
+    color:     color,
+    params:    instance.params,
+    transform: newTransform()
+  };
+  figure.layers.push(layer);
   tabState.instances.push(instance);
 
   const index = figure.layers.length - 1;
   instance.redrawHandler = () => redrawFigure(tabId);
+  // Read by interactor.js: where this layer's handles really are, and
+  // whether the centroid has the press instead.
+  instance.getTransform  = () => layer.transform;
+  instance.yieldTo       = (x, y) => centroidHit(uiState.figures.tabs[tabId], x, y);
+  tabState.centroidSelected = false;
   figure.drawOrder.unshift(index);      // new layer goes on top
   figure.activeLayer = index;
 
@@ -203,12 +219,19 @@ export function redrawFigure(tabId, { dim = true } = {}) {
     const inst = instances[i];
     ctx.save();
     if (dimming && i !== figure.activeLayer) ctx.globalAlpha = DIM_ALPHA;
+    // drawLine maps what the object draws through this layer's transform and
+    // notes its extent in drawState.bounds. Both are null again afterwards.
+    drawState.transform = figure.layers[i].transform || null;
+    drawState.bounds    = newBounds();
     try {
       inst.update(inst.params);
       inst.draw();
     } catch (err) {
       console.error(`Figure layer ${i + 1} (${figure.layers[i].id}) failed to draw:`, err);
     }
+    inst.bounds         = drawState.bounds;
+    drawState.transform = null;
+    drawState.bounds    = null;
     ctx.restore();
   }
 
@@ -218,6 +241,9 @@ export function redrawFigure(tabId, { dim = true } = {}) {
   // rules as the layers. Anchored ones follow their layers, so refresh first.
   refreshPoints(tabState);
   drawFigurePoints(tabState, { showAll, dimming });
+
+  // The active layer's centroid, and its box and rotation handle when selected.
+  drawCentroid(tabState);
 
 } // end redrawFigure
 
@@ -322,6 +348,7 @@ export function renderLayerPanel(tabId) {
   if (canvas) {
     syncOverlayToCanvas("interaction", canvas);
     syncOverlayToCanvas("guides", canvas);
+    syncOverlayToCanvas("bbox", canvas);
   }
 
   // The active object's own handles are the only draggable points, in both
@@ -337,6 +364,7 @@ export function renderLayerPanel(tabId) {
     if (window.armInteractor) window.armInteractor(active);
   }
   if (pointsMode) activatePointsInput(tabId, () => redrawFigure(tabId));
+  activateCentroid(tabId, () => redrawFigure(tabId));
 
 } // end renderLayerPanel
 
@@ -397,6 +425,7 @@ export function selectLayer(tabId, index) {
   const figure = tabState.figure;
   figure.activeLayer = index;
   tabState.selectedPoint = null;   // only the active layer's points can be selected
+  tabState.centroidSelected = false;
 
   if (MOVE_TO_FRONT_ON_SELECT) {
     figure.drawOrder = [index, ...figure.drawOrder.filter((n) => n !== index)];
@@ -418,6 +447,7 @@ export function setLayerVisible(tabId, index, visible) {
 
   const figure = tabState.figure;
   figure.layers[index].visible = !!visible;
+  tabState.centroidSelected = false;
 
   // A hidden layer has nothing to edit, so hiding the active layer makes the
   // next visible layer down the stack active (or, if none is below, any

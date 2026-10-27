@@ -54,6 +54,7 @@
 import { canvasLayerManager } from "/ui/canvasLayerManager.js";
 import { uiState }            from "/ui/uiState.js";
 import { PointPickerPresets } from "/ui/interactor.js";
+import { applyTransform }      from "/draw/drawTransform.js";
 import {
   findCandidate,
   findPoint,
@@ -116,8 +117,15 @@ export function activatePointsInput(tabId, redraw) {
   const onHandle = (ts, x, y) => {
     const pts = ts.instances?.[ts.figure.activeLayer]?.params?.points;
     if (!pts) return false;
-    return pts.some((p) => Math.hypot(p.x - x, p.y - y) < PointPickerPresets.hitTolerance);
+    const xform = layerTransformOf(ts);
+    return pts.some((p) => {
+      const c = applyTransform(xform, p);        // handles are stored in object space
+      return Math.hypot(c.x - x, c.y - y) < PointPickerPresets.hitTolerance;
+    });
   };
+
+  // The transform of the active layer, or null.
+  const layerTransformOf = (ts) => ts.figure.layers[ts.figure.activeLayer]?.transform || null;
 
   let pressedAt = null;    // where the mouse went down, or null
   let dragged   = null;    // the free disc being dragged, or null
@@ -148,7 +156,7 @@ export function activatePointsInput(tabId, redraw) {
     if (!dragged) return;
     const ts = tabState();
     if (!ts) return;
-    moveFreePoint(dragged, m.x, m.y);
+    moveFreePoint(dragged, m.x, m.y, layerTransformOf(ts));
     ts.selectedPoint = dragged.n;
     redraw();
   }, { signal });
@@ -180,7 +188,7 @@ export function activatePointsInput(tabId, redraw) {
     if (!point) {
       const c = findCandidate(ts, m.x, m.y, radius);
       point = c ? addAnchoredPoint(figure, c)
-                : addFreePoint(figure, m.x, m.y);
+                : addFreePoint(figure, m.x, m.y, layerTransformOf(ts));
     }
 
     ts.selectedPoint = point.n;

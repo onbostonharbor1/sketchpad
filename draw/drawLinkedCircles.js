@@ -11,12 +11,18 @@
 
 import { drawLine } from "./drawUtilities.js";
 import { Point }    from "/classes/classes.js";
+import { mapPoint, noteBounds } from "./drawTransform.js";
 
 // Circles use ctx.arc, so they have no endpoints. They are still drawn
 // in final mode; the stitches below follow drawState.final through drawLine.
+// A figure layer's transform (Phase 7b) moves and turns the circle's center;
+// the radius is unchanged. The circle's extent goes into the layer's bounds.
 function drawOneCircle(ctx, center, radius) {
+  noteBounds({ x: center.x - radius, y: center.y - radius });
+  noteBounds({ x: center.x + radius, y: center.y + radius });
+  const c = mapPoint(center);
   ctx.beginPath();
-  ctx.arc(center.x, center.y, radius, 0, 2 * Math.PI);
+  ctx.arc(c.x, c.y, radius, 0, 2 * Math.PI);
   ctx.stroke();
 } // end drawOneCircle
 

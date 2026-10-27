@@ -14,7 +14,7 @@ Do one phase at a time. After each, stop and wait for him to review, play with i
 | 6b | Points mode: click-to-place discs (anchored or free) on the active layer, global `nextPoint`, Points Mode checkbox, final display in points mode, a "Hit radius" subcommand (default 5 px) for tuning. Model below | Done, merged |
 | 6c | Layer colors: each layer has a color, shown on its number in the strip and changeable there; that layer's numbered points are drawn as circled numbers in the same color. Retire the old coded-number display (printCircNum and `drawState.ctr`), which only existed to name join points when numbers were coded by hand | Built on `claude/phase-6c`, awaiting his review (see "Phase 6c as built"). The old coded-number display is NOT retired: see the note there |
 | 7 | Handle and drag: arrow-key nudging, 1 px, 10 px with Shift, of the object's own handles. (The "nudge a number label" part is dropped: discs have no visible numbers.) | Built on `claude/phase-7`, awaiting his review (see "Phase 7 as built") |
-| 7b | Centroid and bounding box: every object has a visible centroid. Drag the centroid to move the object anywhere. Selecting a centroid shows a bounding box; grabbing handles on the box rotates the object about the centroid. Open: one handle or several on the box | |
+| 7b | Centroid and bounding box: every object has a visible centroid. Drag the centroid to move the object anywhere. Selecting a centroid shows a bounding box; grabbing the handle on the box rotates the object about the centroid | Built on `claude1` (no branch, Barry 2026-10-26), awaiting his review (see "Phase 7b as built") |
 | 7c | Break apart an object into its pieces (own phase: it changes existing drawing code). A composite object, such as a polygon of stitched parabolas, is replaced by separate layers (Lines, Parabolas) that can be moved, welded and deleted on their own. Needs a `decompose()` on each object that supports it. Barry's route: redo the drawing commands so they can produce their objects as separate segments, and break apart uses that | Added; placed before welds because weld-drag on composite objects depends on it |
 | 8 | Welds (see "Phase 8 spec"). Order stays 7b, 7c, then 8 (Barry, 2026-10-26) | |
 | 8b | Magic points: more candidate kinds (midpoints, tops of loops, cusps), needed as weld targets and for parametric objects | |
@@ -88,8 +88,8 @@ reproduced above.
   would force every drawing routine to know how to respond, which is much more design work.
   Built: the object handles stay active in both modes on the active layer; circle dragging is removed; points
   mode only adds click-to-place and delete.
-- Free discs drag (6c). Plan: after 7b, store a free disc as an offset from its layer's centroid so it also
-  travels with the object.
+- Free discs drag (6c). Done in 7b: a free disc is stored in its layer's object space (`ox`, `oy`), so it
+  travels with the layer.
 - Welds are made only between points that have placed discs. An object's end point is not weldable until
   a circle has been placed on it. (Retracted: an earlier suggestion that handles are automatically weldable.)
 - Numbers are ids. Existing code already resolves a point given as a number: `numbersToPoints` in
@@ -125,8 +125,7 @@ reproduced above.
    - A "Create bounding box" command: makes a template layer showing the bounding box of an object. Not the
      transient rotation box that 7b shows when a centroid is selected.
    - UI: a pulldown list to insert a template, on the caption-bar line next to the Line and Parabola buttons.
-   - Merge (moved here by Barry): merge the top two layers into one. Open: a layer is one registry object, so
-     the result is a new composite kind holding both objects with their weld points frozen.
+   - Merge is ELIMINATED (Barry, 2026-10-26): "I think there are other ways to do what I'm thinking."
    - Every template layer carries an X that dismisses it. Open: does dismiss hide or destroy? Recommended: hide
      (see the note below).
 8. Utilities command that sets a global hit radius. A figure always opens with the global value. Optional; drop
@@ -160,13 +159,14 @@ reproduced above.
   it rides along with its object.
 - **Numbered point**: the data record behind a disc; anchored or free (see the point model).
 - **Infrastructure line**: a line that carries discs. Stitch lines do not.
-- **Centroid**: the visible center of an object (Phase 7b).
+- **Centroid**: the visible center of an object: the center of its bounding box (Phase 7b, built).
 
 ## Disc rules (Barry)
 
 - A disc tied to a point on an infrastructure line stays at that point. It can be deleted, or it can move to
   follow changes in the line (staying proportional), e.g. a middle disc stays in the middle when the line gets
   longer or shorter.
+- If the point a disc is anchored to disappears, the disc disappears too (Barry, 2026-10-26; Phase 8 acts on it).
 - A free disc moves only when dragged (points mode, 6c). It can be deleted. Anchored discs are not dragged.
 - Attachment between objects: both ends of the green parabola in his example follow the blue object when it is
   rotated or enlarged. Rules are needed for what happens when the blue object gets more or fewer sides or
@@ -189,7 +189,8 @@ reproduced above.
   centroid when it draws, so all objects work without changes; the cost is that drag circles and infrastructure
   positions must be mapped through the same transform. Option B: rewrite each object's own params. Option A is
   proposed.
-- 7b: one rotation handle on the bounding box, or several? Corner handles could scale instead.
+- 7b: one rotation handle on the bounding box, or several? ANSWERED in 7b: one, on a stem above the top edge.
+  The corners are left free for scaling later.
 - Dragging an anchored point: today it slides only along its arm. He said circles can be dragged to where they
   are needed. Should a drag off the arm detach it and turn it into a free point (keeping number and layer)?
 - Phase 8: dragging point 10 onto point 20 leaves two numbers at one place. Does a printed template need one
@@ -197,7 +198,7 @@ reproduced above.
   the scope of Phase 8 when it arrives. (decide when the phase arrives)
 
 - Phase 8: weld rule (which layer moves, freezing, automatic or asked), weldable objects (line types first).
-- Merge: always the top two layers; which number the merged layer keeps; frozen weld points hold it together.
+- Merge: eliminated (Barry, 2026-10-26). Nothing to decide.
 - Phase 10: whether `visible` is saved; the Save As filesystem steps are in `node/createFigureService.mjs`
   (new category directory, help mirror, manifest) and need exclusive create, temp-then-rename manifest,
   empty-slug rejection and duplicate-name suffixes.
@@ -237,7 +238,10 @@ Open:
   the disc with every disc on other layers within the hit radius, so a hub is made in one step. If none is
   near, say so. Not a click on a disc of another layer (points mode edits the active layer only).
 - Where rejections and notices appear. Proposed: a short message in the caption bar, plus a mark on the discs.
-- An anchored disc whose arm disappears keeps its last position today. Does the disc itself go, or only its weld?
+- DECIDED (Barry, 2026-10-26): if the point a disc is anchored to disappears, the disc disappears too. A disc and
+  its point are two objects, and he calls this a debatable feature. Applies when Phase 8 (or a later delete)
+  removes an arm or point. Today an anchored disc whose arm disappears still keeps its last position
+  (`refreshPoints`); Phase 8 changes that to removing the disc.
 - Order: 7b, then 7c, then 8, then 8b. 7c is no longer a prerequisite for welds.
 
 ## Phase 7 as built
@@ -255,6 +259,45 @@ Open:
   `regularPursuit`) get a working click layer in points mode.
 - Test helper note: hiding the active layer changes the Show checkbox to the next layer, so tests click it
   instead of using `setChecked`.
+
+## Phase 7b as built
+
+Built directly on `claude1` (Barry: Phase 7 was already merged, no new branch).
+
+- Every layer has `layer.transform = { angle, tx, ty }` (identity at first). `draw/drawTransform.js` holds the
+  math. The object keeps drawing in its own coordinates ("object space"); the transform turns those into canvas
+  pixels. No ctx.translate or ctx.rotate anywhere.
+- `drawLine` maps both ends through `drawState.transform` and notes them in `drawState.bounds`. Both are null
+  except while a figure layer draws (`redrawFigure` sets and clears them), so the Draw tab and the patterns are
+  unchanged. `drawCircle` and `drawLinkedCircles` map their centers; the radius is unchanged. `displayPoint` is
+  NOT mapped (it receives points `drawLine` has already mapped).
+- Handles are stored in object space and shown, hit and dragged in canvas space (`interactor.js`: `toCanvas`,
+  `toObject`; an instance supplies `getTransform`). Arrow keys nudge in canvas directions.
+- Infrastructure arms are mapped by `figurePoints.js` before a disc is found or placed. A free disc keeps
+  object-space `ox`, `oy` and gets `x`, `y` recomputed on every redraw, so free and anchored discs both travel
+  with the layer.
+- Centroid (`ui/figures/figureCentroid.js`): the center of the bounds of everything the layer drew (object space),
+  so it needs no per-object code. Drawn as a diamond on the "bbox" overlay for the active visible layer. Drag it to
+  move the layer. Click it to select it (orange): a dashed bounding box (bounds + 6 px) and one round rotation
+  handle on a stem above the top edge appear. Drag that handle to turn the layer about the centroid. With the
+  centroid selected the arrow keys move the layer 1 px (10 with Shift). A press anywhere else on the canvas, a
+  layer change, hiding the layer or switching mode deselects.
+- Decisions I made (Barry to confirm or reverse):
+  - One rotation handle, no corner handles yet (corners stay free for scale).
+  - Centroid = center of the bounding box, not an average of points.
+  - The centroid wins a press over a handle under it. A Line's midpoint handle is exactly under its centroid, so on
+    a Line the midpoint handle is no longer reachable; dragging the centroid does the same visible thing but edits
+    the transform instead of the object's numbers. The nudge test now uses the centroid for that case.
+  - Lines mode only. In points mode the centroid is hidden and clicks go to discs, because a Line's midpoint is
+    both its centroid and the natural place for a disc.
+  - Only the active layer shows a centroid. Show All (preview) and final mode hide it.
+  - No Shift-snap for rotation angles.
+  - Moving a welded member is a Phase 8 matter (see Weld hubs).
+- Not mapped: `draw/drawSpirals.js` (direct ctx dots, used by scripts only) and `draw/background.js`. Nothing in the
+  registry reaches them; if a future registry object uses them it will not follow the transform.
+- Tests: Part 7b in `tests/tabSwitch.mjs` (identity at first, bounds, move, rotate a quarter turn about the
+  centroid, handle drag after rotation, free and anchored discs travel, points mode hides the centroid, deselect,
+  every registry object produces bounds). Two older nudge checks changed because of the Line midpoint rule above.
 
 ## 6c review findings (Barry's testing, 2026-10-26; fixed in Phase 7)
 
@@ -280,7 +323,9 @@ Open:
 - Display: the stacked discs show only the top layer's color; a group probably wants its own marker.
 - A Parabola corner is two handles at one spot (end of arm 1, start of arm 2). Welding a corner means both arm
   ends get a disc and join the group.
-- 7b: moving a hub member by its centroid breaks the hub, is blocked, or pulls the others' hub points. Decide in 7b.
+- 7b: moving a hub member by its centroid pulls the partners (Barry, in the Phase 8 spec above). Phase 7b leaves
+  welds alone because welds do not exist yet; Phase 8 hooks into the centroid move (`setTransform` in
+  `ui/figures/figureCentroid.js`) the way it hooks into `moveHandle`.
 
 ## Dismissing a template (X on a template layer): open
 

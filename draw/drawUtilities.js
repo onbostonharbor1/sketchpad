@@ -19,6 +19,10 @@ drawLine(arg1, arg2, arg3, arg4)
   draws just the two endpoints and no line.
   Rule: registry draw code draws lines only through drawLine, never
   with raw ctx.moveTo/lineTo/stroke.
+  Figures (Phase 7b): drawLine also maps both ends through the layer
+  transform (drawState.transform, see draw/drawTransform.js) and notes
+  them in drawState.bounds. Both are null outside a figure layer, so
+  nothing changes anywhere else.
 
 drawALine(color, lineWidth, line)
 - A specialized wrapper that renders a single Line object with
@@ -48,6 +52,7 @@ import { Point, Line } from "/classes/classes.js";
 import { drawState }   from "./drawState.js";
 import { drawParab }   from "/draw/drawRegular.js";
 import { createNodes } from "/draw/createNodes.js";
+import { mapPoint, noteBounds } from "./drawTransform.js";
 
 const toRadians = (deg) => deg * (Math.PI / 180);
 const toDegrees = (rad) => rad * (180 / Math.PI);
@@ -133,7 +138,8 @@ function drawCircle(midpoint, radius, color = "black", width = 1) {
   ctx.strokeStyle = color;
   ctx.lineWidth = width;
   ctx.beginPath();
-  ctx.arc(midpoint.x, midpoint.y, radius, 0, (Math.PI / 180) * 360);
+  const c = mapPoint(midpoint);     // layer transform (Figures); identity elsewhere
+  ctx.arc(c.x, c.y, radius, 0, (Math.PI / 180) * 360);
   ctx.stroke();
   ctx.restore();
 } // end drawCircle
@@ -399,6 +405,16 @@ function drawLine(arg1, arg2, arg3 = "blue", arg4 = 1) {
         color     = arg3;
         lineWidth = arg4;
     }
+
+    // ------------------------------------------------------------
+    // Layer transform (Figures). The ends as given are in object
+    // space: note them for the layer's bounds, then map them to canvas
+    // space. Everything below uses the mapped points.
+    // ------------------------------------------------------------
+    noteBounds(pt1);
+    noteBounds(pt2);
+    pt1 = mapPoint(pt1);
+    pt2 = mapPoint(pt2);
 
     // ------------------------------------------------------------
     // Final mode (drawState.final): draw just the points, no line.

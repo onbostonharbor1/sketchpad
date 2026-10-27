@@ -12,7 +12,7 @@ Phase order and status are in PHASES.md. Read it before starting work.
   Do not start anything until he says go.
 - Once the objective is clear, hand over a whole unit of work, not sentence-level back and forth.
 - Phases come from his numbered list in PHASES.md. Do one phase at a time and stop at the hold he sets.
-- Each phase is done on a branch that he reviews and merges into `claude1`. The working branch is deleted
+- Each phase is done on a branch that he reviews and merges into `claude1` (unless he says otherwise, as for 7b). The working branch is deleted
   afterward, so the repo has only `main` and `claude1`. Merge only when asked (fast-forward).
 - He works on Windows in VS Code (repo at C:\Users\barry\Desktop\sketchpad). Open-in-editor means VS Code only.
 - Do not end every reply with a question.
@@ -53,9 +53,14 @@ Phase order and status are in PHASES.md. Read it before starting work.
 - `ui/interactor.js`: drag handles on `params.points` for one armed object at a time. A pressed handle is selected
   and the arrow keys nudge it (1 px, 10 with Shift). All handle moves go through `moveHandle`.
 - Figures (`ui/figures/`): `figureModel.js` (data), `figuresNav.js` (subtabs, caption tools, left buttons),
-  `figureLayers.js` (insert, draw, dim, select), `figuresCommands.js`, `figuresDisplay.js`, `figures.js` (TabSpec).
+  `figureLayers.js` (insert, draw, dim, select), `figureCentroid.js` (centroid, bounding box, move and rotate a
+  layer), `figuresCommands.js`, `figuresDisplay.js`, `figures.js` (TabSpec).
   A figure is `{name, category, nextPoint, points[], layers[], drawOrder[], activeLayer}` in
   `uiState.figures.tabs[tabId].figure`. Layer numbers are stable; `drawOrder` (top first) is separate.
+- Layer transform (`draw/drawTransform.js`): each figure layer has `transform {angle, tx, ty}`. Objects draw in
+  object space; `drawLine` maps through `drawState.transform` (null outside a figure layer) and notes
+  `drawState.bounds`. Anything that shows or hits a handle or disc maps through the same transform
+  (`interactor.js` via `getTransform`, `figurePoints.js`). No ctx.translate or ctx.rotate.
 - `node/`: the local Node service on port 5174, request shape `{requestName, payload}`.
 
 ## Running and testing

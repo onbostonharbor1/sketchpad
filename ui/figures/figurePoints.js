@@ -9,7 +9,7 @@
 
    Point record, in figure.points:
      { n, kind: "anchored", layer, arm, t, x, y, dx, dy }
-     { n, kind: "free",     layer,          x, y, dx, dy }
+     { n, kind: "free",     layer,          x, y, dx, dy, ox, oy }
 
      n        permanent number, taken from figure.nextPoint. Never
               reused, even after the point is deleted. It is an id only:
@@ -22,11 +22,20 @@
               layer (arm id) at fraction t of its length. It always
               keeps exactly that fraction, so it follows its object
               when the object is moved or its step count changes.
-     x, y     where the point is now. For an anchored point this is
-              recomputed from layer, arm and t on every redraw. Points
-              are never dragged except free ones (moveFreePoint): an
-              anchored point rides along with its object. The object's own
-              handles are dragged by interactor.js.
+     x, y     where the point is now, in canvas pixels. For an anchored
+              point this is recomputed from layer, arm and t on every
+              redraw. Points are never dragged except free ones
+              (moveFreePoint): an anchored point rides along with its
+              object. The object's own handles are dragged by interactor.js.
+     ox, oy   a free point only: where it is in its layer's object space.
+              x, y are recomputed from these on every redraw, so a free
+              disc travels with its layer when the layer is moved or turned
+              (Phase 7b). Where the layer has no transform, ox = x, oy = y.
+
+   Layer transform (Phase 7b): a layer may carry layer.transform (see
+   draw/drawTransform.js). Infrastructure arms come from the object in object
+   space; every arm is mapped through the transform of its layer before a
+   disc is found or placed on it, so all disc positions are in canvas space.
      dx, dy   offset of a number label from the point. Discs are drawn
               without numbers now, so this is always 0; kept for
               Phase 7, which may drop it.
@@ -44,12 +53,14 @@
      findCandidate(tabState, x, y, radius)
      findPoint(figure, x, y, radius)
      addAnchoredPoint(figure, candidate)
-     addFreePoint(figure, x, y)
-     moveFreePoint(point, x, y)
+     addFreePoint(figure, x, y, transform)
+     moveFreePoint(point, x, y, transform)
      deletePoint(figure, n)
      refreshPoints(tabState)
      drawFigurePoints(tabState, { showAll, dimming })
    ============================================================ */
+
+import { applyTransform, inverseTransform } from "/draw/drawTransform.js";
 
 const MARKER_RADIUS = 9;   // drawn size of a numbered point
 const HALO_GAP      = 4;   // selected point: gap from the marker to its outer ring
@@ -68,12 +79,20 @@ function armsOf(instance) {
 } // end armsOf
 
 
-function armPoint(arm, t) {
-  return {
+// The point at fraction t along an arm, in canvas space. transform is the
+// layer's transform, or null/undefined for none.
+function armPoint(arm, t, transform) {
+  return applyTransform(transform, {
     x: arm.a.x + (arm.b.x - arm.a.x) * t,
     y: arm.a.y + (arm.b.y - arm.a.y) * t
-  };
+  });
 } // end armPoint
+
+
+// The transform of layer number i of the figure, or null.
+function layerTransform(figure, i) {
+  return figure.layers[i]?.transform || null;
+} // end layerTransform
 
 
 /* ============================================================
@@ -88,6 +107,7 @@ export function findCandidate(tabState, x, y, radius) {
   const figure    = tabState.figure;
   const instances = tabState.instances || [];
   const layer     = figure.activeLayer;
+  const xform     = layerTransform(figure, layer);
 
   let best     = null;
   let bestDist = radius;
@@ -95,7 +115,7 @@ export function findCandidate(tabState, x, y, radius) {
   for (const arm of armsOf(instances[layer])) {
     for (let i = arm.from; i <= arm.to; i++) {
       const t  = i / arm.steps;
-      const pt = armPoint(arm, t);
+      const pt = armPoint(arm, t, xform);
       const d  = Math.hypot(pt.x - x, pt.y - y);
       if (d < bestDist) {
         bestDist = d;
@@ -157,11 +177,12 @@ export function addAnchoredPoint(figure, c) {
 } // end addAnchoredPoint
 
 
-export function addFreePoint(figure, x, y) {
+export function addFreePoint(figure, x, y, transform = null) {
 
+  const o = inverseTransform(transform, x, y);
   const p = {
     n: figure.nextPoint++, kind: "free", layer: figure.activeLayer,
-    x, y, dx: 0, dy: 0
+    x, y, dx: 0, dy: 0, ox: o.x, oy: o.y
   };
   figure.points.push(p);
   return p;
@@ -175,12 +196,15 @@ export function addFreePoint(figure, x, y) {
    Drags a free point to (x, y). An anchored point is never moved
    this way (it rides along with its object); returns false for it.
    ============================================================ */
-export function moveFreePoint(point, x, y) {
+export function moveFreePoint(point, x, y, transform = null) {
 
   if (point.kind !== "free") return false;
 
-  point.x = x;
-  point.y = y;
+  const o = inverseTransform(transform, x, y);
+  point.x  = x;
+  point.y  = y;
+  point.ox = o.x;
+  point.oy = o.y;
   return true;
 
 } // end moveFreePoint
@@ -211,12 +235,20 @@ export function refreshPoints(tabState) {
   const instances = tabState.instances || [];
 
   for (const p of tabState.figure.points) {
-    if (p.kind !== "anchored") continue;
+    const xform = layerTransform(tabState.figure, p.layer);
+
+    if (p.kind === "free") {
+      if (typeof p.ox !== "number") continue;
+      const pt = applyTransform(xform, { x: p.ox, y: p.oy });
+      p.x = pt.x;
+      p.y = pt.y;
+      continue;
+    }
 
     const arm = armsOf(instances[p.layer]).find((a) => a.id === p.arm);
     if (!arm) continue;               // keep the last known position
 
-    const pt = armPoint(arm, p.t);
+    const pt = armPoint(arm, p.t, xform);
     p.x = pt.x;
     p.y = pt.y;
   }

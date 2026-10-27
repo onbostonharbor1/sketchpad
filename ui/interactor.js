@@ -3,6 +3,7 @@
    =========================================================== */
 import { canvasLayerManager } from "./canvasLayerManager.js";
 import { uiState } from "/ui/uiState.js";
+import { applyTransform, inverseTransform } from "/draw/drawTransform.js";
 
 export const PointPickerPresets = {
     handleRadius: 5,        // Normal size
@@ -12,6 +13,7 @@ export const PointPickerPresets = {
 };
 
 let deactivateCurrent = null;
+let renderCurrent     = null;   // redraws the armed object's handles, or null
 
 /* ===========================================================
    DRAW SIDE: Coordination Logic
@@ -34,6 +36,13 @@ export function armInteractor(instance) {
     // 2. Activate the picker and store the cleanup function
     deactivateCurrent = activatePointPicker(instance.params.points, {
         uiKey: instance.id,
+        // Figures: the layer's transform. Handles are stored in object space
+        // and shown, hit and dragged in canvas space. Absent (the Draw tab)
+        // means the identity.
+        getTransform: instance.getTransform,
+        // Figures: true when a press at (x, y) belongs to the centroid, which
+        // wins over a handle sitting under it.
+        yieldTo: instance.yieldTo,
         onUpdate: () => {
             // Safety: Only proceed if this instance is still the active one
             if (!deactivateCurrent) return;
@@ -63,6 +72,13 @@ export function armInteractor(instance) {
             }
         }
     });
+}
+
+// Redraws the handles of the armed object. For code that changes where they
+// are without going through the interactor (the Figures centroid moving or
+// turning a whole layer).
+export function refreshInteractor() {
+    if (renderCurrent) renderCurrent();
 }
 
 export function disarmInteractor() {
@@ -120,11 +136,25 @@ function activatePointPicker(points, config = {}) {
         };
     }
 
-    // The one place a handle is moved, by drag or by arrow key. Anything that
-    // must follow a handle (welds, in Phase 8) hooks in here.
+    // Handles live in object space. These two turn them into canvas space (to
+    // show and hit them) and back (to store a move). With no transform both
+    // return the point unchanged.
+    function toCanvas(pt) {
+        const t = settings.getTransform ? settings.getTransform() : null;
+        return applyTransform(t, pt);
+    }
+    function toObject(x, y) {
+        const t = settings.getTransform ? settings.getTransform() : null;
+        return inverseTransform(t, x, y);
+    }
+
+    // The one place a handle is moved, by drag or by arrow key. (x, y) is a
+    // canvas position. Anything that must follow a handle (welds, in Phase 8)
+    // hooks in here.
     function moveHandle(i, x, y) {
-        points[i].x = x;
-        points[i].y = y;
+        const o = toObject(x, y);
+        points[i].x = o.x;
+        points[i].y = o.y;
         if (settings.onUpdate) settings.onUpdate();
     }
 
@@ -135,7 +165,8 @@ function activatePointPicker(points, config = {}) {
 
         ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-        points.forEach((pt, i) => {
+        points.forEach((objPt, i) => {
+            const pt = toCanvas(objPt);
             const isActive = (i === draggedIndex || i === hoverIndex || i === selectedIndex);
 
             ctx.beginPath();
@@ -163,8 +194,19 @@ function activatePointPicker(points, config = {}) {
 
     const handleMouseDown = (e) => {
         const mouse = getCanvasCoords(e);
+
+        // The centroid (Figures) outranks a handle under it. Let it have the press.
+        if (settings.yieldTo && settings.yieldTo(mouse.x, mouse.y)) {
+            draggedIndex  = null;
+            if (selectedIndex !== null) {
+                selectedIndex = null;
+                render();
+            }
+            return;
+        }
+
         for (let i = 0; i < points.length; i++) {
-            const pt = points[i];
+            const pt = toCanvas(points[i]);
             const dist = Math.sqrt((mouse.x - pt.x) ** 2 + (mouse.y - pt.y) ** 2);
             if (dist < settings.hitTolerance) {
                 draggedIndex  = i;
@@ -185,7 +227,7 @@ function activatePointPicker(points, config = {}) {
         let currentHover = null;
 
         for (let i = 0; i < points.length; i++) {
-            const pt = points[i];
+            const pt = toCanvas(points[i]);
             const dist = Math.sqrt((mouse.x - pt.x) ** 2 + (mouse.y - pt.y) ** 2);
             if (dist < settings.hitTolerance) {
                 currentHover = i;
@@ -227,7 +269,7 @@ function activatePointPicker(points, config = {}) {
         }
 
         e.preventDefault();
-        const pt = points[selectedIndex];
+        const pt = toCanvas(points[selectedIndex]);
         moveHandle(selectedIndex, pt.x + dx, pt.y + dy);
         render();
     };
@@ -240,9 +282,11 @@ function activatePointPicker(points, config = {}) {
 
     // Initial render call to show dots immediately
     render();
+    renderCurrent = render;
 
     // The cleanup function returned to 'deactivateCurrent'
     return () => {
+        renderCurrent = null;
         controller.abort();
         ctx.clearRect(0, 0, canvas.width, canvas.height);
         canvas.style.display = "none";

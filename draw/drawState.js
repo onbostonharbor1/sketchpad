@@ -21,7 +21,11 @@ export let drawState = {
   debug: false,
   final: false,
   pts: [],
-  ctr: 0
+  ctr: 0,
+  // Layer transform (Figures, Phase 7b; see draw/drawTransform.js). Both are
+  // null except while a figure layer is drawing.
+  transform: null,   // { angle, tx, ty } turning object space into canvas space
+  bounds: null       // { minX, minY, maxX, maxY } of what was drawn, object space
 };
 
 /**

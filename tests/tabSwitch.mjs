@@ -584,24 +584,32 @@ h = await handles();
 if (!near(h[0].x, 200) || !near(h[0].y, 200)) problems.push("[nudge] back again: " + JSON.stringify(h[0]));
 if (!near(h[1].x, 400) || !near(h[1].y, 400)) problems.push("[nudge] the other end moved: " + JSON.stringify(h[1]));
 
-await clickAt(300, 300);                    // the midpoint handle moves the whole line
+// The Line's midpoint handle (300,300) sits under the layer's centroid (Phase 7b),
+// and the centroid wins the press: it moves the whole layer through the transform,
+// leaving the object's own numbers alone.
+const layerT = () => page.evaluate(() => {
+  const t = uiState.figures.tabs[uiState.figures.activeSubtab];
+  return { ...t.figure.layers[t.figure.activeLayer].transform };
+});
+await clickAt(300, 300);
 await page.keyboard.press("Shift+ArrowRight");
 h = await handles();
-if (!near(h[0].x, 210) || !near(h[1].x, 410)) problems.push("[nudge] midpoint did not move the line: " + JSON.stringify(h));
+if (!near(h[0].x, 200) || !near(h[1].x, 400)) problems.push("[nudge] the centroid changed the object's own handles: " + JSON.stringify(h));
+if (!near((await layerT()).tx, 10)) problems.push("[nudge] centroid nudge did not move the layer: " + JSON.stringify(await layerT()));
 
-await clickAt(600, 600);                    // a press elsewhere clears the selection
+await clickAt(610, 600);                    // a press elsewhere clears the selection
 await page.keyboard.press("ArrowRight");
-if (!near((await handles())[0].x, 210)) problems.push("[nudge] moved after the selection was cleared");
+if (!near((await layerT()).tx, 10)) problems.push("[nudge] moved after the selection was cleared");
 
 stage = "nudge in points mode";
 await page.check("#figureModeCheck");
 await page.waitForTimeout(300);
-await clickAt(210, 200);                    // the start handle again (and a disc placed on it)
+await clickAt(210, 200);                    // the start handle again, now at 210 on screen (and a disc placed on it)
 await page.keyboard.press("ArrowRight");
-h = await handles();
-if (!near(h[0].x, 211)) problems.push("[nudge points mode] " + JSON.stringify(h[0]));
+h = await handles();                        // object space: 200 + 1; the layer is 10 px over
+if (!near(h[0].x, 201)) problems.push("[nudge points mode] " + JSON.stringify(h[0]));
 const rider = (await points()).find(p => p.kind === "anchored");
-if (!rider || Math.abs(rider.x - h[0].x) > 0.5) problems.push("[nudge points mode] the disc did not ride along: " + JSON.stringify(rider));
+if (!rider || Math.abs(rider.x - (h[0].x + 10)) > 0.5) problems.push("[nudge points mode] the disc did not ride along: " + JSON.stringify(rider));
 
 stage = "points click slip";
 const nDiscs = (await points()).length;
@@ -655,6 +663,109 @@ for (const key of ["parametrics", "regularPursuit"]) {
   if (got !== 1) problems.push(`[no handles] ${key}: first click in points mode made ${got} discs`);
 }
 
+
+// ---------------------------------------------------------------------------
+// Phase 7b: centroid, bounding box, move and rotate through the layer transform
+// ---------------------------------------------------------------------------
+stage = "7b centroid";
+await newFigure();
+await page.click("#figureInsert_drawLine");     // handles 200,200  400,400  300,300
+await page.waitForTimeout(300);
+const layerInfo = () => page.evaluate(() => {
+  const t = uiState.figures.tabs[uiState.figures.activeSubtab];
+  const l = t.figure.layers[t.figure.activeLayer];
+  return { t: { ...l.transform }, b: { ...t.instances[t.figure.activeLayer].bounds }, sel: t.centroidSelected };
+});
+// Where object point (x, y) of the active layer is on the canvas.
+const mapped = (x, y) => page.evaluate(async ([x, y]) => {
+  const m = await import("/draw/drawTransform.js");
+  const t = uiState.figures.tabs[uiState.figures.activeSubtab];
+  return m.applyTransform(t.figure.layers[t.figure.activeLayer].transform, { x, y });
+}, [x, y]);
+const centroidXY = async () => {          // where the active layer's centroid is on the canvas
+  const b = (await layerInfo()).b;
+  return mapped((b.minX + b.maxX) / 2, (b.minY + b.maxY) / 2);
+};
+const blank7b = (c) => c[3] === 0 || (c[0] > 240 && c[1] > 240 && c[2] > 240);
+
+let li = await layerInfo();
+if (li.t.angle !== 0 || li.t.tx !== 0 || li.t.ty !== 0) problems.push("[7b] a new layer should have the identity transform: " + JSON.stringify(li.t));
+if (li.b.minX !== 200 || li.b.maxX !== 400 || li.b.minY !== 200 || li.b.maxY !== 400) problems.push("[7b] bounds of the line: " + JSON.stringify(li.b));
+if (li.sel) problems.push("[7b] centroid should start unselected");
+
+stage = "7b move";
+await dragTo(300, 300, 350, 330);               // the centroid (it wins over the midpoint handle)
+li = await layerInfo();
+if (!near(li.t.tx, 50) || !near(li.t.ty, 30)) problems.push("[7b move] transform: " + JSON.stringify(li.t));
+if (!li.sel) problems.push("[7b move] dragging the centroid should select it");
+h = await handles();
+if (!near(h[0].x, 200) || !near(h[1].x, 400) || !near(h[2].x, 300)) problems.push("[7b move] the object's own handles changed: " + JSON.stringify(h));
+if (!blank7b(await px(250, 250))) problems.push("[7b move] the old position still shows the line");
+if (blank7b(await px(300, 280))) problems.push("[7b move] the line is not drawn at its new position");
+
+stage = "7b rotate";
+// Centroid is at 350,330. The rotation handle stands 6 + 26 px above the box: 350,198.
+await dragTo(350, 198, 482, 330);               // a quarter turn clockwise
+li = await layerInfo();
+if (!near(li.t.angle, Math.PI / 2)) problems.push("[7b rotate] angle: " + JSON.stringify(li.t));
+let c0 = await mapped(300, 300);
+if (Math.abs(c0.x - 350) > 0.01 || Math.abs(c0.y - 330) > 0.01) problems.push("[7b rotate] the centroid moved: " + JSON.stringify(c0));
+let s0 = await mapped(200, 200);                // the start handle should now be at 450,230
+if (Math.abs(s0.x - 450) > 1 || Math.abs(s0.y - 230) > 1) problems.push("[7b rotate] start handle: " + JSON.stringify(s0));
+if (blank7b(await px(350, 330))) problems.push("[7b rotate] nothing drawn at the centroid");
+if (!blank7b(await px(300, 280))) problems.push("[7b rotate] the unrotated line is still there");
+
+stage = "7b handle after rotate";
+await dragTo(450, 230, 470, 230);               // handles are still draggable where they appear
+h = await handles();
+s0 = await mapped(h[0].x, h[0].y);
+if (Math.abs(s0.x - 470) > 1 || Math.abs(s0.y - 230) > 1) problems.push("[7b handle] dragged start handle ended at " + JSON.stringify(s0));
+h = await handles();
+if (!near(h[1].x, 400) || !near(h[1].y, 400)) problems.push("[7b handle] the other end moved: " + JSON.stringify(h[1]));
+
+stage = "7b discs travel";
+await page.check("#figureModeCheck");
+await page.waitForTimeout(300);
+await clickAt(600, 600);                        // a free disc
+let free = (await points()).find(p => p.kind === "free");
+if (!free || Math.abs(free.x - 600) > 1 || Math.abs(free.y - 600) > 1) problems.push("[7b discs] free disc: " + JSON.stringify(free));
+await clickAt(470, 230);                        // an anchored disc on the start of the rotated line
+let anch = (await points()).find(p => p.kind === "anchored");
+if (!anch || Math.abs(anch.x - 470) > 1 || Math.abs(anch.y - 230) > 1) problems.push("[7b discs] anchored disc: " + JSON.stringify(anch));
+const nBefore = (await points()).length;
+const cen = await centroidXY();
+await clickAt(cen.x, cen.y);                    // points mode: the centroid is not active, a click places a disc
+if ((await points()).length !== nBefore + 1) problems.push("[7b discs] a click on the centroid in points mode placed no disc");
+await page.keyboard.press("Delete");
+await page.uncheck("#figureModeCheck");
+await page.waitForTimeout(300);
+const freeBefore = (await points()).find(p => p.kind === "free");
+const anchBefore = (await points()).find(p => p.kind === "anchored");
+await dragTo(cen.x, cen.y, cen.x + 20, cen.y);  // move the layer 20 px right
+free = (await points()).find(p => p.kind === "free");
+anch = (await points()).find(p => p.kind === "anchored");
+if (!free || Math.abs(free.x - (freeBefore.x + 20)) > 0.5 || Math.abs(free.y - freeBefore.y) > 0.5) problems.push("[7b discs] free disc did not travel: " + JSON.stringify(free));
+if (!anch || Math.abs(anch.x - (anchBefore.x + 20)) > 0.5 || Math.abs(anch.y - anchBefore.y) > 0.5) problems.push("[7b discs] anchored disc did not travel: " + JSON.stringify(anch));
+
+stage = "7b deselect";
+await clickAt(700, 100);                        // a press elsewhere on the canvas deselects
+if ((await layerInfo()).sel) problems.push("[7b deselect] still selected after a press elsewhere");
+await pickLayer(0);
+if ((await layerInfo()).sel) problems.push("[7b deselect] selection survived a layer change");
+
+stage = "7b every object draws and has a centroid";
+for (const key of Object.keys(await page.evaluate(() => window.drawRegistry))) {
+  await newFigure();
+  await page.selectOption("#figureInsertSelect", key);
+  await page.waitForTimeout(250);
+  const info = await page.evaluate(() => {
+    const t = uiState.figures.tabs[uiState.figures.activeSubtab];
+    const b = t.instances[t.figure.activeLayer]?.bounds;
+    return b && isFinite(b.minX) ? { w: b.maxX - b.minX, h: b.maxY - b.minY } : null;
+  });
+  if (!info) notes.push(`[7b] ${key}: drew nothing, so it has no centroid`);
+}
+
 await browser.close();
 
 for (const n of notes.slice(0, 5)) console.log("note:", n);
@@ -665,4 +776,4 @@ if (problems.length) {
   for (const p of problems) console.log(" ", p);
   process.exit(1);
 }
-console.log("\nPASS: 6 tabs x 2 passes, plus Draw and Patterns with an open item, plus the Notes menu item, plus the Figures shell, insert and points mode, no errors");
+console.log("\nPASS: 6 tabs x 2 passes, plus Draw and Patterns with an open item, plus the Notes menu item, plus the Figures shell, insert, points mode and 7b centroid, move and rotate, no errors");
