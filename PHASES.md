@@ -16,7 +16,7 @@ Do one phase at a time. After each, stop and wait for him to review, play with i
 | 7 | Handle and drag: arrow-key nudging, 1 px, 10 px with Shift, of the object's own handles. (The "nudge a number label" part is dropped: discs have no visible numbers.) | Built on `claude/phase-7`, awaiting his review (see "Phase 7 as built") |
 | 7b | Centroid and bounding box: every object has a visible centroid. Drag the centroid to move the object anywhere. Selecting a centroid shows a bounding box; grabbing handles on the box rotates the object about the centroid. Open: one handle or several on the box | |
 | 7c | Break apart an object into its pieces (own phase: it changes existing drawing code). A composite object, such as a polygon of stitched parabolas, is replaced by separate layers (Lines, Parabolas) that can be moved, welded and deleted on their own. Needs a `decompose()` on each object that supports it. Barry's route: redo the drawing commands so they can produce their objects as separate segments, and break apart uses that | Added; placed before welds because weld-drag on composite objects depends on it |
-| 8 | Welds | |
+| 8 | Welds (see "Phase 8 spec"). Order stays 7b, 7c, then 8 (Barry, 2026-10-26) | |
 | 8b | Magic points: more candidate kinds (midpoints, tops of loops, cusps), needed as weld targets and for parametric objects | |
 | 9 | Print aids: scale bar; minimum nail-spacing check (needs nail size and highlight-vs-list answers from Barry) | |
 | 10 | Save and recovery (Save As, category and manifest creation, reload) | |
@@ -125,6 +125,8 @@ reproduced above.
    - A "Create bounding box" command: makes a template layer showing the bounding box of an object. Not the
      transient rotation box that 7b shows when a centroid is selected.
    - UI: a pulldown list to insert a template, on the caption-bar line next to the Line and Parabola buttons.
+   - Merge (moved here by Barry): merge the top two layers into one. Open: a layer is one registry object, so
+     the result is a new composite kind holding both objects with their weld points frozen.
    - Every template layer carries an X that dismisses it. Open: does dismiss hide or destroy? Recommended: hide
      (see the note below).
 8. Utilities command that sets a global hit radius. A figure always opens with the global value. Optional; drop
@@ -182,11 +184,7 @@ reproduced above.
   text helpers, which need small changes. One function maps object space to canvas space for everything else
   (infrastructure, drag circles, picking, welds), so no layer is special and different transforms can coexist.
   Welds compare points in canvas space.
-- 8 / 7c: dragging a welded point. Proposed rule: a weld has one leader (the object that was there first) and one
-  follower. Only the leader's circle drags, and the follower's end moves with it; the follower's other points keep
-  their place. The follower's circle at the weld is locked. To change that, use Unweld, or Break apart (7c). A
-  rigid composite leader (a pentagon) cannot deform at one vertex, so it must be broken apart first. Unwelded
-  objects never move each other.
+- 8 / 7c: dragging a welded point. SUPERSEDED by "Phase 8 spec" (no leader and follower; the dragged end drives).
 - 7b: how to rotate. Option A: every layer gets a transform (move, rotate, later scale) applied around its
   centroid when it draws, so all objects work without changes; the cost is that drag circles and infrastructure
   positions must be mapped through the same transform. Option B: rewrite each object's own params. Option A is
@@ -205,17 +203,42 @@ reproduced above.
   empty-slug rejection and duplicate-name suffixes.
 - Parametric objects have no draggable points yet; lobe numbering is the first idea.
 
-## Weld behavior: open questions (to discuss before Phase 8)
+## Phase 8 spec (Barry's corrections, 2026-10-26; replaces the old leader and follower wording)
 
-- Settled direction: discs are explicit only (nothing is added to the numbered array automatically). A move
-  flows one way, leader to follower; a follower never moves its leader. A weld is a pair of discs on different
-  layers, referenced by layer number and disc number, so stacking order and "adjacent layers" do not matter.
-- Open: chains (A leads B leads C): does C follow A?
-- Open: moving a follower as a whole (7b centroid drag): block, break the weld, or move the rest while the
-  welded handle stays?
-- Open: the leader's disc disappears (fewer steps or sides) or is deleted: what happens to the weld?
-- Open: cycles and a follower with two leaders: proposed rule is reject both.
-- Decided in 6c: discs of non-active layers are drawn at 50%, so weld candidates stay visible but quiet.
+Decided:
+- A weld joins discs on different layers. Discs are explicit only; nothing is added to the numbered array
+  automatically. A weld is a group of two or more discs at one place (8 parabolas on one center is one group).
+  Joining a group means welding to any member. Groups are stored in the figure data as lists of
+  `{layer, n}` (layer number and disc number), so stacking order does not matter.
+- A weld can be anywhere on an object. It is not a draggable point itself. If one of its discs is draggable
+  (a disc on a handle, or a free disc), dragging it moves the weld, and the other members and their objects
+  follow. If none is draggable, the weld moves along with the objects.
+- Creating a weld does not move anything: the discs must already be coincident, or nearly so. Moving the second
+  disc to the first at creation is rejected as wrong.
+- Moving: a handle dragged or nudged on the active layer drives. The move spreads outward through the welds;
+  each layer moves at most once per drag. Followers reshape (their other handles stay). Hooks into `moveHandle`.
+- Moving a welded object as a whole (7b centroid drag) pulls its partners.
+- A weld that cannot be satisfied (both ends already moved) is left alone and drawn in red.
+- Ring rule: reject a weld that would tie two different places into one loop. Joining a group is always allowed.
+  Every rejection must be reported to Barry in some visible way (not silent).
+- Unweld: remove a disc from a group or dissolve the group. A group down to one disc dissolves.
+- If a member disc disappears (a step change or trim removes it, or it is deleted), it leaves the weld.
+- A weld group is one nail on the printed template (Phase 9 counts a group once). Merged numbers: one hole per group.
+- A weld group has its own symbol, not the stacked disc colors. Barry's first idea is a plus sign. Proposed: a
+  black plus on a white halo, so it reads over any layer color and doubles as the nail-center mark.
+- A Parabola corner is two handles at one spot; welding a corner joins both arm ends to the group.
+- Welds are saved with the figure (Phase 10).
+
+Open:
+- A driven weld end meeting a mid-arm disc (position derived from two handles): which handles move? Proposed:
+  the arm that carries the disc translates by the same amount; the object's other handles stay. Handle discs move
+  just that handle.
+- How a weld is created. Proposed: select a disc in points mode and run a Weld command (caption menu); it joins
+  the disc with every disc on other layers within the hit radius, so a hub is made in one step. If none is
+  near, say so. Not a click on a disc of another layer (points mode edits the active layer only).
+- Where rejections and notices appear. Proposed: a short message in the caption bar, plus a mark on the discs.
+- An anchored disc whose arm disappears keeps its last position today. Does the disc itself go, or only its weld?
+- Order: 7b, then 7c, then 8, then 8b. 7c is no longer a prerequisite for welds.
 
 ## Phase 7 as built
 
