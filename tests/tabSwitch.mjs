@@ -965,6 +965,133 @@ if (arms[0].points.length !== 80 || arms[1].points.length !== 80) problems.push(
 node0 = arms[0].points[0];
 if (!near(node0.x, centers[0].x) || !near(node0.y, centers[0].y - 100)) problems.push("[7d linked circles] circle0 node 0: " + JSON.stringify(node0));
 
+// ---------------------------------------------------------------------------
+// Phase 8: welds
+// ---------------------------------------------------------------------------
+const rightClickAt = async (x, y) => {
+  const r = await rect();
+  await page.mouse.click(r[0] + x * r[2] / 800, r[1] + y * r[3] / 800, { button: "right" });
+  await page.waitForTimeout(150);
+};
+const welds = () => page.evaluate(() =>
+  (uiState.figures.tabs[uiState.figures.activeSubtab].figure.welds || []).map(w => ({ ...w, members: w.members.map(m => ({ ...m })) })));
+// Inserts a layer with exact params (insertLayer's own offset-from-a-
+// duplicate behavior only applies when no params are given), so a test
+// can put two objects' points exactly on top of each other on purpose.
+const insertExact = (key, params) => page.evaluate(async ([key, params]) => {
+  const m = await import("/ui/figures/figureLayers.js");
+  m.insertLayer(uiState.figures.activeSubtab, key, { params });
+}, [key, params]);
+// Patches the active layer's params directly (not through update(), which
+// for a position field would read the stale overlay points[] back over
+// it) and redraws, so infrastructure() and refreshPoints() -- both of
+// which read params directly -- see the change.
+const setActiveParams = (patch) => page.evaluate(async (patch) => {
+  const t = uiState.figures.tabs[uiState.figures.activeSubtab];
+  const inst = t.instances[t.figure.activeLayer];
+  Object.assign(inst.params, patch);
+  const m = await import("/ui/figures/figureLayers.js");
+  m.redrawFigure(uiState.figures.activeSubtab);
+}, patch);
+
+stage = "8 weld creation, direct handle propagation";
+await newFigure();
+await insertExact("drawLine", { pt1: { x: 200, y: 200 }, pt2: { x: 400, y: 400 } });   // layer 0
+await insertExact("drawLine", { pt1: { x: 400, y: 400 }, pt2: { x: 600, y: 600 } });   // layer 1, coincides at pt1/pt2
+await page.waitForTimeout(300);
+
+await page.check("#figureModeCheck");
+await page.waitForTimeout(300);
+await pickLayer(0);
+await clickAt(400, 400);                                   // anchored disc, layer 0, t = 1 (pt2)
+await pickLayer(1);
+await clickAt(400, 400);                                   // anchored disc, layer 1, t = 0 (pt1)
+let ds = (await points()).filter(p => p.kind === "anchored" && near(p.x, 400) && near(p.y, 400));
+if (ds.length !== 2) problems.push("[8 weld] setup: expected two coincident discs, got " + ds.length);
+
+await rightClickAt(400, 400);
+let w = await welds();
+if (w.length !== 1 || w[0].members.length !== 2) problems.push("[8 weld] after right-click: " + JSON.stringify(w));
+
+await page.uncheck("#figureModeCheck");
+await page.waitForTimeout(300);
+await pickLayer(0);
+await dragTo(400, 400, 450, 430);                           // drag layer 0's pt2 (the weld's driving end)
+let h1 = await page.evaluate(() => uiState.figures.tabs[uiState.figures.activeSubtab].instances[1].params);
+// A mouse-driven drag (not a computed position), so a 1 px tolerance, as
+// the 7b rotate test above already uses for the same reason.
+if (Math.abs(h1.pt1.x - 450) > 1 || Math.abs(h1.pt1.y - 430) > 1) problems.push("[8 weld] layer 1's pt1 did not follow: " + JSON.stringify(h1.pt1));
+if (!near(h1.pt2.x, 600) || !near(h1.pt2.y, 600)) problems.push("[8 weld] layer 1's pt2 moved too (should be independent): " + JSON.stringify(h1.pt2));
+let h0 = await page.evaluate(() => uiState.figures.tabs[uiState.figures.activeSubtab].instances[0].params);
+if (!near(h0.pt1.x, 200) || !near(h0.pt1.y, 200)) problems.push("[8 weld] layer 0's own other end moved: " + JSON.stringify(h0.pt1));
+
+stage = "8 unweld";
+await page.check("#figureModeCheck");
+await page.waitForTimeout(300);
+await rightClickAt(450, 430);
+w = await welds();
+if (w.length !== 0) problems.push("[8 unweld] weld should be gone: " + JSON.stringify(w));
+
+stage = "8 nothing to weld";
+await rightClickAt(100, 650);                               // empty canvas, no candidate, no disc
+w = await welds();
+if (w.length !== 0) problems.push("[8 nothing to weld] a weld appeared from an empty click: " + JSON.stringify(w));
+if ((await points()).some(p => near(p.x, 100) && near(p.y, 650))) problems.push("[8 nothing to weld] a disc was created where there was nothing to weld");
+await page.uncheck("#figureModeCheck");
+
+stage = "8 whole-layer fallback (no handle at the arm's end)";
+await newFigure();
+await page.selectOption("#figureInsertSelect", "regularPolygon");   // layer 0: no handle sits at any node
+await page.waitForTimeout(300);
+let polyArms = await page.evaluate(() => uiState.figures.tabs[uiState.figures.activeSubtab].instances[0].infrastructure());
+const polyNode0 = polyArms[0].a;
+await insertExact("drawLine", {                             // layer 1, pt1 lands exactly on the polygon's node 0
+  pt1: { x: polyNode0.x, y: polyNode0.y }, pt2: { x: polyNode0.x + 100, y: polyNode0.y + 100 }
+});
+await page.waitForTimeout(300);
+
+await page.check("#figureModeCheck");
+await page.waitForTimeout(300);
+await pickLayer(0);
+await clickAt(polyNode0.x, polyNode0.y);                     // anchored disc on the polygon's side0, t = 0
+await pickLayer(1);
+await clickAt(polyNode0.x, polyNode0.y);                     // anchored disc on the line's pt1
+await rightClickAt(polyNode0.x, polyNode0.y);
+w = await welds();
+if (w.length !== 1) problems.push("[8 fallback] weld not created: " + JSON.stringify(w));
+
+await page.uncheck("#figureModeCheck");
+await page.waitForTimeout(300);
+await pickLayer(1);
+await dragTo(polyNode0.x, polyNode0.y, polyNode0.x + 30, polyNode0.y - 15);
+let polyT = await page.evaluate(() => ({ ...uiState.figures.tabs[uiState.figures.activeSubtab].figure.layers[0].transform }));
+if (Math.abs(polyT.tx - 30) > 1 || Math.abs(polyT.ty - (-15)) > 1) problems.push("[8 fallback] the polygon's whole layer did not translate: " + JSON.stringify(polyT));
+
+stage = "8 disc disappears with its arm, taking its weld with it";
+await newFigure();
+await insertExact("drawLine", { pt1: { x: 200, y: 200 }, pt2: { x: 400, y: 400 } });   // layer 0
+await insertExact("parabola", {                             // layer 1, arm1 start coincides with layer 0's pt1
+  line1_pt1: { x: 200, y: 200 }, line1_pt2: { x: 200, y: 500 },
+  line2_pt1: { x: 200, y: 500 }, line2_pt2: { x: 500, y: 500 }
+});
+await page.waitForTimeout(300);
+
+await page.check("#figureModeCheck");
+await page.waitForTimeout(300);
+await pickLayer(0);
+await clickAt(200, 200);
+await pickLayer(1);
+await clickAt(200, 200);                                     // anchored on arm1, t = 0
+await rightClickAt(200, 200);
+w = await welds();
+if (w.length !== 1) problems.push("[8 disappear] weld not created: " + JSON.stringify(w));
+
+await setActiveParams({ shorten: 20 });                       // trims arm1's whole range away (steps default 20)
+w = await welds();
+if (w.length !== 0) problems.push("[8 disappear] the weld should have dissolved with its vanished member: " + JSON.stringify(w));
+if ((await points()).some(p => near(p.x, 200) && near(p.y, 200) && p.layer === 1)) problems.push("[8 disappear] the disc should have disappeared, not just the weld");
+await page.uncheck("#figureModeCheck");
+
 await browser.close();
 
 for (const n of notes.slice(0, 5)) console.log("note:", n);
@@ -975,4 +1102,4 @@ if (problems.length) {
   for (const p of problems) console.log(" ", p);
   process.exit(1);
 }
-console.log("\nPASS: 6 tabs x 2 passes, plus Draw and Patterns with an open item, plus the Notes menu item, plus the Figures shell, insert, points mode and 7b centroid, move and rotate, 7c break apart, 7d infrastructure, no errors");
+console.log("\nPASS: 6 tabs x 2 passes, plus Draw and Patterns with an open item, plus the Notes menu item, plus the Figures shell, insert, points mode and 7b centroid, move and rotate, 7c break apart, 7d infrastructure, 8 welds, no errors");

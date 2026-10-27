@@ -27,6 +27,16 @@
                                    clicked
        Delete / Backspace          delete the selected point
 
+     Right-click (Phase 8, figureWelds.js): toggles whether the disc
+     under the cursor is welded. Already welded -> drops it out of its
+     group. Not welded, with another disc (any layer, the same layer
+     included, for tying a corner) at the same spot -> welds them. A
+     bare infrastructure point is numbered first, but only if that
+     lands it on an existing disc -- otherwise nothing happens. Either
+     way a short message shows in the caption bar. The browser's own
+     context menu is suppressed on both the right mousedown and the
+     contextmenu event, so it never flashes up first.
+
      Both this file and the interactor listen at the same time in
      points mode. A press on a handle belongs to the interactor, so a
      disc is dragged only when the press is clear of the handles. A
@@ -63,6 +73,7 @@ import {
   moveFreePoint,
   deletePoint
 } from "./figurePoints.js";
+import { toggleWeldAt } from "./figureWelds.js";
 
 const CLICK_SLOP = 4;    // canvas pixels a press may move and still be a click
 
@@ -90,6 +101,29 @@ const POINTS_CURSOR =
   `url("data:image/svg+xml,${encodeURIComponent(CURSOR_SVG)}") ${CURSOR_HOT} ${CURSOR_HOT}, crosshair`;
 
 let controller = null;   // AbortController of the active listeners
+
+
+/* ------------------------------------------------------------
+   showWeldNotice(message)
+   A short-lived note in the caption bar (Phase 8: weld created,
+   removed, or nothing nearby to weld). Self-clearing, so it never
+   needs to be remembered to be cleaned up.
+   ------------------------------------------------------------ */
+function showWeldNotice(message) {
+  const caption = document.getElementById("caption");
+  if (!caption) return;
+
+  let el = document.getElementById("figureWeldNotice");
+  if (!el) {
+    el = document.createElement("span");
+    el.id = "figureWeldNotice";
+    el.style.cssText = "margin-left:12px; font-style:italic; opacity:0.85;";
+    caption.appendChild(el);
+  }
+  el.textContent = message;
+  clearTimeout(el._weldTimer);
+  el._weldTimer = setTimeout(() => { el.textContent = ""; }, 2500);
+} // end showWeldNotice
 
 
 /* ============================================================
@@ -215,6 +249,25 @@ export function activatePointsInput(tabId, redraw) {
     }
 
     ts.selectedPoint = point.n;
+    redraw();
+  }, { signal });
+
+  // Right-click: toggle the weld under the cursor (figureWelds.js).
+  // Both the mousedown and the contextmenu event are suppressed, so the
+  // browser's own menu never appears.
+  layer.addEventListener("mousedown", (e) => {
+    if (e.button === 2) e.preventDefault();
+  }, { signal });
+
+  layer.addEventListener("contextmenu", (e) => {
+    e.preventDefault();
+    const ts = tabState();
+    if (!ts || !editable()) return;
+
+    const m = coords(e);
+    const result = toggleWeldAt(ts, m.x, m.y, uiState.figures.hitRadius);
+    if (result.point) ts.selectedPoint = result.point.n;
+    showWeldNotice(result.message);
     redraw();
   }, { signal });
 

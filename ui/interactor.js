@@ -43,6 +43,12 @@ export function armInteractor(instance) {
         // Figures: true when a press at (x, y) belongs to the centroid, which
         // wins over a handle sitting under it.
         yieldTo: instance.yieldTo,
+        // Figures, Phase 8: snapshot the layer's welded discs just before a
+        // handle moves, and let them follow just after. Undefined (the
+        // Draw tab, or a layer with no welds) means moveHandle below does
+        // nothing extra.
+        beforeMove: instance.beforeMove,
+        afterMove:  instance.afterMove,
         onUpdate: () => {
             // Safety: Only proceed if this instance is still the active one
             if (!deactivateCurrent) return;
@@ -149,13 +155,16 @@ function activatePointPicker(points, config = {}) {
     }
 
     // The one place a handle is moved, by drag or by arrow key. (x, y) is a
-    // canvas position. Anything that must follow a handle (welds, in Phase 8)
-    // hooks in here.
+    // canvas position. Anything that must follow a handle (welds, Phase 8)
+    // hooks in here: beforeMove sees the layer's discs before the move,
+    // afterMove after onUpdate has synced and redrawn it.
     function moveHandle(i, x, y) {
+        if (settings.beforeMove) settings.beforeMove();
         const o = toObject(x, y);
         points[i].x = o.x;
         points[i].y = o.y;
         if (settings.onUpdate) settings.onUpdate();
+        if (settings.afterMove) settings.afterMove();
     }
 
     function render() {

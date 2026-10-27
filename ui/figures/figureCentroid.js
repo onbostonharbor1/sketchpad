@@ -58,6 +58,7 @@ import {
   translateTransform,
   rotateTransformAbout
 } from "/draw/drawTransform.js";
+import { snapshotWeldMembers, propagateAfterChange } from "./figureWelds.js";
 
 const BOX_PAD     = 6;     // box margin around the bounds, canvas pixels
 const STEM        = 26;    // from the box's top edge up to the rotation handle
@@ -223,13 +224,18 @@ export function activateCentroid(tabId, redraw) {
   const activeLayer = (ts) => ts.figure.layers[ts.figure.activeLayer];
 
   // Writes a transform into the layer without replacing the object, so
-  // everything holding the layer sees it.
+  // everything holding the layer sees it. Phase 8: the layer's welded
+  // discs are snapshotted first, then let follow once redraw() has
+  // moved everything and refreshed the points.
   const setTransform = (ts, t) => {
-    const layer = activeLayer(ts);
+    const layer      = activeLayer(ts);
+    const layerIndex = ts.figure.activeLayer;
+    const snapshot    = snapshotWeldMembers(ts.figure, layerIndex);
     if (!layer.transform) layer.transform = newTransform();
     Object.assign(layer.transform, t);
     redraw();
     refreshInteractor();
+    propagateAfterChange(tabId, layerIndex, snapshot);
   };
 
   let drag = null;   // { kind: "move"|"turn", from: {x,y}, start: transform, center, angle0 }

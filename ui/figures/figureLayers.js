@@ -68,6 +68,7 @@ import { syncOverlayToCanvas }      from "/ui/uiUtilities.js";
 import { refreshPoints, drawFigurePoints } from "./figurePoints.js";
 import { activatePointsInput, deactivatePointsInput } from "./figurePointer.js";
 import { activateCentroid, centroidHit, drawCentroid } from "./figureCentroid.js";
+import { snapshotWeldMembers, propagateAfterChange, drawWeldMarks } from "./figureWelds.js";
 import { newTransform, newBounds } from "/draw/drawTransform.js";
 
 // Experiment switch: true = the last layer clicked goes on top.
@@ -150,6 +151,16 @@ export function insertLayer(tabId, registryKey, { params = null, transform = nul
   // whether the centroid has the press instead.
   instance.getTransform  = () => layer.transform;
   instance.yieldTo       = (x, y) => centroidHit(uiState.figures.tabs[tabId], x, y);
+  // Phase 8: a handle's own weld followers. beforeMove snapshots this
+  // layer's welded discs; afterMove (called once the drag has synced and
+  // redrawn the layer) compares and walks the weld graph outward.
+  let weldSnapshot = null;
+  instance.beforeMove = () => {
+    weldSnapshot = snapshotWeldMembers(figure, index);
+  };
+  instance.afterMove = () => {
+    propagateAfterChange(tabId, index, weldSnapshot);
+  };
   tabState.centroidSelected = false;
   figure.drawOrder.unshift(index);      // new layer goes on top
   figure.activeLayer = index;
@@ -293,6 +304,7 @@ export function redrawFigure(tabId, { dim = true } = {}) {
   // rules as the layers. Anchored ones follow their layers, so refresh first.
   refreshPoints(tabState);
   drawFigurePoints(tabState, { showAll, dimming });
+  drawWeldMarks(tabState);
 
   // The active layer's centroid, and its box and rotation handle when selected.
   drawCentroid(tabState);

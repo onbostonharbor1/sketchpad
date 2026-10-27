@@ -52,6 +52,12 @@
    (the places a click can pick) are t = i / steps for i = from..to.
    Stitch lines are not infrastructure and cannot carry points.
 
+   Phase 8: refreshPoints() removes an anchored point outright, instead
+   of keeping its last position, once its arm is gone or its t has
+   fallen outside from..to (the object was replaced, or Trim Bottom /
+   Shorten Top trimmed its spot away). A point that disappears this way
+   leaves its weld, the same as deletePoint().
+
    Exports:
      findCandidate(tabState, x, y, radius)
      findPoint(figure, x, y, radius)
@@ -64,6 +70,7 @@
    ============================================================ */
 
 import { applyTransform, inverseTransform } from "/draw/drawTransform.js";
+import { removeFromWeld } from "./figureWelds.js";
 
 const MARKER_RADIUS = 9;   // drawn size of a numbered point
 const HALO_GAP      = 4;   // selected point: gap from the marker to its outer ring
@@ -223,10 +230,12 @@ export function moveFreePoint(point, x, y, transform = null) {
    deletePoint(figure, n)
    ------------------------------------------------------------
    Removes the point. Its number stays used: nextPoint never
-   goes back.
+   goes back. A welded point leaves its weld first (Phase 8), the same
+   as right-clicking it to unweld.
    ============================================================ */
 export function deletePoint(figure, n) {
 
+  removeFromWeld(figure, n);
   figure.points = figure.points.filter((p) => p.n !== n);
 
 } // end deletePoint
@@ -238,13 +247,21 @@ export function deletePoint(figure, n) {
    Recomputes where each anchored point is from its layer's
    current geometry, keeping its fraction t. Call after the layers
    have been updated and before drawing.
+
+   Phase 8: an anchored point whose arm has gone (object replaced) or
+   whose index has fallen outside the arm's current from..to (Trim
+   Bottom/Shorten Top trimmed it away) disappears with it, leaving its
+   weld the same way deletePoint does -- it no longer has a real place
+   to be, so there is nothing to keep showing.
    ============================================================ */
 export function refreshPoints(tabState) {
 
   const instances = tabState.instances || [];
+  const figure    = tabState.figure;
+  const gone      = [];
 
-  for (const p of tabState.figure.points) {
-    const xform = layerTransform(tabState.figure, p.layer);
+  for (const p of figure.points) {
+    const xform = layerTransform(figure, p.layer);
 
     if (p.kind === "free") {
       if (typeof p.ox !== "number") continue;
@@ -255,11 +272,19 @@ export function refreshPoints(tabState) {
     }
 
     const arm = armsOf(instances[p.layer]).find((a) => a.id === p.arm);
-    if (!arm) continue;               // keep the last known position
+    if (!arm) { gone.push(p.n); continue; }
+
+    const i = Math.round(p.t * arm.steps);
+    if (i < arm.from || i > arm.to) { gone.push(p.n); continue; }
 
     const pt = armPoint(arm, p.t, xform);
     p.x = pt.x;
     p.y = pt.y;
+  }
+
+  for (const n of gone) {
+    removeFromWeld(figure, n);
+    figure.points = figure.points.filter((p) => p.n !== n);
   }
 
 } // end refreshPoints

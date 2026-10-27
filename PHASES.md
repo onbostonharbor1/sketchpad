@@ -267,7 +267,72 @@ them `infrastructure()` is a small addition once welds are otherwise working. Ci
 Parabola (Multi) need real arc math for their perimeter arms (see the three-point/curvature-arc discussion,
 2026-10-27) and stay deferred. Parametrics has no node array yet at all and is its own future phase.
 
-Order: 7b, 7c, 7d done. 8 next.
+Order: 7b, 7c, 7d, 8 done.
+
+## Phase 8 as built (2026-10-27)
+
+Built against the spec above, on `claude/phase-8`. New file `ui/figures/figureWelds.js` holds all of it:
+the weld data (`figure.welds = [{ members: [{layer, n}, ...], }]`, not yet saved -- Phase 10),
+`toggleWeldAt()` (the right-click action), `snapshotWeldMembers()` / `propagateAfterChange()` (the
+move-propagation), and `drawWeldMarks()` (the plus-sign notice on the disc).
+
+Right-click (`figurePointer.js`, points mode only): suppressed on both the right mousedown and the
+`contextmenu` event, so the browser's own menu never appears. Right-clicking a disc already in a group drops
+it out (dissolving the group if that leaves fewer than two members); right-clicking one that is not in a
+group, with another disc (any layer, **including the same layer**, for tying a corner on purpose) within hit
+radius, welds them; right-clicking a bare infrastructure point numbers it first, but only if that lands it on
+an existing disc, so right-clicking empty infrastructure never litters the figure with an unweldable lone
+disc. A short message shows in the caption bar either way (a plain `<span>` appended there, self-clearing
+after 2.5s -- simpler than threading a real notice API through `ui/caption.js` for one phase).
+
+Move propagation hooks into two places, both already noted in interactor.js and figureCentroid.js as
+Phase 8's future hook points:
+- `ui/interactor.js`'s `moveHandle()` gained two optional settings, `beforeMove`/`afterMove`, called
+  immediately before and after a drag or arrow-key move (`armInteractor` passes them through from
+  `instance.beforeMove`/`instance.afterMove`, undefined for the Draw tab or any layer with no welds, so
+  nothing changes there).
+- `figureCentroid.js`'s `setTransform()` (the 7b move/turn drag) snapshots and propagates around its own
+  `redraw()` call the same way.
+
+Both snapshot `snapshotWeldMembers()` (the layer's own welded discs' canvas positions) just before the
+change and hand it to `propagateAfterChange()` just after. That walks the weld graph outward, breadth-first,
+from every welded disc that actually moved, choosing for each neighbor reached:
+1. the neighbor sits exactly at one of its own object's handles (an arm end that is a real handle) -- move
+   that one handle by the same canvas delta;
+2. the neighbor is mid-arm and *both* ends of that specific arm are real handles (Line, Parabola, Radiate)
+   -- move both, so the arm reshapes and the object's other handles stay (the provisional mid-arm rule);
+3. anywhere else (Regular Polygon, Inverse Star, a node ring -- the arm's ends are not handles at all) --
+   translate the whole layer, the same mechanism as the 7b centroid drag.
+A layer moves at most once per call; a second weld edge that would move it again is left alone, which is
+how an unsatisfiable weld shows up (its members no longer coincide -- see below). This matches the point
+made while discussing the spec: finding the right move is runtime coordinate-matching against the target
+layer's own handles, not a per-object-type table, so it keeps working as `infrastructure()` is widened to
+more objects later.
+
+The plus-sign notice (`drawWeldMarks()`, called from `redrawFigure()` right after `drawFigurePoints()`):
+one mark per weld group, at any one member's current position (a white halo so it reads over any layer
+color, with a black plus -- or red if the group's members have drifted apart). Nothing about satisfied/
+unsatisfied is stored on the weld; it is recomputed from the current disc positions on every draw, which is
+simpler than trying to keep a stored flag in sync with everything that can move a disc.
+
+Disc disappearance (`figurePoints.js`'s `refreshPoints()`, a real behavior change from before): an anchored
+point whose arm has gone, or whose index has fallen outside the arm's current `from..to` (an object was
+replaced, or Shorten Top / Trim Bottom trimmed its spot away), is now removed outright instead of kept at
+its last known position. `deletePoint()` and this new case both call `removeFromWeld()` first, so a
+vanished member leaves its weld the same way an explicit unweld does (dissolving the group if that leaves
+it under two members).
+
+Not built (not asked for, or explicitly out of scope): saving welds with the figure (Phase 10, same as the
+spec says); any attempt to detect or reject a weld whose two members, once satisfied, would form an
+unreachable cycle before the drag happens (the design relies entirely on the after-the-fact "members no
+longer coincide" check, never a topological one, matching "ring rule dropped").
+
+Tests (`tests/tabSwitch.mjs`, "8 ..." stages): weld creation and direct handle-to-handle propagation (two
+Lines joined end to end), the independence of the follower's other end, unweld, a right-click on empty
+canvas doing nothing, the whole-layer-translate fallback (a Line welded to a Regular Polygon node), and a
+disc (and its weld) disappearing when Shorten Top trims its arm away. Two of the drag-derived assertions
+use a 1 px tolerance (`Math.abs(...) > 1`) rather than the stricter `near()`, the same reasoning the
+existing 7b rotate test already uses: a real mouse-driven drag, not a computed position.
 
 ## Phase 7 as built
 
