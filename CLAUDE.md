@@ -5,6 +5,20 @@ point template for pounding nails into wood. Barry is a retired technical writer
 programmer. He wants to understand every line, so favor plain, readable code over clever code.
 Phase order and status are in PHASES.md. Read it before starting work.
 
+## What Sketchpad is for (two purposes, Barry 2026-10-27)
+
+1. A printable point template for pounding nails into wood (the end goal above).
+2. A place to sketch: to explore designs easily by working with how objects are represented and how they relate
+   to each other. He could not do this in the original StringThing, and it is why the app is called Sketchpad.
+   Circular Parabola (Multi), whose second handle separates and joins four copies, and Linked Circles, whose link
+   styles (pairwise, ring, all-to-all) make tubes and rings from a few circles, are examples he keeps around
+   because they are interesting to play with, not because a template needs them.
+
+Do not treat the second purpose as clutter or as a means to the first. When a decision trades one against the other
+(trimming a control range, dropping an object that nails cannot use, forcing every object through one drawing
+path), say so and let him decide.
+
+
 ## How to work with Barry
 
 - Talk like a trusted friend: direct, no preamble, no praise, no sycophancy. Push back when he is wrong.
