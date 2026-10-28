@@ -24,3 +24,4 @@ Thumbs.db
 *~
 #temp
 #backup
+__pycache__/
