@@ -1,0 +1,107 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Point Dragging</title>
+  <link rel="stylesheet" href="/help/help_treatise.css" />
+</head>
+<body>
+
+<h1>Point Dragging</h1>
+
+<p class="note">Written 27 October 2026. Sketchpad has four things you can drag, handled by three
+different files. This page puts them side by side, says which one wins when they overlap, and follows a
+drag through to the redraw.</p>
+
+<h2>The four draggable things</h2>
+<table>
+<tr><th>What</th><th>Looks like</th><th>Where</th><th>Code</th><th>What a drag changes</th></tr>
+<tr><td><strong>Handle</strong></td><td>small red dot (orange when hovered or selected)</td>
+  <td>Draw, Figures, interactive scripts</td><td><code>interactor.js</code></td>
+  <td>one entry of the object's <code>params.points</code>; the object reshapes</td></tr>
+<tr><td><strong>Free disc</strong></td><td>filled circle in the layer's color</td>
+  <td>Figures, points mode</td><td><code>figurePointer.js</code></td>
+  <td>that disc's position only</td></tr>
+<tr><td><strong>Centroid</strong></td><td>blue diamond (orange when selected)</td>
+  <td>Figures, lines mode, active layer</td><td><code>figureCentroid.js</code></td>
+  <td>the layer's transform: the whole layer moves</td></tr>
+<tr><td><strong>Rotation handle</strong></td><td>white circle on a stem above the box</td>
+  <td>Figures, while the centroid is selected</td><td><code>figureCentroid.js</code></td>
+  <td>the layer's transform: the whole layer turns about its centroid</td></tr>
+</table>
+<p>An <strong>anchored disc</strong> is not draggable. It sits at a fixed fraction along its object's
+infrastructure and moves when the object does.</p>
+
+<h2>Who gets the press</h2>
+<p>All three files listen to the mouse at once. In order of precedence:</p>
+<ol>
+<li>The <strong>centroid</strong> and its rotation handle (lines mode only). The interactor asks
+  <code>yieldTo(x, y)</code> first and stays out if the centroid wants the press. A Line's midpoint handle
+  sits exactly under its centroid, so on a Line the centroid always wins there.</li>
+<li>A <strong>handle</strong> of the active object, within 10 px.</li>
+<li>In points mode, a <strong>free disc</strong> under the press (within the larger of the hit radius and
+  the disc's 9 px).</li>
+<li>Otherwise, in points mode, the press is a click (place or select a disc).</li>
+</ol>
+<p>Only the left button drags. Right-click in points mode is the weld toggle and drags nothing. (The
+centroid's handler does not yet check the button; a right-press there starts a move. Known, listed in
+<code>PHASES.md</code>.)</p>
+
+<h2>Click or drag?</h2>
+<ul>
+<li><strong>Handles</strong>: any movement drags. The handle is placed exactly under the pointer.</li>
+<li><strong>Points mode</strong>: a press on a handle that moves more than 4 px is the handle being dragged; a
+  press that stays within 4 px is a click (so a disc can be placed on a handle). A press anywhere else is
+  always a click where it went down, even if the hand slips, because dragging empty canvas means
+  nothing.</li>
+</ul>
+
+<h2>Arrow keys</h2>
+<ul>
+<li>With a <strong>handle</strong> selected: the handle moves 1 px, 10 with Shift (Draw and Figures).</li>
+<li>With the <strong>centroid</strong> selected: the whole layer moves 1 px, 10 with Shift.</li>
+<li>Keys are ignored while typing in a text box, slider or list.</li>
+</ul>
+
+<h2>Object space and canvas space</h2>
+<p>In Figures every layer has a transform (move and turn). Handles and free discs are stored in the
+layer's own coordinates ("object space") and shown, hit and dragged in canvas pixels. Every drag converts
+the pointer position back through the transform before storing it, so a sideways drag moves the handle
+sideways on screen even on a layer that has been turned. The math is in
+<code>draw/drawTransform.js</code>.</p>
+
+<h2>A handle drag, start to finish (Figures)</h2>
+<ol>
+<li><code>interactor.js</code> grabs the handle on the press.</li>
+<li>Each mouse move calls <code>moveHandle()</code>:
+  <ol type="a">
+  <li><code>beforeMove()</code> snapshots where this layer's welded discs are.</li>
+  <li>The pointer position, in object space, goes into <code>params.points[i]</code>.</li>
+  <li>The object's <code>update()</code> rebuilds its geometry; <code>redrawFigure()</code> redraws every layer
+    and moves every anchored disc to its fraction along its arm.</li>
+  <li><code>afterMove()</code> compares with the snapshot. Each welded disc that moved passes the same move to
+    its partners on other layers: one handle, both ends of an arm, or the whole layer, depending on where
+    the partner sits (<code>figureWelds.js</code>).</li>
+  </ol></li>
+<li>Release ends the drag.</li>
+</ol>
+<p>A centroid move or turn goes the same way, through <code>setTransform()</code> in
+<code>figureCentroid.js</code>, with the same snapshot-and-follow around it.</p>
+
+<h2>What a midpoint handle does</h2>
+<p>A Line and a Parabola keep a midpoint in their handle list. The object's <code>update()</code> notices that
+the midpoint moved and slides the whole line instead of stretching it. So dragging a line's middle moves
+the line; dragging an end reshapes it.</p>
+
+<h2>Where to look</h2>
+<table>
+<tr><th>Question</th><th>File</th></tr>
+<tr><td>Why didn't the handle move?</td><td><code>interactor.js</code> (armed? <code>params.points</code>? <code>yieldTo</code>?)</td></tr>
+<tr><td>Why did a disc appear instead?</td><td><code>figurePointer.js</code> (the click rules above)</td></tr>
+<tr><td>Why did the whole layer move?</td><td><code>figureCentroid.js</code>, or a weld fallback in <code>figureWelds.js</code></td></tr>
+<tr><td>Why didn't the partner follow?</td><td><code>figureWelds.js</code> (is there really a weld? <code>figure.welds</code>)</td></tr>
+</table>
+
+</body>
+</html>

@@ -10,6 +10,12 @@
 
 <body>
 
+<p class="note">Checked 27 October 2026 against the current code; this page was already close. Corrected:
+paths are absolute (<code>/&lt;basedir&gt;/...</code>, no longer <code>../</code>); there is a sixth public method,
+<code>getRegistry()</code>; Figures registers a callback but reads its category list with <code>fetch()</code>
+itself and has no archive or edit command yet, so nothing invalidates <code>"figures"</code>; the Node service file is
+<code>node/sketchpadService.mjs</code>.</p>
+
   <h1>The Manifest System: Loading, Caching, Invalidation, and Tab Registration</h1>
 
   <p>
@@ -22,7 +28,7 @@
 
   <div class="note">
     <b>Scope</b><br/>
-    1) The <span class="mono">ManifestManager</span> class: its four caches and five public methods.<br/>
+    1) The <span class="mono">ManifestManager</span> class: its four caches and six public methods.<br/>
     2) How tabs register callbacks and how invalidation fires them.<br/>
     3) How the standard tabs (Patterns, Gallery, Utilities, Figures) use the system.<br/>
     4) How the Home tab differs and why.<br/>
@@ -64,7 +70,7 @@ this.listeners     = {}; // basedir → [ callback, ... ]</code></pre>
   </p>
 
 
-  <h2>2. The five public methods</h2>
+  <h2>2. The six public methods</h2>
 
   <h3>2.1 get(basedir)</h3>
 
@@ -75,15 +81,15 @@ this.listeners     = {}; // basedir → [ callback, ... ]</code></pre>
 
   <ul>
     <li>
-      <b>DirectoryRegistry model</b> — if <span class="mono">../&lt;basedir&gt;/directoryRegistry.json</span>
+      <b>DirectoryRegistry model</b> — if <span class="mono">/&lt;basedir&gt;/directoryRegistry.json</span>
       exists, it is read as an array of category names. For each category,
-      <span class="mono">../&lt;basedir&gt;/&lt;category&gt;/manifest.json</span> is loaded (or an empty
+      <span class="mono">/&lt;basedir&gt;/&lt;category&gt;/manifest.json</span> is loaded (or an empty
       array substituted if absent). The result is an array-of-arrays, one inner array per category.
       Both the result and the registry array are cached.
     </li>
     <li>
       <b>Flat model</b> — if no registry exists but
-      <span class="mono">../&lt;basedir&gt;/manifest.json</span> exists, it is loaded as a flat array
+      <span class="mono">/&lt;basedir&gt;/manifest.json</span> exists, it is loaded as a flat array
       and cached.
     </li>
     <li>
@@ -175,7 +181,11 @@ this.listeners     = {}; // basedir → [ callback, ... ]</code></pre>
   <h2>3. How the standard tabs use the system</h2>
 
   <p>
-    Patterns, Gallery, Utilities, and Figures all follow the same pattern.
+    Patterns, Gallery and Utilities all follow the same pattern. Figures registers a callback (below) but
+    does not use <span class="mono">manifest.get()</span>: <span class="mono">figuresDisplay.js</span> fetches
+    <span class="mono">/figures/directoryRegistry.json</span> and each category's manifest itself.
+    <span class="mono">getRegistry(basedir)</span> returns the cached category list for a basedir
+    (an empty array if none).
   </p>
 
   <h3>3.1 At init time</h3>
@@ -265,7 +275,7 @@ this.listeners     = {}; // basedir → [ callback, ... ]</code></pre>
       </tr>
       <tr>
         <td>Archive or edit manifest (Figures)</td>
-        <td><span class="mono">"figures"</span></td>
+        <td>none yet: Figures has no such commands until Save As (Phase 10)</td>
       </tr>
       <tr>
         <td>Create pattern PNG (from Draw)</td>
@@ -376,7 +386,7 @@ if (Object.prototype.hasOwnProperty.call(manifest.cache, "home")) {
     Because <span class="mono">/home/manifest.json</span> is a derived file, any edit to a
     per-tab manifest that adds, changes, or removes a status must also be mirrored into Home's
     manifest on disk. This is handled entirely in the Node service
-    (<span class="mono">sketchpadService.js</span>) so the browser does not need to know about it.
+    (<span class="mono">node/sketchpadService.mjs</span>) so the browser does not need to know about it.
   </p>
 
   <h3>5.1 editManifestEntry (Case A: editing from within a tab)</h3>
@@ -523,7 +533,7 @@ if (Object.prototype.hasOwnProperty.call(manifest.cache, "home")) {
             groups by status, and updates Home's display state.</td>
       </tr>
       <tr>
-        <td><span class="mono">sketchpadService.js</span></td>
+        <td><span class="mono">node/sketchpadService.mjs</span></td>
         <td>Writes per-tab manifests and mirrors every status change into
             <span class="mono">/home/manifest.json</span> immediately,
             so the browser never reads stale home data after a cache clear.</td>

@@ -10,6 +10,9 @@
 
 <body>
 
+<p class="note">Checked 27 October 2026. Accurate; additions are at the end of the page.</p>
+
+
   <p>
     <strong>categories.js</strong> implements Sketchpad’s universal category rendering system.
     It is a pure DOM builder that renders category frames from a single, tab-supplied descriptor format.
@@ -204,6 +207,22 @@
     Tabs provide a descriptor that defines what to show and what happens on click.
     This module validates the structure and renders it consistently, deterministically, and fail-fast.
   </p>
+
+<h2>Added 27 October 2026</h2>
+<p class="note">Checked against the current code. Everything above still holds; these are the additions.</p>
+<p><strong>buildCategoryDescriptor(groups, itemLabelFn, onClickFn)</strong> builds the descriptor for the
+common case: <code>groups</code> is <code>{ category: [entries] }</code> (what
+<code>manifest.getCategoryMap()</code> returns); each entry's label comes from <code>itemLabelFn(entry)</code>; a click
+calls <code>onClickFn(category, list, entry, index)</code>. Patterns uses it. (Also re-exported from
+<code>uiUtilities.js</code>.)</p>
+<p><strong>A quirk in it:</strong> it sorts each list with <code>[...list].sort(itemLabelFn)</code>, passing the
+label function where <code>sort()</code> expects a comparison of two items. The result is that the list is left in
+its original order. It works, because the index handed to the click matches the original manifest order
+that Patterns looks up, and <code>renderCategories()</code> then sorts what is shown by name anyway. Changing it
+to a real alphabetical sort would break that index, so leave it, or fix both together.</p>
+<p><strong>secondaryAction:</strong> an item may carry <code>secondaryAction: function</code>; the item then shows a
+small separate button that runs it without selecting the item. Draw uses this for the "&gt;" that lists an
+object's saved secondaries.</p>
 
 </body>
 </html>

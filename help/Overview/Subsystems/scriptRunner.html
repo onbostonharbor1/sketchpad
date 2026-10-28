@@ -10,6 +10,19 @@
 
 <body>
 
+<p class="note">Checked 27 October 2026 against the current code. Changes since this page was written:
+tabs now call one function, <code>runScriptByPath(path, mode, options)</code>, which stops the previously
+running script (if it exports <code>stop()</code>), disarms the interactor, loads the new one, and sends it to
+<code>executeScriptToCanvas</code> (mode <code>"canvas"</code>) or <code>executeScriptToText</code> (mode
+<code>"text"</code>). The canvas route now takes options (<code>canvasRegionId</code>, <code>enableControls</code>,
+<code>controlsRegionId</code>, <code>clearBackground</code>, <code>backgroundColor</code>), fills the background white,
+runs <code>runPattern()</code>, then arms the interactor if the script's <code>scriptInfo</code> is interactive with
+<code>params.points</code>, and builds its parameter controls. The legacy <code>initPattern</code> /
+<code>drawPattern</code> fallback described below is gone. One mismatch: the file's header says
+<code>runPattern(ctx)</code> receives the context when it declares a parameter, but the code always calls
+<code>runPattern()</code> with no argument.</p>
+
+
   <h1>scriptRunner.js — Universal Script Loader and Deterministic Execution Pipeline</h1>
 
   <p>

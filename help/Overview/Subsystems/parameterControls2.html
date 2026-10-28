@@ -10,6 +10,15 @@
 
 <body>
 
+<p class="note">Checked 27 October 2026; the flags below still work as described. The code now lives in
+<code>ui/controls/</code> (see "Parameter Controls"), and <code>ui/parameterControls.js</code> just forwards to it.
+Not listed below and also available: <code>widget: "number"</code> (honors <code>min</code> and <code>max</code>),
+<code>widget: "thumbnailGrid"</code>, and the grouping flags <code>showsGroup</code> and <code>belongsToGroup</code>
+(see the grouping guide). The point-picker widgets are switched off. Environment detection (section 11)
+applies only when no tab id is given; a tab id starting <code>"tab-draw"</code> or <code>"tab-scripts"</code> decides
+it outright.</p>
+
+
   <h1>parameterControls.js — Control Schema Flags & Rendering Rules</h1>
 
   <p>

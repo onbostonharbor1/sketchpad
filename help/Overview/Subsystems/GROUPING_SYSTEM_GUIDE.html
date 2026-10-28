@@ -69,11 +69,19 @@
     </style>
 </head>
 <body>
+
+<p class="note">Checked 27 October 2026; the mechanism works as described. Corrections: the code is now in
+<code>ui/controls/</code> (the filter in <code>builders/groupFilter.js</code>, the rebuild in
+<code>rendering/rebuild.js</code>, the triggers in <code>widgets/selectWidget.js</code> and
+<code>widgets/radioWidget.js</code>); there is no <code>figuresRunner.js</code> (Figures builds its controls the
+same way Draw does, so grouping works there too); the example file is
+<code>gallery/Scripts/Experimental/concentricCircles.js</code>, not <code>concentricStitch_grouped.js</code>.</p>
+
     <h1>Control Grouping System - Implementation Guide</h1>
 
     <h2>What Was Implemented</h2>
     <p>A <strong>declarative grouping mechanism</strong> for conditional control visibility in <code>parameterControls.js</code>.</p>
-    <p>No changes required to scriptRunner, drawRunner, or figuresRunner - the grouping logic is entirely self-contained within parameterControls.js.</p>
+    <p>No changes were needed in scriptRunner or the Draw and Figures tabs: the grouping logic is entirely inside the parameter controls (<code>ui/controls/</code>).</p>
 
     <h2>How It Works</h2>
 
@@ -178,7 +186,7 @@ sides: { belongsToGroup: "polygon" }  // matches when boundaryType === "polygon"
     <ul>
         <li><strong>Gallery Scripts</strong> (scriptRunner.js)</li>
         <li><strong>Draw objects</strong> (drawRunner.js)</li>
-        <li><strong>Figures</strong> (figuresRunner.js)</li>
+        <li><strong>Figures</strong> (figureLayers.js, through the same Draw-style controls)</li>
     </ul>
     <p>No special integration code needed in any runner.</p>
 
@@ -212,7 +220,7 @@ renderParameterControls() rebuilds the DOM
 Control panel updates (hidden controls removed, new controls appear)</div>
 
     <div class="note">
-        <strong>Example:</strong> See the file <code>concentricStitch_grouped.js</code> for a complete working implementation using this system.
+        <strong>Example:</strong> See <code>gallery/Scripts/Experimental/concentricCircles.js</code> for a complete working implementation using this system.
     </div>
 </body>
 </html>

@@ -10,6 +10,15 @@
 
 <body>
 
+<p class="note">Checked 27 October 2026. <code>ui/actionRegistry.js</code> still exists and <code>main.js</code> still
+loads it, but nothing uses <code>MENU_ACTIONS</code> any more. Caption menus are now built from the small
+item makers in <code>menuCmds.js</code> (<code>makeHelpItem</code>, <code>makeShowScriptItem</code>,
+<code>makeNotesItem</code>, <code>makeEditManifestItem</code>, <code>makeArchiveItem</code>,
+<code>makeThumbnailItem</code>); see the menuManager page. The description below is of the file as it is, but
+the registry is a candidate for deletion. Its Help builder now resolves to <code>help.js</code>, and nothing offers
+"Duplicate" (Draw's menu has Copy Object instead).</p>
+
+
   <p>
     <strong>actionsRegistry.js</strong> defines a small, declarative registry of caption-menu actions used throughout the Sketchpad UI.
     It centralizes how menu items are constructed so that individual tabs (Draw, Patterns, Gallery, etc.)

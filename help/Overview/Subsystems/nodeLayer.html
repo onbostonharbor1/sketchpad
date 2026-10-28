@@ -10,6 +10,15 @@
 
 <body>
 
+<p class="note">Checked 27 October 2026; still accurate. Two additions: besides the three named wrappers,
+other code calls <code>nodeDispatch()</code> directly with these request names: <code>editManifestEntry</code>,
+<code>archiveSecondaryObject</code>, <code>saveSecondaryObject</code>, <code>readSecondaryObject</code>,
+<code>getSecondaryManifest</code>, <code>getPrimaryObjectsWithSecondaries</code>, <code>writeGalleryPatternPng</code>,
+<code>writePatternFromDrawRegistry</code>, <code>writePatternThumbnail</code>, <code>writeHelpFile</code> and
+<code>openInEditor</code>. The service itself is <code>node/sketchpadServer.mjs</code> (the HTTP server on port 5174)
+and <code>node/sketchpadService.mjs</code> (the tasks).</p>
+
+
   <h1>nodeLayer.js — Browser-side Bridge to the Node Service</h1>
 
   <p>
