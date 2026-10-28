@@ -106,13 +106,15 @@ export const FiguresTabSpec = {
 /* ============================================================
    initFiguresTab(restored)
    ------------------------------------------------------------
-   Called every time the Figures tab is shown. Builds the
-   uiState.figures object the first time only, then rebuilds the
-   tab's screen regions and returns to the subtab that was active.
+   Called every time the Figures tab is shown. Rebuilds the tab's
+   screen regions and returns to the subtab that was active.
    ============================================================ */
 export function initFiguresTab(restored = false) {
 
-  // First visit only. "!uiState.figures" is true when it does not exist yet.
+  // A guard only: uiState.js already declares uiState.figures with these
+  // same values (CLAUDE.md: every global value is declared in its state
+  // object), so this block does not normally run. "!uiState.figures" is
+  // true only if that declaration were ever removed.
   if (!uiState.figures) {
     uiState.figures = {
       activeSubtab: "tab-categories",

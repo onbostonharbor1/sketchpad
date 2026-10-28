@@ -12,11 +12,13 @@ Do one phase at a time. After each, stop and wait for him to review, play with i
 | 5 | Figures shell: Create Figure, Untitled N subtabs, caption menu | Done, merged |
 | 6a | Insert objects (see below) | Done, merged |
 | 6b | Points mode: click-to-place discs (anchored or free) on the active layer, global `nextPoint`, Points Mode checkbox, final display in points mode, a "Hit radius" subcommand (default 5 px) for tuning. Model below | Done, merged |
-| 6c | Layer colors: each layer has a color, shown on its number in the strip and changeable there; that layer's numbered points are drawn as circled numbers in the same color. Retire the old coded-number display (printCircNum and `drawState.ctr`), which only existed to name join points when numbers were coded by hand | Built on `claude/phase-6c`, awaiting his review (see "Phase 6c as built"). The old coded-number display is NOT retired: see the note there |
-| 7 | Handle and drag: arrow-key nudging, 1 px, 10 px with Shift, of the object's own handles. (The "nudge a number label" part is dropped: discs have no visible numbers.) | Built on `claude/phase-7`, awaiting his review (see "Phase 7 as built") |
-| 7b | Centroid and bounding box: every object has a visible centroid. Drag the centroid to move the object anywhere. Selecting a centroid shows a bounding box; grabbing the handle on the box rotates the object about the centroid | Built on `claude1` (no branch, Barry 2026-10-26), awaiting his review (see "Phase 7b as built") |
-| 7c | Break apart an object into its pieces (own phase: it changes existing drawing code). A composite object, such as a polygon of stitched parabolas, is replaced by separate layers (Lines, Parabolas) that can be moved, welded and deleted on their own. Needs a `decompose()` on each object that supports it. Barry's route: redo the drawing commands so they can produce their objects as separate segments, and break apart uses that | Built on `claude/phase-7c`, awaiting his review (see "Phase 7c as built") |
-| 8 | Welds (see "Phase 8 spec"). Order stays 7b, 7c, then 8 (Barry, 2026-10-26) | |
+| 6c | Layer colors: each layer has a color, shown on its number in the strip and changeable there; that layer's numbered points are drawn as circled numbers in the same color. Retire the old coded-number display (printCircNum and `drawState.ctr`), which only existed to name join points when numbers were coded by hand | Done, merged |
+| 7 | Handle and drag: arrow-key nudging, 1 px, 10 px with Shift, of the object's own handles. (The "nudge a number label" part is dropped: discs have no visible numbers.) | Done, merged |
+| 7b | Centroid and bounding box: every object has a visible centroid. Drag the centroid to move the object anywhere. Selecting a centroid shows a bounding box; grabbing the handle on the box rotates the object about the centroid | Done, merged |
+| 7c | Break apart an object into its pieces (own phase: it changes existing drawing code). A composite object, such as a polygon of stitched parabolas, is replaced by separate layers (Lines, Parabolas) that can be moved, welded and deleted on their own. Needs a `decompose()` on each object that supports it. Barry's route: redo the drawing commands so they can produce their objects as separate segments, and break apart uses that | Done, merged |
+| 7d | `infrastructure()` for every array-built object, then the node-ring objects (see "Phase 7d") | Done, merged |
+| 8 | Welds (see "Phase 8 spec" and "Phase 8 as built"). Two bugs found in real use and fixed the same day | Done, merged into `claude1` 2026-10-27 |
+| 8, next pass | A handle dropped on another handle welds (see "Phase 8, next pass") | Specified; six questions open for Barry |
 | 8b | Magic points: more candidate kinds (midpoints, tops of loops, cusps), needed as weld targets and for parametric objects | |
 | 9 | Print aids: scale bar; minimum nail-spacing check (needs nail size and highlight-vs-list answers from Barry) | |
 | 10 | Save and recovery (Save As, category and manifest creation, reload) | |
@@ -414,6 +416,16 @@ Open questions for Barry before it is built:
 - **Same object.** Dropping a Parabola's `line2_pt1` onto its own `line1_pt2` would tie its corner, the
   same as a right-click does now. Proposed: yes.
 - **Undoing.** Right-click on the weld still removes it. An accidental drop has no other undo yet.
+
+Two small things found while documenting (2026-10-27), to fix in the same pass:
+
+- **The weld mark is hidden.** The + is drawn on the main canvas; handles are drawn on the interaction
+  layer above it. A weld on a handle has the handle's dot (radius 5) right over the + (arms 5), so only the
+  white halo shows and it reads as a ring. Barry expected a +. Fix: draw the + larger than a handle, or draw
+  it on the interaction layer after the handles.
+- **The centroid ignores the mouse button.** `figureCentroid.js`'s mousedown does not check `e.button`, so a
+  right-press on the diamond starts a move (lines mode only; the diamond is hidden in points mode). Same
+  one-line fix as the interactor and points-mode handlers got.
 
 ## Phase 7 as built
 

@@ -1,0 +1,169 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Figures Tab — A First Discussion</title>
+  <link rel="stylesheet" href="/help/help_treatise.css" />
+</head>
+<body>
+
+<h1>Figures Tab — A First Discussion</h1>
+
+<p class="note">Written 27 October 2026, after Phase 8 (welds) was merged into <code>claude1</code>. This is a
+preliminary account: what the tab is for, the ideas it is built on, how it is used today, how the code is
+laid out, and where the phases stand. The authority for the phases is <code>PHASES.md</code>.</p>
+
+<h2>What it is for</h2>
+<p>Figures is where several drawing objects come together into one design. It serves two purposes, and
+neither is a means to the other:</p>
+<ol>
+<li><strong>A printable point template</strong> for pounding nails into wood: every hole numbered and placed,
+  at true size.</li>
+<li><strong>A place to sketch</strong>: to explore designs by working with how objects are represented and
+  how they relate to each other. The original StringThing could not do this, and it is why the program is
+  called Sketchpad.</li>
+</ol>
+<p>When a decision trades one purpose against the other (trimming a control range, dropping an object that
+nails cannot use, forcing every object through one drawing path), it is raised for decision rather than
+settled quietly.</p>
+
+<h2>The ideas, in the order they build on each other</h2>
+<dl>
+<dt><strong>Figure</strong></dt>
+<dd>One design, in its own subtab ("Untitled 1"). Plain data: name, layers, discs, welds. It lives in
+  <code>uiState.figures.tabs[tabId].figure</code>, so it survives switching tabs. It is not saved to disk yet
+  (Phase 10).</dd>
+<dt><strong>Layer</strong></dt>
+<dd>One inserted registry object (a Line, a Parabola, a Regular Polygon...) with its parameters, a
+  visibility flag, an identity color, and a transform. Layer numbers never change. Stacking order is kept
+  separately; the last layer clicked goes on top.</dd>
+<dt><strong>Instance</strong></dt>
+<dd>The live object that draws a layer: a private copy of the registry object, so two Parabolas do not share
+  parameters. Kept beside the figure, not in it.</dd>
+<dt><strong>Transform</strong></dt>
+<dd>How far a layer has been moved and turned: <code>{ angle, tx, ty }</code>. The object keeps its own
+  numbers; only the transform changes. Every drawn line, handle and disc goes through it.</dd>
+<dt><strong>Handle</strong></dt>
+<dd>One of the object's own red dots. The only thing that drags the object's shape. Arrow keys nudge the
+  selected one (1 px, 10 with Shift).</dd>
+<dt><strong>Infrastructure</strong></dt>
+<dd>The skeleton of an object: the lines (arms) the stitches run between, as opposed to the stitches
+  themselves. Each arm is divided into candidate points, the places a disc can sit.</dd>
+<dt><strong>Disc</strong></dt>
+<dd>A numbered point, drawn as a filled circle in its layer's color. <em>Anchored</em>: sits at a fixed
+  fraction along an arm and rides with the object. <em>Free</em>: placed anywhere and moved only by dragging
+  it. Numbers are never reused.</dd>
+<dt><strong>Centroid</strong></dt>
+<dd>The diamond at the center of the active layer's extent. Drag it to move the layer; click it for a box with
+  a rotation handle.</dd>
+<dt><strong>Weld</strong></dt>
+<dd>A group of discs, on different layers (or two corners of one object), that must stay on the same spot.
+  Drag one, and the others' objects follow.</dd>
+</dl>
+
+<h2>The screen</h2>
+<ul>
+<li><strong>Left column</strong>: Commands; Show All (every layer at full strength, hidden ones too); Points
+  Mode; Create Figure (on Categories) or Insert Object (in a figure).</li>
+<li><strong>Caption bar</strong>: the figure's name; Line and Parabola buttons; "Layer N · Name" and its Show
+  checkbox; the "v" menu (Help, Notes, Hit radius, Delete selected point, Break apart, and grayed future
+  items).</li>
+<li><strong>Layer strip</strong>, left of the canvas: one numbered chip per layer, in its color. Click to make
+  it active; right-click to change its color. A hidden layer's number is struck through.</li>
+<li><strong>Canvas</strong>: the layers, the discs, the weld marks; above it the centroid overlay and the
+  handles.</li>
+<li><strong>Action panel</strong>: the active layer's sliders, built by the same code the Draw tab uses.</li>
+</ul>
+
+<h2>How it is used today</h2>
+<h3>Lines mode (the default)</h3>
+<ul>
+<li>Insert objects. A second copy of the same object is offset 20 px so it does not land on the first.</li>
+<li>Drag handles to shape the active object. Drag the diamond to move it; click it and drag the round
+  handle to turn it.</li>
+<li>Hide a layer while working (it still appears in Show All and the final drawing).</li>
+<li>Break apart: a composite object becomes separate layers, one per piece. The original is hidden.</li>
+</ul>
+<h3>Points mode</h3>
+<ul>
+<li>Layers show only their points. Only the active layer can be changed, and the insert tools are grayed.</li>
+<li>Left-click near a candidate: an anchored disc. Elsewhere: a free disc. On a disc: select it. Drag a free
+  disc to move it. Delete or Backspace removes the selected disc.</li>
+<li>Right-click on a spot where two discs meet: weld them. Right-click a welded disc: unweld it. A short note
+  in the caption bar says what happened.</li>
+</ul>
+<h3>Making a weld, step by step</h3>
+<ol>
+<li>Points Mode on.</li>
+<li>Make the first object's layer active and click the meeting spot: a disc on that object.</li>
+<li>Make the second object's layer active and click the same spot: a disc on that object.</li>
+<li>Right-click the spot. "Welded."</li>
+<li>Points Mode off. Drag either object's handle there; the other follows.</li>
+</ol>
+<p>The layer change between steps 2 and 3 is easy to forget, because a click only ever places a disc on the
+active layer. The next Phase 8 pass is meant to remove it: drop one handle on another and they weld.</p>
+
+<h2>The code</h2>
+<table>
+<tr><th>File</th><th>Owns</th></tr>
+<tr><td><code>figures.js</code></td><td>the TabSpec; init; the left-column controls</td></tr>
+<tr><td><code>figuresNav.js</code></td><td>subtabs: open, switch, close; wiring the checkboxes and Insert list</td></tr>
+<tr><td><code>figuresCommands.js</code></td><td>Commands panel; the caption menu</td></tr>
+<tr><td><code>figuresDisplay.js</code></td><td>the saved-figure category list (empty until Phase 10)</td></tr>
+<tr><td><code>figuresState.js</code></td><td>navigation bookkeeping</td></tr>
+<tr><td><code>figureModel.js</code></td><td>the figure as plain data</td></tr>
+<tr><td><code>figureLayers.js</code></td><td>insert, draw, select, hide layers; arming the mouse handling</td></tr>
+<tr><td><code>figurePoints.js</code></td><td>discs: data, finding candidates, drawing</td></tr>
+<tr><td><code>figurePointer.js</code></td><td>mouse and keys in points mode</td></tr>
+<tr><td><code>figureCentroid.js</code></td><td>moving and turning a whole layer</td></tr>
+<tr><td><code>figureWelds.js</code></td><td>welds: make, unmake, follow, draw the mark</td></tr>
+<tr><td><code>draw/drawTransform.js</code></td><td>the transform math</td></tr>
+</table>
+<p>A separate document, <em>The Figures code, commented</em> (<code>docs/Figures-code.pdf</code>), has every
+one of these files in full, with comments for reading and two actions traced end to end.</p>
+<p>Shared pieces Figures relies on: <code>interactor.js</code> (handle dragging; see "Point Dragging"),
+<code>drawLine</code> in <code>draw/drawUtilities.js</code> (every line goes through it, which is how the
+transform reaches every object), <code>buildParameterControls()</code>, and each registry object's
+<code>infrastructure()</code> and, for Break apart, <code>decompose()</code>.</p>
+
+<h2>Where the phases stand</h2>
+<table>
+<tr><th>Phase</th><th>What</th><th>Status</th></tr>
+<tr><td>1–4</td><td>Tests and safe fixes; hygiene; Notes popup; Draw prerequisites (final flag, <code>drawLine</code>
+  routing)</td><td>Done</td></tr>
+<tr><td>5</td><td>Figures shell: Create Figure, Untitled N subtabs, caption menu</td><td>Done</td></tr>
+<tr><td>6a</td><td>Insert objects; layer strip; Show All</td><td>Done</td></tr>
+<tr><td>6b</td><td>Points mode: anchored and free discs, hit radius</td><td>Done</td></tr>
+<tr><td>6c</td><td>Layer colors; unnumbered colored discs; free discs draggable</td><td>Done</td></tr>
+<tr><td>7</td><td>Arrow-key nudging of handles</td><td>Done</td></tr>
+<tr><td>7b</td><td>Centroid, bounding box, move and rotate a layer</td><td>Done</td></tr>
+<tr><td>7c</td><td>Break apart</td><td>Done</td></tr>
+<tr><td>7d</td><td><code>infrastructure()</code> for every array-built object</td><td>Done</td></tr>
+<tr><td>8</td><td>Welds; two real-use bug fixes on 27 October</td><td>Done, merged into <code>claude1</code> 27 Oct 2026</td></tr>
+<tr><td>8, next pass</td><td>A handle dropped on another handle welds them</td><td>Specified; six questions open in
+  <code>PHASES.md</code></td></tr>
+<tr><td>8b</td><td>Magic points: midpoints, tops of loops, cusps as candidates</td><td>Not started</td></tr>
+<tr><td>9</td><td>Print aids: scale bar, minimum nail spacing</td><td>Not started</td></tr>
+<tr><td>10</td><td>Save and recovery: Save As, categories, reload</td><td>Not started</td></tr>
+<tr><td>11</td><td>Figure follow-ups (deleting layers among them)</td><td>Not started</td></tr>
+<tr><td>12</td><td>Thumbnails in the Insert list</td><td>Not started</td></tr>
+<tr><td>13</td><td>Sweep tool</td><td>Not started</td></tr>
+<tr><td>14</td><td>Filesystem boundary refactor</td><td>Not started</td></tr>
+</table>
+
+<h2>Known gaps today</h2>
+<ul>
+<li>Nothing is saved: closing a figure subtab or reloading the page loses it (Phase 10). There is no undo
+  (see "Undo in Figures: a proposal" under Design Notes).</li>
+<li>The weld mark (a +) is hidden under the handle dot whenever a weld sits on a handle, which is nearly
+  always; you see only its white ring.</li>
+<li>A right-press on the centroid diamond (lines mode) starts a move; the same right-button fix made to
+  handles and points mode has not been made there.</li>
+<li>A weld moves its partners by shifting them. Turning a welded layer turns that layer; its partners are
+  pulled along, not turned.</li>
+<li>Objects without <code>infrastructure()</code> take only free discs.</li>
+</ul>
+
+</body>
+</html>
