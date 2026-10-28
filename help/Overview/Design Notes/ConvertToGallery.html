@@ -14,6 +14,13 @@
 
 <body>
 
+<p class="note">Checked 27 October 2026. The contract stands as written. One thing has changed around it:
+<code>scriptRunner.js</code> now also builds a script's controls after <code>runPattern()</code> returns, when the tab
+asks for controls and the script exports <code>scriptInfo</code>. A converted script that builds its own controls
+in <code>runPattern()</code> (as step 4 below requires) therefore has them built twice, with the same result. Harmless;
+noted so it is not mistaken for a bug.</p>
+
+
   <h1>DESIGN RULES — GALLERY SCRIPT CONVERSION (AUTHORITATIVE)</h1>
 
   <p>

@@ -13,6 +13,13 @@
 
 <body>
 
+<p class="note">Checked 27 October 2026. The contract stands. The loader side has moved on: tabs now call
+<code>runScriptByPath()</code> in <code>scriptRunner.js</code>, which stops the previous script (if it exports
+<code>stop()</code>), puts the canvas in place, fills it white, calls <code>runPattern()</code> with no argument, then
+arms the handle dragger for an interactive <code>scriptInfo</code> and builds its controls if the tab asked for
+them. See the scriptRunner page.</p>
+
+
   <h1>runPattern() in Sketchpad</h1>
 
   <p>

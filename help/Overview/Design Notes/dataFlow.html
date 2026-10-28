@@ -14,6 +14,11 @@
 
 <body>
 
+<p class="note">Checked 27 October 2026. The four loops still describe the app. Two updates: manifests are now
+cached in <code>manifest.js</code> (not in <code>uiState</code>), and the Figures tab, which this page predates, adds its
+own kind of data; see the section added at the end.</p>
+
+
   <h1>Sketchpad Data Flow (Overview)</h1>
 
   <p>
@@ -371,6 +376,29 @@
     These loops interact, but they remain separate.
     This separation is what keeps Sketchpad understandable, testable, and fail-fast.
   </p>
+
+<h2>Added 27 October 2026: Figures</h2>
+<p>Figures adds a fifth kind of data and a variation on the drawing loop.</p>
+<h3>E. Figure data (uiState.figures.tabs[tabId].figure)</h3>
+<ul>
+<li>Plain data: layers (registry id, parameters, color, visibility, transform), discs, welds, stacking order,
+  active layer. Not saved to disk yet (Phase 10).</li>
+<li>Beside it, not in it: one live instance per layer (<code>tabState.instances</code>), a private copy of the
+  registry object made with <code>Object.create</code>. A layer's <code>params</code> and its instance's
+  <code>params</code> are the same object, so a slider or a handle drag changes the figure data directly.</li>
+</ul>
+<h3>Loop 5: the figure drawing loop</h3>
+<ol>
+<li>A control, handle, disc click or centroid drag changes the figure data (through the shared params, or
+  directly).</li>
+<li><code>redrawFigure()</code> draws every visible layer bottom to top. While a layer draws,
+  <code>drawState.transform</code> holds its transform and <code>drawLine</code> maps every line through it.</li>
+<li>Anchored discs are recomputed from their arm and fraction; then discs and weld marks are drawn.</li>
+<li>If the change moved welded discs, their partners on other layers are moved the same amount, and the
+  figure is drawn once more.</li>
+</ol>
+<p>The rule from Loop 3 still holds inside each layer: the object's <code>draw()</code> reads its own elements.
+What is new is that one canvas holds many objects at once, each in its own coordinates.</p>
 
 </body>
 

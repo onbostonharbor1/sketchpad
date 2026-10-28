@@ -1,0 +1,92 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Undo in Figures: a Proposal</title>
+  <link rel="stylesheet" href="/help/help_treatise.css" />
+</head>
+<body>
+
+<h1>Undo in Figures: a Proposal</h1>
+
+<p class="note">Written 27 October 2026 for discussion. Nothing here is built. Barry asked where undo came
+from: it came up while specifying the next weld pass (an accidental handle drop would weld, and there is
+no way back except right-click). Barry also recalls an earlier remark that undo could be done by taking
+snapshots of a portion of <code>uiState</code>. This page works that idea out.</p>
+
+<h2>The idea in one paragraph</h2>
+<p>Everything that makes a figure what it is lives in one plain-data object,
+<code>uiState.figures.tabs[tabId].figure</code>: its layers (each with its object's parameters, color,
+visibility and transform), its discs, its welds, the stacking order, the active layer. Plain data can be
+copied whole with <code>structuredClone()</code>. So: before each change, push a copy onto a stack. Undo pops
+the copy, puts it back, and rebuilds the live drawing objects from it. Nothing has to know how to reverse
+its own change; there is no list of inverse operations to keep correct.</p>
+
+<h2>Why it is cheap here</h2>
+<ul>
+<li>A figure is small: a few kilobytes even with dozens of layers and discs. Fifty copies is nothing.</li>
+<li>It was kept plain data on purpose (see <code>figureModel.js</code>), for Save As. Undo gets the same benefit.</li>
+<li>Welds, discs and layers are all in the one object, so a snapshot can never restore a weld without the
+  discs it refers to.</li>
+</ul>
+
+<h2>The one real piece of work: rebuilding the instances</h2>
+<p>Each layer has a live instance (a private copy of its registry object) in <code>tabState.instances</code>,
+and today <code>layer.params</code> and <code>instance.params</code> are the same object. After a snapshot is put
+back, those links are broken: the restored <code>layer.params</code> is a copy. So every instance has to be
+made again from <code>layer.id</code> and <code>layer.params</code>, with its callbacks
+(<code>redrawHandler</code>, <code>getTransform</code>, <code>yieldTo</code>, <code>beforeMove</code>,
+<code>afterMove</code>) attached.</p>
+<p><code>insertLayer()</code> already does exactly this for one layer, mixed in with "add a new layer". The
+proposal is to pull out a <code>makeInstance(tabId, index)</code> that both use. <strong>Phase 10 (reopening a
+saved figure) needs the same function</strong>, which is the strongest reason to build undo next to it: one
+rebuild path, written once, tested twice.</p>
+
+<h2>When to take a snapshot</h2>
+<p>Once per action, before it starts, never on every mouse move:</p>
+<table>
+<tr><th>Action</th><th>Snapshot taken</th></tr>
+<tr><td>Drag a handle</td><td>on the press, not each move (the first <code>beforeMove</code> of a drag)</td></tr>
+<tr><td>Move or turn a layer</td><td>on the press on the diamond or the rotation handle</td></tr>
+<tr><td>Arrow-key nudge</td><td>once per run of presses (a pause starts a new step)</td></tr>
+<tr><td>Insert, Break apart</td><td>before</td></tr>
+<tr><td>Place, delete or drag a disc</td><td>before</td></tr>
+<tr><td>Weld, unweld</td><td>before</td></tr>
+<tr><td>Show or hide a layer, change its color</td><td>before</td></tr>
+<tr><td>Move a slider</td><td>when the slider is let go (its <code>change</code> event), not while it slides</td></tr>
+</table>
+<p>A new action after an undo clears the redo stack, as usual.</p>
+
+<h2>What is not undone</h2>
+<p>View state, which is not part of the figure: Points Mode, Show All, the selected disc or handle, whether
+the centroid is selected. Undo leaves those as they are (and clears the selections, since the thing
+selected may be gone).</p>
+
+<h2>How it would look</h2>
+<ul>
+<li>Ctrl+Z undo, Ctrl+Y (and Ctrl+Shift+Z) redo, when the keyboard is not in a text box or slider.</li>
+<li>Undo and Redo in the caption menu, grayed when there is nothing to undo or redo.</li>
+<li>One stack per figure subtab, kept in its <code>tabState</code> (view state, not saved with the figure).</li>
+</ul>
+
+<h2>Where the code would go</h2>
+<ul>
+<li>A new <code>ui/figures/figureUndo.js</code>: <code>snapshot(tabId)</code>, <code>undo(tabId)</code>,
+  <code>redo(tabId)</code>, the stacks and their limit.</li>
+<li><code>figureLayers.js</code>: <code>makeInstance()</code>, and a <code>rebuildInstances(tabId)</code> that undo
+  and Phase 10 call.</li>
+<li>One <code>snapshot()</code> call at the start of each action listed above (about a dozen places).</li>
+</ul>
+
+<h2>Questions for Barry</h2>
+<ol>
+<li>How many steps back? (Proposed: 50.)</li>
+<li>Is a slider move an undo step? (Proposed: yes, one per release.)</li>
+<li>Build it with Phase 10, sharing the rebuild code, or sooner on its own? (Proposed: with Phase 10.)</li>
+<li>Should undo also cover closing a figure subtab by mistake? That would need the stack to outlive the
+  subtab; it is a separate, smaller "reopen closed figure" feature.</li>
+</ol>
+
+</body>
+</html>

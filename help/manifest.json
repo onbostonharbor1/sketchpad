@@ -48,6 +48,7 @@
       "ConvertToGallery",
       "dataFlow",
       "drawRegistry",
+      "figuresUndo",
       "runPattern",
       "sketchpadArchitecture"
     ],
@@ -64,6 +65,7 @@
       "overlay",
       "parameterControls",
       "parameterControls2",
+      "pointDragging",
       "scriptRunner",
       "setUI",
       "ui_callbacks",
@@ -72,6 +74,7 @@
     ],
     "Tabs": [
       "draw",
+      "figures",
       "gallery",
       "home",
       "patterns",

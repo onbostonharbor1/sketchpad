@@ -14,6 +14,14 @@
 
 <body>
 
+<p class="note">Checked 27 October 2026. The lifecycle and the params/elements split described here still
+hold. The Mystic Rose sample has changed since this page was written: its center is now a draggable handle
+(<code>params.points</code>, with <code>interactive: true</code>) instead of a <code>pointPicker</code> control (that widget is
+switched off), and its element is <code>elements.thing</code> rather than <code>elements.element</code>. Read the sample
+for its shape, and the current file for its details. What Figures asks of a registry object is added at the
+end.</p>
+
+
   <h1>How Sketchpad drawRegistry Files Are Organized and Used</h1>
 
   <p>
@@ -598,6 +606,24 @@ window.drawRegistry_mysticRose</code></pre>
     This structure supports incremental development: you can begin with one line,
     then add more geometry and more parameters, while keeping the same lifecycle and mental model.
   </p>
+
+<h2>Added 27 October 2026: what Figures asks of a registry object</h2>
+<p>Any registry object can be inserted into a figure. These extra rules make it work well there:</p>
+<ul>
+<li><strong>Keep all state on <code>this</code>.</strong> Each layer is <code>Object.create(entry)</code> with its own
+  <code>params</code> and <code>elements</code>. State kept anywhere else (a module-level variable, the entry object
+  itself) would be shared by every copy, so two Parabolas would fight over it.</li>
+<li><strong>Draw through <code>drawLine</code></strong> (<code>draw/drawUtilities.js</code>). That is how a layer's move and
+  turn reach the object without it knowing: <code>drawLine</code> maps both ends through the layer's transform
+  and records the extent for the centroid. Direct <code>ctx</code> drawing would not move with the layer.</li>
+<li><strong>Handles in <code>params.points</code></strong>, with <code>interactive: true</code>. The interactor drags these.
+  The object's <code>update()</code> reads them back (and decides what a moved midpoint means).</li>
+<li><strong><code>infrastructure()</code></strong> (optional): returns the object's arms, the lines discs can sit on,
+  as <code>{ id, a, b, steps, from, to }</code> or <code>{ id, points, from, to }</code>. Without it, only free discs can
+  be placed on the object. Nine of the sixteen registry objects have one.</li>
+<li><strong><code>decompose()</code></strong> (optional): returns <code>[{ key, params }]</code>, the pieces for Break apart.
+  Only Regular Polygon has one so far.</li>
+</ul>
 
 </body>
 

@@ -14,6 +14,14 @@
 
 <body>
 
+<p class="note">Checked 27 October 2026. Most of this page still holds. Corrections, made in place below: setUI
+does <strong>not</strong> call <code>save()</code> before leaving a tab (tabs keep <code>uiState</code> current as they go; see
+"Switching Tabs"); setUI clears the regions before <code>restore()</code> as well as before <code>init()</code>; a third
+signal, <code>needsUpdate</code>, forces a re-init after a rebuild; the shared helpers file is
+<code>uiUtilities.js</code>. The page predates the Figures tab; see "Figures Tab — A First Discussion" under
+Tabs.</p>
+
+
   <a id="toc"></a>
 
   <h1>Sketchpad Architecture (Detailed)</h1>
@@ -119,7 +127,7 @@
     <li>apply theme</li>
     <li>clear regions on cold init</li>
     <li>call init() or restore()</li>
-    <li>call save() before leaving a tab</li>
+    <li>(not done: setUI never calls <code>save()</code>; each tab writes its state into <code>uiState</code> as it goes)</li>
   </ul>
 
   <p>
@@ -973,7 +981,7 @@
   </p>
 
   <ol>
-    <li>Tab wires Commands button using ui_utilities.js helpers.</li>
+    <li>Tab wires Commands button using uiUtilities.js helpers.</li>
     <li>showCommandsOffcanvas renders HTML and exposes button IDs.</li>
     <li>Tab command handler calls nodeRebuildAndValidateManifests (nodeLayer request).</li>
     <li>Service runs maintain_manifests.mjs (or equivalent) and returns report/log.</li>
@@ -1104,7 +1112,7 @@
   </p>
 
   <ol>
-    <li>Leaving tab: setUI calls tab.save() (or the tab updates uiState.saved continuously).</li>
+    <li>Leaving tab: nothing is called; the tab has been updating uiState (and, for Home, Patterns and Gallery, uiState.saved) as it goes.</li>
     <li>Entering tab: setUI decides init vs restore solely from uiState.&lt;tab&gt;.saved existence/meaning.</li>
     <li>Cold init: tab.init builds UI from defaults and writes uiState.saved.</li>
     <li>Restore: tab.restore reads uiState.saved and rebuilds view exactly.</li>
