@@ -14,6 +14,7 @@ Needs: Python 3 with pypdf, Node with Playwright (render.mjs).
 
 import html
 import os
+import re
 import subprocess
 import tempfile
 
@@ -122,6 +123,12 @@ def _render(html_text, pdf_path, footer):
         os.unlink(tmp)
 
 
+def _key(title):
+    """Chromium drops the space where a long heading wraps onto a second
+    line, so titles are compared with all white space removed."""
+    return re.sub(r"\s+", "", title)
+
+
 def _outline_pages(pdf_path):
     """{bookmark title: 1-based page} for every bookmark, at any depth."""
     reader = PdfReader(pdf_path)
@@ -132,7 +139,7 @@ def _outline_pages(pdf_path):
             if isinstance(it, list):
                 walk(it)
             else:
-                found.setdefault(it.title.strip(), reader.get_destination_page_number(it) + 1)
+                found.setdefault(_key(it.title), reader.get_destination_page_number(it) + 1)
     walk(reader.outline)
     return found
 
@@ -142,7 +149,7 @@ def build_pdf(make_html, entries, heading_of, pdf_path, footer):
     text of that section's first heading}, used to find its page."""
     _render(make_html(toc_html(entries)), pdf_path, footer)
     by_title = _outline_pages(pdf_path)
-    pages = {a: by_title.get(h.strip(), "") for a, h in heading_of.items()}
+    pages = {a: by_title.get(_key(h), "") for a, h in heading_of.items()}
     missing = [a for a, p in pages.items() if p == ""]
     if missing:
         raise SystemExit("no bookmark found for: " + ", ".join(missing))
