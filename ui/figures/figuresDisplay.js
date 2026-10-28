@@ -17,6 +17,15 @@
      directoryRegistry.json -- plain array of category name strings
      manifest.json          -- plain array of entry objects
 
+   Where the files are:
+     /figures/directoryRegistry.json        the list of categories
+     /figures/<category>/manifest.json      the figures in one category,
+                                            each { title, filename, ... }
+     Both are kept by the local Node service (port 5174);
+     node/createFigureService.mjs adds a category to the list. Until Save As
+     exists (Phase 10) there are no saved figures, so the Categories
+     subtab shows "No saved figures yet".
+
    Exports:
      loadFiguresCategories()
      loadFigure(filename, categoryName, title)
@@ -28,6 +37,15 @@ import { setFiguresRegistry }  from "./figuresState.js";
 
 /* ============================================================
    loadFiguresCategories()
+   ------------------------------------------------------------
+   Reads the category list, then each category's manifest, and
+   hands the result to the shared renderCategories() (ui/categories.js),
+   which draws the same accordion list the other tabs show.
+
+   "async" and "await": fetch() asks the local web server for a file
+   and returns at once with a promise of the answer. "await" pauses
+   this function (not the browser) until the answer arrives, so the
+   code reads top to bottom like ordinary sequential code.
    ============================================================ */
 export async function loadFiguresCategories() {
 
@@ -40,9 +58,11 @@ export async function loadFiguresCategories() {
 
     const categories = [];
 
-    for (const categoryName of registry) {
-      const dirPath = `/figures/${categoryName}`;
+    for (const categoryName of registry) {      // "for ... of" walks an array's values
+      const dirPath = `/figures/${categoryName}`; // backquotes: ${...} is filled in
 
+      // A missing or broken manifest skips that one category; it does
+      // not stop the rest from loading.
       try {
         const manRes = await fetch(`${dirPath}/manifest.json`);
         if (!manRes.ok) continue;
@@ -51,10 +71,13 @@ export async function loadFiguresCategories() {
         const items    = [];
 
         for (const fig of manifest) {
-          const { title, filename } = fig;
+          const { title, filename } = fig;       // copies fig.title and fig.filename into two names
           items.push({
             name:        title,
             hasSubitems: false,
+            // An arrow function: a small function written in place. It
+            // remembers filename, categoryName and title from this
+            // loop pass, so each item opens its own figure.
             onClick:     () => loadFigure(filename, categoryName, title)
           });
         }
@@ -87,6 +110,11 @@ export async function loadFiguresCategories() {
    ------------------------------------------------------------
    Opening a saved figure arrives with Save As and reload
    (Phase 10). Until then there is nothing to open.
+
+   When it is built, this will read the saved figure (plain data,
+   see figureModel.js), open a new figure subtab for it, and rebuild
+   one live instance per layer from each layer's id and params, the
+   same way insertLayer() in figureLayers.js builds one today.
    ============================================================ */
 export async function loadFigure(filename, categoryName, title) {
 

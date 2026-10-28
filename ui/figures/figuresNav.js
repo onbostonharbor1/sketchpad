@@ -14,9 +14,29 @@
        Those live in figuresCommands.js.
      * Reads figuresRegistry via getters from figuresState.js.
 
+   The subtab bar:
+     [Categories] [Untitled 1 x] [Untitled 2 x] ...
+     Categories is always first and cannot be closed. Each figure
+     subtab shows its figure's name and a close mark. The data for
+     each subtab is uiState.figures.tabs[tabId]; the active one is
+     uiState.figures.activeSubtab.
+
+   What one figure subtab holds (tabState, uiState.figures.tabs[tabId]):
+     type              "figure"
+     figure            the plain data (figureModel.js)
+     instances         one live drawing object per layer, same index
+                       as figure.layers (figureLayers.js)
+     mode              "lines" or "points"
+     selectedPoint     the number of the selected disc, or null
+     centroidSelected  true while the active layer's diamond is selected
+     preview           true while Show All is ticked
+   All but figure are view state: they would not be saved with the
+   figure.
+
    Exports:
      setFiguresSubtabs()
      renderSubtabs()
+     updateFigureButtons()
      switchToCategories()
      switchToFigureTab(tabId)
      openNewFigureTab()
@@ -43,6 +63,9 @@ import {
 
 /* ============================================================
    setFiguresSubtabs()
+   ------------------------------------------------------------
+   Puts an empty tab bar (a Bootstrap "nav-tabs" list) into #subtabs.
+   renderSubtabs() fills it.
    ============================================================ */
 export function setFiguresSubtabs() {
 
@@ -60,6 +83,10 @@ export function setFiguresSubtabs() {
 
 /* ============================================================
    renderSubtabs()
+   ------------------------------------------------------------
+   Rebuilds the whole bar from uiState.figures.tabs. Called on every
+   switch, open and close; rebuilding is simpler than patching and
+   the bar is small.
    ============================================================ */
 export function renderSubtabs() {
 
@@ -96,6 +123,9 @@ export function renderSubtabs() {
     btn.className = "nav-link";
     if (activeTabId === tabId) btn.classList.add("active");
 
+    // "a?.b" reads b only if a exists (otherwise gives undefined instead
+    // of an error); "x || y" gives y when x is empty. So: the figure's
+    // name, else a title, else the tab id without its "tab-" prefix.
     const label = document.createElement("span");
     label.textContent = tab.figure?.name || tab.title || tabId.replace("tab-", "");
     btn.appendChild(label);
@@ -105,6 +135,8 @@ export function renderSubtabs() {
     close.style.cursor  = "pointer";
     close.style.marginLeft = "5px";
     close.onclick = (e) => {
+      // The close mark sits inside the tab button. Without this the click
+      // would also reach the button and switch to the tab being closed.
       e.stopPropagation();
       closeTab(tabId);
     };
@@ -146,15 +178,17 @@ function addCaptionTools(tabId) {
   mid.id = "figureCaptionTools";
   mid.style.cssText = "display:flex; gap:8px; flex-grow:1; justify-content:center;";
 
+  // [button text, registry key, tooltip]
   const tools = [
     ["Line",     "drawLine", "Insert a line as a new layer"],
     ["Parabola", "parabola", "Insert a parabola (curve-stitch between two arms) as a new layer"]
   ];
 
+  // "const [a, b, c] of list" unpacks each three-element entry into names.
   for (const [label, key, tip] of tools) {
     const b = document.createElement("button");
     b.type = "button";
-    b.id = "figureInsert_" + key;
+    b.id = "figureInsert_" + key;     // the tests find the buttons by these ids
     b.textContent = label;
     b.title = tip;
     b.onclick = () => insertLayer(tabId, key);
@@ -167,7 +201,7 @@ function addCaptionTools(tabId) {
   info.style.cssText = "display:inline-flex; align-items:center; gap:8px; margin-right:10px;";
 
   const label = document.createElement("span");
-  label.id = "figureLayerLabel";
+  label.id = "figureLayerLabel";       // filled by updateLayerInfo() in figureLayers.js
   info.appendChild(label);
 
   const showLabel = document.createElement("label");
@@ -195,12 +229,21 @@ function addCaptionTools(tabId) {
    The left command area. Create Figure shows only on the
    Categories tab; the Insert Object list shows only on a figure
    tab. Both are created by figures.js (setFiguresAction).
+
+   Also wires the Points Mode and Show All checkboxes to the active
+   figure, grays out the insert tools in points mode, and refills
+   the Insert Object list. It runs on every subtab change, so the
+   wiring always points at the figure on screen.
    ============================================================ */
 export function updateFigureButtons() {
 
   const tabId = uiState.figures.activeSubtab;
+  // "!!x" turns any value into a plain true or false. live: a figure
+  // subtab is showing (not Categories).
   const live  = !!uiState.figures.tabs[tabId]?.figure;
 
+  // Small helper: display "" means the element's normal display,
+  // "none" hides it.
   const show = (id, on) => {
     const el = document.getElementById(id);
     if (el) el.style.display = on ? "" : "none";
@@ -217,6 +260,10 @@ export function updateFigureButtons() {
   const ts = uiState.figures.tabs[tabId];
   const pointsMode = !!ts?.mode && ts.mode === "points";
 
+  // Points Mode checkbox. Switching mode clears both selections (a disc
+  // selected in points mode means nothing in lines mode, and the
+  // centroid is hidden in points mode), then rebuilds the controls and
+  // listeners for the new mode (renderLayerPanel) and redraws.
   const modeCheck = document.getElementById("figureModeCheck");
   if (modeCheck) {
     modeCheck.checked = pointsMode;
@@ -232,6 +279,7 @@ export function updateFigureButtons() {
     };
   }
 
+  // Show All checkbox: tabState.preview. redrawFigure reads it.
   const prev = document.getElementById("figurePreviewCheck");
   if (prev) {
     prev.checked = !!uiState.figures.tabs[tabId]?.preview;
@@ -253,6 +301,7 @@ export function updateFigureButtons() {
   const select = document.getElementById("figureInsertSelect");
   if (!select) return;
 
+  // Refill the list: a title entry, then every registry object by name.
   select.innerHTML = "";
   const first = document.createElement("option");
   first.value = "";
@@ -266,6 +315,8 @@ export function updateFigureButtons() {
     select.appendChild(opt);
   }
 
+  // Choosing an object inserts it and puts the list back on its title
+  // entry, so the same object can be chosen again right away.
   select.onchange = () => {
     const key = select.value;
     select.value = "";
@@ -277,6 +328,9 @@ export function updateFigureButtons() {
 
 /* ============================================================
    switchToCategories()
+   ------------------------------------------------------------
+   Shows the category list (#text) and hides the drawing area, the
+   layer strip and the controls.
    ============================================================ */
 export function switchToCategories() {
 
@@ -299,6 +353,8 @@ export function switchToCategories() {
     btnContainer.style.display = "none";
   }
 
+  // Set elsewhere when the saved-figure list has changed; reload it once.
+  // import(...).then(...) loads the module and runs the function when ready.
   if (uiState.figures.needsUpdate) {
     uiState.figures.needsUpdate = false;
     import("/ui/figures/figuresDisplay.js").then(m => m.loadFiguresCategories());
@@ -309,6 +365,11 @@ export function switchToCategories() {
 
 /* ============================================================
    switchToFigureTab(tabId)
+   ------------------------------------------------------------
+   Shows one figure: hides the category list, shows the drawing
+   area and the layer strip, builds the caption bar and its tools,
+   then the layer panel (which also arms the mouse handling) and
+   the picture.
    ============================================================ */
 export function switchToFigureTab(tabId) {
 
@@ -353,6 +414,8 @@ export function openNewFigureTab() {
   const tabs  = uiState.figures.tabs;
   const tabId = nextFigureTabId(tabs);
 
+  // instances is not set here; insertLayer() creates the array with the
+  // first layer. preview is not set either; undefined counts as false.
   tabs[tabId] = {
     type:        "figure",
     figure:      createEmptyFigure(nextUntitledName(tabs)),
@@ -368,6 +431,10 @@ export function openNewFigureTab() {
 
 /* ============================================================
    closeTab(tabId)
+   ------------------------------------------------------------
+   Throws the figure away (there is no Save yet, and no warning),
+   stops every mouse listener that may belong to it, and shows
+   another subtab.
    ============================================================ */
 export function closeTab(tabId) {
 

@@ -20,6 +20,42 @@
      * Shared module-level state variables   -> figures/figuresState.js
      * The figure data model                 -> figures/figureModel.js
      * Commands button and caption bar       -> figures/figuresCommands.js
+     * Layers: insert, draw, select, hide    -> figures/figureLayers.js
+     * Discs (numbered points)               -> figures/figurePoints.js
+     * Mouse and keys in points mode         -> figures/figurePointer.js
+     * Moving and turning a whole layer      -> figures/figureCentroid.js
+     * Welds                                 -> figures/figureWelds.js
+     * The layer transform (the math)        -> draw/drawTransform.js
+
+   How the files depend on each other (an arrow means "imports"):
+
+     figures.js      -> figuresCommands, figuresState, figuresNav, figuresDisplay
+     figuresNav      -> figuresState, figuresCommands, figureLayers,
+                        figurePointer, figureCentroid, figureModel
+     figuresCommands -> figureLayers, figurePoints
+     figuresDisplay  -> figuresState
+     figureLayers    -> figurePoints, figurePointer, figureCentroid, figureWelds
+     figurePointer   -> figurePoints, figureWelds
+     figureCentroid  -> figureWelds
+     figureWelds    <-> figureLayers, figurePoints   (each pair imports the
+                                                      other; safe, see
+                                                      figureWelds.js)
+     figureModel, figuresState: no imports at all.
+
+   Where the figure's state lives:
+     uiState.figures = {
+       activeSubtab: "tab-categories" or "tab-figure-N",
+       tabs: {
+         "tab-categories": { type: "categories" },
+         "tab-figure-1":   { type: "figure", figure, instances, mode,
+                             selectedPoint, centroidSelected, preview }
+       },
+       hitRadius: 5,     how close a click must be to pick a point (px)
+       saved: null       reserved for the TabSpec save/restore pattern
+     }
+     Because it is all in uiState, a figure survives switching to
+     another main tab and back with no saving needed (CLAUDE.md:
+     "state is written through immediately").
    ============================================================ */
 
 import { setCommandsButtonLabel }    from "/ui/uiUtilities.js";
@@ -44,6 +80,14 @@ import { loadFiguresCategories }     from "/ui/figures/figuresDisplay.js";
 
 /* ============================================================
    FiguresTabSpec
+   ------------------------------------------------------------
+   setUI.js activates every main tab through one of these. Its
+   decision order: if the tab needs an update, init(true); else if
+   it was saved, restore; else init(false). Figures keeps its state
+   in uiState (see above), so save() has nothing extra to hand back,
+   uiState.figures.saved stays null, and setUI therefore always calls
+   init(). There is no restore: init() itself shows whatever subtab
+   was active last.
    ============================================================ */
 export const FiguresTabSpec = {
   theme: "theme-figures",
@@ -61,9 +105,14 @@ export const FiguresTabSpec = {
 
 /* ============================================================
    initFiguresTab(restored)
+   ------------------------------------------------------------
+   Called every time the Figures tab is shown. Builds the
+   uiState.figures object the first time only, then rebuilds the
+   tab's screen regions and returns to the subtab that was active.
    ============================================================ */
 export function initFiguresTab(restored = false) {
 
+  // First visit only. "!uiState.figures" is true when it does not exist yet.
   if (!uiState.figures) {
     uiState.figures = {
       activeSubtab: "tab-categories",
@@ -90,6 +139,7 @@ export function initFiguresTab(restored = false) {
 
   const activeId = uiState.figures.activeSubtab;
 
+  // Go back to the figure that was showing, if it still exists.
   if (activeId && activeId !== "tab-categories") {
     if (uiState.figures.tabs[activeId]) {
       switchToFigureTab(activeId);
@@ -100,6 +150,9 @@ export function initFiguresTab(restored = false) {
     switchToCategories();
   }
 
+  // Register with the manifest system once, so a Rebuild & Validate
+  // re-runs this init. A function is an object in JavaScript, so it can
+  // carry a property (_registered) that remembers it was done.
   if (!initFiguresTab._registered) {
     manifest.register("figures", () => initFiguresTab(false));
     initFiguresTab._registered = true;
@@ -112,6 +165,20 @@ export function initFiguresTab(restored = false) {
    UI Region Setup Functions
    ============================================================ */
 
+/* ------------------------------------------------------------
+   setFiguresAction()
+   Builds the Figures controls in the permanent #button div, under
+   the Commands button, in this order:
+     Show All checkbox      (figure subtabs only)
+     Points Mode checkbox   (figure subtabs only)
+     Create Figure button   (Categories subtab only)
+     Insert Object list     (figure subtabs only)
+   They are all built here once and shown or hidden per subtab by
+   updateFigureButtons() in figuresNav.js, which also wires the two
+   checkboxes and fills the list. Every element carries the class
+   "tab-extra" so clearDivs() removes them when another main tab
+   is shown (CLAUDE.md: no ad hoc divs; #button is permanent).
+   ------------------------------------------------------------ */
 function setFiguresAction() {
   /* Append Create Figure button into #button below Commands.
      Guard against double-adding on restore.                  */
@@ -169,7 +236,7 @@ function setFiguresAction() {
   btn.className   = "cmdButton tab-extra";
   btn.type        = "button";
   btn.textContent = "Create Figure";
-  btn.onclick     = openNewFigureTab;
+  btn.onclick     = openNewFigureTab;   // the function itself, not a call: run on click
   buttonDiv.appendChild(btn);
 
   // Insert Object: a list of every registry object. Filled and enabled
@@ -188,11 +255,16 @@ function setFiguresAction() {
 
 } // end setFiguresAction
 
+// The #text region holds the category list. A placeholder until
+// loadFiguresCategories() fills it.
 function setFiguresText() {
   const el = document.getElementById("text");
   if (el) el.innerHTML = "Loading categories...";
 } // end setFiguresText
 
+// Moves the one shared drawing canvas (window.drawCanvas, used by
+// every tab) into this tab's #sketchpad region, unless it is already
+// there.
 function setFiguresSketchpad() {
   const sketchpad = document.getElementById("sketchpad");
   const canvas    = window.drawCanvas;

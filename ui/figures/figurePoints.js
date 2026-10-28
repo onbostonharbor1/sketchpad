@@ -52,6 +52,14 @@
    (the places a click can pick) are t = i / steps for i = from..to.
    Stitch lines are not infrastructure and cannot carry points.
 
+   A worked example: a Parabola with Steps 20 has two arms. Its arm2 runs
+   from line2_pt1 (50, 350) to line2_pt2 (350, 350), steps 20, from 0 to
+   20. The candidates are 21 spots, 15 px apart: t = 0, 0.05, 0.10 ...
+   1.0. A click at (262, 351) with hit radius 5 is nearest to i = 14
+   (t = 0.7, x = 50 + 300 * 0.7 = 260), 2.2 px away, so it numbers an
+   anchored disc { arm: "arm2", t: 0.7 }. Drag line2_pt2 elsewhere and
+   that disc stays at 70% of the way along the arm.
+
    Phase 8: refreshPoints() removes an anchored point outright, instead
    of keeping its last position, once its arm is gone or its t has
    fallen outside from..to (the object was replaced, or Trim Bottom /
@@ -86,6 +94,9 @@ const DISC_DIM_ALPHA = 0.5;
    Exported for figureWelds.js (Phase 8), which has to look across an
    object's own other arms -- a Parabola's two corner handles, say --
    when a weld is made at a spot more than one arm touches.
+   An object without infrastructure() (most gallery-derived objects
+   before Phase 7d) simply has no arms, so no anchored discs: a click
+   on it makes a free disc.
    ------------------------------------------------------------ */
 export function armsOf(instance) {
   return (instance && typeof instance.infrastructure === "function")
@@ -100,6 +111,10 @@ export function armsOf(instance) {
 // points array for an arc or a ring of nodes -- t = i/steps still picks
 // index i, since steps = points.length - 1 for that shape. Exported for
 // figureWelds.js, same reason as armsOf() above.
+//
+// The straight case is ordinary linear interpolation: t = 0 is a, t = 1
+// is b, t = 0.5 is halfway. Math.round in the array case guards against
+// t * steps coming out as 6.999999 instead of 7.
 export function armPoint(arm, t, transform) {
   const pt = arm.points
     ? arm.points[Math.round(t * arm.steps)]
@@ -123,6 +138,11 @@ function layerTransform(figure, i) {
    The infrastructure point nearest to (x, y) within radius, or
    null. Only the active layer is searched.
    Returns { layer, arm, t, x, y }.
+
+   Ties: the comparison is "d < bestDist" (strictly less), so when two
+   arms have a candidate at the same distance -- a Parabola's corner,
+   where arm1 ends and arm2 starts -- the arm checked first (arm1)
+   wins. figureWelds.js (cornerPartners) exists partly because of this.
    ============================================================ */
 export function findCandidate(tabState, x, y, radius) {
 
@@ -132,13 +152,13 @@ export function findCandidate(tabState, x, y, radius) {
   const xform     = layerTransform(figure, layer);
 
   let best     = null;
-  let bestDist = radius;
+  let bestDist = radius;      // anything farther than radius never qualifies
 
   for (const arm of armsOf(instances[layer])) {
     for (let i = arm.from; i <= arm.to; i++) {
       const t  = i / arm.steps;
       const pt = armPoint(arm, t, xform);
-      const d  = Math.hypot(pt.x - x, pt.y - y);
+      const d  = Math.hypot(pt.x - x, pt.y - y);   // straight-line distance
       if (d < bestDist) {
         bestDist = d;
         best = { layer, arm: arm.id, t, x: pt.x, y: pt.y };
@@ -185,6 +205,9 @@ export function findPoint(figure, x, y, radius) {
    ------------------------------------------------------------
    Allocate the next number and add the point. Returns the point. A
    free point goes on the active layer.
+
+   "figure.nextPoint++" uses the current value and then adds one, so
+   the first point is 1, the next 2, and so on, never repeating.
    ============================================================ */
 export function addAnchoredPoint(figure, c) {
 
@@ -199,6 +222,9 @@ export function addAnchoredPoint(figure, c) {
 } // end addAnchoredPoint
 
 
+// transform: the active layer's transform, so the free disc's position
+// can be stored in that layer's object space (ox, oy) and travel with
+// the layer from then on. "= null" is a default for callers that omit it.
 export function addFreePoint(figure, x, y, transform = null) {
 
   const o = inverseTransform(transform, x, y);
@@ -217,6 +243,9 @@ export function addFreePoint(figure, x, y, transform = null) {
    ------------------------------------------------------------
    Drags a free point to (x, y). An anchored point is never moved
    this way (it rides along with its object); returns false for it.
+
+   Used by a points-mode drag (figurePointer.js) and by a weld that
+   has to bring a free member along (figureWelds.js).
    ============================================================ */
 export function moveFreePoint(point, x, y, transform = null) {
 
@@ -238,6 +267,9 @@ export function moveFreePoint(point, x, y, transform = null) {
    Removes the point. Its number stays used: nextPoint never
    goes back. A welded point leaves its weld first (Phase 8), the same
    as right-clicking it to unweld.
+
+   filter() builds a new array of every point except number n, and
+   that new array replaces figure.points.
    ============================================================ */
 export function deletePoint(figure, n) {
 
@@ -259,6 +291,10 @@ export function deletePoint(figure, n) {
    Bottom/Shorten Top trimmed it away) disappears with it, leaving its
    weld the same way deletePoint does -- it no longer has a real place
    to be, so there is nothing to keep showing.
+
+   Points to remove are collected in "gone" first and removed after
+   the loop: removing entries from an array while walking through it
+   would skip some.
    ============================================================ */
 export function refreshPoints(tabState) {
 
@@ -269,6 +305,7 @@ export function refreshPoints(tabState) {
   for (const p of figure.points) {
     const xform = layerTransform(figure, p.layer);
 
+    // A free disc: object-space position, through its layer's transform.
     if (p.kind === "free") {
       if (typeof p.ox !== "number") continue;
       const pt = applyTransform(xform, { x: p.ox, y: p.oy });
@@ -277,6 +314,7 @@ export function refreshPoints(tabState) {
       continue;
     }
 
+    // An anchored disc: its arm, as the object is shaped right now.
     const arm = armsOf(instances[p.layer]).find((a) => a.id === p.arm);
     if (!arm) { gone.push(p.n); continue; }
 
@@ -306,6 +344,10 @@ export function refreshPoints(tabState) {
    active one are drawn at DISC_DIM_ALPHA. The selected disc has a
    thick red rim and a second red ring just outside it, so it stands
    out even when it sits on a handle or a stitch line.
+
+   Drawing a circle on a canvas: beginPath() starts a shape,
+   arc(x, y, r, start, end) traces it (0 to 2 pi radians is a full
+   circle), fill() paints the inside, stroke() the outline.
    ============================================================ */
 export function drawFigurePoints(tabState, { showAll = false, dimming = false } = {}) {
 

@@ -10,10 +10,19 @@
      * Does NOT own lifecycle (init/restore/save). That is figures.js.
      * Does NOT build subtabs or switch them. That is figuresNav.js.
 
-   Caption menu (no-ops until their features exist):
-     Help, Notes, Show Script, Copy, Archive, Reset.
-     Help and Notes follow the same grayed-out rule as the other
-     tabs: gray when there is nothing to show.
+   Caption menu, top to bottom:
+     Help, Notes          the shared items every tab has; grayed when
+                          there is nothing to show
+     Hit radius (N px)... how close a points-mode click must be
+     Delete selected point   points mode, with a disc selected
+     Break apart          Phase 7c, not in points mode
+     Show Script, Copy, Archive, Reset    grayed: not built yet, shown
+                                          so the menu has its final shape
+
+   The caption bar itself also carries the Line and Parabola buttons
+   and the active layer's name and Show checkbox. Those are added by
+   addCaptionTools() in figuresNav.js after setFiguresCaption() has
+   built the bar.
 
    Exports:
      wireFiguresCommandsButton()
@@ -39,12 +48,20 @@ import { deletePoint }              from "./figurePoints.js";
 
 /* ============================================================
    wireFiguresCommandsButton()
+   ------------------------------------------------------------
+   The Commands button at the top left opens a slide-in panel
+   ("offcanvas", a Bootstrap term) with two buttons:
+     Rebuild & Validate  asks the Node service to rebuild every
+                         manifest, then reloads this tab
+     Help                closes the panel and opens the help overlay
    ============================================================ */
 export function wireFiguresCommandsButton() {
 
   setCommandsButtonHandler(() => {
     showCommandsOffcanvas({
       title: "Figures Commands",
+      // buildBody is called with the panel's body element once the
+      // panel exists; it fills the body and wires the buttons.
       buildBody(offcanvasBodyEl) {
 
         offcanvasBodyEl.innerHTML = `
@@ -69,6 +86,9 @@ export function wireFiguresCommandsButton() {
 
             const report = await nodeRebuildAndValidateManifests();
 
+            // import() inside a function loads the module only when it is
+            // needed, here only after a rebuild. It also avoids an import
+            // loop at load time (figures.js imports this file).
             const { syncSystemStateAfterRebuild } = await import("/ui/uiUtilities.js");
             await syncSystemStateAfterRebuild();
 
@@ -96,6 +116,11 @@ export function wireFiguresCommandsButton() {
    ------------------------------------------------------------
    title    - caption text (default "Figures")
    withMenu - true on a figure subtab: shows the "v" menu
+
+   The menu items are built fresh each time the "v" is pressed
+   (getFiguresCaptionMenuItems below), so a grayed or enabled item
+   always reflects the moment it is opened -- for instance, "Delete
+   selected point" is live only if a disc is selected right then.
    ============================================================ */
 export function setFiguresCaption(title = "Figures", withMenu = false) {
 
@@ -104,6 +129,8 @@ export function setFiguresCaption(title = "Figures", withMenu = false) {
   setCaptionBar({
     targetId: "caption",
     title,
+    // "a ? b : c" is if-else as an expression: a function on a figure
+    // subtab, null (no menu button) on the Categories subtab.
     onMenu: withMenu ? async (anchor) => {
       const items = await getFiguresCaptionMenuItems(title);
       menuManager.open(items, anchor);
@@ -115,6 +142,10 @@ export function setFiguresCaption(title = "Figures", withMenu = false) {
 
 /* ============================================================
    getFiguresCaptionMenuItems(title)
+   ------------------------------------------------------------
+   Returns the menu as an array of items. Each item is a plain
+   object the shared menuManager understands:
+     { label, onClick, disabled?, tooltip? }
    ============================================================ */
 export async function getFiguresCaptionMenuItems(title) {
 
@@ -129,13 +160,16 @@ export async function getFiguresCaptionMenuItems(title) {
   // The active figure tab, read when the item is clicked.
   const activeTab = () => uiState.figures.tabs[uiState.figures.activeSubtab];
 
+  // A plain browser prompt box, checked for a sensible number. The
+  // label shows the current value because the menu is rebuilt on
+  // every opening.
   const hitRadiusItem = {
     label:   "Hit radius (" + uiState.figures.hitRadius + " px)...",
     tooltip: "How close a click must be to pick a point in points mode",
     onClick: () => {
       const answer = window.prompt(
         "Hit radius in canvas pixels (1 to 50):", String(uiState.figures.hitRadius));
-      if (answer === null) return;
+      if (answer === null) return;             // Cancel pressed
       const n = Number(answer);
       if (Number.isFinite(n) && n >= 1 && n <= 50) uiState.figures.hitRadius = n;
     }
@@ -146,12 +180,13 @@ export async function getFiguresCaptionMenuItems(title) {
   const ts0 = activeTab();
   const deletePointItem = {
     label:    "Delete selected point",
+    // "!=" (not "!==") on purpose: true for both null and undefined.
     disabled: !(ts0 && ts0.mode === "points" && ts0.selectedPoint != null),
     tooltip:  "Removes the selected disc (points mode). Its number is never reused.",
     onClick: () => {
       const ts = activeTab();
       if (!ts || !ts.figure || ts.selectedPoint == null) return;
-      deletePoint(ts.figure, ts.selectedPoint);
+      deletePoint(ts.figure, ts.selectedPoint);   // also drops it from any weld
       ts.selectedPoint = null;
       redrawFigure(uiState.figures.activeSubtab);
     }

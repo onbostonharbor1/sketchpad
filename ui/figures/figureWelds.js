@@ -10,12 +10,15 @@
      layer to follow, so the figure keeps meeting at that point.
 
    Data (figure.welds, not yet saved -- Phase 10):
-     figure.welds = [ { members: [ { layer, n }, ... ], unsatisfied } ]
+     figure.welds = [ { members: [ { layer, n }, ... ] } ]
      members   the discs in the group, by their figure.points number.
-     unsatisfied   true while the group's members no longer coincide
-               (two of its layers both tried to move this drag and only
-               one could). Recomputed on every draw, not stored across
-               redraws; see drawWeldMarks().
+     Whether a group is satisfied (its members still coincide) is not
+     stored at all. drawWeldMarks() works it out on every draw and
+     shows an unsatisfied group with a red mark instead of a black one.
+     (An earlier version of this comment listed an "unsatisfied" field;
+     the code never had one.)
+     figure.welds does not exist until the first weld is made
+     (createOrJoinWeld creates it), so readers write figure.welds || [].
 
    Creating and removing a weld (right-click, figurePointer.js):
      toggleWeldAt() is the whole of it. Right-click a disc already in a
@@ -65,6 +68,34 @@
      handle again, or a whole layer that has already moved in pieces or
      as a whole, is left alone, which is how an unsatisfiable weld
      (two paths disagreeing about where something should land) shows up.
+
+   A worked example. Layer 1 is a Parabola with its far end
+   (line2_pt2) at (350, 350); layer 0 is a Line whose start (pt1) is
+   also at (350, 350). Disc 2 sits on the Parabola's arm2 at t = 1,
+   disc 1 on the Line at t = 0, and figure.welds is
+     [ { members: [ { layer: 0, n: 1 }, { layer: 1, n: 2 } ] } ]
+   You drag the Line's start to (410, 310):
+     1. interactor.js calls beforeMove: snapshot { 1 -> (350, 350) }
+        (only layer 0's welded discs; the Line is the layer moving).
+     2. the handle moves, the Line redraws, refreshPoints puts disc 1
+        at (410, 310).
+     3. afterMove calls propagateAfterChange: disc 1 moved by
+        (+60, -40), so it seeds the walk.
+     4. its weld's other member is disc 2: anchored, t = 1, and the
+        end of arm2 is the Parabola's own handle line2_pt2. So that
+        one handle moves by (+60, -40), to (410, 310).
+     5. disc 2 is queued in turn, but its weld has no member left
+        that hasn't been reached, so the walk ends; one redraw.
+   The Parabola's other end and its corner do not move: only the
+   welded end follows, and the parabola reshapes.
+
+   Why the weld mark looks like a ring, not a + (2026-10-27): the mark
+   is drawn on the main canvas, but the handles are drawn on the
+   interaction layer above it. A weld made on a handle has that
+   handle's dot (radius 5) right on top of the + (arms 5 long), so
+   only the white halo around it shows. Proposed fix, not built: draw
+   the + larger than a handle, or on the interaction layer after the
+   handles. See PHASES.md.
 
    Exports:
      weldOf(figure, n)
@@ -226,6 +257,10 @@ export function toggleWeldAt(tabState, x, y, radius) {
 
   const figure = tabState.figure;
 
+  // The disc nearest (px, py) within radius, on ANY visible layer (not
+  // just the active one -- a weld joins layers), optionally skipping one
+  // disc by number. Used twice: for the disc under the cursor, then for
+  // a partner sitting on that disc.
   const discAt = (px, py, excludeN = null) => {
     let best = null, bestDist = radius;
     for (const p of figure.points) {
@@ -311,6 +346,10 @@ export function snapshotWeldMembers(figure, layerIndex) {
    matches pt, or -1. Used to tell a real handle apart from a node an
    object only derives (Regular Polygon's, say).
    ------------------------------------------------------------ */
+// Matching by position (to a millionth of a pixel) rather than by name
+// works for every object without a table of field names: an arm's a and
+// b are the object's own params (pt1, line2_pt2 ...), and the handles
+// array is kept equal to them by the object's update().
 function findHandleIndex(instance, pt) {
   const pts = instance?.params?.points || [];
   for (let i = 0; i < pts.length; i++) {
@@ -324,6 +363,10 @@ function findHandleIndex(instance, pt) {
    moveFollowerHandle(instance, idx, xform, dx, dy)
    Moves one handle by a canvas-space delta and re-syncs the object.
    ------------------------------------------------------------ */
+// The delta is in canvas pixels but handles are stored in object space,
+// so: handle to canvas, add the delta, back to object space. For a layer
+// that has been turned, this is what makes a sideways drag of the partner
+// come out sideways on screen.
 function moveFollowerHandle(instance, idx, xform, dx, dy) {
   const obj = instance.params.points[idx];
   const canvasPt = applyTransform(xform, obj);
@@ -443,6 +486,11 @@ export function propagateAfterChange(tabId, layerIndex, snapshot) {
   // per-layer. The driving layer itself counts as fully spoken for
   // (whole: true blocks it from being touched again by a path that
   // loops back to it), since the user's own drag already moved it.
+  // A Map is a lookup table: moved.get(layer) / moved.set(layer, value).
+  // queue is the work list of discs whose move still has to be passed
+  // on (first in, first out: a breadth-first walk). queued remembers
+  // every disc already reached, so a loop of welds cannot go round
+  // forever.
   const moved = new Map([[layerIndex, { whole: true, handles: new Set() }]]);
   const queue = [];
   const queued = new Set();
@@ -502,6 +550,8 @@ export function drawWeldMarks(tabState) {
     const visible = pts.some((p) => figure.layers[p.layer]?.visible);
     if (!visible) continue;
 
+    // every(...) is true only if the test holds for every member: here,
+    // all within half a pixel of the first one.
     const satisfied = pts.every((p) =>
       Math.hypot(p.x - pts[0].x, p.y - pts[0].y) <= EPS
     );

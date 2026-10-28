@@ -37,6 +37,13 @@
      context menu is suppressed on both the right mousedown and the
      contextmenu event, so it never flashes up first.
 
+     Only the left button clicks, places, selects or drags. A right
+     press used to be taken as a left one too: it placed or selected a
+     disc on release, and (in interactor.js) grabbed a handle, which
+     any hand jitter then dragged under the cursor. That put a stray
+     disc on the wrong layer and produced a "corner tied" weld of a
+     line to itself (bug found in real use, 2026-10-27, PHASES.md).
+
      Both this file and the interactor listen at the same time in
      points mode. A press on a handle belongs to the interactor, so a
      disc is dragged only when the press is clear of the handles. A
@@ -130,9 +137,20 @@ function showWeldNotice(message) {
    activatePointsInput(tabId, redraw)
    ------------------------------------------------------------
    redraw() redraws the whole figure. Replaces any earlier
-   activation. Call this before armInteractor(): both size the
-   same interaction layer, and the interactor draws the handles
-   on it.
+   activation. Called after armInteractor() (renderLayerPanel in
+   figureLayers.js does this): both use the same interaction layer,
+   the interactor draws the handles on it, and an object with no
+   handles makes the interactor hide that layer, which has to be
+   shown again here.
+
+   How the listeners are organized: every listener is registered with
+   { signal } from one AbortController. deactivatePointsInput() calls
+   controller.abort(), which removes all of them at once -- no list of
+   listeners to keep and take down one by one.
+
+   The mouse state between press and release lives in four variables
+   (pressedAt, dragged, moved, onHandleAtPress). They are local to this
+   activation, so a new activation starts clean.
    ============================================================ */
 export function activatePointsInput(tabId, redraw) {
 
@@ -161,6 +179,9 @@ export function activatePointsInput(tabId, redraw) {
 
   const tabState = () => uiState.figures.tabs[tabId];
 
+  // Mouse position in canvas pixels. The canvas may be shown larger or
+  // smaller than its own pixel size (CSS scaling), so the offset from
+  // its corner is scaled by width / shown width.
   const coords = (e) => {
     const rect = layer.getBoundingClientRect();
     return {
@@ -210,6 +231,9 @@ export function activatePointsInput(tabId, redraw) {
     if (hit && hit.kind === "free") dragged = hit;
   }, { signal });
 
+  // Listens on window, not the layer, so a drag that strays off the
+  // canvas is still followed. Until the press has moved more than
+  // CLICK_SLOP it is still a click; after that only a free disc moves.
   window.addEventListener("mousemove", (e) => {
     if (!pressedAt) return;
     const m = coords(e);
@@ -224,6 +248,13 @@ export function activatePointsInput(tabId, redraw) {
     redraw();
   }, { signal });
 
+  // The release decides what the press was. In order:
+  //   pressed on a free disc         -> select it (it may have been dragged)
+  //   dragged a handle               -> nothing more (the interactor moved it)
+  //   on a disc of the active layer  -> select it
+  //   near a candidate               -> number an anchored disc there
+  //   anywhere else                  -> a free disc where the press began
+  // A right press never gets here: mousedown left pressedAt null.
   window.addEventListener("mouseup", (e) => {
     if (!pressedAt) return;
     const wasDrag  = moved;
@@ -277,6 +308,9 @@ export function activatePointsInput(tabId, redraw) {
     redraw();
   }, { signal });
 
+  // Delete or Backspace removes the selected disc -- but not while the
+  // keyboard is in a text box, slider or list, where those keys belong
+  // to the control.
   document.addEventListener("keydown", (e) => {
     if (e.key !== "Delete" && e.key !== "Backspace") return;
     if (uiState.activeTab !== "figures") return;
@@ -298,6 +332,9 @@ export function activatePointsInput(tabId, redraw) {
 
 /* ============================================================
    deactivatePointsInput()
+   ------------------------------------------------------------
+   Removes every points-mode listener (one abort) and hides the
+   interaction layer. Safe to call when nothing is active.
    ============================================================ */
 export function deactivatePointsInput() {
 

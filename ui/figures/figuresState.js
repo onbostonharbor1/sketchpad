@@ -21,8 +21,28 @@
      currentTabId    -- Currently active tab ID (e.g., "tab-categories"
                         or "tab-figureId").
                         Null when not initialized.
+
+   Where this sits next to uiState:
+     These two values are navigation bookkeeping for this module
+     only. Everything that describes a figure (its layers, discs,
+     welds, mode, selection) lives in uiState.figures, where every
+     tab can see it and where it survives a tab switch. If a value
+     here and a value in uiState ever seem to disagree, uiState is
+     the one that counts: figuresNav.js sets both together.
+
+   Who reads and writes:
+     setFiguresRegistry   figuresDisplay.js, after loading the list
+                          of saved-figure categories
+     setCurrentTabId      figuresNav.js, on every subtab switch
+     resetFiguresState    initialization (not called by Figures
+                          code at present; kept for the pattern
+                          the other tabs follow)
    ============================================================ */
 
+// "let" at the top of a module: one copy for the whole program,
+// private to this file. Other files can only reach these through
+// the exported functions below. This is how the file keeps its
+// "all mutation goes through setters" rule.
 let figuresRegistry = null;
 let currentTabId    = null;
 

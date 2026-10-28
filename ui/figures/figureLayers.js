@@ -27,6 +27,13 @@
    elements, so two layers of the same object (two parabolas) do not
    share state. The instance is not part of the figure data.
 
+   Data and instance share one params object: layer.params and
+   instance.params are the same object in memory (insertLayer sets
+   layer.params = instance.params). A slider or a handle drag changes
+   instance.params, and the figure data sees the change at once with
+   no copying. That is the "state is written through immediately"
+   rule from CLAUDE.md.
+
    Layer numbers are stable: layer N is figure.layers[N-1] for good.
    Stacking is separate: figure.drawOrder lists layer indices, top
    first. Selecting a layer moves it to the front of drawOrder
@@ -45,6 +52,15 @@
 
    Controls: the active layer's controls are built with the same
    buildParameterControls() the Draw tab uses.
+
+   What is on screen, in front-to-back order (each its own canvas,
+   stacked; see canvasLayerManager.js):
+     interaction  the active object's handles (interactor.js), and in
+                  points mode the mouse input (figurePointer.js)
+     bbox         the centroid diamond, box and rotation handle
+                  (figureCentroid.js)
+     main canvas  the layers, then the discs, then the weld marks
+                  (redrawFigure below)
 
    Architectural rules:
      * Does NOT build subtabs or switch them. That is figuresNav.js.
@@ -89,6 +105,12 @@ const INSERT_STEP = 20;
    ------------------------------------------------------------
    Registry objects for the Insert pulldown: [{ key, name }],
    sorted by name.
+
+   Read as a pipeline over the registry's keys:
+     filter  drop any key whose entry is missing
+     map     turn each key into { key, name }
+     sort    alphabetical by name (localeCompare is the
+             language-aware string comparison)
    ============================================================ */
 export function listInsertableObjects() {
 
@@ -107,6 +129,19 @@ export function listInsertableObjects() {
    ------------------------------------------------------------
    Appends a new layer at the top of the stack with the object's
    default parameters, makes it active, and redraws.
+
+   The optional third argument, { params, transform }, is used by
+   Break Apart (a piece arrives with exact values) and by the tests
+   (to place objects exactly). "= {}" at the end of the parameter list
+   lets callers leave the whole third argument out.
+
+   Steps:
+     1. make a private instance of the registry object
+     2. let it set itself up (init), then shift it if an identical
+        object is already in the figure, so the two don't overlap
+     3. record the layer data and the instance at the same index
+     4. attach the callbacks that interactor.js and the weld code use
+     5. put it on top, make it active, redraw
    ============================================================ */
 export function insertLayer(tabId, registryKey, { params = null, transform = null } = {}) {
 
@@ -117,6 +152,11 @@ export function insertLayer(tabId, registryKey, { params = null, transform = nul
   if (!entry) throw new Error("insertLayer: registry object not found: " + registryKey);
 
   // The registry entry is a shared singleton. Make a private instance.
+  // Object.create(entry) makes a new, empty object that falls back on
+  // entry for anything it doesn't have itself -- so it shares entry's
+  // functions (init, update, draw, infrastructure ...) but gets its own
+  // params and elements below. structuredClone makes a deep copy, so
+  // no nested point object is shared with the registry either.
   const instance    = Object.create(entry);
   instance.params   = structuredClone(entry.params);
   instance.elements = null;
@@ -124,6 +164,8 @@ export function insertLayer(tabId, registryKey, { params = null, transform = nul
   if (params) Object.assign(instance.params, structuredClone(params));
 
   const figure = tabState.figure;
+  // Colors cycle: the ninth layer gets the first color again ("%" is
+  // the remainder after division).
   const color  = LAYER_COLORS[figure.layers.length % LAYER_COLORS.length];
 
   instance.init();
@@ -139,12 +181,14 @@ export function insertLayer(tabId, registryKey, { params = null, transform = nul
     id:        registryKey,
     visible:   true,
     color:     color,
-    params:    instance.params,
-    transform: transform ? { ...transform } : newTransform()
+    params:    instance.params,       // the same object, not a copy (see header)
+    transform: transform ? { ...transform } : newTransform()   // { ...t } is a shallow copy
   };
   figure.layers.push(layer);
   tabState.instances.push(instance);
 
+  // The new layer's index. Captured here, so the callbacks below always
+  // refer to this layer, whatever happens to the stacking later.
   const index = figure.layers.length - 1;
   instance.redrawHandler = () => redrawFigure(tabId);
   // Read by interactor.js: where this layer's handles really are, and
@@ -154,6 +198,8 @@ export function insertLayer(tabId, registryKey, { params = null, transform = nul
   // Phase 8: a handle's own weld followers. beforeMove snapshots this
   // layer's welded discs; afterMove (called once the drag has synced and
   // redrawn the layer) compares and walks the weld graph outward.
+  // weldSnapshot is a variable private to this one layer's callbacks
+  // (a "closure"): each inserted layer has its own.
   let weldSnapshot = null;
   instance.beforeMove = () => {
     weldSnapshot = snapshotWeldMembers(figure, index);
@@ -162,7 +208,7 @@ export function insertLayer(tabId, registryKey, { params = null, transform = nul
     propagateAfterChange(tabId, index, weldSnapshot);
   };
   tabState.centroidSelected = false;
-  figure.drawOrder.unshift(index);      // new layer goes on top
+  figure.drawOrder.unshift(index);      // new layer goes on top (unshift adds at the front)
   figure.activeLayer = index;
 
   renderLayerPanel(tabId);
@@ -212,6 +258,8 @@ export function breakApartLayer(tabId) {
   ts.selectedPoint       = null;
   ts.centroidSelected    = false;
 
+  // insertLayer copies the transform ({ ...transform }), so the pieces
+  // can later be moved without moving each other or the hidden original.
   for (const piece of pieces) {
     insertLayer(tabId, piece.key, { params: piece.params, transform: layer.transform });
   }
@@ -224,6 +272,12 @@ export function breakApartLayer(tabId) {
    Shifts whatever positions a registry object keeps: its points,
    midpoint, center or start. Objects with none of these are
    not moved.
+
+   Registry objects are not uniform about where they keep their
+   positions, so this tries the four common shapes. It moves only
+   the handles array (params.points) for a Line or a Parabola; the
+   object's own update() then reads the moved handles back into its
+   named fields (pt1, line1_pt1 ...) on the next draw.
    ------------------------------------------------------------ */
 function offsetParams(params, d) {
 
@@ -236,6 +290,7 @@ function offsetParams(params, d) {
     params.midpoint.x += d;
     params.midpoint.y += d;
   }
+  // "kx in params" asks whether params has a field named kx at all.
   for (const [kx, ky] of [["centerX", "centerY"], ["startX", "startY"]]) {
     if (kx in params && ky in params) {
       params[kx] += d;
@@ -251,6 +306,15 @@ function offsetParams(params, d) {
    ------------------------------------------------------------
    Clears the canvas and draws every visible layer, bottom to top.
    A layer that throws is reported with its index and skipped.
+
+   This is the one place a figure is drawn. Nearly every change ends
+   by calling it: a slider, a handle drag (through
+   instance.redrawHandler), a disc click, a weld, a mode switch. It
+   draws in three passes:
+     1. the layers (each object's own draw(), through drawLine)
+     2. the discs (figurePoints.js), after recomputing where anchored
+        ones now are
+     3. the weld marks (figureWelds.js), then the centroid overlay
    ============================================================ */
 export function redrawFigure(tabId, { dim = true } = {}) {
 
@@ -280,19 +344,23 @@ export function redrawFigure(tabId, { dim = true } = {}) {
     if (!figure.layers[i].visible && !showAll) continue;
 
     const inst = instances[i];
+    // save()/restore() bracket each layer so its alpha (dimming) and any
+    // style it sets do not leak into the next layer.
     ctx.save();
     if (dimming && i !== figure.activeLayer) ctx.globalAlpha = DIM_ALPHA;
     // drawLine maps what the object draws through this layer's transform and
     // notes its extent in drawState.bounds. Both are null again afterwards.
     drawState.transform = figure.layers[i].transform || null;
     drawState.bounds    = newBounds();
+    // update() first: it brings the object's internal geometry in line
+    // with its params (a slider or a handle may have changed them).
     try {
       inst.update(inst.params);
       inst.draw();
     } catch (err) {
       console.error(`Figure layer ${i + 1} (${figure.layers[i].id}) failed to draw:`, err);
     }
-    inst.bounds         = drawState.bounds;
+    inst.bounds         = drawState.bounds;    // kept for figureCentroid.js
     drawState.transform = null;
     drawState.bounds    = null;
     ctx.restore();
@@ -323,6 +391,11 @@ export function redrawFigure(tabId, { dim = true } = {}) {
    interactor (the object's handles) on the active layer when it is
    visible, or always in points mode, and the points-mode mouse
    input as well in points mode.
+
+   Called whenever which layer is active, or the mode, changes. It
+   tears down every mouse listener (handles, points mode, centroid)
+   and sets up the ones that fit the new situation, so nothing from
+   the previous layer is ever left listening.
    ============================================================ */
 export function renderLayerPanel(tabId) {
 
@@ -344,7 +417,7 @@ export function renderLayerPanel(tabId) {
 
       const row = document.createElement("div");
       row.className = "figure-layer-row";
-      row.title = reg?.name || layer.id;
+      row.title = reg?.name || layer.id;      // the tooltip names the object
       row.style.cssText =
         "display:flex; align-items:center; justify-content:center; width:100%; padding:1px 4px; cursor:pointer;" +
         (i === figure.activeLayer ? " background:rgba(0,0,0,0.18); font-weight:bold;" : "");
@@ -372,8 +445,8 @@ export function renderLayerPanel(tabId) {
         redrawFigure(tabId);
       };
       num.oncontextmenu = (e) => {
-        e.preventDefault();
-        picker.click();
+        e.preventDefault();       // no browser menu
+        picker.click();           // opens the system color chooser
       };
 
       if (!layer.visible) {
@@ -408,6 +481,8 @@ export function renderLayerPanel(tabId) {
   updateLayerInfo(tabId);
 
   // ---- interactor (drag handles) ------------------------------------
+  // The overlay canvases must be the same size as the main canvas, or a
+  // handle drawn on them would not sit over the point it belongs to.
   const canvas = window.drawCanvas;
   if (canvas) {
     syncOverlayToCanvas("interaction", canvas);
@@ -436,6 +511,11 @@ export function renderLayerPanel(tabId) {
 /* ------------------------------------------------------------
    textColorOn(hex)
    Black or white, whichever reads better on the given background.
+
+   "#c0392b" -> parseInt("c0392b", 16) is one number holding all three
+   color bytes; ">> 16" and "& 255" pick out red, ">> 8" green, the
+   last byte blue. The weights 0.299, 0.587, 0.114 are the standard
+   perceived-brightness formula (green looks brightest to the eye).
    ------------------------------------------------------------ */
 function textColorOn(hex) {
 
@@ -471,7 +551,8 @@ function updateLayerInfo(tabId) {
   }
 
   const reg = window.drawRegistry?.[layer.id];
-  label.textContent = "Layer " + (figure.activeLayer + 1) + " \u00b7 " + (reg?.name || layer.id);
+  // · is the middle dot character.
+  label.textContent = "Layer " + (figure.activeLayer + 1) + " · " + (reg?.name || layer.id);
   box.checked  = layer.visible;
   box.disabled = false;
 
@@ -480,6 +561,8 @@ function updateLayerInfo(tabId) {
 
 /* ============================================================
    selectLayer(tabId, index)
+   ------------------------------------------------------------
+   Makes a layer active (a click on its number in the strip).
    ============================================================ */
 export function selectLayer(tabId, index) {
 
@@ -491,6 +574,8 @@ export function selectLayer(tabId, index) {
   tabState.selectedPoint = null;   // only the active layer's points can be selected
   tabState.centroidSelected = false;
 
+  // [index, ...rest] builds a new array: index first, then every other
+  // entry of drawOrder in its old order.
   if (MOVE_TO_FRONT_ON_SELECT) {
     figure.drawOrder = [index, ...figure.drawOrder.filter((n) => n !== index)];
   }
@@ -503,6 +588,9 @@ export function selectLayer(tabId, index) {
 
 /* ============================================================
    setLayerVisible(tabId, index, visible)
+   ------------------------------------------------------------
+   The Show checkbox in the caption bar. Hiding is for editing only:
+   Show All and the final drawing still include hidden layers.
    ============================================================ */
 export function setLayerVisible(tabId, index, visible) {
 
@@ -517,6 +605,8 @@ export function setLayerVisible(tabId, index, visible) {
   // next visible layer down the stack active (or, if none is below, any
   // visible layer). The stacking itself is left alone (unlike selectLayer,
   // which moves the layer to the front).
+  // "a ?? b" gives b only when a is null or undefined (unlike "||", which
+  // would also skip a layer index of 0).
   if (!visible && index === figure.activeLayer) {
     const order = figure.drawOrder;
     const isVisible = (i) => figure.layers[i].visible;

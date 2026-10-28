@@ -41,6 +41,25 @@
    unused in Figures. The mouse is read from window, like interactor.js, so
    an object with no handles still works.
 
+   Welds (Phase 8): moving or turning a layer moves its welded discs, so
+   setTransform() below takes a snapshot of them first and lets their
+   partners follow afterwards (figureWelds.js). A turn is handed to the
+   partners as a plain shift of each disc, which is exact for the discs
+   themselves but means a welded partner is shifted, not turned.
+
+   Known gap (2026-10-27): the mousedown handler does not check which
+   button was pressed, so a right-press on the diamond starts a move,
+   the same bug that was fixed in interactor.js and figurePointer.js.
+   It only matters in lines mode (the diamond is hidden in points mode,
+   where right-click welds). One-line fix, listed in PHASES.md.
+
+   A worked example of a turn: the diamond is at (300, 300), the press
+   on the rotation handle at (300, 250), straight above it, so
+   angle0 = atan2(-50, 0) = -90 degrees. The mouse moves to (350, 300),
+   straight right: now = atan2(0, 50) = 0 degrees. The layer is turned
+   by now - angle0 = +90 degrees about (300, 300): a quarter turn
+   clockwise on screen.
+
    Exports:
      activateCentroid(tabId, redraw)
      deactivateCentroid()
@@ -90,6 +109,10 @@ function geometry(ts) {
   const b      = inst?.bounds;
   if (!layer || !layer.visible || !b || !isFinite(b.minX)) return null;
 
+  // Everything is worked out in object space (where the bounds are),
+  // then each spot is sent to the canvas through the layer's transform.
+  // That is why the box turns with the layer instead of staying square
+  // to the screen.
   const t  = layer.transform || null;
   const cx = (b.minX + b.maxX) / 2;
   const cy = (b.minY + b.maxY) / 2;
@@ -240,6 +263,13 @@ export function activateCentroid(tabId, redraw) {
 
   let drag = null;   // { kind: "move"|"turn", from: {x,y}, start: transform, center, angle0 }
 
+  // Every move is computed from where the drag STARTED (drag.start and
+  // drag.from), not from the previous mouse position. Small rounding
+  // errors therefore never pile up over a long drag.
+  //
+  // Press order of precedence: the rotation handle (only while
+  // selected), then the diamond, then anywhere else on the canvas,
+  // which deselects.
   window.addEventListener("mousedown", (e) => {
     if (!live()) return;
     const ts = tabState();
@@ -285,6 +315,9 @@ export function activateCentroid(tabId, redraw) {
     if (drag.kind === "move") {
       setTransform(ts, translateTransform(drag.start, m.x - drag.from.x, m.y - drag.from.y));
     } else {
+      // Math.atan2(dy, dx) is the direction from the centroid to the mouse,
+      // as an angle. The layer turns by how far that direction has swung
+      // since the press (see the worked example in the header).
       const now = Math.atan2(m.y - drag.center.y, m.x - drag.center.x);
       setTransform(ts, rotateTransformAbout(drag.start, drag.center.x, drag.center.y, now - drag.angle0));
     }
@@ -323,6 +356,9 @@ export function activateCentroid(tabId, redraw) {
 
 /* ============================================================
    deactivateCentroid()
+   ------------------------------------------------------------
+   Removes all four listeners with one abort. Safe to call when
+   nothing is active.
    ============================================================ */
 export function deactivateCentroid() {
 
