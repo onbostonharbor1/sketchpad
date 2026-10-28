@@ -26,6 +26,7 @@ Do one phase at a time. After each, stop and wait for him to review, play with i
 | 12 | Thumbnails (the Insert list becomes icons with a larger preview on mouseover) | |
 | 13 | Sweep tool | |
 | 14 | Filesystem boundary refactor (C3) | |
+| 15 | Investigate redoing the older tabs' command and caption code with `ui/figures/figuresCommands.js` as the pattern (Barry, 2026-10-27: it reads cleaner than the others). Investigate and report first; rebuild only after he decides | |
 
 Barry's "Deferred" and "Dropped" lists belong here too. Paste them in from his original list; they are not
 reproduced above.
