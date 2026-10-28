@@ -190,6 +190,12 @@ export function activatePointsInput(tabId, redraw) {
   let onHandleAtPress = false;   // the press began on a handle of the object
 
   layer.addEventListener("mousedown", (e) => {
+    // Left button only. A right-click is the weld toggle (below); without
+    // this it would also run as a click on release and place or select a
+    // disc before the weld code looks (on Windows the contextmenu event
+    // comes after mouseup).
+    if (e.button !== 0) return;
+
     const ts = tabState();
     if (!ts) return;
 

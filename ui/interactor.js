@@ -202,6 +202,10 @@ function activatePointPicker(points, config = {}) {
     }
 
     const handleMouseDown = (e) => {
+        // Left button only. A right-click (Figures: weld) must not grab a
+        // handle, or the smallest hand jitter drags it to the cursor.
+        if (e.button !== 0) return;
+
         const mouse = getCanvasCoords(e);
 
         // The centroid (Figures) outranks a handle under it. Let it have the press.

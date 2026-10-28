@@ -183,6 +183,12 @@ export function removeFromWeld(figure, n) {
    ------------------------------------------------------------ */
 function cornerPartners(tabState, point) {
 
+  // Only an anchored disc sits on an arm of its object, so only it can be
+  // at a corner. A free disc has no arm: without this check every arm of
+  // its layer looked like "another arm", and a free disc lying on its own
+  // object's handle was "corner tied" to it.
+  if (point.kind !== "anchored") return [];
+
   const figure   = tabState.figure;
   const instance = tabState.instances?.[point.layer];
   if (!instance) return [];
@@ -244,7 +250,7 @@ export function toggleWeldAt(tabState, x, y, radius) {
     if (!candidate) return { kind: "none", message: "Nothing to weld here." };
 
     const partner = discAt(candidate.x, candidate.y);
-    const probe   = { layer: candidate.layer, arm: candidate.arm, x: candidate.x, y: candidate.y };
+    const probe   = { kind: "anchored", layer: candidate.layer, arm: candidate.arm, x: candidate.x, y: candidate.y };
     if (!partner && !cornerPartners(tabState, probe).length) {
       return { kind: "none", message: "Nothing to weld here." };
     }

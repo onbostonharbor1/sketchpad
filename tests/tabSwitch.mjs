@@ -1129,6 +1129,49 @@ let pp = await page.evaluate(() => uiState.figures.tabs[uiState.figures.activeSu
 if (Math.abs(pp.line1_pt2.x - 250) > 1 || Math.abs(pp.line1_pt2.y - 260) > 1) problems.push("[8 corner] line1_pt2 did not follow: " + JSON.stringify(pp.line1_pt2));
 if (Math.abs(pp.line2_pt1.x - 250) > 1 || Math.abs(pp.line2_pt1.y - 260) > 1) problems.push("[8 corner] line2_pt1 did not follow -- the Parabola's own corner split: " + JSON.stringify(pp.line2_pt1));
 
+stage = "8 right-click is only a weld toggle (no handle drag, no stray disc)";
+// Found in real use: a right-press on a handle grabbed it (hand jitter
+// dragged it to the cursor), and on release ran as a left click too,
+// placing a disc. Neither may happen.
+await newFigure();
+await insertExact("drawLine", { pt1: { x: 200, y: 200 }, pt2: { x: 400, y: 400 } });
+await page.waitForTimeout(300);
+await page.check("#figureModeCheck");
+await page.waitForTimeout(300);
+{
+  const r = await rect();
+  const sx = (x) => r[0] + x * r[2] / 800, sy = (y) => r[1] + y * r[3] / 800;
+  await page.mouse.move(sx(203), sy(201));
+  await page.mouse.down({ button: "right" });
+  await page.mouse.move(sx(206), sy(204), { steps: 3 });   // the hand jitters 3 px
+  await page.mouse.up({ button: "right" });
+  await page.waitForTimeout(200);
+}
+h = await handles();
+if (!near(h[0].x, 200) || !near(h[0].y, 200)) problems.push("[8 right-click] the line's start handle moved: " + JSON.stringify(h[0]));
+if ((await points()).length !== 0) problems.push("[8 right-click] a right-click placed a disc: " + JSON.stringify(await points()));
+
+stage = "8 a free disc on its own object's handle is not a corner";
+// The other half of the same report: a free disc lying exactly on its own
+// layer's handle was "corner tied" to that handle's candidate. A fresh
+// figure, so this does not depend on the stage above.
+await page.uncheck("#figureModeCheck");
+await newFigure();
+await insertExact("drawLine", { pt1: { x: 200, y: 200 }, pt2: { x: 400, y: 400 } });
+await page.waitForTimeout(300);
+await page.check("#figureModeCheck");
+await page.waitForTimeout(300);
+await page.evaluate(async () => {
+  const m = await import("/ui/figures/figurePoints.js");
+  const ts = uiState.figures.tabs[uiState.figures.activeSubtab];
+  m.addFreePoint(ts.figure, 200, 200, ts.figure.layers[0].transform);
+});
+await rightClickAt(200, 200);
+w = await welds();
+if (w.length !== 0) problems.push("[8 free not corner] a free disc was welded to its own object: " + JSON.stringify(w));
+if ((await points()).length !== 1) problems.push("[8 free not corner] a disc was added: " + JSON.stringify(await points()));
+await page.uncheck("#figureModeCheck");
+
 await browser.close();
 
 for (const n of notes.slice(0, 5)) console.log("note:", n);

@@ -369,6 +369,52 @@ actually wrong, found by reproducing it directly rather than guessing from the s
 Regression test added ("8 corner tie"): the exact repro -- a Parabola and a Line sharing a corner, one
 right-click, drag the Line, check that BOTH of the Parabola's own corner fields followed, not just one.
 
+### Second bug found in real use (2026-10-27, same branch): the weld never reached the Parabola
+
+Same setup, a Parabola and a Line meeting at the Parabola's far end. The right-click said "Welded (corner
+tied)" -- odd, since neither end is a corner -- and dragging the Line left the Parabola behind. Barry's
+figure dump settled it: both welded discs were on the Line's layer, and the Parabola had no disc at all.
+Three things combined:
+
+1. **Discs go on the active layer only.** With the Line active, a click at the Parabola's end, a little
+   more than the hit radius from any point of the Line, made a free disc on the Line's layer.
+2. **A right-click also acted as a left button.** Neither `interactor.js` nor the click code in
+   `figurePointer.js` checked which button was pressed. A right-press within 10 px of a handle grabbed it,
+   and the smallest hand movement dragged it under the cursor -- here, exactly onto that free disc. On
+   release, the click code also ran, and could select or place a disc before the weld code looked (on
+   Windows the context-menu event comes after the button comes up). Both now ignore everything but the
+   left button.
+3. **`cornerPartners()` treated a free disc as a corner.** A free disc has no arm, so every arm of its own
+   layer counted as "another arm", and the Line's own start (now under the free disc) was tied to it. It
+   now looks only at anchored discs.
+
+Tests added: "8 right-click is only a weld toggle" (a jittering right-press on a handle moves nothing and
+places nothing) and "8 a free disc on its own object's handle is not a corner".
+
+Point (1) is a usability problem, not a bug, and is what the next item is for.
+
+## Phase 8, next pass (Barry, 2026-10-27): a handle dropped on another handle welds
+
+When a handle of one object is dropped on a handle of another, the two weld, with no points mode and no
+discs to place first. This removes the step that went wrong above: no one has to remember which layer is
+active.
+
+Open questions for Barry before it is built:
+
+- **When.** On release only (proposed), so dragging a handle across another one on the way somewhere else
+  does not weld it.
+- **How close.** Within the handle grab range (10 px, proposed). The dropped handle then snaps exactly
+  onto the other, since a weld needs its members to coincide. The snap moves only the handle being
+  dragged, which the person is moving anyway.
+- **Discs.** A weld is made of discs, so a disc is placed on each handle (or the existing one used). They
+  stay visible afterwards like any other disc.
+- **Which handles.** Arm-end handles are infrastructure points and can be welded. A midpoint handle (the
+  one that slides a whole line) usually is not: a Line's midpoint is not a candidate (steps = 1), though a
+  Parabola's is when steps is even. Proposed: arm ends only.
+- **Same object.** Dropping a Parabola's `line2_pt1` onto its own `line1_pt2` would tie its corner, the
+  same as a right-click does now. Proposed: yes.
+- **Undoing.** Right-click on the weld still removes it. An accidental drop has no other undo yet.
+
 ## Phase 7 as built
 
 - A press on a handle selects it (orange with an outer ring); a press anywhere else clears the selection. The arrow
