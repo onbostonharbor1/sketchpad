@@ -45,6 +45,7 @@ import { spawn } from "child_process";
 import path from "path";
 import { runManifestMaintenance } from "./maintain_manifests.mjs";
 import { createFigure }           from "./createFigureService.mjs";
+import { RequestError, assertSimpleName, isInside } from "./safePaths.mjs";
 
 
 /* ===========================================================
@@ -925,13 +926,9 @@ export async function writePatternThumbnail(payload = {}) {
   const pngBase64 = payload.pngBase64;
 
   /* ---- validate payload ---- */
-  if (typeof category !== "string" || category.trim() === "") {
-    throw new Error("writePatternThumbnail: category missing or invalid");
-  }
+  assertSimpleName(category, "writePatternThumbnail: category");
 
-  if (typeof filename !== "string" || filename.trim() === "") {
-    throw new Error("writePatternThumbnail: filename missing or invalid");
-  }
+  assertSimpleName(filename, "writePatternThumbnail: filename");
 
   if (typeof pngBase64 !== "string" || pngBase64.trim() === "") {
     throw new Error("writePatternThumbnail: pngBase64 missing or invalid");
@@ -1186,14 +1183,19 @@ function resolveManifestPathAllowed(allowedRoots, manifestPathInput, tag) {
     if (typeof root !== "string" || root.trim() === "") {
       throw new Error("resolveManifestPathAllowed: invalid root");
     }
-    if (abs.startsWith(root)) {
+    if (isInside(root, abs)) {
       ok = true;
       break;
     }
   }
 
   if (!ok) {
-    throw new Error(`${tag}: manifestPath escapes allowed roots: ${abs}`);
+    throw new RequestError(`${tag}: manifestPath escapes allowed roots: ${abs}`);
+  }
+
+  /* ---- only a file named manifest.json may be edited through this path ---- */
+  if (path.basename(abs) !== "manifest.json") {
+    throw new RequestError(`${tag}: manifestPath must name a manifest.json: ${abs}`);
   }
 
   assertFileExists(abs, "Manifest file not found: " + abs);
@@ -2082,9 +2084,7 @@ async function archiveItem(payload) {
     throw new Error("archiveItem: manifestPath missing");
   }
 
-  if (typeof filename !== "string" || filename.trim() === "") {
-    throw new Error("archiveItem: filename missing");
-  }
+  assertSimpleName(filename, "archiveItem: filename");
 
   const patternsRoot  = path.resolve("./patterns");
   const galleryRoot   = path.resolve("./gallery");
@@ -2105,16 +2105,8 @@ async function archiveItem(payload) {
     throw new Error("archiveItem: source file not found: " + srcAbs);
   }
 
-  const archiveDirAbs = path.join(manifestDir, "archive");
-  if (!fs.existsSync(archiveDirAbs)) {
-    fs.mkdirSync(archiveDirAbs, { recursive: true });
-  }
-
-  const destAbs = path.join(archiveDirAbs, filename);
-
-  fs.renameSync(srcAbs, destAbs);
-
-  // Update manifest: remove matching entry.
+  // Work out the new manifest BEFORE moving anything, so a request that
+  // cannot be finished leaves every file where it was.
   const raw  = fs.readFileSync(manifestAbs, "utf8");
   const list = JSON.parse(raw);
 
@@ -2144,14 +2136,30 @@ async function archiveItem(payload) {
   });
 
   if (afterList.length === before) {
-    throw new Error("archiveItem: no manifest entry matched filename: " + filename);
+    throw new RequestError("archiveItem: no manifest entry matched filename: " + filename);
   }
 
-  fs.writeFileSync(
-    manifestAbs,
-    JSON.stringify(afterList, null, 2) + "\n",
-    "utf8"
-  );
+  // Now move the file, then write the manifest. If the manifest cannot be
+  // written, put the file back.
+  const archiveDirAbs = path.join(manifestDir, "archive");
+  if (!fs.existsSync(archiveDirAbs)) {
+    fs.mkdirSync(archiveDirAbs, { recursive: true });
+  }
+
+  const destAbs = path.join(archiveDirAbs, filename);
+
+  fs.renameSync(srcAbs, destAbs);
+
+  try {
+    fs.writeFileSync(
+      manifestAbs,
+      JSON.stringify(afterList, null, 2) + "\n",
+      "utf8"
+    );
+  } catch (writeErr) {
+    fs.renameSync(destAbs, srcAbs);
+    throw writeErr;
+  }
 
   // Mirror the removal into ./home/manifest.json so the Home tab
   // stays consistent without requiring a full rebuild.
@@ -2226,8 +2234,8 @@ async function writeHelpFile(payload = {}) {
 
   const abs = path.resolve(rel);
 
-  if (!abs.startsWith(helpRoot)) {
-    throw new Error("writeHelpFile: path escapes ./help: " + abs);
+  if (abs === helpRoot || !isInside(helpRoot, abs)) {
+    throw new RequestError("writeHelpFile: path escapes ./help: " + abs);
   }
 
   // Parent directory MUST exist (fail-fast, no silent mkdirs)
@@ -2293,13 +2301,9 @@ export async function writeGalleryPatternPng(payload = {}) {
   const pngBase64   = payload.pngBase64;
   const thumbBase64 = payload.thumbBase64;
 
-  if (typeof category !== "string" || category.trim() === "") {
-    throw new Error("writeGalleryPatternPng: category missing or invalid");
-  }
+  assertSimpleName(category, "writeGalleryPatternPng: category");
 
-  if (typeof idName !== "string" || idName.trim() === "") {
-    throw new Error("writeGalleryPatternPng: idName missing or invalid");
-  }
+  assertSimpleName(idName, "writeGalleryPatternPng: idName");
 
   if (typeof pngBase64 !== "string" || pngBase64.trim() === "") {
     throw new Error("writeGalleryPatternPng: pngBase64 missing or invalid");
@@ -2504,13 +2508,9 @@ export async function writePatternFromDrawRegistry(payload = {}) {
   const scriptText  = payload.scriptText;
   const thumbBase64 = payload.thumbBase64;
 
-  if (typeof category !== "string" || category.trim() === "") {
-    throw new Error("writePatternFromDrawRegistry: category missing/invalid");
-  }
+  assertSimpleName(category, "writePatternFromDrawRegistry: category");
 
-  if (typeof idName !== "string" || idName.trim() === "") {
-    throw new Error("writePatternFromDrawRegistry: idName missing/invalid");
-  }
+  assertSimpleName(idName, "writePatternFromDrawRegistry: idName");
 
   if (typeof scriptText !== "string" || scriptText.trim() === "") {
     throw new Error("writePatternFromDrawRegistry: scriptText missing/invalid");
@@ -2622,8 +2622,8 @@ export async function saveSecondaryObject(payload = {}) {
   const jsonContent = payload.payload;
   const thumbBase64 = payload.thumbBase64;
 
-  if (!primaryId) throw new Error("saveSecondaryObject: primaryId missing");
-  if (!name)      throw new Error("saveSecondaryObject: name missing");
+  assertSimpleName(primaryId, "saveSecondaryObject: primaryId");
+  assertSimpleName(name, "saveSecondaryObject: name");
   if (!jsonContent) throw new Error("saveSecondaryObject: payload (json) missing");
   if (!thumbBase64) throw new Error("saveSecondaryObject: thumbBase64 missing");
 
@@ -2724,8 +2724,8 @@ export async function archiveSecondaryObject(payload = {}) {
   const primaryId = payload.primaryId;
   const filename  = payload.filename;
 
-  if (!primaryId) throw new Error("archiveSecondaryObject: primaryId missing");
-  if (!filename)  throw new Error("archiveSecondaryObject: filename missing");
+  assertSimpleName(primaryId, "archiveSecondaryObject: primaryId");
+  assertSimpleName(filename, "archiveSecondaryObject: filename");
 
   const registryRoot = path.resolve("./drawRegistry");
   const primaryDir = path.join(registryRoot, primaryId);
@@ -2756,7 +2756,7 @@ export async function archiveSecondaryObject(payload = {}) {
 =========================================================== */
 export async function getSecondaryManifest(payload = {}) {
   const primaryId = payload.primaryId;
-  if (!primaryId) throw new Error("getSecondaryManifest: primaryId missing");
+  assertSimpleName(primaryId, "getSecondaryManifest: primaryId");
 
   const registryRoot = path.resolve("./drawRegistry");
   const manifestPath = path.join(registryRoot, primaryId, "manifest.json");
@@ -2818,7 +2818,8 @@ export async function readSecondaryObject(payload = {}) {
   const primaryId = payload.primaryId;
   const filename  = payload.filename;
 
-  if (!primaryId || !filename) throw new Error("readSecondaryObject: args missing");
+  assertSimpleName(primaryId, "readSecondaryObject: primaryId");
+  assertSimpleName(filename, "readSecondaryObject: filename");
 
   const registryRoot = path.resolve("./drawRegistry");
   const filePath = path.join(registryRoot, primaryId, filename);

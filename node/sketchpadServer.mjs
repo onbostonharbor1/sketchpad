@@ -48,6 +48,7 @@
 
 import http from "http";
 import { dispatchService } from "./sketchpadService.mjs";
+import { RequestError } from "./safePaths.mjs";
 
 /* ===========================================================
    CONFIGURATION CONSTANTS
@@ -63,7 +64,38 @@ import { dispatchService } from "./sketchpadService.mjs";
    =========================================================== */
 
 const HOST = "127.0.0.1";
-const PORT = 5174;
+const PORT = Number(process.env.SKETCHPAD_PORT) || 5174;
+
+/* The only pages allowed to call this service. A browser sends an Origin
+   header on a cross-origin POST, so a page on any other site is refused.
+   Calls with no Origin header (curl, the test scripts) are allowed, since
+   they can only come from this computer. The Host header must also be this
+   service's own address, which blocks DNS-rebinding tricks. */
+const ALLOWED_ORIGINS = new Set(["http://localhost:5173", "http://127.0.0.1:5173"]);
+const ALLOWED_HOSTS   = new Set(["localhost:" + PORT, "127.0.0.1:" + PORT]);
+
+/* Largest request body accepted (thumbnail and PNG uploads are base64). */
+const MAX_BODY_BYTES = 50 * 1024 * 1024;
+
+function isRequestAllowed(req) {
+  const origin = req.headers.origin;
+  if (origin !== undefined && !ALLOWED_ORIGINS.has(origin)) return false;
+  const host = req.headers.host;
+  if (host !== undefined && !ALLOWED_HOSTS.has(host)) return false;
+  return true;
+}
+
+/* A plain Error thrown by a handler for bad input has no system error code
+   and says what is wrong with the request. Treat those as 400. Anything
+   else (disk errors, bugs) is a 500. */
+function statusForError(err) {
+  if (err instanceof RequestError) return err.status;
+  const message = (err && err.message) ? err.message : String(err);
+  if (message.startsWith("dispatchService:")) return 400;
+  if (err && typeof err.code === "string") return 500;
+  if (/\b(missing|invalid|must be|must name|not allowed|escapes|outside|unknown editor|not found)\b/i.test(message)) return 400;
+  return 500;
+}
 
 /* ===========================================================
    startServer()
@@ -114,6 +146,11 @@ export function startServer() {
 async function handleRequest(req, res) {
   const url = new URL(req.url, "http://localhost"); // base is required
   const pathname = url.pathname; // strips query string
+
+  if (!isRequestAllowed(req)) {
+    sendJson(res, 403, { error: "Origin or Host not allowed" });
+    return;
+  }
 
   // Accept both /dispatch and /dispatch/
   const isDispatch =
@@ -180,12 +217,7 @@ async function handleDispatch(req, res) {
     // are treated as 400 if they look like a usage error; otherwise 500.
     const message = (err && err.message) ? err.message : String(err);
 
-    if (message.startsWith("dispatchService:")) {
-      sendJson(res, 400, { error: message });
-      return;
-    }
-
-    sendJson(res, 500, { error: message });
+    sendJson(res, statusForError(err), { error: message });
   }
 } // end handleDispatch
 
@@ -207,14 +239,21 @@ async function handleDispatch(req, res) {
 function readJsonBody(req) {
   return new Promise((resolve, reject) => {
     let raw = "";
+    let size = 0;
 
     req.on("data", (chunk) => {
+      size += chunk.length;
+      if (size > MAX_BODY_BYTES) {
+        reject(new RequestError("Request body too large", 413));
+        req.destroy();
+        return;
+      }
       raw += chunk;
     });
 
     req.on("end", () => {
       if (raw.length === 0) {
-        reject(new Error("Empty request body"));
+        reject(new RequestError("Empty request body"));
         return;
       }
 
@@ -223,7 +262,7 @@ function readJsonBody(req) {
         resolve(obj);
       }
       catch (err) {
-        reject(new Error("Invalid JSON"));
+        reject(new RequestError("Invalid JSON"));
       }
     });
 
