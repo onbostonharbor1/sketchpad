@@ -25,7 +25,7 @@
 
 import { uiState }                    from "/ui/uiState.js";
 import { clearDivs, setCommandsButtonLabel } from "/ui/uiUtilities.js";
-import { drawActiveTab, setDrawSketchpad }   from "/ui/drawRunner.js";
+import { drawActiveTab, setDrawSketchpad }   from "/ui/draw/drawRunner.js";
 import {
   setDrawSubtabs,
   addDrawSubtab,

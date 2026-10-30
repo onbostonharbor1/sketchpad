@@ -149,30 +149,6 @@ async function renderHomeImageEntryToText(entry, myToken) {
 
 
 /* ============================================================
-   clearHomeCanvasAndOverlays()
-   ============================================================ */
-export function clearHomeCanvasAndOverlays() {
-
-  const canvas = window.drawCanvas;
-  if (!canvas) throw new Error("clearHomeCanvasAndOverlays: window.drawCanvas missing");
-
-  const c = window.ctx;
-  if (!c) throw new Error("clearHomeCanvasAndOverlays: window.ctx missing");
-
-  c.setTransform(1, 0, 0, 1, 0, 0);
-  c.globalAlpha              = 1;
-  c.globalCompositeOperation = "source-over";
-  c.clearRect(0, 0, canvas.width, canvas.height);
-  c.fillStyle = "#ffffff";
-  c.fillRect(0, 0, canvas.width, canvas.height);
-
-  const layers = document.getElementById("canvasOverlayLayers");
-  if (layers) layers.innerHTML = "";
-
-} // end clearHomeCanvasAndOverlays
-
-
-/* ============================================================
    showHomeResultsError(where, err)
    ============================================================ */
 function showHomeResultsError(where, err) {

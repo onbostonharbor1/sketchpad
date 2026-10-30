@@ -58,7 +58,7 @@ drawRegularPolygonTouch(thing)
 import { drawState } from "/draw/drawState.js";
 import { createNodes } from "/draw/createNodes.js";
 import { Line, Point, StringThing }       from "../classes/classes.js";
-import {  drawLines, drawParabs, drawNodes, shortenArm,
+import {  drawLines, drawParabs, drawNodes,
 	 ptsOnLine, stitcher, getPreviousIndex }            from "./drawUtilities.js";
 
 function createArms(thing, lines) {

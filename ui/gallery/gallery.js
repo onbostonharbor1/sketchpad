@@ -229,24 +229,3 @@ export function saveGalleryState() {
   return uiState.gallery.saved;
 
 } // end saveGalleryState
-
-
-/* ============================================================
-   rehydrateGalleryState()
-   ============================================================ */
-export function rehydrateGalleryState() {
-
-  const savedStr = sessionStorage.getItem("sketchpad.gallery.saved");
-
-  if (!uiState.gallery) uiState.gallery = {};
-
-  if (savedStr) {
-    const saved = JSON.parse(savedStr);
-    uiState.gallery.saved = saved;
-
-    setCurrentDomain(saved.domain     || null);
-    setCurrentCategory(saved.category || null);
-    setCurrentIndex(saved.index       || 0);
-  }
-
-} // end rehydrateGalleryState

@@ -320,7 +320,7 @@ export async function resetActiveDrawObject() {
   const { markTabClean } = await import("/ui/draw/drawNav.js");
   markTabClean(tabId);
 
-  const { drawActiveTab } = await import("/ui/drawRunner.js");
+  const { drawActiveTab } = await import("/ui/draw/drawRunner.js");
   drawActiveTab();
 
 } // end resetActiveDrawObject

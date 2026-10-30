@@ -158,34 +158,6 @@ async loadJSON(path) {
       return `/utilities/${category}/${clean}.js`;
     } // end utilityScript
 
-  }, // end path
-
-
-  /* ==========================================================
-     LEGACY NORMALIZERS
-     ----------------------------------------------------------
-     Kept for backward compatibility.
-     These now delegate to absolute path helpers.
-  ========================================================== */
-
-  normalizeHelpPath(tabName, itemName) {
-    return this.path.helpHtml(tabName, itemName);
-  }, // end normalizeHelpPath
-
-  normalizeScriptPath(tabName, itemName) {
-    return this.path.script(tabName, itemName);
-  }, // end normalizeScriptPath
-
-  normalizePatternPath(category, file) {
-    return this.path.patternScript(category, file);
-  }, // end normalizePatternPath
-
-  normalizeGalleryScript(file) {
-    return this.path.galleryScript(file);
-  }, // end normalizeGalleryScript
-
-  normalizeUtilityPath(category, file) {
-    return this.path.utilityScript(category, file);
-  } // end normalizeUtilityPath
+  } // end path
 
 }; // end fileLayer

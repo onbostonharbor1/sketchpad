@@ -84,48 +84,6 @@ export async function syncSystemStateAfterRebuild() {
 
 } // end syncSystemStateAfterRebuild
 
-/**
- * MASTER REBUILD:
- * 1. Wipes stale cache.
- * 2. Parallel re-fetch of ALL manifests from disk.
- * 3. Resets Home module variables.
- * 4. Resets all tab 'saved' states to force Cold Start.
- */
-export async function rebuildAllSystemCaches() {
-  // 1. Wipe memory
-  manifest.clearCache();
-
-  // 2. Proactive Fetch (The "Immaterial Time" parallel approach)
-  const paths = [
-    "home",
-    "patterns",
-    "gallery/Ideabook",
-    "gallery/Patterns",
-    "gallery/Scripts",
-    "utilities/Tools",
-    "utilities/Lab"
-  ];
-
-  // Fire all requests at once
-  await Promise.all(paths.map(p => manifest.get(p)));
-
-  // 3. Clear Home's private grouping logic (Dynamic Import)
-  try {
-    const homeMod = await import("/ui/home/home.js");
-    if (homeMod && typeof homeMod.clearHomeLocalState === "function") {
-      homeMod.clearHomeLocalState();
-    }
-  } catch (err) {
-    console.warn("rebuildAllSystemCaches: Home state reset skipped", err);
-  }
-
-  // 4. Delete 'saved' states for all tabs
-  const tabKeys = ["home", "patterns", "gallery", "utilities", "figures"];
-  tabKeys.forEach(key => {
-    if (uiState[key]) delete uiState[key].saved;
-  });
-} // end rebuildAllSystemCaches
-
 
 /**
  * Set the Commands button label for the active top-level tab.
@@ -151,18 +109,7 @@ export function setCommandsButtonLabel(label) {
 
 
 
-////////////////////////////////////////////////////////////////
-// clearOverlaysForTabSwitch()
-////////////////////////////////////////////////////////////////
-function clearOverlaysForTabSwitch() {
-  document.getElementById("overlayContainer").style.display = "none";
-  overlayManager.clearAll();
-} // end clearOverlaysForTabSwitch
-
-export {
-  clearDivs,
-  clearOverlaysForTabSwitch
-};
+export { clearDivs };
 
 
 
@@ -320,28 +267,6 @@ export function showCommandsOffcanvas({ title, buildBody }) {
 export function showOffcanvasPanel({ title, bodyHtml }) {
   return showOffcanvas({ title, bodyHtml });
 }
-
-
-/* ===========================================================
-   setCommandsButton(label, onClick)
-=========================================================== */
-export function setCommandsButton(label, onClick) {
-
-  const btn = document.getElementById("commandsButton");
-  if (!btn) throw new Error("setCommandsButton: #commandsButton not found");
-
-  btn.textContent = label || "Commands";
-
-  // Deterministic: remove prior handler by cloning the node.
-  const fresh = btn.cloneNode(true);
-  btn.parentNode.replaceChild(fresh, btn);
-
-  fresh.addEventListener("click", () => {
-    if (!onClick) throw new Error("setCommandsButton: onClick missing");
-    onClick();
-  });
-
-} // end setCommandsButton
 
 
 

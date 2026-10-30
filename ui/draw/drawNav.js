@@ -38,7 +38,7 @@
 
 import { clearDivs, showOffcanvasPanel, renderThumbnailGrid } from "/ui/uiUtilities.js";
 import { getIDsWithSecondaries, listSecondaries, loadSecondary } from "/ui/draw/secondaryObjects.js";
-import { drawActiveTab }                                        from "/ui/drawRunner.js";
+import { drawActiveTab }                                        from "/ui/draw/drawRunner.js";
 import { getIdsWithSecondaries, setIdsWithSecondaries }        from "./drawTabState.js";
 import { renderDrawCategories }                                from "./drawCategories.js";
 import {
