@@ -172,9 +172,9 @@ export function openHelpHomeOverlay() {
    - Does NOT invent ids.
    - Correctly builds helpPath for nested dirs.
    - Caller can pass either:
-       â€¢ options.subdirs : ["Scripts","Elliptical"]
+       • options.subdirs : ["Scripts","Elliptical"]
      OR
-       â€¢ options.path    : ["gallery","Scripts","Elliptical"]  (tabName ignored)
+       • options.path    : ["gallery","Scripts","Elliptical"]  (tabName ignored)
 
    RULES
    -----
@@ -423,7 +423,7 @@ function getTinyMceConfig(overrides = {}) {
     valid_elements: "*[*]",
     forced_root_block: "p",
 
-    // Donâ€™t auto-insert weird stuff
+    // Don’t auto-insert weird stuff
     convert_urls: false
 
   };
@@ -940,12 +940,12 @@ function setHelpBrowserDefaultPage() {
 
    Rules:
      - Arrays:
-         â€¢ keep only items that actually have help files
+         • keep only items that actually have help files
            (we treat ".js" leaf entries as NOT help pages)
-         â€¢ if result is empty => return null (prune)
+         • if result is empty => return null (prune)
      - Objects:
-         â€¢ recursively prune children
-         â€¢ if object ends up empty => return null (prune)
+         • recursively prune children
+         • if object ends up empty => return null (prune)
      - Any other type => throw
 
    Special:

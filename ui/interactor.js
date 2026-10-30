@@ -1,5 +1,5 @@
 /* ===========================================================
-   interactor.js â€“ Unified Interaction Manager
+   interactor.js – Unified Interaction Manager
    =========================================================== */
 import { canvasLayerManager } from "./canvasLayerManager.js";
 import { uiState } from "/ui/uiState.js";

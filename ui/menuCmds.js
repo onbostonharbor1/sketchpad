@@ -943,14 +943,14 @@ export async function saveSecondaryObject(spec = {}) {
    makeHelpItem(tabName, helpKey, options)
    ------------------------------------------------------------
    Returns a Help menu item.
-     â€¢ If helpKey is provided, delegates to menuManager.buildHelpItem
+     • If helpKey is provided, delegates to menuManager.buildHelpItem
        which resolves the help file and opens the overlay.
-     â€¢ If no helpKey, returns a disabled placeholder.
+     • If no helpKey, returns a disabled placeholder.
 
    Arguments:
-     tabName  â€” e.g. "patterns", "gallery", "figures"
-     helpKey  â€” item-specific help file key, or null/undefined
-     options  â€” passed through to buildHelpItem (e.g. { subdirs })
+     tabName  — e.g. "patterns", "gallery", "figures"
+     helpKey  — item-specific help file key, or null/undefined
+     options  — passed through to buildHelpItem (e.g. { subdirs })
    ------------------------------------------------------------ */
 export async function makeHelpItem(tabName, helpKey, options = {}) {
   if (helpKey) {
@@ -965,12 +965,12 @@ export async function makeHelpItem(tabName, helpKey, options = {}) {
    makeShowScriptItem(info, handler)
    ------------------------------------------------------------
    Returns a Show Script menu item.
-     â€¢ Disabled when info.isScript is falsy or info.scriptPath missing.
-     â€¢ handler is called with (scriptPath, label) when clicked.
+     • Disabled when info.isScript is falsy or info.scriptPath missing.
+     • handler is called with (scriptPath, label) when clicked.
 
    Arguments:
-     info    â€” { isScript, scriptPath, filename, title }
-     handler â€” fn(scriptPath, label) â€” typically showScriptOffcanvas
+     info    — { isScript, scriptPath, filename, title }
+     handler — fn(scriptPath, label) — typically showScriptOffcanvas
    ------------------------------------------------------------ */
 export function makeShowScriptItem(info, handler) {
   const scriptPath = info.scriptPath || "";
@@ -990,10 +990,10 @@ export function makeShowScriptItem(info, handler) {
    makeThumbnailItem(handler)
    ------------------------------------------------------------
    Returns a Create Thumbnail menu item.
-     â€¢ Always enabled â€” handler is responsible for checking canvas.
+     • Always enabled — handler is responsible for checking canvas.
 
    Arguments:
-     handler â€” async fn() â€” tab-specific thumbnail creation
+     handler — async fn() — tab-specific thumbnail creation
    ------------------------------------------------------------ */
 export function makeThumbnailItem(handler) {
   return {
@@ -1009,10 +1009,10 @@ export function makeThumbnailItem(handler) {
    makeEditManifestItem(handler)
    ------------------------------------------------------------
    Returns an Edit Manifest menu item.
-     â€¢ Always enabled â€” handler validates its own preconditions.
+     • Always enabled — handler validates its own preconditions.
 
    Arguments:
-     handler â€” async fn() â€” tab-specific manifest edit + refresh
+     handler — async fn() — tab-specific manifest edit + refresh
    ------------------------------------------------------------ */
 export function makeEditManifestItem(handler) {
   return {
@@ -1028,10 +1028,10 @@ export function makeEditManifestItem(handler) {
    makeArchiveItem(handler)
    ------------------------------------------------------------
    Returns an Archive menu item.
-     â€¢ Always enabled â€” handler shows its own confirm dialog.
+     • Always enabled — handler shows its own confirm dialog.
 
    Arguments:
-     handler â€” async fn() â€” tab-specific archive + navigation
+     handler — async fn() — tab-specific archive + navigation
    ------------------------------------------------------------ */
 export function makeArchiveItem(handler) {
   return {

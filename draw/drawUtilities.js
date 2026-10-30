@@ -178,8 +178,8 @@ function drawNodes(thing,nodes) {
          j = i + skip
 
      chop  (optional, default false)
-       false â†’ wrap around using modulo
-       true  â†’ stop drawing when j exceeds array bounds
+       false → wrap around using modulo
+       true  → stop drawing when j exceeds array bounds
 
      color (optional, default "blue")
        Line color passed to drawLine().
@@ -253,20 +253,20 @@ PURPOSE
 PARAMETERS
 - ptArray : array of Point objects (or indexable via numbersToPoints
             indirectly through drawLine)
-- skip    : integer â‰¥ 1
+- skip    : integer ≥ 1
             Defines how far ahead in the array the second endpoint is.
             Examples:
-              skip = 1  â†’ connect consecutive points
-                          (0â†’1, 1â†’2, 2â†’3, ...)
-              skip = 2  â†’ skip one point between connections
-                          (0â†’2, 1â†’3, 2â†’4, ...)
-              skip = n  â†’ longer chords, more â€œwovenâ€ patterns
+              skip = 1  → connect consecutive points
+                          (0→1, 1→2, 2→3, ...)
+              skip = 2  → skip one point between connections
+                          (0→2, 1→3, 2→4, ...)
+              skip = n  → longer chords, more “woven” patterns
 - color   : stroke color passed to drawLine
 
 BEHAVIOR
 - Iterates forward through ptArray.
 - For each index i, draws a line from ptArray[i] to ptArray[i + skip].
-- Stops (â€œchopsâ€) as soon as i + skip would exceed the array bounds.
+- Stops (“chops”) as soon as i + skip would exceed the array bounds.
 - No wraparound, no closing segment, no partial line at the end.
 
 ASSUMPTIONS
@@ -312,16 +312,16 @@ PARAMETERS
 - ptArray : array of Point-like objects: {x:number, y:number}
 - skip    : how far forward to connect (integer)
             examples (N = ptArray.length):
-              skip = 1  â†’ 0->1, 1->2, 2->3, ...
-              skip = 2  â†’ 0->2, 1->3, 2->4, ...
-              skip = N/2â†’ â€œdiametersâ€ on a circle (if N even)
+              skip = 1  → 0->1, 1->2, 2->3, ...
+              skip = 2  → 0->2, 1->3, 2->4, ...
+              skip = N/2→ “diameters” on a circle (if N even)
 - color   : stroke color passed to drawLine()
 - start   : first index to use (inclusive)
 - end     : last index to use (exclusive). default is ptArray.length
-- close   : if true, add one final â€œclosingâ€ line after the loop
+- close   : if true, add one final “closing” line after the loop
 - chop    : controls wraparound
-            false â†’ wrap with modulo: j = (i + skip) % ptArray.length
-            true  â†’ do NOT wrap; if (i + skip) is out of range, stop.
+            false → wrap with modulo: j = (i + skip) % ptArray.length
+            true  → do NOT wrap; if (i + skip) is out of range, stop.
 
 NOTES
 - This function assumes drawLine(p1, p2, color) already exists.
@@ -351,7 +351,7 @@ function drawLinesWithin(
     let j = i + skip;
 
     if (chop) {
-      if (j < 0 || j >= ptArray.length) break;   // stop as soon as weâ€™d go out of range
+      if (j < 0 || j >= ptArray.length) break;   // stop as soon as we’d go out of range
     } else {
       j = ((j % ptArray.length) + ptArray.length) % ptArray.length; // safe modulo for negative skip
     }
@@ -559,9 +559,9 @@ function stitcher(arm1, arm2) {
  * using transforms stored in thing.lineTransform.
  *
  * Supported types:
- *   "straight"      â€“ evenly spaced points start â†’ end
- *   "flexAtMiddle"  â€“ deflect at midpoint, endpoints fixed
- *   "bendAtMid"     â€“ deflect at midpoint, replace far endpoint
+ *   "straight"      – evenly spaced points start → end
+ *   "flexAtMiddle"  – deflect at midpoint, endpoints fixed
+ *   "bendAtMid"     – deflect at midpoint, replace far endpoint
  *
  * @param {StringThing} thing - must have numSteps and lineTransform { type, angle }
  * @param {Line} line - line with start and end Points
@@ -628,7 +628,7 @@ function ptsOnLine(thing, line) {
     return [...firstHalf, ...secondHalf.slice(1)];
   }
 
-  // fallback â†’ straight
+  // fallback → straight
   return ptsOnStraightLine(start, end, numSteps);
 }
 
@@ -642,7 +642,7 @@ function getPreviousIndex(i, length) {
 numbersToPoints(coords)
 --------------------------------------------------------------------
 PURPOSE
-- Normalize mixed â€œindex-or-pointâ€ inputs into actual Point objects.
+- Normalize mixed “index-or-point” inputs into actual Point objects.
 - Accepts numbers (indices into drawState.pts), Point objects, or
   arrays containing any mix of the two.
 - This allows higher-level drawing code to stay concise and flexible
@@ -651,8 +651,8 @@ PURPOSE
 INPUT
 - coords may be:
     1) An array containing:
-         - numbers â†’ treated as indices into drawState.pts
-         - Point objects â†’ passed through unchanged
+         - numbers → treated as indices into drawState.pts
+         - Point objects → passed through unchanged
     2) A single number
          - treated as an index into drawState.pts
     3) A single Point object
@@ -664,11 +664,11 @@ ASSUMPTIONS
 
 RETURN
 - If coords is an array:
-    â†’ returns a new array of Point objects
+    → returns a new array of Point objects
 - If coords is a number:
-    â†’ returns drawState.pts[coords]
+    → returns drawState.pts[coords]
 - Otherwise:
-    â†’ returns coords unchanged (assumed to be a Point)
+    → returns coords unchanged (assumed to be a Point)
 
 DESIGN NOTES
 - This function performs *no copying* of Point objects; it returns
@@ -704,7 +704,7 @@ function numbersToPoints(coords) {
         return nodes;
     }
 
-    // Case 2: coords is a single number â†’ index into drawState.pts
+    // Case 2: coords is a single number → index into drawState.pts
     if (typeof coords === "number") {
         return drawState.pts[coords];
     }

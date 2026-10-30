@@ -8,16 +8,16 @@
        RIGHT:  Prev | Next | v(menu)
 
    Behavior:
-     â€¢ "v" ALWAYS exists
-     â€¢ If menuManager reports zero actions â†’ v-button disabled
-     â€¢ Title remains left-aligned, flexible width
-     â€¢ Button cluster right-aligned
-     â€¢ Prev/Next provided by caller (if needed)
-     â€¢ v-button is created here, but menuManager controls open/close
+     • "v" ALWAYS exists
+     • If menuManager reports zero actions → v-button disabled
+     • Title remains left-aligned, flexible width
+     • Button cluster right-aligned
+     • Prev/Next provided by caller (if needed)
+     • v-button is created here, but menuManager controls open/close
 
    Dependencies:
-     â€¢ menuManager.js
-     â€¢ nextPrevOverlay.js
+     • menuManager.js
+     • nextPrevOverlay.js
 ============================================================ */
 
 import { menuManager } from "./menuManager.js";
@@ -43,9 +43,9 @@ import {
      }
 
    Notes:
-     â€¢ Caption bar is cleared on each call.
-     â€¢ Buttons only appear if callbacks are provided.
-     â€¢ This function also controls the Next/Prev click-zone
+     • Caption bar is cleared on each call.
+     • Buttons only appear if callbacks are provided.
+     • This function also controls the Next/Prev click-zone
        overlay automatically.
 ------------------------------------------------------------ */
 export function setCaptionBar(config) {
@@ -155,13 +155,13 @@ export function setCaptionBar(config) {
    Purpose:
      Produce a predictable, normalized caption entry object
      regardless of whether the tab provides:
-       â€¢ title
-       â€¢ name
-       â€¢ filename
-       â€¢ category
+       • title
+       • name
+       • filename
+       • category
 
    Arguments:
-     raw (object) â€“ tab-specific metadata
+     raw (object) – tab-specific metadata
 
    Returns:
      {

@@ -49,7 +49,7 @@ window.drawRegistry_inEllipse = {
     withinCirc: {
       widget: "select",
       options: [
-        { value: START_END,   label: "Startâ€“End" },
+        { value: START_END,   label: "Start–End" },
         { value: FULL,         label: "Full" },
         { value: TAPER,       label: "Taper (Both)" },
         { value: START_TAPER, label: "Start Taper" },

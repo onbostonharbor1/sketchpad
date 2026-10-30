@@ -3,7 +3,7 @@
    =========================================================== */
 
 /* ===========================================================
-   MAIN TAB BAR â€” OVERLAPPING SLOPED TABS (ONLY #mainTabs)
+   MAIN TAB BAR — OVERLAPPING SLOPED TABS (ONLY #mainTabs)
    =========================================================== */
 
 ul#mainTabs.nav-tabs {
@@ -37,7 +37,7 @@ ul#mainTabs.nav-tabs::after {
 #utilities-tab { --tab-base: var(--utilities-base); --tab-text: #fff; }
 
 /* ===========================================================
-   SHAPE DEFINITION â€” ROUNDED TRAPEZOID MASK
+   SHAPE DEFINITION — ROUNDED TRAPEZOID MASK
    =========================================================== */
 
 :root {
@@ -126,11 +126,11 @@ ul#mainTabs.nav-tabs .nav-link.active::after {
 }
 
 /* ===========================================================
-   SUBTABS â€” SAME SHAPE, NO LIP
+   SUBTABS — SAME SHAPE, NO LIP
    Goals:
      1) Selected tab is obvious (FONT ONLY)
-     2) Tabs donâ€™t merge (seam divider + odd/even variation)
-     3) â€œCategoriesâ€ readable (white text)
+     2) Tabs don’t merge (seam divider + odd/even variation)
+     3) “Categories” readable (white text)
    =========================================================== */
 
 .gallery-subtabs,
@@ -180,12 +180,12 @@ ul#mainTabs.nav-tabs .nav-link.active::after {
 
   background: var(--theme-mid);
 
-  /* make â€œCategoriesâ€ readable */
+  /* make “Categories” readable */
   color: rgba(255,255,255,0.96);
 
   border: none;
 
-  /* keep overlap, but weâ€™ll add a seam divider */
+  /* keep overlap, but we’ll add a seam divider */
   margin-right: -14px;
 
   cursor: pointer;
@@ -207,7 +207,7 @@ ul#mainTabs.nav-tabs .nav-link.active::after {
     transform 0.12s ease;
 }
 
-/* seam divider so tabs donâ€™t visually merge */
+/* seam divider so tabs don’t visually merge */
 .draw-subtabs .nav-link,
 .gallery-subtabs .nav-link,
 .patterns-subtabs .nav-link,
@@ -312,7 +312,7 @@ ul#mainTabs.nav-tabs .nav-link.active {
 
 
 /* ===========================================================
-   PATTERNS TAB ONLY â€” CATEGORIES LABEL CLARITY
+   PATTERNS TAB ONLY — CATEGORIES LABEL CLARITY
    =========================================================== */
 
 .patterns-subtabs .nav-item:first-child .nav-link:not(.active) {
@@ -322,7 +322,7 @@ ul#mainTabs.nav-tabs .nav-link.active {
 }
 
 /* ===========================================================
-   GALLERY SUBTABS â€” FIX OVERLAP STACKING (BUTTON LEVEL)
+   GALLERY SUBTABS — FIX OVERLAP STACKING (BUTTON LEVEL)
    =========================================================== */
 
 .gallery-subtabs .nav-item { position: relative; }
@@ -332,7 +332,7 @@ ul#mainTabs.nav-tabs .nav-link.active {
 .gallery-subtabs .nav-item:nth-child(3) .nav-link { z-index: 5; }
 .gallery-subtabs .nav-item:nth-child(4) .nav-link { z-index: 6; } /* Results */
 
-/* GALLERY ONLY â€” force inactive tab fill (no washout) */
+/* GALLERY ONLY — force inactive tab fill (no washout) */
 .gallery-subtabs .nav-link:not(.active) {
   filter: none !important;
   opacity: 1 !important;
@@ -340,7 +340,7 @@ ul#mainTabs.nav-tabs .nav-link.active {
 }
 
 /* ===========================================================
-   GALLERY SUBTABS ONLY â€” INACTIVE ALTERNATION (BACKGROUND ONLY)
+   GALLERY SUBTABS ONLY — INACTIVE ALTERNATION (BACKGROUND ONLY)
    -----------------------------------------------------------
    No filters. No global impact. Just a subtle odd/even lift.
    =========================================================== */
@@ -355,7 +355,7 @@ ul#mainTabs.nav-tabs .nav-link.active {
 
 
 /* ===========================================================
-   UTILITIES SUBTABS â€” FIX 3RD TAB WASHOUT + CLEAN ALTERNATION
+   UTILITIES SUBTABS — FIX 3RD TAB WASHOUT + CLEAN ALTERNATION
    -----------------------------------------------------------
    Problem: global odd/even filter alternation brightens tab 3
             so much the white text disappears.
@@ -373,14 +373,14 @@ ul#mainTabs.nav-tabs .nav-link.active {
 .utilities-subtabs .nav-item:nth-child(2) .nav-link { z-index: 4; }
 .utilities-subtabs .nav-item:nth-child(3) .nav-link { z-index: 5; }
 
-/* UTILITIES ONLY â€” force inactive tab fill (no washout) */
+/* UTILITIES ONLY — force inactive tab fill (no washout) */
 .utilities-subtabs .nav-link:not(.active) {
   filter: none !important;
   opacity: 1 !important;
   background: var(--theme-mid) !important;
 }
 
-/* UTILITIES ONLY â€” background-only alternation (no filters) */
+/* UTILITIES ONLY — background-only alternation (no filters) */
 
 /* odd inactive: slightly darker */
 .utilities-subtabs .nav-item:nth-child(odd) .nav-link:not(.active) {

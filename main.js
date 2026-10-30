@@ -1,4 +1,4 @@
-// main.js â€” Vite entry point
+// main.js — Vite entry point
 
 
 import '@melloware/coloris/dist/coloris.css';
