@@ -41,14 +41,25 @@
 export async function nodeDispatch(requestName, payload = {}) {
   const url = "http://localhost:5174/dispatch";
 
-  const response = await fetch(url, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      requestName: requestName,
-      payload: payload
-    })
-  });
+  let response;
+  try {
+    response = await fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        requestName: requestName,
+        payload: payload
+      })
+    });
+  } catch (networkErr) {
+    // The service is not running (or this is a read-only copy of Sketchpad
+    // with no Node service). Say so in plain words.
+    throw new Error(
+      "The Node service did not answer at " + url + ". Features that read or write " +
+      "files need it (start it with: npm run dev:all). A read-only copy of Sketchpad " +
+      "has no Node service, so those features are unavailable there."
+    );
+  }
 
   if (!response.ok) {
     const text = await response.text();
