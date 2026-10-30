@@ -207,7 +207,10 @@ export function renderCategories(targetId, descriptor) {
 export function buildCategoryDescriptor(groups, itemLabelFn, onClickFn) {
   return Object.keys(groups).sort().map(category => {
     const list = groups[category] || [];
-    const sorted = [...list].sort(itemLabelFn);
+    // A copy in manifest order. (This used to call sort(itemLabelFn), which passes a
+    // label function where sort() wants a comparison; it left the order unchanged.
+    // Patterns relies on the click index matching manifest order.)
+    const sorted = [...list];
 
     return {
       title: category,

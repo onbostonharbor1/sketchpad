@@ -32,13 +32,8 @@
    REQUIRED:
      - export function runPattern()
 
-   COMPATIBILITY SUPPORT (important):
-     - runPattern() may be declared as:
-         runPattern()
-       OR
-         runPattern(ctx)
-       The runner will pass ctx ONLY when the function declares
-       at least one parameter.
+   ARGUMENTS:
+     - runPattern() is always called with no arguments.
 
    OPTIONAL (parameterControls support):
      - export const scriptInfo = { ... }
@@ -50,8 +45,6 @@
    -----------------------
    REQUIRED:
      - export function runPattern()   returning HTML string
-   OPTIONAL:
-     - export function render()       returning HTML string
 
    ------------------------------------------------------------
    FAIL-FAST PHILOSOPHY
@@ -307,13 +300,12 @@ export async function executeScriptToCanvas(mod, title, options = {}) {
 /**
  * Executes a script module and displays its output as text in the DOM.
  *
- * Attempts to call either the module's `runPattern()` method (preferred) or
- * `render()` method (legacy fallback) to generate HTML content. The result is
- * inserted into a specified DOM element and returned.
+ * Calls the module's `runPattern()` method to generate HTML content. The
+ * result is inserted into a specified DOM element and returned.
  *
  * @async
- * @param {Object} mod - The script module to execute. Must have either a
- *                       `runPattern()` or `render()` function.
+ * @param {Object} mod - The script module to execute. Must have a
+ *                       `runPattern()` function.
  * @param {string} title - The title for the script execution (currently unused).
  * @param {Object} [options={}] - Optional configuration object.
  * @param {string} [options.textRegionId="text"] - The DOM element ID where
@@ -323,7 +315,7 @@ export async function executeScriptToCanvas(mod, title, options = {}) {
  *                       string if HTML was generated).
  *
  * @throws {Error} If mod is not provided, if the target DOM element is not found,
- *                 or if the module has neither `runPattern()` nor `render()` methods.
+ *                 or if the module has no `runPattern()` method.
  */
 export async function executeScriptToText(mod, title, options = {}) {
 
@@ -347,20 +339,9 @@ export async function executeScriptToText(mod, title, options = {}) {
     return out;
   }
 
-  // alternate legacy contract
-  if (typeof mod.render === "function") {
-    const html = await mod.render();
-    if (typeof html === "string") {
-      text.innerHTML = html;
-      return html;
-    }
-    text.innerHTML = "<p>(Script render() returned no HTML)</p>";
-    return html;
-  }
-
   text.innerHTML = "<p style='color:red'>(No usable output from script)</p>";
   throw new Error(
-    "executeScriptToText: script has neither runPattern() nor render()"
+    "executeScriptToText: script has no runPattern()"
   );
 
 } // end executeScriptToText

@@ -34,7 +34,6 @@ window.drawRegistry_inverseStar = {
         rotate:    0,
         shorten:   0,
         xScale:    1,
-        shorten:  0.0,
         yScale:    1,
         color:     "blue",
         lineWidth: 1,

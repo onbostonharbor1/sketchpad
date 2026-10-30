@@ -18,11 +18,6 @@ export class CurveStitch {
             xScale:      1,
             yScale:      1,
             shorten:     0,
-            truncate:    0,
-            ellipse: {
-                a: null,
-                b: null,
-          },
 
             both:        false,      // check this one out
             //            yIncrement:  1,
