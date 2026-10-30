@@ -21,7 +21,9 @@
     "build": "vite build",
     "preview": "vite preview",
     "lint:globals": "eslint --no-error-on-unmatched-pattern ui draw classes drawRegistry utilities home gallery patterns help main.js drawMain.js",
-    "test:tabs": "node tests/tabSwitch.mjs"
+    "test:tabs": "node tests/tabSwitch.mjs",
+    "check:imports": "node tests/importCheck.mjs",
+    "test:node": "node tests/nodeSmoke.mjs"
   },
   "dependencies": {
     "@jaames/iro": "^5.5.2",
@@ -33,6 +35,7 @@
     "tinymce": "^8.3.2"
   },
   "devDependencies": {
+    "bootstrap": "^5.3.3",
     "concurrently": "^9.2.1",
     "eslint": "^9.39.5",
     "globals": "^17.13.0",
