@@ -1172,6 +1172,70 @@ if (w.length !== 0) problems.push("[8 free not corner] a free disc was welded to
 if ((await points()).length !== 1) problems.push("[8 free not corner] a disc was added: " + JSON.stringify(await points()));
 await page.uncheck("#figureModeCheck");
 
+/* ---- Sweep 1: fast tab clicks, Utilities Result, Gallery script path ---- */
+const tabState = () => page.evaluate(() => ({
+  active: uiState.activeTab,
+  button: document.querySelector("#mainTabs .nav-link.active")?.id,
+  theme:  [...document.getElementById("wrapper").classList].filter(c => c.startsWith("theme-")).join(" ")
+}));
+
+// Several quick clicks with no waiting in between. The page must end on the
+// tab clicked last, with that tab's button and theme (before the fix, two
+// switches ran at once and could leave a mix).
+for (const seq of [["gallery", "patterns"], ["patterns", "utilities", "gallery"], ["draw", "figures", "home", "patterns"]]) {
+  stage = "fast clicks " + seq.join(">");
+  for (const t of seq) await page.click(`#${t}-tab`, { noWaitAfter: true });
+  await page.waitForTimeout(3000);
+  const last = seq[seq.length - 1];
+  const st = await tabState();
+  if (st.active !== last || st.button !== last + "-tab" || st.theme !== "theme-" + last) {
+    problems.push(`[${stage}] ended as ${JSON.stringify(st)}, wanted ${last}`);
+  }
+}
+
+// Utilities: run a Tools item, leave, come back. The Result subtab must still
+// be there and be the active one.
+stage = "utilities result";
+await page.click("#utilities-tab");
+await page.waitForTimeout(1000);
+await page.click('#text .item[data-key="Validate Draw Registry"] span');
+await page.waitForTimeout(2000);
+await page.click("#home-tab");
+await page.waitForTimeout(800);
+await page.click("#utilities-tab");
+await page.waitForTimeout(2500);
+const resultBtn = await page.evaluate(() => {
+  const b = [...document.querySelectorAll("#subtabs button")].find(x => x.innerText.trim() === "Result");
+  return b ? { visible: !!b.offsetParent, active: b.classList.contains("active") } : null;
+});
+if (!resultBtn || !resultBtn.visible || !resultBtn.active) {
+  problems.push("[utilities result] Result subtab missing or not active after coming back: " + JSON.stringify(resultBtn));
+}
+
+// Gallery script opened from the list: the browser must ask for a .js file
+// (a plain web server has no extension fallback) and the canvas must draw.
+stage = "gallery script path";
+const jsRequests = [];
+const onRequest = (r) => { const u = new globalThis.URL(r.url()); if (u.pathname.startsWith("/gallery/Scripts/")) jsRequests.push(u.pathname); };
+page.on("request", onRequest);
+await page.click("#gallery-tab");
+await page.waitForTimeout(800);
+await page.locator("#subtabs button", { hasText: "Scripts" }).click();
+await page.waitForTimeout(1000);
+await page.click("#text .item span");
+await page.waitForTimeout(2500);
+page.off("request", onRequest);
+if (!jsRequests.some(u => u.endsWith(".js"))) problems.push("[gallery script path] no .js request seen: " + JSON.stringify(jsRequests));
+if (jsRequests.some(u => !u.endsWith(".js") && !/\/manifest\.json$/.test(u) && !/\.(png|jpe?g)$/i.test(u))) {
+  problems.push("[gallery script path] request without .js: " + JSON.stringify(jsRequests));
+}
+const drawn = await page.evaluate(() => {
+  const c = window.drawCanvas; const d = c.getContext("2d").getImageData(0, 0, c.width, c.height).data; let n = 0;
+  for (let i = 0; i < d.length; i += 4) if (d[i + 3] > 0 && !(d[i] > 250 && d[i + 1] > 250 && d[i + 2] > 250)) n++;
+  return n;
+});
+if (drawn === 0) problems.push("[gallery script path] canvas is blank");
+
 await browser.close();
 
 for (const n of notes.slice(0, 5)) console.log("note:", n);
@@ -1182,4 +1246,4 @@ if (problems.length) {
   for (const p of problems) console.log(" ", p);
   process.exit(1);
 }
-console.log("\nPASS: 6 tabs x 2 passes, plus Draw and Patterns with an open item, plus the Notes menu item, plus the Figures shell, insert, points mode and 7b centroid, move and rotate, 7c break apart, 7d infrastructure, 8 welds, no errors");
+console.log("\nPASS: 6 tabs x 2 passes, plus Draw and Patterns with an open item, plus the Notes menu item, plus the Figures shell, insert, points mode and 7b centroid, move and rotate, 7c break apart, 7d infrastructure, 8 welds, fast tab clicks, Utilities Result, Gallery script path, no errors");

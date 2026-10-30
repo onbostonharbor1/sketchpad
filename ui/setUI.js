@@ -138,20 +138,39 @@ async function activateTab(tab) {
    setUI(tabName)
    PUBLIC ENTRY
 ============================================================ */
-export async function setUI(tab) {
+/* Tab switches run one at a time. Every call takes a ticket number. A call
+   that is still waiting when a newer call arrives is dropped, so clicking
+   several tabs quickly ends on the tab clicked last, with that tab's
+   content, colors and active button. (Before, two switches ran at the same
+   time and could leave one tab's content under another tab's colors.) */
+let activationChain = Promise.resolve();
+let latestTicket    = 0;
 
+export function setUI(tab) {
+  const ticket = ++latestTicket;
+
+  const result = activationChain.then(() => {
+    if (ticket !== latestTicket) return undefined;   // replaced by a newer click
+    return activateWithReport(tab);
+  });
+
+  // One failed switch must not block the ones after it.
+  activationChain = result.catch(() => {});
+
+  return result;
+} // end setUI
+
+async function activateWithReport(tab) {
   // Stage names the step that was running if something throws, so a
   // failure at startup says where, not just what.
   const progress = { stage: "start" };
-
   try {
     await runSetUI(tab, progress);
   } catch (e) {
     console.error(`setUI("${tab}") failed during stage "${progress.stage}":`, e);
     throw e;
   }
-
-} // end setUI
+} // end activateWithReport
 
 
 async function runSetUI(tab, progress) {

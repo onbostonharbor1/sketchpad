@@ -248,7 +248,12 @@ async function showGalleryScript(category, entry) {
   actionDiv.innerHTML = "";
   sketchDiv.innerHTML = "";
 
-  const scriptPath = `/gallery/Scripts/${category}/${entry.filename}`;
+  // Use the manifest path (which carries the .js and the exact file case).
+  // The old code used entry.filename, which has no extension: Vite filled in
+  // the ".js" in development, but a plain web server answers 404.
+  let relPath = normalizeGalleryEntryPath(category, entry);
+  if (!/\.js$/i.test(relPath)) relPath += ".js";
+  const scriptPath = `/gallery/Scripts/${category}/${relPath}`;
 
   try {
     await runScriptByPath(scriptPath, "canvas", {

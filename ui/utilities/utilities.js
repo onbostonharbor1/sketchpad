@@ -100,10 +100,12 @@ export async function initUtilityTab(restored = false) {
 
   await ensureUtilitiesCacheLoaded();
 
+  // "Has a utility run" stays true for the whole session once it is true:
+  // the Result subtab must stay visible when you come back to the tab.
+  // (It used to be reset to false on every init. The tab then returned to
+  // Result while the Result button was hidden, so no subtab looked active.)
   if (restored && uiState.utilities.saved) {
     setHasRunUtility(uiState.utilities.saved.hasRunUtility || false);
-  } else {
-    setHasRunUtility(false);
   }
 
   await setUtilitySubtabs();
