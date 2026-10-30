@@ -786,15 +786,15 @@
     "status": "favorite"
   },
   {
-    "file": "pursuitDynamic5",
-    "path": "/gallery/Scripts/Pursuit/pursuitDynamic5.js",
-    "title": "Pursuit Dynamic 5",
+    "file": "pursuit2",
+    "path": "/gallery/Scripts/Pursuit/pursuit2.js",
+    "title": "Pursuit Curves in Polygon",
     "status": "working"
   },
   {
-    "file": "pursuit2",
-    "path": "/gallery/Scripts/Pursuit/pursuit2.js",
-    "title": "pursuit2.js",
+    "file": "pursuitDynamic5",
+    "path": "/gallery/Scripts/Pursuit/pursuitDynamic5.js",
+    "title": "Pursuit Dynamic 5",
     "status": "working"
   },
   {

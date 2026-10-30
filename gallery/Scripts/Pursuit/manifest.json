@@ -20,9 +20,10 @@
     "title": "Pursuit 3"
   },
   {
-    "filename": "Pursuit2",
-    "path": "Pursuit2.js",
-    "title": "Pursuit Curves in Polygon"
+    "filename": "pursuit2",
+    "path": "pursuit2.js",
+    "title": "Pursuit Curves in Polygon",
+    "status": "working"
   },
   {
     "filename": "pursuitDynamic5",
@@ -39,12 +40,6 @@
     "filename": "pursuitStatic5",
     "path": "pursuitStatic5.js",
     "title": "Pursuit Static 5"
-  },
-  {
-    "filename": "pursuit2",
-    "path": "pursuit2.js",
-    "title": "pursuit2.js",
-    "status": "working"
   },
   {
     "filename": "pursuit",
