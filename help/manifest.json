@@ -53,7 +53,6 @@
       "sketchpadArchitecture"
     ],
     "Subsystems": [
-      "actionRegistry",
       "caption",
       "categories",
       "fileLayer",
@@ -68,7 +67,6 @@
       "pointDragging",
       "scriptRunner",
       "setUI",
-      "ui_callbacks",
       "ui_utilities",
       "uiState"
     ],

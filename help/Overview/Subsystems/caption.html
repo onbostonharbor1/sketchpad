@@ -40,16 +40,10 @@ layer name) find it by those class names, after building it.</p>
 <li>Gallery: buttons, and click zones over the picture (scripts) or the image (in <code>#text</code>).</li>
 </ul>
 
-<h2>Exported but unused</h2>
-<ul>
-<li><code>normalizeCaptionEntry(raw)</code>: returns <code>{ title, filename, category }</code> from loosely shaped
-  data.</li>
-<li><code>rebuildCaption(config)</code>: empties the container and calls <code>setCaptionBar</code>, which
-  empties it anyway.</li>
-<li><code>buildMenuHandler(tabName, context)</code>: returns a handler that calls
-  <code>menuManager.open(tabName, context)</code>. That is the wrong argument list for today's
-  <code>open(items, anchor)</code>, so it would throw. Nothing calls it; it is a candidate for deletion.</li>
-</ul>
+<h2>Removed 31 October 2026</h2>
+<p><code>normalizeCaptionEntry</code>, <code>rebuildCaption</code> and <code>buildMenuHandler</code> were exported
+but nothing called them (the last passed the wrong arguments to <code>menuManager.open</code>). They are gone.
+<code>setCaptionBar</code> is the only function in this file.</p>
 
 </body>
 </html>

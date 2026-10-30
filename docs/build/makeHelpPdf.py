@@ -29,7 +29,7 @@ ORDER = {
     "Subsystems": ["setUI", "uiState", "ui_utilities", "manifest", "fileLayer", "nodeLayer",
                    "categories", "caption", "menuManager", "overlay", "interactor",
                    "pointDragging", "parameterControls", "parameterControls2",
-                   "GROUPING_SYSTEM_GUIDE", "scriptRunner", "actionRegistry", "ui_callbacks"],
+                   "GROUPING_SYSTEM_GUIDE", "scriptRunner"],
     "Design Notes": ["sketchpadArchitecture", "dataFlow", "drawRegistry", "runPattern",
                      "ConvertToGallery", "coding_simplicity", "figuresUndo"],
 }
@@ -106,31 +106,32 @@ A separate document, <em>The Figures code, commented</em>, has the Figures sourc
 """
 
 INTRO_FOUND = """
-<p>Checking the pages against the code turned up a few things in the code itself. None of them was
-changed (the documentation branch changes only comments and documents); they are listed here, and on the
-page concerned, for a decision.</p>
+<p>Checking the pages against the code turned up a few things in the code itself. When this list was first
+written (27 October 2026) none of them had been changed. Rows marked <b>Fixed 31 October 2026</b> were changed
+on the branch <code>claude/sweep-1</code>; the others are still open, for a decision.</p>
 <table>
 <tr><th style="width:30%">Where</th><th>What</th><th style="width:18%">Kind</th></tr>
 <tr><td>Figures: weld mark</td><td>The + is drawn under the handle dot, so a weld on a handle shows only a white
   ring.</td><td>Visible bug</td></tr>
 <tr><td>Figures: centroid</td><td>A right-press on the diamond starts a move (the button is not checked).</td>
   <td>Small bug</td></tr>
-<tr><td>Utilities</td><td>Leaving while on Result and coming back re-runs the script but hides the Result subtab
-  (read from the code, not tried).</td><td>Probable bug</td></tr>
+<tr><td>Utilities</td><td>Leaving while on Result and coming back re-ran the script but hid the Result subtab
+  (confirmed in the running app).</td><td>Fixed 31 October 2026</td></tr>
 <tr><td><code>setUI.js</code></td><td>No tab's <code>save()</code> is ever called; Draw, Utilities and Figures therefore
   always re-init (harmless: they return to where they were). End-of-work items 4 and 6 in
   <code>PHASES.md</code>.</td><td>Design loose end</td></tr>
-<tr><td><code>caption.js</code></td><td><code>buildMenuHandler</code> calls the menu with the wrong arguments; it and two
-  other helpers are unused.</td><td>Dead code</td></tr>
-<tr><td><code>categories.js</code></td><td><code>buildCategoryDescriptor</code> passes a label function to <code>sort()</code>;
-  it leaves the order unchanged, which Patterns happens to rely on.</td><td>Quirk</td></tr>
-<tr><td><code>scriptRunner.js</code></td><td>Its header says <code>runPattern(ctx)</code> receives the context; the code
-  never passes it.</td><td>Stale comment</td></tr>
+<tr><td><code>caption.js</code></td><td><code>buildMenuHandler</code> called the menu with the wrong arguments; it and two
+  other helpers were unused. Removed.</td><td>Fixed 31 October 2026</td></tr>
+<tr><td><code>categories.js</code></td><td><code>buildCategoryDescriptor</code> passed a label function to <code>sort()</code>;
+  it left the order unchanged, which Patterns relies on. Now a plain copy, same order.</td><td>Fixed 31 October 2026</td></tr>
+<tr><td><code>scriptRunner.js</code></td><td>Its header said <code>runPattern(ctx)</code> receives the context; the code
+  never passed it. Header corrected; the unused <code>render()</code> fallback was removed too.</td><td>Fixed 31 October 2026</td></tr>
 <tr><td><code>manifest.js</code></td><td>A <code>drawRegistry</code> branch that nothing reaches and that would find
   nothing.</td><td>Dead code</td></tr>
 <tr><td>Assorted</td><td><code>actionRegistry.js</code>'s table, <code>clearHomeCanvasAndOverlays</code>,
   <code>rebuildAllSystemCaches</code>, <code>setCommandsButton</code>, <code>clearOverlaysForTabSwitch</code>, the fileLayer
-  normalizers, two session-storage <code>rehydrate</code> functions: all exported, none called.</td><td>Dead code</td></tr>
+  normalizers and <code>rehydrateGalleryState</code> were exported and never called. Removed
+  (<code>saveUtilityState</code> stays: it is wired into the tab but <code>setUI</code> never calls it, see above).</td><td>Fixed 31 October 2026</td></tr>
 <tr><td>Parameter controls</td><td>The point-picker widgets are switched off, but <code>boxes</code> and
   <code>regularPursuit</code> still declare one (it shows as a plain text box).</td><td>Leftover</td></tr>
 </table>

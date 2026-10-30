@@ -437,11 +437,11 @@ if (Object.prototype.hasOwnProperty.call(manifest.cache, "home")) {
   </p>
 
 
-  <h2>6. Global reset operations</h2>
+  <h2>6. Global reset operation</h2>
 
   <p>
-    Two operations wipe the entire cache rather than invalidating specific keys.
-    Both are in <span class="mono">uiUtilities.js</span> and are only called after the
+    One operation wipes the entire cache rather than invalidating specific keys.
+    It is in <span class="mono">uiUtilities.js</span> and is only called after the
     Node rebuild service has rewritten all manifests on disk.
   </p>
 
@@ -451,21 +451,22 @@ if (Object.prototype.hasOwnProperty.call(manifest.cache, "home")) {
       marks all tab <span class="mono">needsUpdate</span> flags so each tab re-initialises
       on next visit.
     </li>
-    <li>
-      <b><span class="mono">rebuildAllSystemCaches()</span></b> — clears the cache then
-      immediately re-fetches all known basedirs in parallel to warm the cache proactively.
-    </li>
-  </ul>
+      </ul>
 
   <p>
-    Neither fires registered callbacks — that is intentional.
+    (A second function, <span class="mono">rebuildAllSystemCaches()</span>, which also re-fetched
+    every basedir to warm the cache, was removed on 31 October 2026: nothing called it.)
+  </p>
+
+  <p>
+    It does not fire registered callbacks — that is intentional.
     A global rebuild replaces all data from scratch and the tab lifecycle
     (via <span class="mono">needsUpdate</span>) handles re-rendering.
     Firing all callbacks would cause redundant re-renders before the fresh data arrives.
   </p>
 
   <p>
-    <span class="mono">clearCache()</span> should not be called outside of these two functions.
+    <span class="mono">clearCache()</span> should not be called outside of this function.
     All other invalidation uses <span class="mono">invalidate(key)</span>.
   </p>
 

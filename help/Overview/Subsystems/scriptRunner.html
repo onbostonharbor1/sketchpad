@@ -87,16 +87,16 @@ runs <code>runPattern()</code>, then arms the interactor if the script's <code>s
   </p>
 
   <ul>
-    <li><b>Preferred modern export:</b> <span class="mono">runPattern()</span></li>
-    <li><b>Legacy drawing export:</b> <span class="mono">drawPattern(params)</span> (optionally with <span class="mono">initPattern()</span>)</li>
-    <li><b>Text-only utilities:</b> <span class="mono">render()</span></li>
+        <li><b>Entry point:</b> <span class="mono">runPattern()</span>, called with no arguments, for canvas
+      scripts and for text-only utilities alike.</li>
   </ul>
 
   <p>
-    In the current implementation, <span class="mono">loadScriptModule()</span> requires
-    <span class="mono">runPattern()</span> to exist (fail-fast).
-    The execution functions also include fallback logic for legacy patterns,
-    but module loading itself is strict.
+    <span class="mono">loadScriptModule()</span> requires <span class="mono">runPattern()</span> to exist
+    (fail-fast). There are no fallbacks: the older <span class="mono">drawPattern(params)</span> /
+    <span class="mono">initPattern()</span> pair and the text-only <span class="mono">render()</span>
+    were removed (the first was already gone from the code; the second, on 31 October 2026, because no
+    script used it).
   </p>
 
   <div class="note">
@@ -190,22 +190,7 @@ runs <code>runPattern()</code>, then arms the interactor if the script's <code>s
     not to interfere with internal script sequencing.
   </div>
 
-  <h3>4.1 Legacy fallback path</h3>
-
-  <p>
-    If a module does not use <span class="mono">runPattern()</span> but does provide legacy exports,
-    this function supports:
-  </p>
-
-  <ul>
-    <li><span class="mono">initPattern()</span> to provide params (optional)</li>
-    <li><span class="mono">drawPattern(params)</span> to perform drawing</li>
-  </ul>
-
-  <p>
-    If neither <span class="mono">runPattern</span> nor <span class="mono">drawPattern</span> exists,
-    it throws.
-  </p>
+  
 
 
   <h2>5. executeScriptToText(mod, title): controlled text/HTML execution</h2>
@@ -230,8 +215,7 @@ runs <code>runPattern()</code>, then arms the interactor if the script's <code>s
   </p>
 
   <ul>
-    <li>Preferred: <span class="mono">runPattern()</span> and use its returned string as HTML if provided</li>
-    <li>Alternate: <span class="mono">render()</span> and use its returned string as HTML if provided</li>
+        <li><span class="mono">runPattern()</span>, and uses its returned string as HTML if provided</li>
   </ul>
 
   <p>
