@@ -1,34 +1,40 @@
+
 /* drawRunner.js
-   ============================================================
-   Draw Tab -- Drawing Execution and Transformation Engine
-   ============================================================
+   ------------------------------------------------------------
+   Drawing Execution & Transformation Engine
+   ------------------------------------------------------------
    Responsibilities:
      - Render active drawRegistry objects to the shared canvas
      - Manage the #sketchpad DOM and interaction overlay sync
      - Handle coordinate alignment for the interaction layer
      - Export drawRegistry state to standalone Pattern scripts
-   ============================================================ */
+   ------------------------------------------------------------ */
 
-import { uiState }                from "/ui/uiState.js";
-import { resetCanvas }            from "/draw/drawState.js";
-import { buildParameterControls } from "/ui/parameterControls.js";
-import { markTabDirty }           from "/ui/draw/drawNav.js";
+import { uiState }               from "/ui/uiState.js";
+import { resetCanvas }           from "/draw/drawState.js";
+import { buildParameterControls } from "./parameterControls.js";
+import { markTabDirty }           from "./draw/drawNav.js";
 import { syncOverlayToCanvas }    from "/ui/uiUtilities.js";
-import { canvasLayerManager }     from "/ui/canvasLayerManager.js";
+import { canvasLayerManager } from "/ui/canvasLayerManager.js";
 
+/**
+ * drawActiveTab()
+ * Core execution logic for the active Draw object.
+ */
 
-/* ============================================================
-   drawActiveTab()
-   ============================================================ */
+/**
+ * drawActiveTab()
+ * Core execution logic for the active Draw object.
+ */
 export function drawActiveTab() {
-
   const tabId = uiState.draw.activeSubtab;
-  const info  = uiState.draw.tabs[tabId];
+  const info = uiState.draw.tabs[tabId];
 
   if (!info || info.type !== "object" || !info.drawRegistry) return;
 
   const entry = info.drawRegistry;
 
+  // Ensure wrapper is visible
   const wrapper = document.getElementById("sketchpad-wrapper");
   if (wrapper) wrapper.style.display = "flex";
 
@@ -45,6 +51,7 @@ export function drawActiveTab() {
   if (!ctx) throw new Error("drawActiveTab: global ctx missing");
   ctx.clearRect(0, 0, canvas.width, canvas.height);
 
+  // Sync the interaction layer (and future layers) via uiUtilities
   syncOverlayToCanvas("interaction", canvas);
   syncOverlayToCanvas("guides", canvas);
 
@@ -60,32 +67,38 @@ export function drawActiveTab() {
     const params = (state.parameters = entry.params);
     entry.update(params);
     entry.draw();
+
+    // --- NEW: Render the ghost skeleton for Line 1 ---
     renderScaffoldGuides(entry);
+
   } catch (err) {
     console.error("✗ Error redrawing " + entry.name, err);
   }
-
 } // end drawActiveTab
 
-
-/* ============================================================
-   renderScaffoldGuides(entry)
-   ============================================================ */
+/**
+ * Renders the dashed scaffolding for the active drawing's primary arm.
+ * Targets the 'guides' canvas layer managed by canvasLayerManager.
+ */
 function renderScaffoldGuides(entry) {
-
+  // 1. Safety check: Does this entry have a master scaffold Line?
   if (!entry.elements || !entry.elements.l1) return;
 
   try {
     const guideCanvas = canvasLayerManager.get("guides");
-    const gCtx        = guideCanvas.getContext("2d");
-    const l1          = entry.elements.l1;
+    const mainCanvas = window.drawCanvas;
 
+    const gCtx = guideCanvas.getContext("2d");
+    const l1 = entry.elements.l1;
+
+    // 2. Clear the specific guides layer
     gCtx.clearRect(0, 0, guideCanvas.width, guideCanvas.height);
 
+    // 3. Draw the ghost line
     gCtx.save();
-    gCtx.strokeStyle = "rgba(180, 180, 180, 0.4)";
-    gCtx.lineWidth   = 1.5;
-    gCtx.setLineDash([8, 4]);
+    gCtx.strokeStyle = "rgba(180, 180, 180, 0.4)"; // Subtle gray
+    gCtx.lineWidth = 1.5;
+    gCtx.setLineDash([8, 4]); // Dashed
 
     gCtx.beginPath();
     gCtx.moveTo(l1.start.x, l1.start.y);
@@ -94,41 +107,38 @@ function renderScaffoldGuides(entry) {
 
     gCtx.restore();
   } catch (err) {
+    // Fail silently if the guides layer isn't initialized yet
     console.warn("renderScaffoldGuides: guides layer not available", err);
   }
-
 } // end renderScaffoldGuides
 
-
-/* ============================================================
-   setDrawSketchpad(item)
-   ============================================================ */
+/**
+ * setDrawSketchpad(item)
+ */
 export function setDrawSketchpad(item) {
   const tabId = "tab-" + item.name.replace(/\s+/g, "-").toLowerCase();
   uiState.draw.activeSubtab = tabId;
   drawActiveTab();
 } // end setDrawSketchpad
 
-
-/* ============================================================
-   clearCanvas()
-   ============================================================ */
+/**
+ * clearCanvas()
+ */
 export function clearCanvas() {
   if (!ctx) return;
   ctx.clearRect(0, 0, window.drawCanvas.width, window.drawCanvas.height);
 } // end clearCanvas
 
-
-/* ============================================================
-   createPatternScriptTextFromDrawRegistry(entry, params)
-   ============================================================ */
+/**
+ * createPatternScriptTextFromDrawRegistry(entry, params)
+ * Note: Template string imports are now strictly at the top.
+ */
 export function createPatternScriptTextFromDrawRegistry(entry, params) {
-
-  if (!entry)  throw new Error("createPatternScriptTextFromDrawRegistry: entry missing");
+  if (!entry) throw new Error("createPatternScriptTextFromDrawRegistry: entry missing");
   if (!params) throw new Error("createPatternScriptTextFromDrawRegistry: params missing");
 
-  const title        = entry.name.trim();
-  const paramsJson   = JSON.stringify(params, null, 2);
+  const title = entry.name.trim();
+  const paramsJson = JSON.stringify(params, null, 2);
   const controlsJson = entry.controls ? JSON.stringify(entry.controls, null, 2) : "null";
 
   return `import { resetCanvas } from "/ui/drawState.js";
@@ -142,7 +152,7 @@ export const scriptInfo = {
   params: ${paramsJson},
   controls: ${controlsJson},
   parameters: null,
-  onParamChange() {},
+  onParamChange() {}, 
   redrawHandler: null
 };
 
@@ -166,9 +176,7 @@ export async function runPattern() {
   return null;
 } // end runPattern
 `;
-
 } // end createPatternScriptTextFromDrawRegistry
-
 
 function escapeForBlockComment(s) {
   return String(s).replace(/\*\//g, "* /");
