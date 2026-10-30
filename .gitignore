@@ -25,3 +25,4 @@ Thumbs.db
 #temp
 #backup
 __pycache__/
+/dist-static/

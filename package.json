@@ -23,7 +23,8 @@
     "lint:globals": "eslint --no-error-on-unmatched-pattern ui draw classes drawRegistry utilities home gallery patterns help main.js drawMain.js",
     "test:tabs": "node tests/tabSwitch.mjs",
     "check:imports": "node tests/importCheck.mjs",
-    "test:node": "node tests/nodeSmoke.mjs"
+    "test:node": "node tests/nodeSmoke.mjs",
+    "build:static": "node scripts/buildStatic.mjs"
   },
   "dependencies": {
     "@jaames/iro": "^5.5.2",
