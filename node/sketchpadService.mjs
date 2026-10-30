@@ -16,15 +16,34 @@
        tab (#text div) via a browser → nodeLayer → service call
 
    -----------------------------------------------------------
-   CURRENT TASKS
+   CURRENT TASKS  (the request names the dispatcher accepts)
 
-   Implemented:
-     • writePatternThumbnail    (write 50x50 thumb PNG from browser)
+   Manifests
+     • manifestMaintenance            rebuild every manifest (maintain_manifests.mjs)
+     • editManifestEntry              change one entry's title and status
+     • editPackageScript              edit an entry in a manifest
+     • archiveItem                    move a file to archive/ and drop its entry
 
-   Placeholders (NO-OP, future expansion):
+   Writers (data comes from the browser)
+     • writePatternThumbnail          50x50 thumbnail PNG for a pattern
+     • writePatternFromDrawRegistry   a Pattern script plus thumbnail
+     • writeGalleryPatternPng         a Gallery PNG plus thumbnail
+     • writeHelpFile                  one help page under ./help
+     • createFigure                   a figure file (createFigureService.mjs)
+
+   Secondary objects (saved Draw settings)
+     • saveSecondaryObject, readSecondaryObject, archiveSecondaryObject,
+       getSecondaryManifest, getPrimaryObjectsWithSecondaries
+
+   Logs and editor
+     • listLogFiles, readLogFile      the files in ./utilities/logfiles
+     • openInEditor                   open a project file in VS Code
+
+   Placeholders (NO-OP, future expansion)
      • deletePackageScript
-     • editPackageScript
      • renamePackageScript
+
+   Every path built from request text is checked by safePaths.mjs.
 
    -----------------------------------------------------------
 
@@ -35,7 +54,6 @@
      • Each category owns its own manifest.json
      • directoryRegistry.json is the ONLY source of categories
      • Titles cannot be inferred → filename used as placeholder
-
 
 
    =========================================================== */
@@ -81,13 +99,6 @@ export async function dispatchService(requestName, payload = {}) {
 
 case "manifestMaintenance":
   return await runManifestMaintenance({ mode: "ui" });
-
-    // case "addPatternScripts":
-      // return await addPatternScripts(payload);
-
-    /* backward-compatible alias */
-    // case "updatePatternManifests":
-      // return await addPatternScripts(payload);
 
     case "writePatternThumbnail":
       return await writePatternThumbnail(payload);
@@ -148,8 +159,6 @@ case "manifestMaintenance":
       throw new Error(`dispatchService: unknown requestName: ${requestName}`);
   }
 } // end dispatchService
-
-
 
 
 /* ============================================================
@@ -489,10 +498,6 @@ function findOriginalManifestEntryByRootedPath(rootedPath) {
 } // end findOriginalManifestEntryByRootedPath
 
 
-
-
-
-
 /* ===========================================================
    TASK: listLogFiles
 
@@ -706,198 +711,13 @@ function launchDetached(cmd, args) {
 
 
 /* ===========================================================
-   TASK: addPatternScripts
-
-   DESCRIPTION
-   -----------
-   Implements the Utilities command “Add Pattern Files”.
-
-   For each category listed in ./patterns/directoryRegistry.json:
-
-     • If ./patterns/<category>/manifest.json exists:
-         - scan directory for *.js files
-         - find files NOT listed in manifest.json
-         - append placeholder entries to manifest.json
-
-     • If a category has no manifest.json:
-         - it is skipped silently (by design)
-
-   REPORTING
-   ---------
-   Returns a structured report listing:
-     • which categories changed
-     • which files were added per category
-
-   This report is intended to be rendered directly
-   into the Utilities #text div.
-
-   =========================================================== */
-
-/* ===========================================================
    TASK: addPatternScripts  (AUGMENTED)
 
    Adds support for Gallery Scripts in addition to Patterns.
 
    NEW BEHAVIOR
    ------------
-   In addition to scanning ./patterns/* categories, this function
-   now also scans:
-
-     ./gallery/Scripts/
-       manifest.json
-       *.js
-
-   Differences vs Patterns:
-     • No directoryRegistry.json
-     • Single manifest.json
-     • Flat directory (no categories)
-
-   Gallery entries are appended using the same placeholder logic
-   (filename → title).
-
-   =========================================================== */
-
-export async function addPatternScripts(payload = {}) {
-
-  const patternsRoot = payload.patternsRoot || "./patterns";
-  const galleryRoot  = payload.galleryRoot  || "./gallery/Scripts";
-
-  const absPatternsRoot = path.resolve(patternsRoot);
-  const absGalleryRoot  = path.resolve(galleryRoot);
-
-  assertDirectoryExists(
-    absPatternsRoot,
-    `Patterns root not found or not a directory: ${absPatternsRoot}`
-  );
-
-  const registryPath = path.join(absPatternsRoot, "directoryRegistry.json");
-  assertFileExists(
-    registryPath,
-    `directoryRegistry.json not found: ${registryPath}`
-  );
-
-  const categories = readJsonFileSync(registryPath);
-  if (!Array.isArray(categories)) {
-    throw new Error("directoryRegistry.json must contain a JSON array");
-  }
-
-  const updatedCategories = [];
-
-  for (const category of categories) {
-
-    const categoryDir = path.join(absPatternsRoot, category);
-    assertDirectoryExists(categoryDir, `Category directory missing: ${categoryDir}`);
-
-    const manifestPath = path.join(categoryDir, "manifest.json");
-    if (!fs.existsSync(manifestPath)) continue;
-
-    const manifest = readJsonFileSync(manifestPath);
-    if (!Array.isArray(manifest)) {
-      throw new Error(`Manifest must be an array: ${manifestPath}`);
-    }
-
-    const indexByPath     = buildIndexByPath(manifest);
-    const indexByFilename = buildIndexByFilename(manifest);
-
-    const jsFiles = listJsFiles(categoryDir);
-
-    const result = {
-      domain: "patterns",
-      category,
-      manifestPath,
-      totalBefore: manifest.length,
-      totalAfter:  manifest.length,
-      added: []
-    };
-
-    for (const fileName of jsFiles) {
-      const baseName = fileName.replace(/\.js$/i, "");
-      const relPath  = normalizePath(fileName);
-
-      if (indexByPath.has(relPath) || indexByFilename.has(baseName)) continue;
-
-      const entry = makeManifestEntry(relPath);
-      manifest.push(entry);
-
-      indexByPath.add(relPath);
-      indexByFilename.add(baseName);
-
-      result.added.push(entry);
-    }
-
-    if (result.added.length > 0) {
-      writeJsonFileSync(manifestPath, manifest);
-      result.totalAfter = manifest.length;
-      updatedCategories.push(result);
-    }
-  }
-
-  const updatedGallery = [];
-
-  if (fs.existsSync(absGalleryRoot)) {
-
-    assertDirectoryExists(absGalleryRoot, `Gallery Scripts dir invalid: ${absGalleryRoot}`);
-
-    const galleryManifestPath = path.join(absGalleryRoot, "manifest.json");
-    assertFileExists(galleryManifestPath, `Gallery Scripts manifest missing: ${galleryManifestPath}`);
-
-    const manifest = readJsonFileSync(galleryManifestPath);
-    if (!Array.isArray(manifest)) {
-      throw new Error("Gallery Scripts manifest must be an array");
-    }
-
-    const indexByPath     = buildIndexByPath(manifest);
-    const indexByFilename = buildIndexByFilename(manifest);
-
-    const jsFiles = listJsFiles(absGalleryRoot);
-
-    const result = {
-      domain: "gallery",
-      section: "Scripts",
-      manifestPath: galleryManifestPath,
-      totalBefore: manifest.length,
-      totalAfter:  manifest.length,
-      added: []
-    };
-
-    for (const fileName of jsFiles) {
-      const baseName = fileName.replace(/\.js$/i, "");
-      const relPath  = normalizePath(fileName);
-
-      if (indexByPath.has(relPath) || indexByFilename.has(baseName)) continue;
-
-      const entry = makeManifestEntry(relPath);
-      manifest.push(entry);
-
-      indexByPath.add(relPath);
-      indexByFilename.add(baseName);
-
-      result.added.push(entry);
-    }
-
-    if (result.added.length > 0) {
-      writeJsonFileSync(galleryManifestPath, manifest);
-      result.totalAfter = manifest.length;
-      updatedGallery.push(result);
-    }
-  }
-
-  const hasUpdates =
-    updatedCategories.length > 0 ||
-    updatedGallery.length > 0;
-
-  return {
-    request: "addPatternScripts",
-    patternsRoot: absPatternsRoot,
-    galleryRoot:  absGalleryRoot,
-    categoriesScanned: categories.slice(),
-    updatedCategories,
-    updatedGallery,
-    hasUpdates
-  };
-
-} // end addPatternScripts
-
+   In addition to scanning ./patterns
 
 
 /* ===========================================================
@@ -1205,7 +1025,6 @@ function resolveManifestPathAllowed(allowedRoots, manifestPathInput, tag) {
 } // end resolveManifestPathAllowed
 
 
-
 /* ===========================================================
    TASK: renamePackageScript  (NO-OP PLACEHOLDER)
 
@@ -1228,100 +1047,6 @@ export async function renamePackageScript(payload = {}) {
 /* ===========================================================
    HELPER FUNCTIONS
 =========================================================== */
-
-/* -----------------------------------------------------------
-   listJsFiles(dir)
-
-   Returns a sorted list of *.js filenames in the given
-   directory, excluding:
-     • manifest.json
-     • directoryRegistry.json
-
-   Files beginning with "." are ignored.
------------------------------------------------------------ */
-function listJsFiles(dir) {
-  const entries = fs.readdirSync(dir, { withFileTypes: true });
-  const files = [];
-
-  for (const ent of entries) {
-    if (!ent.isFile()) continue;
-
-    const name = ent.name;
-
-    // ignore dotfiles
-    if (name.startsWith(".")) continue;
-
-    if (name === "manifest.json") continue;
-    if (name === "directoryRegistry.json") continue;
-    if (!name.toLowerCase().endsWith(".js")) continue;
-
-    files.push(name);
-  }
-
-  files.sort((a, b) => a.localeCompare(b));
-  return files;
-} // end listJsFiles
-
-
-
-/* -----------------------------------------------------------
-   makeManifestEntry(relPath)
-
-   Creates a placeholder manifest entry for a script file.
-   Since titles cannot be inferred, the filename is used.
------------------------------------------------------------ */
-function makeManifestEntry(relPath) {
-  const file = relPath.split("/").pop();
-  const base = file.replace(/\.js$/i, "");
-
-  return {
-    filename: base,
-    path: relPath,
-    title: base
-  };
-} // end makeManifestEntry
-
-
-/* -----------------------------------------------------------
-   buildIndexByPath(manifest)
-
-   Builds a lookup structure for manifest entry paths.
------------------------------------------------------------ */
-function buildIndexByPath(manifest) {
-  const set = new Set();
-
-  for (const e of manifest) {
-    if (!e || typeof e !== "object") continue;
-    if (typeof e.path !== "string") continue;
-    set.add(normalizePath(e.path));
-  }
-
-  return {
-    has(p) { return set.has(normalizePath(p)); },
-    add(p) { set.add(normalizePath(p)); }
-  };
-} // end buildIndexByPath
-
-
-/* -----------------------------------------------------------
-   buildIndexByFilename(manifest)
-
-   Builds a lookup structure for manifest entry filenames.
------------------------------------------------------------ */
-function buildIndexByFilename(manifest) {
-  const set = new Set();
-
-  for (const e of manifest) {
-    if (!e || typeof e !== "object") continue;
-    if (typeof e.filename !== "string") continue;
-    set.add(e.filename);
-  }
-
-  return {
-    has(f) { return set.has(f); },
-    add(f) { set.add(f); }
-  };
-} // end buildIndexByFilename
 
 
 /* -----------------------------------------------------------
@@ -1349,16 +1074,6 @@ function writeJsonFileSync(filePath, data) {
 
 
 /* -----------------------------------------------------------
-   normalizePath(p)
-
-   Normalizes paths to use forward slashes.
------------------------------------------------------------ */
-function normalizePath(p) {
-  return String(p).replace(/\\/g, "/");
-} // end normalizePath
-
-
-/* -----------------------------------------------------------
    assertDirectoryExists(dir, message)
 
    Fail-fast directory existence check.
@@ -1378,616 +1093,6 @@ function assertFileExists(file, message) {
   if (!fs.existsSync(file)) throw new Error(message);
   if (!fs.statSync(file).isFile()) throw new Error(message);
 } // end assertFileExists
-
-export async function rebuildAndValidateManifests(payload = {}) {
-
-  const log = [];
-  const t0 = Date.now();
-
-  const logDir = path.resolve("./utilities/logfiles");
-  ensureDir(logDir, "rebuildAndValidateManifests: log dir missing: " + logDir);
-
-  const stamp = new Date().toISOString().replace(/[:]/g, "-").replace(/\..+/, "");
-  const logFile = path.join(logDir, `rebuildValidate_${stamp}.txt`);
-
-  // Reporting structures (grouped by subdir)
-  const addedMap  = new Map();  // group -> [items...]
-  const brokenMap = new Map();  // group -> [items...]
-
-  // For Home output: collect status-bearing items from manifests + virtual broken items
-  const homeOut = [];
-
-  // ------------------------------------------------------------
-  // 1) Discover + Add (Patterns, Gallery, Utilities)
-  // ------------------------------------------------------------
-  await scanPatternsAddNew({ addedMap, log });
-  await scanGalleryScriptsAddNew({ addedMap, log });
-  await scanGalleryImagesAddNew({ addedMap, log });
-  await scanUtilitiesAddNew({ addedMap, log });
-  await scanDrawRegistryAndValidate({ addedMap, brokenMap, log });
-
-  // ------------------------------------------------------------
-  // 2) Validate (all manifests) -> broken virtual home items
-  //    Also collect existing status-marked items for Home.
-  // ------------------------------------------------------------
-  await scanAllManifestsForHomeAndBroken({ homeOut, brokenMap, log });
-
-  // ------------------------------------------------------------
-  // 3) Write /home/manifest.json (always)
-  // ------------------------------------------------------------
-  writeHomeManifest(homeOut);
-
-  const ms = Date.now() - t0;
-
-  // ------------------------------------------------------------
-  // 4) Write logfile (always)
-  // ------------------------------------------------------------
-  log.unshift("Rebuild + Validate - " + new Date().toString());
-  log.push("");
-  log.push("Elapsed ms: " + ms);
-  fs.writeFileSync(logFile, log.join("\n"), "utf8");
-
-  // ------------------------------------------------------------
-  // 5) Build grouped report (Added + Broken only)
-  // ------------------------------------------------------------
-  const addedGroups  = mapToGroups(addedMap);
-  const brokenGroups = mapToGroups(brokenMap);
-
-  return {
-    request: "rebuildAndValidateManifests",
-    status: "ok",
-    logFile,
-    elapsedMs: ms,
-    addedGroups,
-    brokenGroups
-  };
-
-} // end rebuildAndValidateManifests
-
-
-function mapToGroups(map) {
-  const groups = [];
-  for (const [group, items] of map.entries()) {
-    groups.push({ group, items: items.slice() });
-  }
-  groups.sort((a, b) => a.group.localeCompare(b.group));
-  return groups;
-} // end mapToGroups
-
-
-function addGrouped(map, group, item) {
-  if (!map.has(group)) map.set(group, []);
-  map.get(group).push(item);
-} // end addGrouped
-
-
-function ensureDir(dir, message) {
-  if (!fs.existsSync(dir)) throw new Error(message);
-  if (!fs.statSync(dir).isDirectory()) throw new Error(message);
-} // end ensureDir
-
-
-function readJson(absPath) {
-  return JSON.parse(fs.readFileSync(absPath, "utf8"));
-} // end readJson
-
-
-function writeJsonIfChanged(absPath, data) {
-
-  const next = JSON.stringify(data, null, 2) + "\n";
-
-  if (!fs.existsSync(absPath)) {
-    fs.writeFileSync(absPath, next, "utf8");
-    return true;
-  }
-
-  const cur = fs.readFileSync(absPath, "utf8");
-  if (cur === next) return false;
-
-  fs.writeFileSync(absPath, next, "utf8");
-  return true;
-
-} // end writeJsonIfChanged
-
-
-function listFilesByExt(dir, ext) {
-  const entries = fs.readdirSync(dir, { withFileTypes: true });
-  const out = [];
-
-  for (const ent of entries) {
-    if (!ent.isFile()) continue;
-
-    const name = ent.name;
-    if (name.startsWith(".")) continue;
-    if (name === "manifest.json") continue;
-    if (name === "directoryRegistry.json") continue;
-
-    if (name.toLowerCase().endsWith(ext)) out.push(name);
-  }
-
-  out.sort((a, b) => a.localeCompare(b));
-  return out;
-} // end listFilesByExt
-
-
-function indexByPath(manifest) {
-  const set = new Set();
-  for (const e of manifest) {
-    if (!e || typeof e !== "object") continue;
-    if (typeof e.path !== "string") continue;
-    set.add(String(e.path).replace(/\\/g, "/"));
-  }
-  return set;
-} // end indexByPath
-
-
-function indexByFilename(manifest) {
-  const set = new Set();
-  for (const e of manifest) {
-    if (!e || typeof e !== "object") continue;
-    if (typeof e.filename !== "string") continue;
-    set.add(e.filename);
-  }
-  return set;
-} // end indexByFilename
-
-
-function makeNewScriptEntry(fileName) {
-
-  // You requested: title should be file name (ex: "foo.js")
-  const base = fileName.replace(/\.js$/i, "");
-
-  return {
-    filename: base,
-    path: fileName,       // scripts: manifest path is local filename (or relPath within category)
-    title: fileName,
-    status: "new"
-  };
-
-} // end makeNewScriptEntry
-
-
-function makeNewImageEntry(relPathKey, fileName) {
-
-  // relPathKey includes subdir prefix for gallery images (ex: "3D/401.jpg")
-  // For images, filename base is used in existing system; keep it.
-  const base = path.parse(fileName).name;
-
-  return {
-    filename: base,
-    path: relPathKey,
-    title: fileName,
-    status: "new"
-  };
-
-} // end makeNewImageEntry
-
-
-function ensurePatternsDummyThumb(category, baseName) {
-
-  const src = path.resolve("./patterns/thumb.png");
-  if (!fs.existsSync(src)) throw new Error("Dummy thumbnail missing: " + src);
-  if (!fs.statSync(src).isFile()) throw new Error("Dummy thumbnail is not a file: " + src);
-
-  const imagesDir = path.resolve("./patterns", category, "images");
-  if (!fs.existsSync(imagesDir)) fs.mkdirSync(imagesDir, { recursive: true });
-  if (!fs.statSync(imagesDir).isDirectory()) throw new Error("images dir not directory: " + imagesDir);
-
-  const dst = path.join(imagesDir, "thumb_" + baseName + ".png");
-
-  // Only create if missing (your preference)
-  if (fs.existsSync(dst)) return;
-
-  fs.copyFileSync(src, dst);
-
-  if (!fs.existsSync(dst)) throw new Error("copyFileSync failed: " + dst);
-
-} // end ensurePatternsDummyThumb
-
-
-async function scanPatternsAddNew({ addedMap, log }) {
-
-  const patternsRoot = path.resolve("./patterns");
-  ensureDir(patternsRoot, "patterns root missing: " + patternsRoot);
-
-  const registryPath = path.join(patternsRoot, "directoryRegistry.json");
-  if (!fs.existsSync(registryPath)) throw new Error("patterns directoryRegistry.json missing: " + registryPath);
-
-  const cats = readJson(registryPath);
-  if (!Array.isArray(cats)) throw new Error("patterns directoryRegistry.json must be array");
-
-  for (const cat of cats) {
-
-    const catDir = path.join(patternsRoot, cat);
-    ensureDir(catDir, "patterns category dir missing: " + catDir);
-
-    const manifestPath = path.join(catDir, "manifest.json");
-    if (!fs.existsSync(manifestPath)) continue;
-
-    const manifest = readJson(manifestPath);
-    if (!Array.isArray(manifest)) throw new Error("patterns manifest must be array: " + manifestPath);
-
-    const byPath = indexByPath(manifest);
-    const byFn   = indexByFilename(manifest);
-
-    const jsFiles = listFilesByExt(catDir, ".js");
-
-    let changed = false;
-
-    for (const f of jsFiles) {
-      const base = f.replace(/\.js$/i, "");
-
-      if (byPath.has(f)) continue;
-      if (byFn.has(base)) continue;
-
-      const entry = makeNewScriptEntry(f);
-      entry.path = f; // local filename inside category folder
-
-      manifest.push(entry);
-
-      byPath.add(f);
-      byFn.add(base);
-
-      ensurePatternsDummyThumb(cat, base);
-
-      addGrouped(addedMap, "patterns/" + cat, f);
-      log.push("[PATTERNS ADDED] " + cat + "/" + f);
-
-      changed = true;
-    }
-
-    if (changed) {
-      const wrote = writeJsonIfChanged(manifestPath, manifest);
-      if (!wrote) log.push("[PATTERNS NOTE] no-op write avoided: " + manifestPath);
-    }
-  }
-
-} // end scanPatternsAddNew
-
-
-async function scanGalleryScriptsAddNew({ addedMap, log }) {
-
-  // NEW gallery model: /gallery/Scripts/directoryRegistry.json and per-category manifest.json
-  const scriptsRoot = path.resolve("./gallery/Scripts");
-  if (!fs.existsSync(scriptsRoot)) return;
-
-  ensureDir(scriptsRoot, "gallery scripts root invalid: " + scriptsRoot);
-
-  const registryPath = path.join(scriptsRoot, "directoryRegistry.json");
-  if (!fs.existsSync(registryPath)) throw new Error("gallery/Scripts directoryRegistry.json missing: " + registryPath);
-
-  const cats = readJson(registryPath);
-  if (!Array.isArray(cats)) throw new Error("gallery/Scripts directoryRegistry.json must be array");
-
-  for (const cat of cats) {
-
-    const catDir = path.join(scriptsRoot, cat);
-    ensureDir(catDir, "gallery scripts category dir missing: " + catDir);
-
-    const manifestPath = path.join(catDir, "manifest.json");
-    if (!fs.existsSync(manifestPath)) continue;
-
-    const manifest = readJson(manifestPath);
-    if (!Array.isArray(manifest)) throw new Error("gallery scripts manifest must be array: " + manifestPath);
-
-    const byPath = indexByPath(manifest);
-    const byFn   = indexByFilename(manifest);
-
-    const jsFiles = listFilesByExt(catDir, ".js");
-
-    let changed = false;
-
-    for (const f of jsFiles) {
-      const base = f.replace(/\.js$/i, "");
-
-      if (byPath.has(f)) continue;
-      if (byFn.has(base)) continue;
-
-      const entry = makeNewScriptEntry(f);
-      entry.path = f;
-
-      manifest.push(entry);
-
-      byPath.add(f);
-      byFn.add(base);
-
-      addGrouped(addedMap, "gallery/Scripts/" + cat, f);
-      log.push("[GALLERY SCRIPTS ADDED] " + cat + "/" + f);
-
-      changed = true;
-    }
-
-    if (changed) {
-      const wrote = writeJsonIfChanged(manifestPath, manifest);
-      if (!wrote) log.push("[GALLERY SCRIPTS NOTE] no-op write avoided: " + manifestPath);
-    }
-  }
-
-} // end scanGalleryScriptsAddNew
-
-
-async function scanGalleryImagesAddNew({ addedMap, log }) {
-
-  // This is the “update_gallery_manifests” behavior but simplified:
-  // - add new images
-  // - write NO thumbnails here (you already have sharp logic elsewhere);
-  //   if you still want thumbs, we can plug sharp back in next.
-  // For now: discovery only + status:new, and missing files go to broken via validator.
-
-  const galleryRoot = path.resolve("./gallery");
-  ensureDir(galleryRoot, "gallery root missing: " + galleryRoot);
-
-  const domains = ["Ideabook", "Patterns"];
-
-  for (const domain of domains) {
-
-    const domainDir = path.join(galleryRoot, domain);
-    if (!fs.existsSync(domainDir)) continue;
-    ensureDir(domainDir, "gallery domain dir missing: " + domainDir);
-
-    const registryPath = path.join(domainDir, "directoryRegistry.json");
-    if (!fs.existsSync(registryPath)) throw new Error("gallery " + domain + " directoryRegistry.json missing: " + registryPath);
-
-    const cats = readJson(registryPath);
-    if (!Array.isArray(cats)) throw new Error("gallery " + domain + " directoryRegistry.json must be array");
-
-    for (const cat of cats) {
-
-      const catDir = path.join(domainDir, cat);
-      ensureDir(catDir, "gallery category dir missing: " + catDir);
-
-      const manifestPath = path.join(catDir, "manifest.json");
-      if (!fs.existsSync(manifestPath)) continue;
-
-      const manifest = readJson(manifestPath);
-      if (!Array.isArray(manifest)) throw new Error("gallery manifest must be array: " + manifestPath);
-
-      const byPath = indexByPath(manifest);
-
-      // Images are in the category folder (per your current gallery.js path logic)
-      const imgs = listImageFiles(catDir);
-
-      let changed = false;
-
-      for (const fileName of imgs) {
-
-        const key = cat + "/" + fileName;  // manifest paths are domain-relative with category prefix
-
-        if (byPath.has(key)) continue;
-
-        const entry = makeNewImageEntry(key, fileName);
-        manifest.push(entry);
-        byPath.add(key);
-
-        addGrouped(addedMap, "gallery/" + domain + "/" + cat, fileName);
-        log.push("[GALLERY IMAGES ADDED] " + domain + "/" + cat + "/" + fileName);
-
-        changed = true;
-      }
-
-      if (changed) {
-        const wrote = writeJsonIfChanged(manifestPath, manifest);
-        if (!wrote) log.push("[GALLERY IMAGES NOTE] no-op write avoided: " + manifestPath);
-      }
-    }
-  }
-
-} // end scanGalleryImagesAddNew
-
-
-function listImageFiles(dir) {
-  const allowed = /\.(jpg|jpeg|png|gif|webp|bmp|tiff)$/i;
-  const entries = fs.readdirSync(dir, { withFileTypes: true });
-  const out = [];
-
-  for (const ent of entries) {
-    if (!ent.isFile()) continue;
-    const name = ent.name;
-    if (allowed.test(name)) out.push(name);
-  }
-
-  out.sort((a, b) => a.localeCompare(b));
-  return out;
-} // end listImageFiles
-
-
-async function scanUtilitiesAddNew({ addedMap, log }) {
-
-  const utilitiesRoot = path.resolve("./utilities");
-  ensureDir(utilitiesRoot, "utilities root missing: " + utilitiesRoot);
-
-  const domains = ["Tools", "Lab"];
-
-  for (const domain of domains) {
-
-    const domainDir = path.join(utilitiesRoot, domain);
-    if (!fs.existsSync(domainDir)) continue;
-    ensureDir(domainDir, "utilities domain dir missing: " + domainDir);
-
-    const registryPath = path.join(domainDir, "directoryRegistry.json");
-    if (!fs.existsSync(registryPath)) throw new Error("utilities/" + domain + " directoryRegistry.json missing: " + registryPath);
-
-    const cats = readJson(registryPath);
-    if (!Array.isArray(cats)) throw new Error("utilities/" + domain + " directoryRegistry.json must be array");
-
-    for (const cat of cats) {
-
-      const catDir = path.join(domainDir, cat);
-      ensureDir(catDir, "utilities category dir missing: " + catDir);
-
-      const manifestPath = path.join(catDir, "manifest.json");
-      if (!fs.existsSync(manifestPath)) continue;
-
-      const manifest = readJson(manifestPath);
-      if (!Array.isArray(manifest)) throw new Error("utilities manifest must be array: " + manifestPath);
-
-      const byPath = indexByPath(manifest);
-      const byFn   = indexByFilename(manifest);
-
-      const jsFiles = listFilesByExt(catDir, ".js");
-
-      let changed = false;
-
-      for (const f of jsFiles) {
-        const base = f.replace(/\.js$/i, "");
-
-        if (byPath.has(f)) continue;
-        if (byFn.has(base)) continue;
-
-        const entry = makeNewScriptEntry(f);
-        entry.path = f;
-
-        manifest.push(entry);
-
-        byPath.add(f);
-        byFn.add(base);
-
-        addGrouped(addedMap, "utilities/" + domain + "/" + cat, f);
-        log.push("[UTILITIES ADDED] " + domain + "/" + cat + "/" + f);
-
-        changed = true;
-      }
-
-      if (changed) {
-        const wrote = writeJsonIfChanged(manifestPath, manifest);
-        if (!wrote) log.push("[UTILITIES NOTE] no-op write avoided: " + manifestPath);
-      }
-    }
-  }
-
-} // end scanUtilitiesAddNew
-
-
-async function scanDrawRegistryAndValidate({ addedMap, brokenMap, log }) {
-  const registryRoot = path.resolve("./drawRegistry");
-  if (!fs.existsSync(registryRoot)) return;
-
-  const entries = fs.readdirSync(registryRoot, { withFileTypes: true });
-
-  for (const ent of entries) {
-    if (!ent.isDirectory()) continue;
-
-    const primaryId = ent.name;
-    const primaryDir = path.join(registryRoot, primaryId);
-    const manifestPath = path.join(primaryDir, "manifest.json");
-
-    if (!fs.existsSync(manifestPath)) continue;
-
-    let manifest = [];
-    try {
-      manifest = readJsonFileSync(manifestPath);
-    } catch (e) {
-      log.push("[DRAW REGISTRY ERROR] " + primaryId + ": manifest read failed");
-      continue;
-    }
-
-    if (!Array.isArray(manifest)) {
-      log.push("[DRAW REGISTRY ERROR] " + primaryId + ": manifest is not an array");
-      continue;
-    }
-
-    let changed = false;
-    const newManifest = [];
-
-    for (const entry of manifest) {
-      const filePath = path.join(primaryDir, entry.path);
-
-      if (fs.existsSync(filePath)) {
-        newManifest.push(entry);
-      } else {
-        changed = true;
-        log.push("[DRAW REGISTRY REMOVED] " + primaryId + "/" + entry.path);
-        const label = `drawRegistry/${primaryId}/${entry.path}`;
-        addGrouped(brokenMap, "drawRegistry", label);
-      }
-    }
-
-    if (changed) {
-      writeJsonFileSync(manifestPath, newManifest);
-      log.push("[DRAW REGISTRY UPDATED] " + primaryId + "/manifest.json");
-    }
-  }
-} // end scanDrawRegistryAndValidate
-
-
-async function scanAllManifestsForHomeAndBroken({ homeOut, brokenMap, log }) {
-
-  const roots = [
-    path.resolve("./patterns"),
-    path.resolve("./gallery"),
-    path.resolve("./utilities")
-  ];
-
-  const manifestFiles = [];
-
-  for (const r of roots) {
-    if (!fs.existsSync(r)) continue;
-    walkFindManifests(r, manifestFiles);
-  }
-
-  for (const mf of manifestFiles) {
-
-    const list = readJson(mf);
-    if (!Array.isArray(list)) throw new Error("manifest must be array: " + mf);
-
-    const manifestDir = path.dirname(mf);
-
-    for (const entry of list) {
-
-      if (!entry || typeof entry !== "object") continue;
-
-      // Collect status-bearing entries for Home (as-is status)
-      if (entry.status) {
-        const rooted = makeRootedPath(manifestDir, entry);
-        homeOut.push({
-          file: String(entry.file || entry.filename || path.posix.basename(rooted)),
-          path: rooted,
-          title: String(entry.title || ""),
-          status: String(entry.status).trim()
-        });
-      }
-
-      // Validate referenced file exists; if missing, create VIRTUAL broken home item.
-      const rooted = makeRootedPath(manifestDir, entry);
-      const absItem = path.resolve("." + rooted); // rooted begins with "/"
-      if (!fs.existsSync(absItem)) {
-
-        const group = groupFromManifestPath(mf);
-
-        const file = String(entry.file || entry.filename || path.posix.basename(rooted));
-        const title = String(entry.title || entry.filename || file || "");
-        const broken = {
-          file,
-          path: rooted,
-          title,
-          status: "broken"
-        };
-
-        homeOut.push(broken);
-
-        const label = rooted;
-        addGrouped(brokenMap, group, label);
-
-        log.push("[BROKEN] " + rooted + " (from " + mf + ")");
-      }
-    }
-  }
-
-  // Sort Home output deterministically
-  homeOut.sort((a, b) => {
-    const as = String(a.status || "").toLowerCase();
-    const bs = String(b.status || "").toLowerCase();
-    if (as < bs) return -1;
-    if (as > bs) return 1;
-
-    const ak = String(a.title || a.file || a.path).toLowerCase();
-    const bk = String(b.title || b.file || b.path).toLowerCase();
-    if (ak < bk) return -1;
-    if (ak > bk) return 1;
-    return 0;
-  });
-
-} // end scanAllManifestsForHomeAndBroken
 
 
 function walkFindManifests(dir, out) {
@@ -2013,16 +1118,6 @@ function walkFindManifests(dir, out) {
 } // end walkFindManifests
 
 
-function groupFromManifestPath(absManifestPath) {
-
-  // Group by the directory containing the manifest, relative to project root.
-  const rel = path.relative(path.resolve("."), path.dirname(absManifestPath));
-  const posixRel = rel.split(path.sep).join(path.posix.sep);
-  return posixRel;
-
-} // end groupFromManifestPath
-
-
 function makeRootedPath(manifestDirAbs, entry) {
 
   const rel = entry.path || entry.filename || entry.file;
@@ -2039,18 +1134,6 @@ function makeRootedPath(manifestDirAbs, entry) {
   return "/" + posixRel;
 
 } // end makeRootedPath
-
-
-function writeHomeManifest(homeOut) {
-
-  const outDir = path.resolve("./home");
-  if (!fs.existsSync(outDir)) fs.mkdirSync(outDir, { recursive: true });
-  ensureDir(outDir, "home dir not directory: " + outDir);
-
-  const outPath = path.join(outDir, "manifest.json");
-  fs.writeFileSync(outPath, JSON.stringify(homeOut, null, 2) + "\n", "utf8");
-
-} // end writeHomeManifest
 
 /* ============================================================
    TASK: archiveItem  (GENERIC)
@@ -2255,7 +1338,6 @@ async function writeHelpFile(payload = {}) {
   };
 
 } // end writeHelpFile
-
 
 
 /* ===========================================================
@@ -2580,8 +1662,6 @@ export async function writePatternFromDrawRegistry(payload = {}) {
   };
 
 } // end writePatternFromDrawRegistry
-
-
 
 
 /* -----------------------------------------------------------
