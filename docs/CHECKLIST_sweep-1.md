@@ -83,14 +83,14 @@ Start: `git fetch`, `git checkout claude/sweep-1`, `npm install`, then `sketchpa
 
 | Item | Why not |
 |---|---|
-| Draw, Figures and Patterns share one set of object settings (reproduced) | A design decision for the core tab. Options: Draw works on its own copy, or each opens a copy. Needs your call. |
+| Draw, Figures and Patterns share one set of object settings (reproduced) | Your call (31 Oct): treat as an accident, no change now. Revisit is item 1a on the leftover list in `NEXT_PASS.md`. Figure layers already work on their own copies, so dragging and welds are unaffected. |
 | Script state leak (two scripts fail after about 100 earlier scripts) | Needs a look at which `drawState` fields survive `resetCanvas()` before changing anything. |
 | `029.JPG` listed in `gallery/Ideabook/possible/manifest.json`, file missing | I cannot recreate your file. Remove the entry or restore the file. |
 | Unused packages `@jaames/iro`, `dexie`, `sharp`; TinyMCE advisories | Your confirmation. `npm audit fix` updates TinyMCE; check the help editor after. |
 | Manifest phase: maintenance runs three times at start, import-time run with `process.exit(1)` | Belongs to the manifest phase you planned before Phase 10. |
 | `index.html` structure work, `clearDivs()` list, window back doors | Not started. Needs the 7a plan from `NEXT_PASS.md`. |
 | Bootstrap removal and CSS cleanup | Not started. Bootstrap's Reboot styles (box-sizing, fonts, button base) are used everywhere without being named, so removing it needs screenshot comparison on every screen. The pack script is the start of that method. |
-| Splits: Node service, `menuCmds.js`, `uiUtilities.js`, `help.js` | Not started. The tests to guard the Node split are in place. |
+| Splits: `menuCmds.js`, `uiUtilities.js`, `help.js` | Not started. (The Node service split is done: `c9588b5`.) |
 | Phase items (handle-drop weld, delete layer, Phase 10, thumbnails, native color input, Phase 9 reshape, templates import, instrumentation) | Not started. Large, and each needs your eyes on the result. |
 | Help Overview PDFs (`docs/*.pdf`) | Not regenerated; the HTML pages and the PDF builder are updated, so rebuilding gives current text. |
 
