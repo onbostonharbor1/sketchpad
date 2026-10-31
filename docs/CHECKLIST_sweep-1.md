@@ -42,6 +42,7 @@ revert if it fails: `git revert <commit>`.
 | `911c97b` | `npm audit fix`: tinymce 8.3.2 to 8.10.1, vite 7.1.12 to 7.3.7 (lock file only) |
 | `3be737d` | Ideabook: stale `029.JPG` entry removed from `possible/manifest.json` |
 | `a7f13f2` | `test:tabs` now also checks the side panel, accordion, Edit Manifest dialog, Show Script, lazy help editor and a Draw handle drag |
+| `bd8c915` | `npm run pixels:save` and `pixels:compare` (25 pictures before and after a change; adds the `pngjs` dev dependency) |
 
 ## 1. Gates to run first (all on Windows)
 
@@ -169,7 +170,12 @@ Failure reads "... is not defined" or "does not provide an export named ...". Un
 4. Gallery > Ideabook: "possible" now shows one fewer picture (the missing 029 is gone); pictures 028 and 030 still show;
    "ok" still shows 029. Undo: `git revert 3be737d`.
 
-**T18. `git status` after a run** shows no unexpected changed manifests. (If `home/manifest.json` or a category manifest
+**T18. The picture tools (commit `bd8c915`).** With the app running: `npm run pixels:save -- one`, then
+`npm run pixels:save -- two`, then `npm run pixels:compare -- one two`. It should print 25 lines of `identical` (or
+`same`) and `All 25 pictures match.` Two runs of the same code must match; if some differ, tell me which (it may be
+timing on your machine). `npm install` adds `pngjs` first. Then delete the `pixel-refs` folder. Undo: `git revert bd8c915`.
+
+**T19. `git status` after a run** shows no unexpected changed manifests. (If `home/manifest.json` or a category manifest
 changed, that is the start-up rebuild, as before. `package-lock.json` should not change by itself.)
 
 ## 3. Things you can check from the pictures
