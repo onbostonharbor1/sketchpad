@@ -43,6 +43,8 @@ revert if it fails: `git revert <commit>`.
 | `3be737d` | Ideabook: stale `029.JPG` entry removed from `possible/manifest.json` |
 | `a7f13f2` | `test:tabs` now also checks the side panel, accordion, Edit Manifest dialog, Show Script, lazy help editor and a Draw handle drag |
 | `bd8c915` | `npm run pixels:save` and `pixels:compare` (25 pictures before and after a change; adds the `pngjs` dev dependency) |
+| `b73d47c` | `test:node` grows to 60 checks: writers, `editManifestEntry`, log requests, dispatcher table; Node follow-ups: atomic writes, shared manifest-folder list and helpers, quiet switch, comments fixed |
+| `1e2562d` | Offcanvas aliases removed; help pages match the helpers that moved out of `uiUtilities.js` |
 
 ## 1. Gates to run first (all on Windows)
 
@@ -51,7 +53,7 @@ revert if it fails: `git revert <commit>`.
 | `npm run lint:globals` | 0 errors, 7 warnings (the known `armInteractor` and `gl` ones in Gallery scripts) |
 | `npm run check:imports` | `0 problem(s)` |
 | `npm run check:ids` | `every looked-up id is in index.html ...` |
-| `npm run test:node` | `52 passed, 0 failed` |
+| `npm run test:node` | `60 passed, 0 failed` |
 | `npm run test:tabs` | a line starting `PASS:` and ending `no errors` |
 
 `test:tabs` now also does, by itself, what T9, T10, T11 and part of T5 ask for (commit `a7f13f2`): opens the side panel and closes
@@ -175,7 +177,20 @@ Failure reads "... is not defined" or "does not provide an export named ...". Un
 `same`) and `All 25 pictures match.` Two runs of the same code must match; if some differ, tell me which (it may be
 timing on your machine). `npm install` adds `pngjs` first. Then delete the `pixel-refs` folder. Undo: `git revert bd8c915`.
 
-**T19. `git status` after a run** shows no unexpected changed manifests. (If `home/manifest.json` or a category manifest
+**T19. Node follow-ups (commit `b73d47c`) and aliases (commit `1e2562d`).**
+1. `npm run test:node` prints `60 passed`.
+2. Every Node-backed thing you did in T2 still works. What changed underneath: every file the service writes is now
+   written to a temporary file and renamed over the real one, so after any of those actions look in the folder:
+   there must be no file ending in `.tmp`. A failure reads "EPERM" or "EBUSY" in the Node window: Windows refused the
+   rename (another program, such as VS Code or a virus checker, had the file open); the service then falls back to
+   copying over it, so the action should still succeed. If it fails, tell me the file.
+3. Start the Node window with `set SKETCHPAD_QUIET=1` first (then `node node/sketchpadServer.mjs`): the window stops
+   printing one line per request.
+4. The Commands panels on all six tabs still open (T3) and the secondary-thumbnail grid in Draw still opens (the names
+   `showCommandsOffcanvas` and `showOffcanvasPanel` are gone). Undo: `git revert 1e2562d`.
+5. Help > Overview > Subsystems > "uiUtilities.js and the helpers that came out of it": the page reads correctly.
+
+**T20. `git status` after a run** shows no unexpected changed manifests. (If `home/manifest.json` or a category manifest
 changed, that is the start-up rebuild, as before. `package-lock.json` should not change by itself.)
 
 ## 3. Things you can check from the pictures
