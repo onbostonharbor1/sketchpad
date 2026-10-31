@@ -107,9 +107,10 @@ let controller = null;   // AbortController of the active listeners
    showWeldNotice(message)
    A short-lived note in the caption bar (Phase 8: weld created,
    removed, or nothing nearby to weld). Self-clearing, so it never
-   needs to be remembered to be cleaned up.
+   needs to be remembered to be cleaned up. Exported for figureLayers.js,
+   which reports a weld made by dropping a handle on a handle.
    ------------------------------------------------------------ */
-function showWeldNotice(message) {
+export function showWeldNotice(message) {
   const caption = document.getElementById("caption");
   if (!caption) return;
 

@@ -49,6 +49,11 @@ export function armInteractor(instance) {
         // nothing extra.
         beforeMove: instance.beforeMove,
         afterMove:  instance.afterMove,
+        // Figures, Phase 8 next pass: called with the handle's index when a
+        // drag ends (the mouse comes up after the handle actually moved).
+        // A handle dropped on another handle welds there. Undefined (the
+        // Draw tab) means nothing happens on release.
+        onRelease:  instance.onRelease,
         onUpdate: () => {
             // Safety: Only proceed if this instance is still the active one
             if (!deactivateCurrent) return;
@@ -127,6 +132,7 @@ function activatePointPicker(points, config = {}) {
     let draggedIndex  = null;
     let hoverIndex    = null;
     let selectedIndex = null;   // the handle the arrow keys nudge
+    let dragMoved     = false;  // the pressed handle has moved since the press
 
     // Use AbortController for clean, one-shot listener removal
     const controller = new AbortController();
@@ -224,6 +230,7 @@ function activatePointPicker(points, config = {}) {
             if (dist < settings.hitTolerance) {
                 draggedIndex  = i;
                 selectedIndex = i;
+                dragMoved     = false;
                 render();
                 return;
             }
@@ -252,13 +259,22 @@ function activatePointPicker(points, config = {}) {
             hoverIndex = currentHover;
             if (draggedIndex !== null) {
                 moveHandle(draggedIndex, mouse.x, mouse.y);
+                dragMoved = true;
             }
             render();
         }
     };
 
+    // On release only: a press that never moved is a click (select the
+    // handle), not a drop, so onRelease is not called for it.
     const handleMouseUp = () => {
+        const released = draggedIndex;
+        const moved    = dragMoved;
         draggedIndex = null;
+        dragMoved    = false;
+        if (released !== null && moved && settings.onRelease) {
+            settings.onRelease(released);
+        }
         render();
     };
 

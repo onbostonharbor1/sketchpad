@@ -71,6 +71,7 @@ export function initFiguresTab(restored = false) {
         "tab-categories": { type: "categories" }
       },
       hitRadius: 5,
+      snapRadius: 10,
       saved: null
     };
   }

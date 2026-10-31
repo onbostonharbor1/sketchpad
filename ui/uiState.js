@@ -111,6 +111,11 @@ export const uiState = {
     // Click tolerance, in canvas pixels, for picking points in points mode.
     hitRadius: 5,
 
+    // How close, in canvas pixels, a dropped handle must land to another
+    // handle to snap onto it and weld (Phase 8 next pass). Set from
+    // Figures Commands > "Weld snap radius".
+    snapRadius: 10,
+
     saved: null
   },
 

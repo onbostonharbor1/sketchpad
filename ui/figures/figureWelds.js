@@ -44,6 +44,22 @@
      own words) reachable from a single right-click, not just a shape
      the data model happens to allow.
 
+   Dropping a handle on a handle (weldHandleDrop(), Phase 8 next pass):
+     When a drag of one of the active layer's handles ends (interactor.js
+     onRelease) within uiState.figures.snapRadius (10 px; Figures
+     Commands > "Weld snap radius") of another handle -- any handle of
+     any visible layer, the same layer included -- the dropped handle
+     snaps exactly onto that one and the two weld. No points mode and no
+     discs to place first. A weld is made of discs, so each side gets one
+     if it has none: an anchored disc where an infrastructure point sits
+     under the handle, otherwise a handle disc (figurePoints.js, kind
+     "handle") that rides on the handle itself. cornerPartners() runs as
+     for a right-click, so dropping on a Parabola corner ties both of its
+     corner handles, and dropping a Parabola's corner handle on its own
+     twin ties its corner. Only on release: dragging across a handle on
+     the way somewhere else does nothing. A wrong weld is undone the
+     usual way, right-click in points mode.
+
    Moving a weld (propagateAfterChange(), the move-propagation rule):
      Hooked into moveHandle() (ui/interactor.js, drag and the arrow
      keys) and setTransform() (figureCentroid.js, move and turn) via a
@@ -51,6 +67,8 @@
      Every weld member of the layer being changed that actually moved
      seeds a breadth-first walk of the weld graph. For each neighbor
      disc reached:
+       - the neighbor is a handle disc -> move that handle by the same
+         canvas delta;
        - the neighbor sits exactly at one of its own object's handles
          (t = 0 or 1, and that arm end matches a handle) -> move that
          one handle by the same canvas delta;
@@ -70,6 +88,7 @@
      weldOf(figure, n)
      removeFromWeld(figure, n)
      toggleWeldAt(tabState, x, y, radius)
+     weldHandleDrop(tabId, layerIndex, h)
      snapshotWeldMembers(figure, layerIndex)
      propagateAfterChange(tabId, layerIndex, snapshot)
      drawWeldMarks(tabState)
@@ -77,7 +96,7 @@
 
 import { uiState } from "/ui/uiState.js";
 import { applyTransform, inverseTransform, translateTransform } from "/draw/drawTransform.js";
-import { findCandidate, addAnchoredPoint, moveFreePoint, refreshPoints, armsOf, armPoint } from "./figurePoints.js";
+import { findCandidate, addAnchoredPoint, addHandlePoint, moveFreePoint, refreshPoints, armsOf, armPoint } from "./figurePoints.js";
 // figureLayers.js imports this module too (for snapshotWeldMembers,
 // propagateAfterChange and drawWeldMarks); importing redrawFigure back
 // from it here is a circular import, but it is fine -- this binding is
@@ -86,8 +105,11 @@ import { findCandidate, addAnchoredPoint, moveFreePoint, refreshPoints, armsOf, 
 import { redrawFigure } from "./figureLayers.js";
 
 const EPS = 0.5;         // canvas pixels; "the same spot" and "didn't move"
-const MARK_RADIUS = 7;   // the plus mark's white halo
-const MARK_ARM    = 5;   // the plus mark's arm length
+// The mark is drawn on the main canvas, and a handle's dot (radius 5) is
+// drawn over it on the interaction layer. Its arms reach well past the dot,
+// so a weld on a handle still reads as a plus, not a ring.
+const MARK_RADIUS = 11;  // the plus mark's white halo
+const MARK_ARM    = 10;  // the plus mark's arm length
 
 
 /* ------------------------------------------------------------
@@ -284,6 +306,125 @@ export function toggleWeldAt(tabState, x, y, radius) {
 } // end toggleWeldAt
 
 
+/* ------------------------------------------------------------
+   discOnHandle(tabState, layerIndex, h)
+   ------------------------------------------------------------
+   A disc on handle h of the layer, found or made. Prefers, in turn:
+   an existing handle disc on that same handle; an existing anchored
+   disc at the handle's spot; a new anchored disc on an infrastructure
+   point at the spot; a new handle disc. Never a free disc, since a free
+   disc does not follow the handle. Null if the layer has no handle h.
+   ------------------------------------------------------------ */
+function discOnHandle(tabState, layerIndex, h) {
+
+  const figure   = tabState.figure;
+  const instance = tabState.instances?.[layerIndex];
+  const hp       = instance?.params?.points?.[h];
+  if (!hp) return null;
+
+  const xform = figure.layers[layerIndex]?.transform || null;
+  const at    = applyTransform(xform, hp);
+  const here  = (p) => p.layer === layerIndex && Math.hypot(p.x - at.x, p.y - at.y) <= EPS;
+
+  const onHandle = figure.points.find((p) => here(p) && p.kind === "handle" && p.h === h);
+  if (onHandle) return onHandle;
+
+  const anchored = figure.points.find((p) => here(p) && p.kind === "anchored");
+  if (anchored) return anchored;
+
+  for (const arm of armsOf(instance)) {
+    for (let i = arm.from; i <= arm.to; i++) {
+      const t  = i / arm.steps;
+      const pt = armPoint(arm, t, xform);
+      if (Math.hypot(pt.x - at.x, pt.y - at.y) <= EPS) {
+        return addAnchoredPoint(figure, { layer: layerIndex, arm: arm.id, t, x: pt.x, y: pt.y });
+      }
+    }
+  }
+
+  return addHandlePoint(figure, layerIndex, h, at.x, at.y);
+
+} // end discOnHandle
+
+
+/* ============================================================
+   weldHandleDrop(tabId, layerIndex, h)
+   ------------------------------------------------------------
+   Called when a drag of handle h of layer layerIndex ends (see the
+   header). Returns null for an ordinary drag that ended nowhere near
+   another handle (nothing to say), otherwise { message }.
+   ============================================================ */
+export function weldHandleDrop(tabId, layerIndex, h) {
+
+  const tabState = uiState.figures.tabs[tabId];
+  if (!tabState || !tabState.figure) return null;
+  const figure    = tabState.figure;
+  const instances = tabState.instances || [];
+  const instance  = instances[layerIndex];
+  const own       = instance?.params?.points?.[h];
+  if (!own) return null;
+
+  const xform   = figure.layers[layerIndex]?.transform || null;
+  const dropped = applyTransform(xform, own);
+
+  // 1. The nearest other handle, on any visible layer, within snap range.
+  let target = null;
+  let best   = uiState.figures.snapRadius;
+  figure.layers.forEach((layer, li) => {
+    if (!layer || !layer.visible) return;
+    const pts = instances[li]?.params?.points || [];
+    pts.forEach((pt, hi) => {
+      if (li === layerIndex && hi === h) return;
+      const c = applyTransform(layer.transform || null, pt);
+      const d = Math.hypot(c.x - dropped.x, c.y - dropped.y);
+      if (d <= best) { best = d; target = { layer: li, h: hi, x: c.x, y: c.y }; }
+    });
+  });
+  if (!target) return null;
+
+  // 2. Snap the dropped handle exactly onto the target. This is a move
+  //    like any other, so anything already welded to the dropped handle
+  //    follows it the last few pixels.
+  const snapshot = snapshotWeldMembers(figure, layerIndex);
+  const o = inverseTransform(xform, target.x, target.y);
+  own.x = o.x;
+  own.y = o.y;
+  if (typeof instance.update === "function") instance.update(instance.params);
+  redrawFigure(tabId);
+  propagateAfterChange(tabId, layerIndex, snapshot);
+
+  // 3. A disc on each handle, plus the other corner handle of any corner
+  //    either one sits on, all in one group.
+  const discs = [];
+  const add = (d) => { if (d && !discs.includes(d)) discs.push(d); };
+  add(discOnHandle(tabState, layerIndex, h));
+  add(discOnHandle(tabState, target.layer, target.h));
+  let corner = false;
+  for (const d of [...discs]) {
+    for (const c of cornerPartners(tabState, d)) {
+      if (!discs.includes(c)) corner = true;
+      add(c);
+    }
+  }
+
+  if (discs.length < 2) {
+    redrawFigure(tabId);
+    return { message: "Snapped. Nothing to weld here." };
+  }
+
+  const group = weldOf(figure, discs[0].n);
+  if (group && discs.every((d) => weldOf(figure, d.n) === group)) {
+    redrawFigure(tabId);
+    return { message: "Already welded." };
+  }
+
+  for (const d of discs.slice(1)) createOrJoinWeld(figure, discs[0].n, d.n);
+  redrawFigure(tabId);
+  return { message: corner ? "Welded (corner tied)." : "Welded." };
+
+} // end weldHandleDrop
+
+
 /* ============================================================
    snapshotWeldMembers(figure, layerIndex)
    ------------------------------------------------------------
@@ -378,6 +519,16 @@ function applyFollowerMove(tabState, point, dx, dy, moved) {
   if (layerMoved.whole) return false;   // already moved as a whole; nothing more to add
 
   const instance = tabState.instances?.[point.layer];
+
+  // A handle disc rides on one handle of its object: move that handle.
+  if (point.kind === "handle") {
+    if (!instance?.params?.points?.[point.h]) return false;
+    if (layerMoved.handles.has(point.h)) return false;
+    moveFollowerHandle(instance, point.h, xform, dx, dy);
+    layerMoved.handles.add(point.h);
+    return true;
+  }
+
   if (!instance || typeof instance.infrastructure !== "function") return false;
   const arm = instance.infrastructure().find((a) => a.id === point.arm);
   if (!arm) return false;

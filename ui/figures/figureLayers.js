@@ -66,9 +66,9 @@ import { resetCanvas, drawState }    from "/draw/drawState.js";
 import { buildParameterControls }   from "/ui/parameterControls.js";
 import { syncOverlayToCanvas }      from "/ui/uiUtilities.js";
 import { refreshPoints, drawFigurePoints } from "./figurePoints.js";
-import { activatePointsInput, deactivatePointsInput } from "./figurePointer.js";
+import { activatePointsInput, deactivatePointsInput, showWeldNotice } from "./figurePointer.js";
 import { activateCentroid, centroidHit, drawCentroid } from "./figureCentroid.js";
-import { snapshotWeldMembers, propagateAfterChange, drawWeldMarks } from "./figureWelds.js";
+import { snapshotWeldMembers, propagateAfterChange, drawWeldMarks, weldHandleDrop } from "./figureWelds.js";
 import { newTransform, newBounds } from "/draw/drawTransform.js";
 
 // Experiment switch: true = the last layer clicked goes on top.
@@ -160,6 +160,11 @@ export function insertLayer(tabId, registryKey, { params = null, transform = nul
   };
   instance.afterMove = () => {
     propagateAfterChange(tabId, index, weldSnapshot);
+  };
+  // Phase 8 next pass: a handle dropped on another handle welds there.
+  instance.onRelease = (h) => {
+    const result = weldHandleDrop(tabId, index, h);
+    if (result) showWeldNotice(result.message);
   };
   tabState.centroidSelected = false;
   figure.drawOrder.unshift(index);      // new layer goes on top

@@ -141,6 +141,20 @@ export async function getFiguresCaptionMenuItems(title) {
     }
   };
 
+  // Phase 8 next pass: how close a dropped handle must land to another
+  // handle to weld. Same shape as the hit radius above.
+  const snapRadiusItem = {
+    label:   "Weld snap radius (" + uiState.figures.snapRadius + " px)...",
+    tooltip: "How close a dropped handle must land to another handle to snap onto it and weld",
+    onClick: () => {
+      const answer = window.prompt(
+        "Weld snap radius in canvas pixels (1 to 50):", String(uiState.figures.snapRadius));
+      if (answer === null) return;
+      const n = Number(answer);
+      if (Number.isFinite(n) && n >= 1 && n <= 50) uiState.figures.snapRadius = n;
+    }
+  };
+
   // Usable only in points mode with a disc selected (the menu is rebuilt
   // each time it opens, so this is read fresh).
   const ts0 = activeTab();
@@ -170,6 +184,7 @@ export async function getFiguresCaptionMenuItems(title) {
     await makeHelpItem("figures", null),
     await makeNotesItem(null, title),
     hitRadiusItem,
+    snapRadiusItem,
     deletePointItem,
     breakApartItem,
     later("Show Script"),

@@ -10,6 +10,7 @@
    Point record, in figure.points:
      { n, kind: "anchored", layer, arm, t, x, y, dx, dy }
      { n, kind: "free",     layer,          x, y, dx, dy, ox, oy }
+     { n, kind: "handle",   layer, h,       x, y, dx, dy }
 
      n        permanent number, taken from figure.nextPoint. Never
               reused, even after the point is deleted. It is an id only:
@@ -31,6 +32,14 @@
               x, y are recomputed from these on every redraw, so a free
               disc travels with its layer when the layer is moved or turned
               (Phase 7b). Where the layer has no transform, ox = x, oy = y.
+     h        a handle point only (Phase 8 next pass): it sits on its
+              object's own handle number h (an index into params.points)
+              and follows that handle wherever it goes. Made only when a
+              handle is dropped on another handle and no infrastructure
+              point sits under it (a Line's midpoint, say, or the far end
+              of a trimmed Parabola arm), since a weld needs a disc on
+              each side. It disappears if the object no longer has
+              handle h.
 
    Layer transform (Phase 7b): a layer may carry layer.transform (see
    draw/drawTransform.js). Infrastructure arms come from the object in object
@@ -65,6 +74,7 @@
      findPoint(figure, x, y, radius)
      addAnchoredPoint(figure, candidate)
      addFreePoint(figure, x, y, transform)
+     addHandlePoint(figure, layer, h, x, y)
      moveFreePoint(point, x, y, transform)
      deletePoint(figure, n)
      refreshPoints(tabState)
@@ -213,6 +223,22 @@ export function addFreePoint(figure, x, y, transform = null) {
 
 
 /* ============================================================
+   addHandlePoint(figure, layer, h, x, y)
+   ------------------------------------------------------------
+   A disc that rides on handle number h of the layer's object (see
+   "h" in the header). x, y is where that handle is now, in canvas
+   space. Returns the point.
+   ============================================================ */
+export function addHandlePoint(figure, layer, h, x, y) {
+
+  const p = { n: figure.nextPoint++, kind: "handle", layer, h, x, y, dx: 0, dy: 0 };
+  figure.points.push(p);
+  return p;
+
+} // end addHandlePoint
+
+
+/* ============================================================
    moveFreePoint(point, x, y)
    ------------------------------------------------------------
    Drags a free point to (x, y). An anchored point is never moved
@@ -272,6 +298,15 @@ export function refreshPoints(tabState) {
     if (p.kind === "free") {
       if (typeof p.ox !== "number") continue;
       const pt = applyTransform(xform, { x: p.ox, y: p.oy });
+      p.x = pt.x;
+      p.y = pt.y;
+      continue;
+    }
+
+    if (p.kind === "handle") {
+      const hp = instances[p.layer]?.params?.points?.[p.h];
+      if (!hp) { gone.push(p.n); continue; }
+      const pt = applyTransform(xform, hp);
       p.x = pt.x;
       p.y = pt.y;
       continue;
