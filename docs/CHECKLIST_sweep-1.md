@@ -207,8 +207,8 @@ changed, that is the start-up rebuild, as before. `package-lock.json` should not
 | Script state leak (two scripts fail after about 100 earlier scripts) | Needs a look at which `drawState` fields survive `resetCanvas()` first. |
 | Five moderate advisories (eslint chain, dev only) | The fix `npm audit` offers is a breaking eslint change. Left alone. |
 | Dead code still listed in `FOLLOWUPS_node-service.md` | The rest of the follow-up list (comments, atomic writes, tests, further splits); the deletions you approved are done. |
-| 47 `!important` in the CSS | Removing all of them in `parameterControls.css` changed 8 screens, so each needs separate work. Not started. Listed in `NEXT_PASS.md`. |
-| Visibility held in state: 46 `.style.display` assignments remain | One by one, section 7 below lists each with its own check. The checkbox walk (the one that read the page) was dead code and is gone. |
+| 46 `!important` in the CSS, the 46 show/hide lines, fixed `#categories` / `#drawControls`, and the small items | Written as step-by-step jobs in `docs/RUNBOOK_deferred.md` for you to do on the PC (Jobs 1 to 4). |
+| Visibility held in state: 46 `.style.display` assignments remain | One by one, section 7 below lists each with its own check; the recipe is Job 2 in `docs/RUNBOOK_deferred.md`. The checkbox walk (the one that read the page) was dead code and is gone. |
 | Manifest phase: maintenance runs three times at start, import-time run with `process.exit(1)` | Belongs to the manifest phase you planned before Phase 10. |
 | Phase items (handle-drop weld, delete layer, Phase 10, thumbnails, native color input, Phase 9 reshape, template import and welding to templates, instrumentation) | Large; each needs your design call or your eyes. |
 | Help Overview PDFs (`docs/*.pdf`) | Not regenerated; the HTML pages and the PDF builder are updated, so rebuilding gives current text. Help pages that still say "Bootstrap" were not rewritten. |
@@ -246,5 +246,6 @@ covers the group.
 
 - `npm run check:imports`, `npm run check:ids`, `npm run test:node`, `npm run build:static`.
 - `scripts/extractBootstrapCss.mjs`: a record of how `css/base.css` was made (needs `npm install --no-save bootstrap@5.3.3`).
-- The pixel comparison I used (22 to 25 screens, before and after) is in my probe folder, not the repo. If you want it in
-  the repo as `npm run test:pixels`, say so; it would need a stored set of reference pictures.
+- `npm run pixels:save -- <name>` and `npm run pixels:compare -- <before> <after>`: 25 pictures of the app, before and after
+  a change (`tests/pixelShots.mjs`, `tests/pixelCompare.mjs`; pictures go in `pixel-refs/`, not committed). Uses `pngjs`.
+- `docs/RUNBOOK_deferred.md`: step-by-step jobs for the work deferred from this sweep.
