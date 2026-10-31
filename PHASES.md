@@ -17,6 +17,7 @@ Do one phase at a time. After each, stop and wait for him to review, play with i
 | 7b | Centroid and bounding box: every object has a visible centroid. Drag the centroid to move the object anywhere. Selecting a centroid shows a bounding box; grabbing the handle on the box rotates the object about the centroid | Built on `claude1` (no branch, Barry 2026-10-26), awaiting his review (see "Phase 7b as built") |
 | 7c | Break apart an object into its pieces (own phase: it changes existing drawing code). A composite object, such as a polygon of stitched parabolas, is replaced by separate layers (Lines, Parabolas) that can be moved, welded and deleted on their own. Needs a `decompose()` on each object that supports it. Barry's route: redo the drawing commands so they can produce their objects as separate segments, and break apart uses that | Built on `claude/phase-7c`, awaiting his review (see "Phase 7c as built") |
 | 8 | Welds (see "Phase 8 spec"). Order stays 7b, 7c, then 8 (Barry, 2026-10-26) | |
+| 8, next pass | A handle dropped on another handle welds (see "Phase 8, next pass" and "as built") | Built on `claude/phase-8-next`, not merged |
 | 8b | Magic points: more candidate kinds (midpoints, tops of loops, cusps), needed as weld targets and for parametric objects | |
 | 9 | Print aids: scale bar; minimum nail-spacing check (needs nail size and highlight-vs-list answers from Barry) | |
 | 10 | Save and recovery (Save As, category and manifest creation, reload) | |
@@ -399,21 +400,49 @@ When a handle of one object is dropped on a handle of another, the two weld, wit
 discs to place first. This removes the step that went wrong above: no one has to remember which layer is
 active.
 
-Open questions for Barry before it is built:
+Barry's answers (2026-10-31), which replace the open questions that stood here:
 
-- **When.** On release only (proposed), so dragging a handle across another one on the way somewhere else
-  does not weld it.
-- **How close.** Within the handle grab range (10 px, proposed). The dropped handle then snaps exactly
-  onto the other, since a weld needs its members to coincide. The snap moves only the handle being
-  dragged, which the person is moving anyway.
-- **Discs.** A weld is made of discs, so a disc is placed on each handle (or the existing one used). They
-  stay visible afterwards like any other disc.
-- **Which handles.** Arm-end handles are infrastructure points and can be welded. A midpoint handle (the
-  one that slides a whole line) usually is not: a Line's midpoint is not a candidate (steps = 1), though a
-  Parabola's is when steps is even. Proposed: arm ends only.
-- **Same object.** Dropping a Parabola's `line2_pt1` onto its own `line1_pt2` would tie its corner, the
-  same as a right-click does now. Proposed: yes.
-- **Undoing.** Right-click on the weld still removes it. An accidental drop has no other undo yet.
+- **When.** On release only.
+- **How close.** 10 px, and the dropped handle snaps exactly onto the other. He wants to be able to change
+  the value: Figures Commands > "Weld snap radius (N px)...", `uiState.figures.snapRadius`.
+- **Which handles.** Any handle. A wrong weld is easy to remove.
+- **Same object.** Do it: a Parabola's corner handle dropped on its own twin ties the corner. His general
+  rule: if he does something unwise, let him, unless the action is harmful.
+- **Discs** and **undoing**: as proposed (a disc on each side; right-click in points mode unwelds).
+
+Also fixed in this pass (found while documenting, 2026-10-27): the weld mark was hidden under a handle's
+dot, and a right-press on the centroid diamond started a move.
+
+## Phase 8, next pass as built (2026-10-31, `claude/phase-8-next`)
+
+- `ui/interactor.js`: an optional `onRelease(index)` setting, called when the mouse comes up after the pressed
+  handle actually moved. A press and release without moving (selecting a handle) is not a drop. The Draw tab
+  passes nothing, so nothing changes there.
+- `ui/figures/figureLayers.js`: each layer's instance gets `onRelease`, which calls `weldHandleDrop()` and shows
+  its message in the caption bar (`showWeldNotice`, now exported from `figurePointer.js`).
+- `ui/figures/figureWelds.js`, `weldHandleDrop(tabId, layer, h)`:
+  1. Finds the nearest other handle of any visible layer, the same layer included, within the snap radius.
+     None: an ordinary drag, nothing is said.
+  2. Snaps the dropped handle exactly onto it. This is an ordinary move, so anything already welded to the
+     dropped handle follows it the last few pixels.
+  3. Gives each handle a disc (an existing one if there is one) and joins them in one group, with
+     `cornerPartners()` as for a right-click. Dropping on a Parabola corner ties both of its corner handles.
+- New disc kind, `"handle"` (`figurePoints.js`): `{ n, kind: "handle", layer, h, x, y }`. A weld needs a disc on
+  each side, and some handles have no infrastructure point under them: a Line's midpoint, the far end of a
+  trimmed Parabola arm. A handle disc rides on handle number h and moves that handle when its weld moves
+  (`applyFollowerMove`). An anchored disc is still used wherever an infrastructure point sits under the handle,
+  so the existing weld code handles every case it handled before. Phase 10 has to save this kind too.
+- Weld mark: halo 11, arms 10 (were 7 and 5), so the + reaches past a handle's dot (radius 5, drawn over it on
+  the interaction layer). The halo now covers the discs under it; the + stands for the group, as the Phase 8
+  spec said.
+- `figureCentroid.js`: the mousedown ignores every button but the left, like the interactor.
+- Known effect of "any handle, same layer": a Parabola corner handle dragged less than the snap radius from its
+  twin ties the corner. Right-click in points mode undoes it.
+- Tests (`tests/tabSwitch.mjs`, "8 next" stages): drop, snap and weld across layers, with the notice, the + visible
+  past the handle and the weld then carrying the other line; dragging across a handle on the way does not weld;
+  the snap radius setting; a handle disc on a Line's midpoint, with the weld then sliding that Line; a Parabola
+  corner dropped on its twin; a right-press on the centroid moves nothing. Checked that these fail with the drop
+  weld switched off.
 
 ## Phase 7 as built
 
