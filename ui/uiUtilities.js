@@ -8,6 +8,8 @@
    =========================================================== */
 
 import { canvasLayerManager } from "./canvasLayerManager.js";
+import { disarmInteractor } from "/ui/interactor.js";
+import { REGIONS, BUTTON_EXTRA_SELECTOR } from "/ui/regions.js";
 
 /* ------------------------------------------------------------
    clearDivs(args="")
@@ -17,40 +19,26 @@ import { canvasLayerManager } from "./canvasLayerManager.js";
      args - optional string id of an extra div to clear in addition
 ------------------------------------------------------------ */
 function clearDivs(args = "") {
-    // 1. Clear standard regions
-    let ids = ["action", "caption", "text", "sketchpad"];
+    // 1. Clear the regions listed in regions.js, plus one extra if the caller names it.
+    const regions = [...REGIONS];
     if (args !== "") {
-        ids.push(args);
+        regions.push({ id: args, clear: "empty-show" });
     }
 
-    ids.forEach(id => {
+    regions.forEach(({ id, clear }) => {
         const el = document.getElementById(id);
-        if (el) {
-            el.innerHTML = "";
-            el.style.display = "";
+        if (!el) return;
+        if (clear === "hide") {
+            el.style.display = "none";     // tabs must explicitly show it again
+            return;
         }
+        el.innerHTML = "";
+        if (clear === "empty-show") el.style.display = "";
+        if (clear === "empty-hide") el.style.display = "none";
     });
 
-    // 1b. Hide/Clear Layout-specific Elements
-    const sidebar = document.getElementById("figure-sidebar");
-    if (sidebar) {
-        sidebar.innerHTML = "";
-        sidebar.style.display = "none";
-    }
-
     // Remove per-tab additions to the permanent #button div.
-    document.querySelectorAll("#button .tab-extra").forEach(el => el.remove());
-
-    const ifc = document.getElementById("interface-controls");
-    if (ifc) {
-        ifc.innerHTML = "";
-        // CSS :empty rule handles display:none, or we can force it:
-        // ifc.style.display = "none";
-    }
-
-    // Hide sketchpad wrapper by default (tabs must explicitly show it)
-    const wrapper = document.getElementById("sketchpad-wrapper");
-    if (wrapper) wrapper.style.display = "none";
+    document.querySelectorAll(BUTTON_EXTRA_SELECTOR).forEach(el => el.remove());
 
     // 2. Clear canvas overlay layers (pixels + HTML)
     canvasLayerManager.clearAll();
@@ -65,9 +53,7 @@ function clearDivs(args = "") {
     }
 
     // 4. Disarm interactor
-    if (window.disarmInteractor) {
-        window.disarmInteractor();
-    }
+    disarmInteractor();
 } // end clearDivs
 
 export { clearDivs };

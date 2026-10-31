@@ -22,8 +22,7 @@ const builtByCode = new Set([
 
 // Known problems, listed so the check stays green but they are not forgotten.
 const knownProblems = {
-  "next-prev-overlay": "ui/interactor.js looks for this id, but the element is overlay-nextprev, so the lookup never finds it. " +
-                       "Fixing it would start setting pointer-events on the overlay while dragging, so it needs a look at dragging first.",
+  // id: "what is wrong and why it is left"
 };
 
 const skipDirs = new Set(["node_modules", "dist", "dist-static", ".git", "help", "public", "archive", "tests"]);
@@ -49,6 +48,12 @@ for (const f of files) {
   }
 }
 
+// Every region in ui/regions.js must be written in index.html.
+const regionIds = [...fs.readFileSync(path.join(root, "ui/regions.js"), "utf8").matchAll(/\bid:\s*"([^"]+)"/g)].map(m => m[1]);
+const missingRegions = regionIds.filter(id => !htmlIds.has(id));
+if (regionIds.length === 0) { console.log("no region ids found in ui/regions.js"); process.exit(1); }
+for (const id of missingRegions) console.log("region in ui/regions.js is not in index.html: " + id);
+
 const unknown = new Map();   // id -> [file:line]
 for (const f of files) {
   const lines = fs.readFileSync(f, "utf8").split("\n");
@@ -69,10 +74,11 @@ const newProblems = [...unknown.keys()].filter(id => !(id in knownProblems));
 for (const id of Object.keys(knownProblems)) {
   if (unknown.has(id)) console.log("known problem: " + id + ": " + knownProblems[id]);
 }
-if (newProblems.length === 0) {
+if (newProblems.length === 0 && missingRegions.length === 0) {
   console.log("id check: every looked-up id is in index.html, on the built-by-code list, or created by a module (" + createdInCode.size + " such ids)");
 } else {
   console.log("id check: " + newProblems.length + " id(s) are looked up but not in index.html, the built-by-code list, or any module:");
   for (const id of newProblems) { const where = unknown.get(id); console.log("  " + id + "   " + where.slice(0, 3).join(", ") + (where.length > 3 ? " (+" + (where.length - 3) + ")" : "")); }
   process.exit(1);
 }
+if (missingRegions.length > 0) process.exit(1);
