@@ -292,7 +292,14 @@ ul#mainTabs.nav-tabs .nav-link.active::after {
 }
 
 /* ===========================================================
-   BOOTSTRAP OVERRIDES (SCOPED)
+   MAIN TABS: BORDER / OUTLINE / SHADOW OFF (SCOPED)
+   -----------------------------------------------------------
+   These were written to beat Bootstrap's tab rules, which now
+   live in css/base.css. NOTE: the "box-shadow: none !important"
+   below also cancels the shadow given to the active tab by
+   "ul#mainTabs.nav-tabs .nav-link.active" above. The active tab
+   has no shadow on screen today. Removing the !important here
+   would bring it back.
    =========================================================== */
 
 ul#mainTabs.nav-tabs .nav-link {

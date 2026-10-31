@@ -136,18 +136,6 @@ body {
   display: block;
 }
 
-/* Legacy placeholders (kept for reference) */
-#subtabs,
-#caption,
-#text,
-#sketchpad {
-  /*
-  margin-bottom: 10px;
-  padding: 8px;
-  border: 1px solid #ccc;
-  */
-}
-
 /* ---- Canvas base ---- */
 #sharedCanvas {
   position: static;
@@ -321,9 +309,6 @@ body {
 .thumb-image.selected {
   outline: 3px solid #000;
   outline-offset: -3px;
-}
-
-.thumb-image.selected {
   box-shadow: 0 0 0 2px #fff, 0 0 0 5px #000;
 }
 

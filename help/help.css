@@ -150,6 +150,8 @@ code {
   flex: 0 0 140px;
   min-width: 120px;
   max-width: 180px;
+  overflow-x: auto;     /* horizontal scroll if needed */
+  overflow-y: auto;     /* keep vertical scroll */
 
   overflow: auto;
   border-right: 1px solid #ccc;
@@ -193,6 +195,7 @@ code {
 .helpBrowserOverlay #helpTree {
   line-height: 1.25;
   font-size: 14px;
+  white-space: nowrap;   /* no wrapping, so the left pane can scroll sideways */
 }
 
 /* Remove only the extra top-level indent; preserve hierarchy */
@@ -217,6 +220,8 @@ code {
 /* Keep anchor tight */
 .helpBrowserOverlay #helpTree .jstree-anchor {
   padding-left: 0;
+  text-decoration: none;   /* no underline, no link coloring */
+  color: inherit;
 }
 
 /* ============================================================
@@ -225,19 +230,5 @@ code {
    2) remove underline + link coloring
 ============================================================ */
 
-/* 1) Horizontal scrollbar when needed */
-.helpBrowserOverlay #helpBrowserLeft {
-  overflow-x: auto;     /* horizontal scroll if needed */
-  overflow-y: auto;     /* keep vertical scroll */
-}
-
-/* jsTree: prevent wrapping so horizontal scroll can occur */
-.helpBrowserOverlay #helpTree {
-  white-space: nowrap;
-}
-
-/* 2) No underline / no link coloring */
-.helpBrowserOverlay #helpTree .jstree-anchor {
-  text-decoration: none;
-  color: inherit;
-}
+/* (The left pane's scrolling, the tree's no-wrap, and the anchors' plain
+   look are set in the rules above.) */

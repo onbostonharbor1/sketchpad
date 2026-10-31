@@ -284,15 +284,6 @@ input.ctrl-text[type="text"] {
 } /* end .cmdButton:active */
 
 
-/* optional: if you want the offcanvas button centered like the control one */
-.cmdButtonRow {
-  display: flex;
-  align-items: center;
-  justify-content: space-between; /* or center */
-  gap: 12px;
-  margin-bottom: 12px;
-} /* end .cmdButtonRow */
-
 #button {
   display: flex;
   flex-direction: column;
@@ -321,8 +312,9 @@ input.ctrl-text[type="text"] {
 
 .cmdButtonRow {
   display: flex;
-  justify-content: center;   /* ← center, not space-between */
+  justify-content: center;
   align-items: center;
+  gap: 12px;
   width: 100%;
   margin-bottom: 12px;
 } /* end .cmdButtonRow */
@@ -488,11 +480,6 @@ input.ctrl-text[type="text"] {
   pointer-events: none;
   width: 0;
   height: 0;
-}
-
-/* Still hide the text box inside the Coloris dialog */
-#clr-picker input.clr-color {
-  display: none !important;
 }
 
 /* ============================================================

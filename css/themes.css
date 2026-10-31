@@ -189,6 +189,8 @@
 
 /* ===========================================================
    DRAW-SPECIFIC OVERRIDES
+   (a second .theme-draw rule on purpose: it must come after the
+   UI ALIASES block above, which also names .theme-draw)
    =========================================================== */
 
 .theme-draw {
