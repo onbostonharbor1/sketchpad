@@ -106,8 +106,8 @@ check("no Origin is allowed",       (await call("listLogFiles", {})).status === 
 check("foreign Host is refused",    (await call("listLogFiles", {}, { Host: "evil.example" })).status === 403);
 
 /* ---- 3. every request name, empty payload: never a 500 ---- */
-const NAMES = ["writePatternThumbnail", "createFigure", "editManifestEntry", "deletePackageScript", "editPackageScript",
-  "renamePackageScript", "listLogFiles", "readLogFile", "openInEditor", "archiveItem", "writePatternFromDrawRegistry",
+const NAMES = ["writePatternThumbnail", "createFigure", "editManifestEntry",
+  "listLogFiles", "readLogFile", "openInEditor", "archiveItem", "writePatternFromDrawRegistry",
   "writeHelpFile", "writeGalleryPatternPng", "saveSecondaryObject", "archiveSecondaryObject", "getSecondaryManifest",
   "getPrimaryObjectsWithSecondaries", "readSecondaryObject", "manifestMaintenance"];
 for (const n of NAMES) {

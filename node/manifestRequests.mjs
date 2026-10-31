@@ -1,8 +1,7 @@
 /* ===========================================================
    manifestRequests.mjs  (Node.js)
    -----------------------------------------------------------
-   Requests that edit manifests: editManifestEntry, editPackageScript, archiveItem, and
-   the placeholders deletePackageScript and renamePackageScript. Also holds the
+   Requests that edit manifests: editManifestEntry and archiveItem. Also holds the
    manifest path checks these requests share.
    Called by the dispatcher in sketchpadService.mjs.
    =========================================================== */
@@ -350,168 +349,6 @@ function findOriginalManifestEntryByRootedPath(rootedPath) {
 } // end findOriginalManifestEntryByRootedPath
 
 
-/* ===========================================================
-   TASK: deletePackageScript  (NO-OP PLACEHOLDER)
-
-   DESCRIPTION
-   -----------
-   Reserved for future functionality to delete a pattern script
-   and remove its manifest entry.
-
-   Currently implemented as a no-op to stabilize the dispatcher
-   interface early.
-
-   =========================================================== */
-
-export async function deletePackageScript(payload = {}) {
-  return {
-    request: "deletePackageScript",
-    status: "noop",
-    payload
-  };
-} // end deletePackageScript
-
-
-/* ===========================================================
-   TASK: editPackageScript  (NO-OP PLACEHOLDER)
-
-   DESCRIPTION
-   -----------
-   Reserved for future functionality to edit metadata for a
-   pattern script (title, tags, notes, etc.).
-
-   =========================================================== */
-
-/* ===========================================================
-   TASK: editPackageScript
-
-   DESCRIPTION
-   -----------
-   Updates the title of a single manifest entry identified
-   by filename within a per-category manifest.json.
-
-   Payload:
-     {
-       manifestPath : "/patterns/<category>/manifest.json",
-       filename     : "<base filename>",
-       title        : "<new title>"
-     }
-
-   =========================================================== */
-
-
-/* -----------------------------------------------------------
-   resolveManifestPath(patternsRoot, manifestPathInput)
-
-   DESCRIPTION
-   -----------
-   Resolves a UI-provided manifest path safely and ensures
-   it remains inside the patterns root.
-
-   Examples accepted:
-     "/patterns/circles/manifest.json"
-     "patterns/circles/manifest.json"
-
------------------------------------------------------------ */
-
-/* ===========================================================
-   TASK: editPackageScript
-
-   DESCRIPTION
-   -----------
-   Updates the title of a single manifest entry identified
-   by filename within a manifest.json.
-
-   Allowed manifest locations:
-     • ./patterns/../manifest.json
-     • ./gallery/../manifest.json
-
-   Payload:
-     {
-       manifestPath : "/patterns/<category>/manifest.json"  OR "/gallery/Scripts/manifest.json",
-       filename     : "<base filename>",
-       title        : "<new title>"
-     }
-   =========================================================== */
-
-export async function editPackageScript(payload = {}) {
-  console.log("editPackageScript file:", import.meta.url);
-
-  const manifestPathInput = payload.manifestPath;
-  const filename          = payload.filename;
-  const newTitleRaw       = payload.title;
-
-  /* ---- validate payload ---- */
-  if (typeof manifestPathInput !== "string" || manifestPathInput.trim() === "") {
-    throw new Error("editPackageScript: manifestPath missing or invalid");
-  }
-
-  if (typeof filename !== "string" || filename.trim() === "") {
-    throw new Error("editPackageScript: filename missing or invalid");
-  }
-
-  if (typeof newTitleRaw !== "string") {
-    throw new Error("editPackageScript: title must be a string");
-  }
-
-  const newTitle = newTitleRaw.trim();
-
-  /* ---- resolve and validate manifest path (patterns OR gallery) ---- */
-  const patternsRoot = path.resolve("./patterns");
-  const galleryRoot  = path.resolve("./gallery");
-
-  const manifestPath = resolveManifestPathAllowed(
-    [patternsRoot, galleryRoot],
-    manifestPathInput,
-    "editPackageScript"
-  );
-
-  /* ---- load manifest ---- */
-  const manifest = readJsonFileSync(manifestPath);
-  if (!Array.isArray(manifest)) {
-    throw new Error("editPackageScript: manifest is not an array");
-  }
-
-  /* ---- locate entry ---- */
-  let indexFound = -1;
-
-  for (let i = 0; i < manifest.length; i++) {
-    const entry = manifest[i];
-    if (!entry || typeof entry !== "object") continue;
-
-    if (entry.filename === filename) {
-      indexFound = i;
-      break;
-    }
-  }
-
-  if (indexFound < 0) {
-    throw new Error(`editPackageScript: entry not found: ${filename}`);
-  }
-
-  /* ---- update entry ---- */
-  const entry    = manifest[indexFound];
-  const oldTitle = entry.title || "";
-
-  entry.title = newTitle;
-
-  /* ---- persist ---- */
-  writeJsonFileSync(manifestPath, manifest);
-
-  /* ---- report ---- */
-  return {
-    request: "editPackageScript",
-    status: "ok",
-    manifestPath,
-    filename,
-    indexUpdated: indexFound,
-    oldTitle,
-    newTitle
-  };
-
-} // end editPackageScript
-
-
 /* -----------------------------------------------------------
    resolveManifestPathAllowed(allowedRoots, manifestPathInput, tag)
 
@@ -568,25 +405,6 @@ function resolveManifestPathAllowed(allowedRoots, manifestPathInput, tag) {
   return abs;
 
 } // end resolveManifestPathAllowed
-
-
-/* ===========================================================
-   TASK: renamePackageScript  (NO-OP PLACEHOLDER)
-
-   DESCRIPTION
-   -----------
-   Reserved for future functionality to rename a script file
-   and update its manifest entry accordingly.
-
-   =========================================================== */
-
-export async function renamePackageScript(payload = {}) {
-  return {
-    request: "renamePackageScript",
-    status: "noop",
-    payload
-  };
-} // end renamePackageScript
 
 
 function walkFindManifests(dir, out) {

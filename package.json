@@ -28,12 +28,9 @@
     "build:static": "node scripts/buildStatic.mjs"
   },
   "dependencies": {
-    "@jaames/iro": "^5.5.2",
     "@melloware/coloris": "^0.25.0",
-    "dexie": "^4.2.1",
     "jquery": "^3.7.1",
     "jstree": "^3.3.17",
-    "sharp": "^0.34.5",
     "tinymce": "^8.3.2"
   },
   "devDependencies": {

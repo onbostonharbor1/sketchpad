@@ -1,8 +1,8 @@
 /* ===========================================================
    drawExport.js
    -----------------------------------------------------------
-   Draw's export requests to the Node service: Gallery PNG, Pattern script (text built from the
-   Draw registry object), and saved settings. Used only by Draw.
+   Draw's export requests to the Node service: Gallery PNG and Pattern script (text built from
+   the Draw registry object). Used only by Draw. (Saved settings are in ui/draw/secondaryObjects.js.)
    =========================================================== */
 
 import { nodeDispatch } from "/ui/nodeLayer.js";
@@ -207,7 +207,7 @@ export async function createPatternScript(spec = {}) {
     the builder with per-id overrides.
 ============================================================ */
 
-export function createPatternScriptTextFromDrawRegistry(spec) {
+function createPatternScriptTextFromDrawRegistry(spec) {
 
   if (!spec) throw new Error("createPatternScriptTextFromDrawRegistry: spec missing");
 
@@ -269,79 +269,3 @@ export function createPatternScriptTextFromDrawRegistry(spec) {
   return lines.join("\n");
 
 } // end createPatternScriptTextFromDrawRegistry
-
-/* ============================================================
-    serializeParamsObject(obj)
-
-    - Converts plain objects to JS object literal text.
-    - Converts {x,y} with numeric fields to "new Point(x,y)"
-    - Numbers/strings/bools/null preserved
-============================================================ */
-function serializeParamsObject(obj) {
-
-  if (obj === null) return "null";
-
-  if (Array.isArray(obj)) {
-    const parts = obj.map((v) => serializeParamsObject(v));
-    return `[${parts.join(", ")}]`;
-  }
-
-  if (typeof obj === "number") return String(obj);
-  if (typeof obj === "boolean") return obj ? "true" : "false";
-
-  if (typeof obj === "string") {
-    // minimal escaping
-    return JSON.stringify(obj);
-  }
-
-  if (typeof obj !== "object") {
-    throw new Error("serializeParamsObject: unsupported type: " + typeof obj);
-  }
-
-  // Heuristic: Point-like
-  if (
-    Object.prototype.hasOwnProperty.call(obj, "x") &&
-    Object.prototype.hasOwnProperty.call(obj, "y") &&
-    typeof obj.x === "number" &&
-    typeof obj.y === "number" &&
-    Object.keys(obj).length === 2
-  ) {
-    return `new Point(${obj.x}, ${obj.y})`;
-  }
-
-  const keys = Object.keys(obj);
-
-  const parts = keys.map((k) => {
-    const v = obj[k];
-    const keyText = /^[A-Za-z_$][A-Za-z0-9_$]*$/.test(k) ? k : JSON.stringify(k);
-    return `${keyText}: ${serializeParamsObject(v)}`;
-  });
-
-  return `{ ${parts.join(", ")} }`;
-
-} // end serializeParamsObject
-
-/* ============================================================
-    saveSecondaryObject(spec) (Jules)
-    ------------------------------------------------------------
-    Dispatches a save request for a nailing template into
-    the parent object's subdirectory.
-=========================================================== */
-export async function saveSecondaryObject(spec = {}) {
-  const { parentId, secondaryName, params } = spec;
-
-  if (!parentId || !secondaryName) {
-    throw new Error("saveSecondaryObject: Missing parentId or secondaryName");
-  }
-
-  const result = await nodeDispatch("saveSecondaryObject", {
-    parentId,
-    secondaryName,
-    params
-  });
-
-  if (result.status === "ok") {
-    alert("Secondary template saved to: " + result.path);
-  }
-  return result;
-}

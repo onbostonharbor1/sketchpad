@@ -21,7 +21,6 @@
    Manifests
      • manifestMaintenance            rebuild every manifest (maintain_manifests.mjs)
      • editManifestEntry              change one entry's title and status
-     • editPackageScript              edit an entry in a manifest
      • archiveItem                    move a file to archive/ and drop its entry
 
    Writers (data comes from the browser)
@@ -39,14 +38,10 @@
      • listLogFiles, readLogFile      the files in ./utilities/logfiles
      • openInEditor                   open a project file in VS Code
 
-   Placeholders (NO-OP, future expansion)
-     • deletePackageScript
-     • renamePackageScript
-
    Every path built from request text is checked by safePaths.mjs.
 
    WHERE THE TASKS LIVE
-     • manifestRequests.mjs        manifest edits, archiveItem, placeholders
+     • manifestRequests.mjs        manifest edits, archiveItem
      • writerRequests.mjs          thumbnails, help pages, Gallery PNGs, Pattern scripts
      • secondaryRequests.mjs       saved Draw settings
      • logAndEditorRequests.mjs    log files, open in VS Code
@@ -68,8 +63,7 @@
 
 import { runManifestMaintenance } from "./maintain_manifests.mjs";
 import { createFigure }           from "./createFigureService.mjs";
-import { editManifestEntry, editPackageScript, deletePackageScript,
-         renamePackageScript, archiveItem }                       from "./manifestRequests.mjs";
+import { editManifestEntry, archiveItem }                     from "./manifestRequests.mjs";
 import { writePatternThumbnail, writePatternFromDrawRegistry,
          writeGalleryPatternPng, writeHelpFile }                  from "./writerRequests.mjs";
 import { saveSecondaryObject, readSecondaryObject, archiveSecondaryObject,
@@ -106,9 +100,6 @@ const HANDLERS = {
   createFigure:                     createFigure,
 
   editManifestEntry:                editManifestEntry,
-  editPackageScript:                editPackageScript,
-  deletePackageScript:              deletePackageScript,
-  renamePackageScript:              renamePackageScript,
   archiveItem:                      archiveItem,
 
   writePatternThumbnail:            writePatternThumbnail,

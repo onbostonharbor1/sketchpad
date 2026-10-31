@@ -282,7 +282,7 @@ function wireEditManifestHandlers(spec, resolve) {
 
 } // end wireEditManifestHandlers
 
-export async function applyEditManifest(spec, resolve) {
+async function applyEditManifest(spec, resolve) {
 
   if (!spec) throw new Error("applyEditManifest: spec missing");
   if (!spec.manifestPath) throw new Error("applyEditManifest: spec.manifestPath missing");
@@ -361,56 +361,6 @@ export async function applyEditManifest(spec, resolve) {
   resolve(true);
 
 } // end applyEditManifest
-
-/* ============================================================
-    preselectStatus(initialStatus, presets)
-=========================================================== */
-function preselectStatus(initialStatus, presets) {
-
-  if (!initialStatus) return;
-
-  for (let i = 0; i < presets.length; i++) {
-    const id = "statusPreset_" + i;
-    const el = document.getElementById(id);
-    if (!el) continue;
-
-    if (el.value === initialStatus) {
-      el.checked = true;
-      return;
-    }
-  }
-
-} // end preselectStatus
-
-/* ============================================================
-    clearStatusRadios()
-=========================================================== */
-function clearStatusRadios() {
-
-  const nodes = document.querySelectorAll("input[name='statusPreset']");
-  if (!nodes) return;
-
-  nodes.forEach((n) => {
-    n.checked = false;
-  });
-
-} // end clearStatusRadios
-
-/* ============================================================
-    getPickedRadioValue()
-=========================================================== */
-function getPickedRadioValue() {
-
-  const nodes = document.querySelectorAll("input[name='statusPreset']");
-  if (!nodes) return "";
-
-  for (let i = 0; i < nodes.length; i++) {
-    if (nodes[i].checked) return nodes[i].value;
-  }
-
-  return "";
-
-} // end getPickedRadioValue
 
 /* ============================================================
     closeFormsOverlay()
