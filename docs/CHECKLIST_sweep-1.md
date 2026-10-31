@@ -46,7 +46,7 @@ revert if it fails: `git revert <commit>`.
 | `npm run lint:globals` | 0 errors, 7 warnings (the known `armInteractor` and `gl` ones in Gallery scripts) |
 | `npm run check:imports` | `0 problem(s)` |
 | `npm run check:ids` | `every looked-up id is in index.html ...` |
-| `npm run test:node` | `55 passed, 0 failed` |
+| `npm run test:node` | `52 passed, 0 failed` |
 | `npm run test:tabs` | a line starting `PASS:` and ending `no errors` |
 
 Checked here on Linux before you look: all five pass. Not checked anywhere: Windows, `sketchpad.bat`, real printing.
