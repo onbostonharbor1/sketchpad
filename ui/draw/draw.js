@@ -53,6 +53,7 @@ import {
   copyActiveDrawObject,
   wireDrawCommandsButton
 }                                           from "/ui/draw/drawMenuCmds.js";
+import { disarmInteractor } from "/ui/interactor.js";
 
 
 /* ============================================================
@@ -160,7 +161,7 @@ export function initDrawTab(restored = false) {
    ============================================================ */
 function restoreDrawTab() {
 
-  if (window.disarmInteractor) window.disarmInteractor();
+  disarmInteractor();
 
   setCommandsButtonLabel("Draw Commands");
   wireDrawCommandsButton();

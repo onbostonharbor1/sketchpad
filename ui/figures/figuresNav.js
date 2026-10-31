@@ -59,6 +59,7 @@ import {
   nextUntitledName,
   nextFigureTabId
 }                             from "./figureModel.js";
+import { disarmInteractor } from "/ui/interactor.js";
 
 
 /* ============================================================
@@ -439,7 +440,7 @@ export function openNewFigureTab() {
 export function closeTab(tabId) {
 
   delete uiState.figures.tabs[tabId];
-  if (window.disarmInteractor) window.disarmInteractor();
+  disarmInteractor();
   deactivatePointsInput();
   deactivateCentroid();
 

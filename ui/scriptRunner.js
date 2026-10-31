@@ -67,6 +67,7 @@ import { drawState, resetCanvas } from "/draw/drawState.js";
    no controls are built and the script still runs.
 */
 import { buildParameterControls } from "/ui/parameterControls.js";
+import { armInteractor, disarmInteractor } from "/ui/interactor.js";
 
 
 /* ===========================================================
@@ -282,9 +283,7 @@ export async function executeScriptToCanvas(mod, title, options = {}) {
   // 3. THE BURIAL: Arm after execution
   // Now info.params.points will actually have data in it.
   if (info && info.interactive === true && info.params?.points) {
-    if (window.armInteractor) {
-      window.armInteractor(info);
-    }
+    armInteractor(info);
   }
 
   // 4. Build parameter controls
@@ -355,9 +354,7 @@ export async function runScriptByPath(path, mode, options = {}) {
 
   // 1. TEARDOWN: Clear the interaction layer before starting a new script.
   // This prevents ghost dots from a previous script.
-  if (window.disarmInteractor) {
-      window.disarmInteractor();
-  }
+  disarmInteractor();
 
   if (activeModule && typeof activeModule.stop === "function") {
     try {

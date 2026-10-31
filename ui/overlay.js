@@ -1,3 +1,4 @@
+import { disarmInteractor } from "/ui/interactor.js";
 ////////////////////////////////////////////////////////////////
 // overlay.js --  CLEAN FINAL VERSION
 ////////////////////////////////////////////////////////////////
@@ -19,9 +20,7 @@ export const overlayManager = {
     if (!el) throw new Error("overlayManager.show: unknown layer " + name);
 
     // CRITICAL: Disable interactor when showing any overlay
-    if (window.disarmInteractor) {
-      window.disarmInteractor();
-    }
+    disarmInteractor();
 
     el.innerHTML = html;
     el.style.display = "block";

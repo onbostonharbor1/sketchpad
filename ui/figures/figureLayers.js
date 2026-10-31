@@ -86,6 +86,7 @@ import { activatePointsInput, deactivatePointsInput } from "./figurePointer.js";
 import { activateCentroid, centroidHit, drawCentroid } from "./figureCentroid.js";
 import { snapshotWeldMembers, propagateAfterChange, drawWeldMarks } from "./figureWelds.js";
 import { newTransform, newBounds } from "/draw/drawTransform.js";
+import { armInteractor, disarmInteractor } from "/ui/interactor.js";
 
 // Experiment switch: true = the last layer clicked goes on top.
 const MOVE_TO_FRONT_ON_SELECT = true;
@@ -495,12 +496,12 @@ export function renderLayerPanel(tabId) {
   // takes clicks (place, select, delete). It is set up after the interactor:
   // an object with no handles makes the interactor hide the interaction
   // layer, and the pointer input has to show it again.
-  if (window.disarmInteractor) window.disarmInteractor();
+  disarmInteractor();
   deactivatePointsInput();
 
   const pointsMode = tabState.mode === "points";
   if (active && figure.layers[figure.activeLayer].visible) {
-    if (window.armInteractor) window.armInteractor(active);
+    armInteractor(active);
   }
   if (pointsMode) activatePointsInput(tabId, () => redrawFigure(tabId));
   activateCentroid(tabId, () => redrawFigure(tabId));

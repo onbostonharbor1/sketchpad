@@ -48,6 +48,7 @@ import {
   clearDrawCaption,
   setDrawAction
 }                                                              from "./drawMenuCmds.js";
+import { armInteractor, disarmInteractor } from "/ui/interactor.js";
 
 
 /* ============================================================
@@ -143,7 +144,7 @@ export function addDrawSubtab(item) {
     entry.init();
 
     if (entry.interactive && entry.params.points) {
-      if (window.armInteractor)    window.armInteractor(entry);
+      armInteractor(entry);
       if (window.interactor?.draw) window.interactor.draw();
     }
 
@@ -199,7 +200,7 @@ export function switchTab(tabId) {
 
   uiState.draw.activeSubtab = tabId;
 
-  if (window.disarmInteractor) window.disarmInteractor();
+  disarmInteractor();
   if (window.interactor)       window.interactor.target = null;
 
   clearDivs();
@@ -217,7 +218,7 @@ export function switchTab(tabId) {
     const entry = info.drawRegistry;
     updateDrawCaption(entry);
     if (entry?.interactive && entry.params?.points) {
-      if (window.armInteractor)    window.armInteractor(entry);
+      armInteractor(entry);
       if (window.interactor?.draw) window.interactor.draw();
     }
   }

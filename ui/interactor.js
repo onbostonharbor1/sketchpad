@@ -29,8 +29,9 @@ export function armInteractor(instance) {
         return;
     }
 
-    // Disable navigation overlays that might interfere with dragging
-    const nav = document.getElementById("next-prev-overlay");
+    // Make sure the Prev / Next overlay does not take mouse events away from dragging.
+    // (css/overlay.css already sets this; the line keeps it true if that CSS changes.)
+    const nav = document.getElementById("overlay-nextprev");
     if (nav) nav.style.pointerEvents = "none";
 
     // 2. Activate the picker and store the cleanup function
@@ -306,6 +307,7 @@ function activatePointPicker(points, config = {}) {
     };
 }
 
-// Global Exports
+// Gallery scripts call armInteractor / disarmInteractor as bare names, so these two
+// stay on window. Code in ui/ imports them from this file instead.
 window.armInteractor = armInteractor;
 window.disarmInteractor = disarmInteractor;
