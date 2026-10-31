@@ -30,6 +30,8 @@ const notes    = [];   // reported only
 
 const browser = await chromium.launch();
 const page    = await browser.newPage({ viewport: { width: 1400, height: 900 } });
+const tinyRequests = [];   // every request whose URL names TinyMCE, from the start of the run
+page.on("request", r => { if (/tinymce/i.test(r.url())) tinyRequests.push(r.url()); });
 
 let stage = "load";
 page.on("pageerror", e => problems.push(`[${stage}] pageerror: ${e.message}`));
@@ -1225,6 +1227,151 @@ const drawn = await page.evaluate(() => {
 });
 if (drawn === 0) problems.push("[gallery script path] canvas is blank");
 
+
+/* ---- Part 7: side panel, accordion, dialogs, help editor, handle drag ----
+   Things that used to be checked by hand: the side panel (Bootstrap is gone, the
+   code opens and closes it itself), the accordion, the Edit Manifest dialog, Show
+   Script, the lazy help editor, and dragging a Draw handle. */
+stage = "side panel";
+const panelState = () => page.evaluate(() => ({
+  shown: document.getElementById("offcanvasPanel").classList.contains("show"),
+  backdrops: document.querySelectorAll(".offcanvas-backdrop").length,
+  overflow: document.body.style.overflow,
+}));
+await page.click("#draw-tab");
+await page.waitForTimeout(900);
+await page.click("#commandsButton");
+await page.waitForTimeout(500);
+let ps = await panelState();
+if (!ps.shown || ps.backdrops !== 1 || ps.overflow !== "hidden") problems.push("[side panel] open state wrong: " + JSON.stringify(ps));
+await page.keyboard.press("Escape");
+await page.waitForTimeout(600);
+ps = await panelState();
+if (ps.shown || ps.backdrops !== 0 || ps.overflow !== "") problems.push("[side panel] Escape did not close it cleanly: " + JSON.stringify(ps));
+await page.click("#commandsButton");
+await page.waitForTimeout(500);
+await page.mouse.click(100, 450);                 // the dimmed area
+await page.waitForTimeout(600);
+ps = await panelState();
+if (ps.shown || ps.backdrops !== 0) problems.push("[side panel] backdrop click did not close it: " + JSON.stringify(ps));
+await page.click("#commandsButton");
+await page.waitForTimeout(500);
+await page.click("#offcanvasPanel .btn-close");
+await page.waitForTimeout(600);
+ps = await panelState();
+if (ps.shown || ps.backdrops !== 0) problems.push("[side panel] X button did not close it: " + JSON.stringify(ps));
+for (let i = 0; i < 5; i++) {                     // repeated open / close leaves no extra backdrops
+  await page.click("#commandsButton");
+  await page.waitForTimeout(350);
+  await page.keyboard.press("Escape");
+  await page.waitForTimeout(450);
+}
+ps = await panelState();
+if (ps.backdrops !== 0 || ps.overflow !== "") problems.push("[side panel] leftovers after 5 open/close: " + JSON.stringify(ps));
+// Help button inside the panel: the panel closes and the Help overlay opens.
+await page.click("#commandsButton");
+await page.waitForTimeout(500);
+await page.click("#drawHelpButton");
+await page.waitForTimeout(900);
+ps = await panelState();
+const helpShown = await page.evaluate(() => document.getElementById("overlayContainer").style.display);
+if (ps.shown || helpShown !== "block") problems.push("[side panel] Help button: panel " + JSON.stringify(ps) + " overlay " + helpShown);
+await page.evaluate(() => document.getElementById("overlayClose").click());
+await page.waitForTimeout(300);
+
+stage = "accordion";
+await page.click("#draw-tab");
+await page.waitForTimeout(700);
+await page.locator("#subtabs button", { hasText: "Categories" }).first().click();
+await page.waitForTimeout(500);
+await page.click('#text .item[data-key="Parametrics"] span');
+await page.waitForTimeout(1500);
+const accState = () => page.evaluate(() => {
+  const b = document.querySelector(".accordion-button");
+  const body = document.querySelector(".accordion-collapse");
+  return b && body ? { open: body.classList.contains("show"), collapsed: b.classList.contains("collapsed"), expanded: b.getAttribute("aria-expanded") } : null;
+});
+let acc = await accState();
+if (!acc || !acc.open || acc.collapsed || acc.expanded !== "true") problems.push("[accordion] starts open: " + JSON.stringify(acc));
+await page.click(".accordion-button");
+await page.waitForTimeout(400);
+acc = await accState();
+if (!acc || acc.open || !acc.collapsed || acc.expanded !== "false") problems.push("[accordion] click should close: " + JSON.stringify(acc));
+await page.click(".accordion-button");
+await page.waitForTimeout(400);
+acc = await accState();
+if (!acc || !acc.open) problems.push("[accordion] second click should open: " + JSON.stringify(acc));
+
+stage = "edit manifest dialog and show script";
+const dlg = await page.evaluate(async () => {
+  const d = await import("/ui/editManifestDialog.js");
+  d.openEditManifestDialog({ manifestPath: "/patterns/manifest.json", matchField: "filename", matchValue: "x.js", title: "T", status: "", statusPresets: ["working", "draft"] });
+  await new Promise(r => setTimeout(r, 400));
+  const out = { radios: document.querySelectorAll("#overlay-forms input[type=radio]").length, ok: !!document.getElementById("editManifestOk"), cancel: !!document.getElementById("editManifestCancel") };
+  document.getElementById("editManifestCancel")?.click();
+  await new Promise(r => setTimeout(r, 300));
+  out.closed = document.getElementById("overlayContainer").style.display === "none";
+  return out;
+});
+if (dlg.radios < 2 || !dlg.ok || !dlg.cancel || !dlg.closed) problems.push("[edit manifest dialog] " + JSON.stringify(dlg));
+const sv = await page.evaluate(async () => {
+  const s = await import("/ui/scriptView.js");
+  s.showScriptOffcanvas("/ui/scriptView.js", "probe");
+  await new Promise(r => setTimeout(r, 800));
+  const o = document.getElementById("offcanvasPanel");
+  return { shown: o.classList.contains("show"), len: o.querySelector(".offcanvas-body").innerText.length, title: o.querySelector(".offcanvas-title").textContent };
+});
+await page.keyboard.press("Escape");
+await page.waitForTimeout(500);
+if (!sv.shown || sv.len < 100 || !/probe/.test(sv.title)) problems.push("[show script] " + JSON.stringify(sv));
+
+stage = "help editor loads on demand";
+const tinyBefore = tinyRequests.length;
+if (tinyBefore !== 0) problems.push("[help editor] TinyMCE was fetched before any edit: " + tinyBefore + " requests, first " + tinyRequests[0]);
+await page.evaluate(async () => {
+  const o = await import("/ui/overlay.js");
+  o.showHelpOverlay("/help/Index.html", "Probe", { createIfMissing: true });
+});
+await page.waitForTimeout(4000);
+const tiny = await page.evaluate(() => ({ editor: !!document.querySelector(".tox-tinymce"), menubar: !!document.querySelector(".tox-menubar") }));
+tiny.requests = tinyRequests.length;
+if (!tiny.editor || !tiny.menubar || tiny.requests === 0) problems.push("[help editor] did not open: " + JSON.stringify(tiny));
+await page.evaluate(() => document.getElementById("overlayClose")?.click());
+await page.waitForTimeout(300);
+
+stage = "draw handle drag";
+await page.click("#draw-tab");
+await page.waitForTimeout(700);
+await page.locator("#subtabs button", { hasText: "Categories" }).first().click();
+await page.waitForTimeout(500);
+await page.click('#text .item[data-key="Cycloid"] span');
+await page.waitForTimeout(1800);
+const handle = await page.evaluate(async () => {
+  const { uiState } = await import("/ui/uiState.js");
+  const tab = uiState.draw.tabs[uiState.draw.activeSubtab];
+  const pts = tab.drawRegistry.params.points;
+  const c = window.drawCanvas, r = c.getBoundingClientRect();
+  return { n: pts.length, x: pts[0].x, y: pts[0].y, sx: r.width / c.width, sy: r.height / c.height, left: r.left, top: r.top };
+});
+const hx = handle.left + handle.x * handle.sx, hy = handle.top + handle.y * handle.sy;
+await page.mouse.move(hx, hy);
+await page.mouse.down();
+await page.mouse.move(hx + 30, hy + 20, { steps: 6 });
+await page.mouse.up();
+await page.waitForTimeout(300);
+const moved = await page.evaluate(async () => {
+  const { uiState } = await import("/ui/uiState.js");
+  const p = uiState.draw.tabs[uiState.draw.activeSubtab].drawRegistry.params.points[0];
+  return { x: p.x, y: p.y };
+});
+if (Math.abs(moved.x - (handle.x + 30 / handle.sx)) > 3 || Math.abs(moved.y - (handle.y + 20 / handle.sy)) > 3) {
+  problems.push("[draw handle drag] handle 0 went from " + JSON.stringify({ x: handle.x, y: handle.y }) + " to " + JSON.stringify(moved) + " (expected about +30,+20)");
+}
+await page.click("#patterns-tab");              // leaving the tab disarms: the interaction layer is hidden
+await page.waitForTimeout(900);
+const layerShown = await page.evaluate(() => { const l = document.getElementById("interaction-layer"); return l && l.style.display !== "none"; });
+if (layerShown) problems.push("[draw handle drag] interaction layer still shown after leaving Draw");
+
 await browser.close();
 
 for (const n of notes.slice(0, 5)) console.log("note:", n);
@@ -1235,4 +1382,4 @@ if (problems.length) {
   for (const p of problems) console.log(" ", p);
   process.exit(1);
 }
-console.log("\nPASS: 6 tabs x 2 passes, plus Draw and Patterns with an open item, plus the Notes menu item, plus the Figures shell, insert, points mode and 7b centroid, move and rotate, 7c break apart, 7d infrastructure, 8 welds, fast tab clicks, Utilities Result, Gallery script path, no errors");
+console.log("\nPASS: 6 tabs x 2 passes, plus Draw and Patterns with an open item, plus the Notes menu item, plus the Figures shell, insert, points mode and 7b centroid, move and rotate, 7c break apart, 7d infrastructure, 8 welds, fast tab clicks, Utilities Result, Gallery script path, side panel, accordion, Edit Manifest dialog, Show Script, lazy help editor, Draw handle drag, no errors");
