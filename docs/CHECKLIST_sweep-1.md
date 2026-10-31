@@ -21,6 +21,7 @@ Picture version for an iPad: the artifact "Sketchpad Sweep Review" (15 screens, 
 | `f6e9075` | Remove UI code nothing calls; keep one Draw runner, in ui/draw/ |
 | `7107356` | nodeDispatch: say plainly when the Node service is not running |
 | `ebf1119` | npm run build:static: a read-only copy any web server can host |
+| `c9588b5` | Node service split into one file per request family (moves only; dispatcher is a flat map) |
 
 To drop any one of them: `git revert <commit>`.
 
@@ -63,7 +64,9 @@ Start: `git fetch`, `git checkout claude/sweep-1`, `npm install`, then `sketchpa
 5. `npm run test:node`, `npm run check:imports`, `npm run test:tabs` all pass on Windows. (`test:tabs` needs the
    bootstrap dev dependency; `npm install` adds it.)
 6. Open the Pursuit scripts in Gallery > Scripts and run "Pursuit Curves in Polygon".
-7. `git status` after a run shows no unexpected changed manifests (if `home/manifest.json` or a category manifest
+7. Node split: repeat the Node-service actions in item 2 once more; each should behave exactly as before. A failure
+   would read "is not defined" or "unknown requestName" in the Node window. To undo: `git revert c9588b5`.
+8. `git status` after a run shows no unexpected changed manifests (if `home/manifest.json` or a category manifest
    changed, that is the start-up rebuild, as before).
 
 ## C. What failure looks like, per commit
