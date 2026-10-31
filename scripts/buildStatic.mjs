@@ -10,8 +10,6 @@
      - the Vite build of the app (index.html and assets/)
      - the folders the app loads at run time: home, patterns, gallery,
        utilities, drawRegistry, help, figures, draw, classes, ui
-     - Bootstrap copied into vendor/ and index.html pointed at it, so
-       the copy needs no internet
      - thumbnails (images/thumb_*.png) are kept; full-size gallery
        images and the TinyMCE editor are left out unless you ask:
            --with-images     keep every image (hundreds of MB)
@@ -36,12 +34,12 @@ const withImages  = flag("--with-images");
 const withTinymce = flag("--with-tinymce");
 
 /* 1. The Vite build */
-console.log("1/4 vite build ...");
+console.log("1/3 vite build ...");
 const build = spawnSync("npx", ["vite", "build", "--outDir", out, "--emptyOutDir"], { cwd: root, stdio: "inherit", shell: process.platform === "win32" });
 if (build.status !== 0) { console.error("vite build failed"); process.exit(1); }
 
 /* 2. The folders loaded at run time */
-console.log("2/4 copying run-time folders ...");
+console.log("2/3 copying run-time folders ...");
 const FOLDERS = ["home", "patterns", "gallery", "utilities", "drawRegistry", "help", "figures", "draw", "classes", "ui"];
 const IMAGE = /\.(png|jpe?g|gif|webp)$/i;
 let copied = 0, skipped = 0;
@@ -61,22 +59,7 @@ for (const dir of FOLDERS) {
 }
 console.log(`    ${copied} files copied, ${skipped} full-size images left out`);
 
-/* 3. Bootstrap, so the copy needs no internet */
-console.log("3/4 vendoring Bootstrap ...");
-const bsDist = path.join(root, "node_modules", "bootstrap", "dist");
-if (!fs.existsSync(bsDist)) { console.error("node_modules/bootstrap is missing: run npm install"); process.exit(1); }
-fs.mkdirSync(path.join(out, "vendor"), { recursive: true });
-fs.copyFileSync(path.join(bsDist, "css", "bootstrap.min.css"),            path.join(out, "vendor", "bootstrap.min.css"));
-fs.copyFileSync(path.join(bsDist, "js",  "bootstrap.bundle.min.js"),      path.join(out, "vendor", "bootstrap.bundle.min.js"));
-const indexPath = path.join(out, "index.html");
-let html = fs.readFileSync(indexPath, "utf8");
-const before = html;
-html = html.replace(/https:\/\/cdn\.jsdelivr\.net\/npm\/bootstrap@[\d.]+\/dist\/css\/bootstrap\.min\.css/g, "/vendor/bootstrap.min.css")
-           .replace(/https:\/\/cdn\.jsdelivr\.net\/npm\/bootstrap@[\d.]+\/dist\/js\/bootstrap\.bundle\.min\.js/g, "/vendor/bootstrap.bundle.min.js");
-if (html === before) console.warn("    WARNING: no Bootstrap CDN link found in index.html");
-fs.writeFileSync(indexPath, html);
-
-/* 4. Leave out the help editor unless asked */
+/* 3. Leave out the help editor unless asked */
 if (!withTinymce) fs.rmSync(path.join(out, "tinymce"), { recursive: true, force: true });
 fs.writeFileSync(path.join(out, "READ-ONLY.txt"),
   "Read-only copy of Sketchpad, built " + new Date().toISOString() + ".\n" +
@@ -85,4 +68,4 @@ fs.writeFileSync(path.join(out, "READ-ONLY.txt"),
 
 let files = 0, bytes = 0;
 (function count(d) { for (const e of fs.readdirSync(d, { withFileTypes: true })) { const p = path.join(d, e.name); if (e.isDirectory()) count(p); else { files++; bytes += fs.statSync(p).size; } } })(out);
-console.log(`4/4 done: ${out}\n    ${files} files, ${(bytes / 1048576).toFixed(1)} MB`);
+console.log(`3/3 done: ${out}\n    ${files} files, ${(bytes / 1048576).toFixed(1)} MB`);

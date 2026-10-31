@@ -12,9 +12,8 @@
    Needs the playwright package:  npm i -D playwright
    Optional: SKETCHPAD_URL=http://localhost:5173/ to change the URL.
 
-   Network failures (CDN, offline) are reported but do not fail
-   the test. Set TEST_LOCAL_BOOTSTRAP=1 to serve bootstrap from
-   node_modules/bootstrap instead of the CDN.
+   Network failures (a CDN, offline) are reported but do not fail
+   the test.
    ------------------------------------------------------------ */
 
 import { createRequire } from "node:module";
@@ -31,16 +30,6 @@ const notes    = [];   // reported only
 
 const browser = await chromium.launch();
 const page    = await browser.newPage({ viewport: { width: 1400, height: 900 } });
-
-if (process.env.TEST_LOCAL_BOOTSTRAP) {
-  page.route("**/cdn.jsdelivr.net/**", route => {
-    const u = route.request().url();
-    const f = u.endsWith(".css")
-      ? "node_modules/bootstrap/dist/css/bootstrap.min.css"
-      : "node_modules/bootstrap/dist/js/bootstrap.bundle.min.js";
-    route.fulfill({ path: f });
-  });
-}
 
 let stage = "load";
 page.on("pageerror", e => problems.push(`[${stage}] pageerror: ${e.message}`));

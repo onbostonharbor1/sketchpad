@@ -43,6 +43,7 @@ import {
   showNextGalleryItem,
   normalizeGalleryEntryPath
 }                                          from "./galleryResults.js";
+import { hideOffcanvas } from "/ui/offcanvas.js";
 
 
 /* ============================================================
@@ -326,11 +327,7 @@ export function wireGalleryCommandsButton() {
         });
 
         helpBtn?.addEventListener("click", () => {
-          const panel = document.getElementById("offcanvasPanel");
-          if (panel) {
-            const oc = bootstrap.Offcanvas.getOrCreateInstance(panel);
-            oc.hide();
-          }
+          hideOffcanvas();
           openHelpHomeOverlay();
         });
       }

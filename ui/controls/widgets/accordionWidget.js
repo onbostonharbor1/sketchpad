@@ -16,10 +16,6 @@ export function setAccordionControl(field, label, def, value, info, key, tabId) 
   if (!tabId) throw new Error("setAccordionControl: tabId missing");
   if (!key) throw new Error("setAccordionControl: key missing");
 
-  if (!window.bootstrap) {
-    throw new Error("setAccordionControl: Bootstrap JS (window.bootstrap) not found");
-  }
-
   const sections = def.sections;
   if (!sections || !Array.isArray(sections) || sections.length === 0) {
     throw new Error("setAccordionControl: def.sections missing/invalid for key " + key);
@@ -78,8 +74,6 @@ export function setAccordionControl(field, label, def, value, info, key, tabId) 
     btn.textContent = sec.title;
 
     const collapseId = tabId + "-" + key + "-collapse-" + i;
-    btn.setAttribute("data-bs-toggle", "collapse");
-    btn.setAttribute("data-bs-target", "#" + collapseId);
     btn.setAttribute("aria-expanded", startOpen ? "true" : "false");
     btn.setAttribute("aria-controls", collapseId);
 
@@ -88,7 +82,7 @@ export function setAccordionControl(field, label, def, value, info, key, tabId) 
     const bodyWrap = document.createElement("div");
     bodyWrap.id = collapseId;
     bodyWrap.className = "accordion-collapse collapse" + (startOpen ? " show" : "");
-    bodyWrap.setAttribute("data-bs-parent", "#" + acc.id);
+    btn.addEventListener("click", () => toggleAccordionSection(acc, btn, bodyWrap));
 
     const body = document.createElement("div");
     body.className = "accordion-body";
@@ -208,10 +202,7 @@ export function setAccordionControl(field, label, def, value, info, key, tabId) 
 
   // Optional redraw on accordion toggle
   if (def.redrawOnToggle === true) {
-    acc.addEventListener("shown.bs.collapse", () => {
-      if (typeof info.redrawHandler === "function") info.redrawHandler();
-    });
-    acc.addEventListener("hidden.bs.collapse", () => {
+    acc.addEventListener("accordion-toggled", () => {
       if (typeof info.redrawHandler === "function") info.redrawHandler();
     });
   }
@@ -220,6 +211,32 @@ export function setAccordionControl(field, label, def, value, info, key, tabId) 
   field.appendChild(wrap);
 
 } // end setAccordionControl
+
+
+/* ------------------------------------------------------------
+   toggleAccordionSection(acc, btn, panel)
+   Opens a closed section (and closes the others, so one section
+   is open at a time) or closes an open one. Then tells the
+   accordion with an "accordion-toggled" event.
+------------------------------------------------------------ */
+function toggleAccordionSection(acc, btn, panel) {
+  const opening = !panel.classList.contains("show");
+
+  if (opening) {
+    acc.querySelectorAll(".accordion-collapse.show").forEach(other => {
+      other.classList.remove("show");
+      const otherBtn = other.parentElement.querySelector(".accordion-button");
+      otherBtn.classList.add("collapsed");
+      otherBtn.setAttribute("aria-expanded", "false");
+    });
+  }
+
+  panel.classList.toggle("show", opening);
+  btn.classList.toggle("collapsed", !opening);
+  btn.setAttribute("aria-expanded", opening ? "true" : "false");
+
+  acc.dispatchEvent(new CustomEvent("accordion-toggled"));
+} // end toggleAccordionSection
 
 
 /* ------------------------------------------------------------

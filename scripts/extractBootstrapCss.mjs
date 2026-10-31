@@ -7,6 +7,9 @@
        (or were seen on the page at run time), and
      - the tag-level "Reboot" rules for tags the app uses,
      - the --bs-* variables those rules refer to.
+   KEPT AS A RECORD: Bootstrap is no longer a dependency of the app, so
+   to run this again first install it without saving:
+       npm install --no-save bootstrap@5.3.3
    Run: node scripts/extractBootstrapCss.mjs [classes.json]
    classes.json (optional): { "classes": [...], "tags": [...] }
    from a pixel run, to add classes created only at run time.

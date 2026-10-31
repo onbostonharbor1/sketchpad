@@ -6,10 +6,12 @@
 
 /* ------------------------------------------------------------
     showScriptOffcanvas(scriptPath, titleText)
-    Fetches script source and displays it inside the Bootstrap
+    Fetches script source and displays it inside the
     offcanvas panel. Offcanvas is appropriate for long, scrollable
     text that should not block the app.
 ------------------------------------------------------------ */
+import { showPanel } from "/ui/offcanvas.js";
+
 export function showScriptOffcanvas(scriptPath, titleText) {
 
   if (!scriptPath) throw new Error("showScriptOffcanvas: scriptPath missing");
@@ -45,8 +47,7 @@ export function showScriptOffcanvas(scriptPath, titleText) {
 
       body.appendChild(pre);
 
-      const bsCanvas = new bootstrap.Offcanvas(panel);
-      bsCanvas.show();
+      showPanel();
     });
 
 } // end showScriptOffcanvas

@@ -44,6 +44,7 @@ import { buildCanvasThumbnailBase64 } from "/ui/thumbnails.js";
 import { setCommandsButtonHandler } from "/ui/commandsButton.js";
 import { showCommandsOffcanvas } from "/ui/offcanvas.js";
 import { formatRebuildReportShared } from "/ui/rebuildSync.js";
+import { hideOffcanvas } from "/ui/offcanvas.js";
 
 
 /* ============================================================
@@ -491,11 +492,7 @@ export function wireDrawCommandsButton() {
 
         if (helpBtn) {
           helpBtn.addEventListener("click", () => {
-            const panel = document.getElementById("offcanvasPanel");
-            if (panel) {
-              const oc = bootstrap.Offcanvas.getOrCreateInstance(panel);
-              oc.hide();
-            }
+            hideOffcanvas();
             openHelpHomeOverlay();
           });
         }

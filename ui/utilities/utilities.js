@@ -39,6 +39,7 @@ import {
   switchUtilityTab
 }                                            from "/ui/utilities/utilitiesNav.js";
 import { displayUtilityResult }              from "/ui/utilities/utilitiesDisplay.js";
+import { hideOffcanvas } from "/ui/offcanvas.js";
 
 
 /* ============================================================
@@ -305,10 +306,7 @@ export function wireUtilitiesCommandsButton() {
         if (!helpBtn) throw new Error("wireUtilitiesCommandsButton: utilitiesHelpButton missing");
 
         helpBtn.addEventListener("click", () => {
-          const panel = document.getElementById("offcanvasPanel");
-          if (!panel) throw new Error("wireUtilitiesCommandsButton: #offcanvasPanel missing");
-          const oc = bootstrap.Offcanvas.getOrCreateInstance(panel);
-          oc.hide();
+          hideOffcanvas();
           openHelpHomeOverlay();
         });
       }

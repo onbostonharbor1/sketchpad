@@ -37,6 +37,7 @@ import { setCommandsButtonHandler } from "/ui/commandsButton.js";
 import { showCommandsOffcanvas } from "/ui/offcanvas.js";
 import { refreshHomeCategoriesFromManifestEdit } from "./homeManifest.js";
 import { isJsPath }                          from "./homeResults.js";
+import { hideOffcanvas } from "/ui/offcanvas.js";
 
 
 /* ============================================================
@@ -231,10 +232,7 @@ export function wireHomeCommandsButton() {
         if (!helpBtn) throw new Error("wireHomeCommandsButton: #homeHelpButton missing");
 
         helpBtn.addEventListener("click", () => {
-          const panel = document.getElementById("offcanvasPanel");
-          if (!panel) throw new Error("wireHomeCommandsButton: #offcanvasPanel missing");
-          const oc = bootstrap.Offcanvas.getOrCreateInstance(panel);
-          oc.hide();
+          hideOffcanvas();
           openHelpHomeOverlay();
         });
       }

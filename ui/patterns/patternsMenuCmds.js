@@ -39,7 +39,7 @@ import { archiveItem } from "/ui/archiveItem.js";
 import { openEditManifestDialog } from "/ui/editManifestDialog.js";
 import { buildCanvasThumbnailBase64 } from "/ui/thumbnails.js";
 import { setCommandsButtonHandler } from "/ui/commandsButton.js";
-import { showCommandsOffcanvas } from "/ui/offcanvas.js";
+import { showCommandsOffcanvas, hideOffcanvas } from "/ui/offcanvas.js";
 import { formatRebuildReportShared } from "/ui/rebuildSync.js";
 import { onPrev, onNext }             from "./patternsDisplay.js";
 
@@ -311,8 +311,7 @@ export function wirePatternsCommandsButton() {
         if (!helpBtn) throw new Error("wirePatternsCommandsButton: patternsHelpButton missing");
 
         helpBtn.addEventListener("click", () => {
-          const closeBtn = document.querySelector('[data-bs-dismiss="offcanvas"]');
-          if (closeBtn) closeBtn.click();
+          hideOffcanvas();
           openHelpHomeOverlay();
         });
       }

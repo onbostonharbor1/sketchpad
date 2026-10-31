@@ -37,7 +37,7 @@
    ============================================================ */
 
 import { clearDivs } from "/ui/uiUtilities.js";
-import { showOffcanvasPanel } from "/ui/offcanvas.js";
+import { showOffcanvasPanel, hideOffcanvas } from "/ui/offcanvas.js";
 import { renderThumbnailGrid } from "/ui/thumbnails.js";
 import { getIDsWithSecondaries, listSecondaries, loadSecondary } from "/ui/draw/secondaryObjects.js";
 import { drawActiveTab }                                        from "/ui/draw/drawRunner.js";
@@ -344,8 +344,7 @@ export async function showSecondaryOffcanvas(primaryId) {
 
     const onClick = async (item, idx) => {
       await loadSecondaryObjectInTab(primaryId, item, list, idx);
-      const closeBtn = document.querySelector('[data-bs-dismiss="offcanvas"]');
-      if (closeBtn) closeBtn.click();
+      hideOffcanvas();
     };
 
     renderThumbnailGrid("secondaryThumbGrid", list, buildSrc, onClick);

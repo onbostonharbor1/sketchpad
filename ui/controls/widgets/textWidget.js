@@ -110,7 +110,6 @@ export function setStaticTextControl(field, label, def, value, info, key, tabId)
 
    FAIL-FAST
    ---------
-   - Requires window.bootstrap
    - def.sections must be non-empty array
    - section.title must be non-empty string
    - section.items (if present) must be array of {label, action}
