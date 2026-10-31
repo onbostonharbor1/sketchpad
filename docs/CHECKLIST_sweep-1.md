@@ -24,6 +24,7 @@ Picture version for an iPad: the artifact "Sketchpad Sweep Review" (15 screens, 
 | `c9588b5` | Node service split into one file per request family (moves only; dispatcher is a flat map) |
 | `25900fd` | `ui/uiUtilities.js` split: offcanvas, commandsButton, thumbnails, rebuildSync, htmlText (`clearDivs` stays); 22 importers updated; two re-exports removed |
 | `5c25bad` | `ui/menuCmds.js` split: archiveItem.js, editManifestDialog.js, scriptView.js, draw/drawExport.js; menuCmds.js keeps the menu-item factories |
+| `8e598a0` | `ui/help.js` split into helpTree.js, helpEditor.js, help.js; TinyMCE loads on first edit (main bundle 1.6 MB to 0.45 MB) |
 
 To drop any one of them: `git revert <commit>`.
 
@@ -74,7 +75,10 @@ Start: `git fetch`, `git checkout claude/sweep-1`, `npm install`, then `sketchpa
 9. menuCmds split: in Patterns, Gallery, Home and Utilities, use Edit Manifest (dialog opens, save works), Show Script,
    Archive; in Draw, Create Pattern and Create Gallery PNG. A failure reads "does not provide an export named ...".
    To undo: `git revert 5c25bad`.
-10. `git status` after a run shows no unexpected changed manifests (if `home/manifest.json` or a category manifest
+10. help split: open Help from any Commands menu and click through the tree. Edit a help page: the editor opens after a
+   short first-time delay (it is fetched then), Save writes the file, Cancel closes it. A second edit opens at once.
+   Create Help (missing page) opens an empty editor. To undo: `git revert 8e598a0`.
+11. `git status` after a run shows no unexpected changed manifests (if `home/manifest.json` or a category manifest
    changed, that is the start-up rebuild, as before).
 
 ## C. What failure looks like, per commit
@@ -98,7 +102,7 @@ Start: `git fetch`, `git checkout claude/sweep-1`, `npm install`, then `sketchpa
 | Manifest phase: maintenance runs three times at start, import-time run with `process.exit(1)` | Belongs to the manifest phase you planned before Phase 10. |
 | `index.html` structure work, `clearDivs()` list, window back doors | Not started. Needs the 7a plan from `NEXT_PASS.md`. |
 | Bootstrap removal and CSS cleanup | Not started. Bootstrap's Reboot styles (box-sizing, fonts, button base) are used everywhere without being named, so removing it needs screenshot comparison on every screen. The pack script is the start of that method. |
-| Split: `help.js` | Not started. (Node service `c9588b5`, `uiUtilities.js` `25900fd` and `menuCmds.js` `5c25bad` are done.) |
+| Splits | All four done: Node service `c9588b5`, `uiUtilities.js` `25900fd`, `menuCmds.js` `5c25bad`, `help.js` `8e598a0`. |
 | Phase items (handle-drop weld, delete layer, Phase 10, thumbnails, native color input, Phase 9 reshape, templates import, instrumentation) | Not started. Large, and each needs your eyes on the result. |
 | Help Overview PDFs (`docs/*.pdf`) | Not regenerated; the HTML pages and the PDF builder are updated, so rebuilding gives current text. |
 
