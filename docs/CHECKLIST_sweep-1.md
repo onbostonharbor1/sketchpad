@@ -22,6 +22,7 @@ Picture version for an iPad: the artifact "Sketchpad Sweep Review" (15 screens, 
 | `7107356` | nodeDispatch: say plainly when the Node service is not running |
 | `ebf1119` | npm run build:static: a read-only copy any web server can host |
 | `c9588b5` | Node service split into one file per request family (moves only; dispatcher is a flat map) |
+| `25900fd` | `ui/uiUtilities.js` split: offcanvas, commandsButton, thumbnails, rebuildSync, htmlText (`clearDivs` stays); 22 importers updated; two re-exports removed |
 
 To drop any one of them: `git revert <commit>`.
 
@@ -66,7 +67,10 @@ Start: `git fetch`, `git checkout claude/sweep-1`, `npm install`, then `sketchpa
 6. Open the Pursuit scripts in Gallery > Scripts and run "Pursuit Curves in Polygon".
 7. Node split: repeat the Node-service actions in item 2 once more; each should behave exactly as before. A failure
    would read "is not defined" or "unknown requestName" in the Node window. To undo: `git revert c9588b5`.
-8. `git status` after a run shows no unexpected changed manifests (if `home/manifest.json` or a category manifest
+8. uiUtilities split: on each tab click the Commands button and confirm the panel opens; in Patterns and Draw (caption
+   menu) open a thumbnail grid and click one; run Rebuild and Validate and confirm the report shows and tabs refresh.
+   A failure reads "does not provide an export named ..." in the browser console. To undo: `git revert 25900fd`.
+9. `git status` after a run shows no unexpected changed manifests (if `home/manifest.json` or a category manifest
    changed, that is the start-up rebuild, as before).
 
 ## C. What failure looks like, per commit
@@ -90,7 +94,7 @@ Start: `git fetch`, `git checkout claude/sweep-1`, `npm install`, then `sketchpa
 | Manifest phase: maintenance runs three times at start, import-time run with `process.exit(1)` | Belongs to the manifest phase you planned before Phase 10. |
 | `index.html` structure work, `clearDivs()` list, window back doors | Not started. Needs the 7a plan from `NEXT_PASS.md`. |
 | Bootstrap removal and CSS cleanup | Not started. Bootstrap's Reboot styles (box-sizing, fonts, button base) are used everywhere without being named, so removing it needs screenshot comparison on every screen. The pack script is the start of that method. |
-| Splits: `menuCmds.js`, `uiUtilities.js`, `help.js` | Not started. (The Node service split is done: `c9588b5`.) |
+| Splits: `menuCmds.js`, `help.js` | Not started. (Node service `c9588b5` and `uiUtilities.js` `25900fd` are done.) |
 | Phase items (handle-drop weld, delete layer, Phase 10, thumbnails, native color input, Phase 9 reshape, templates import, instrumentation) | Not started. Large, and each needs your eyes on the result. |
 | Help Overview PDFs (`docs/*.pdf`) | Not regenerated; the HTML pages and the PDF builder are updated, so rebuilding gives current text. |
 
