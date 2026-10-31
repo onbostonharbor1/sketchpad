@@ -241,6 +241,9 @@ export function activateCentroid(tabId, redraw) {
   let drag = null;   // { kind: "move"|"turn", from: {x,y}, start: transform, center, angle0 }
 
   window.addEventListener("mousedown", (e) => {
+    // Left button only, like the interactor and the points-mode handlers:
+    // a right-press on the diamond must not start a move.
+    if (e.button !== 0) return;
     if (!live()) return;
     const ts = tabState();
     const m  = coords(e);
