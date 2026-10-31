@@ -34,7 +34,7 @@ import { setCaptionBar }            from "/ui/caption.js";
 import { menuManager }              from "/ui/menuManager.js";
 import { makeHelpItem, makeNotesItem } from "/ui/menuCmds.js";
 import { setCommandsButtonLabel, setCommandsButtonHandler } from "/ui/commandsButton.js";
-import { showCommandsOffcanvas } from "/ui/offcanvas.js";
+import { showOffcanvas } from "/ui/offcanvas.js";
 import { formatRebuildReportShared } from "/ui/rebuildSync.js";
 import { nodeRebuildAndValidateManifests } from "/ui/nodeLayer.js";
 import { openHelpHomeOverlay }      from "/ui/help.js";
@@ -55,7 +55,7 @@ import { deletePoint }              from "./figurePoints.js";
 export function wireFiguresCommandsButton() {
 
   setCommandsButtonHandler(() => {
-    showCommandsOffcanvas({
+    showOffcanvas({
       title: "Figures Commands",
       // buildBody is called with the panel's body element once the
       // panel exists; it fills the body and wires the buttons.

@@ -45,7 +45,7 @@ start-up.</p>
 <li>The overlay's title is the page's own <code>&lt;title&gt;</code>; failing that, <code>titleText</code>;
   failing that, the file name.</li>
 <li>The toolbar has an <strong>Edit</strong> button (unless <code>allowEdit: false</code>) that opens the page in
-  the TinyMCE editor (<code>help.js</code>).</li>
+  the TinyMCE editor (<code>helpEditor.js</code>, loaded the first time a page is edited).</li>
 <li>With <code>createIfMissing: true</code> it skips the fetch and opens an empty editor, for writing a page
   that does not exist yet.</li>
 </ul>
@@ -63,7 +63,7 @@ may return a message, which is shown in a status line. <code>closeNotesOverlay()
 <ul>
 <li><code>canvasLayerManager.js</code>: the four overlay canvases stacked over the drawing (see "Point
   Dragging" and the interactor page).</li>
-<li><code>help.js</code>: the help manifest, the help home page, the Help menu item, the editor.</li>
+<li><code>help.js</code>: the help manifest, the help home page, the Help menu item. <code>helpTree.js</code>: the tree and page pane. <code>helpEditor.js</code>: the TinyMCE editor.</li>
 </ul>
 
 </body>

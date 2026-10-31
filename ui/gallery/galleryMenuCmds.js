@@ -36,7 +36,7 @@ import { showScriptOffcanvas } from "/ui/scriptView.js";
 import { openEditManifestDialog } from "/ui/editManifestDialog.js";
 import { formatRebuildReportShared } from "/ui/rebuildSync.js";
 import { setCommandsButtonHandler } from "/ui/commandsButton.js";
-import { showCommandsOffcanvas } from "/ui/offcanvas.js";
+import { showOffcanvas } from "/ui/offcanvas.js";
 import { getCurrentCategory }              from "./galleryState.js";
 import {
   showPrevGalleryItem,
@@ -301,7 +301,7 @@ function buildGalleryOffcanvasHtml() {
 export function wireGalleryCommandsButton() {
 
   setCommandsButtonHandler(() => {
-    showCommandsOffcanvas({
+    showOffcanvas({
       title: "Gallery Maintenance",
       buildBody(container) {
 

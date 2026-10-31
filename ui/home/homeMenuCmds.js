@@ -34,7 +34,7 @@ import { showScriptOffcanvas } from "/ui/scriptView.js";
 import { openEditManifestDialog } from "/ui/editManifestDialog.js";
 import { formatRebuildReportShared } from "/ui/rebuildSync.js";
 import { setCommandsButtonHandler } from "/ui/commandsButton.js";
-import { showCommandsOffcanvas } from "/ui/offcanvas.js";
+import { showOffcanvas } from "/ui/offcanvas.js";
 import { refreshHomeCategoriesFromManifestEdit } from "./homeManifest.js";
 import { isJsPath }                          from "./homeResults.js";
 import { hideOffcanvas } from "/ui/offcanvas.js";
@@ -199,7 +199,7 @@ function buildHomeOffcanvasHtml() {
 export function wireHomeCommandsButton() {
 
   setCommandsButtonHandler(() => {
-    showCommandsOffcanvas({
+    showOffcanvas({
       title: "Home Maintenance",
       buildBody(offcanvasBodyEl) {
 

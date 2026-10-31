@@ -3,63 +3,65 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>uiUtilities.js — Shared Screen Helpers</title>
+  <title>uiUtilities.js and the helpers that came out of it</title>
   <link rel="stylesheet" href="/help/help_treatise.css" />
 </head>
 <body>
 
-<h1>uiUtilities.js — Shared Screen Helpers</h1>
+<h1>uiUtilities.js and the helpers that came out of it</h1>
 
-<p class="note">Rewritten 27 October 2026. The file is now <code>ui/uiUtilities.js</code> (it was
-<code>ui_utilities.js</code>; this page keeps its old name so existing links still work). The three overlapping
-offcanvas functions the earlier page complained about are now one, with two old names kept as aliases;
-the help-manifest loader has moved to <code>help.js</code>; canvas layers are cleared through
-<code>canvasLayerManager.js</code>.</p>
+<p class="note">Rewritten 31 October 2026. <code>ui/uiUtilities.js</code> used to hold every shared screen helper
+(this page keeps its old name so existing links still work). It now holds only <code>clearDivs()</code>. The rest moved to
+files named for what they do, and the code that used them now imports from those files.</p>
 
-<p>A collection of helpers every tab uses: clearing the screen between tabs, the Commands button and its
-slide-in panel, thumbnail grids, and the two clean-ups that follow a Rebuild &amp; Validate.</p>
+<table>
+<tr><th>File</th><th>What it holds</th></tr>
+<tr><td><code>uiUtilities.js</code></td><td><code>clearDivs(extraId)</code></td></tr>
+<tr><td><code>regions.js</code></td><td>The table <code>clearDivs()</code> reads: which regions of <code>index.html</code> it empties, shows or hides</td></tr>
+<tr><td><code>commandsButton.js</code></td><td><code>setCommandsButtonLabel(label)</code>, <code>setCommandsButtonHandler(onClick)</code></td></tr>
+<tr><td><code>offcanvas.js</code></td><td><code>showOffcanvas({ title, buildBody | bodyHtml })</code>, <code>showPanel()</code>, <code>hideOffcanvas()</code></td></tr>
+<tr><td><code>thumbnails.js</code></td><td><code>renderThumbnailGrid</code>, <code>markSelectedThumbnail</code>, <code>buildCanvasThumbnailBase64</code></td></tr>
+<tr><td><code>rebuildSync.js</code></td><td><code>syncSystemStateAfterRebuild()</code>, <code>formatRebuildReportShared(report)</code></td></tr>
+<tr><td><code>htmlText.js</code></td><td><code>escapeHtml(text)</code></td></tr>
+</table>
 
 <h2>clearDivs(extraId)</h2>
 <p>The one teardown every tab switch goes through (<code>setUI.js</code> calls it before every
 <code>init</code> and <code>restore</code>). In order:</p>
 <ol>
-<li>Empties <code>#action</code>, <code>#caption</code>, <code>#text</code>, <code>#sketchpad</code> (and
-  <code>extraId</code>, if given) and resets their display.</li>
-<li>Empties and hides the Figures layer strip (<code>#figure-sidebar</code>).</li>
+<li>Goes down the table in <code>regions.js</code>: <code>#action</code>, <code>#caption</code>, <code>#text</code>,
+  <code>#sketchpad</code> (and <code>extraId</code>, if given) are emptied and their display reset;
+  <code>#figure-sidebar</code> is emptied and hidden; <code>#interface-controls</code> is emptied;
+  <code>#sketchpad-wrapper</code> is hidden (a tab that draws must show it again).</li>
 <li>Removes everything in the permanent <code>#button</code> div tagged <code>tab-extra</code>: the per-tab
   additions such as Create Figure and Points Mode. (CLAUDE.md: anything a tab adds to <code>#button</code>
   must carry this class.)</li>
-<li>Empties <code>#interface-controls</code>.</li>
-<li>Hides <code>#sketchpad-wrapper</code>: a tab that draws must show it again.</li>
 <li>Clears every canvas overlay layer (<code>canvasLayerManager.clearAll()</code>) and the main canvas.</li>
-<li>Disarms the interactor.</li>
+<li>Disarms the interactor (<code>disarmInteractor()</code>, imported from <code>interactor.js</code>).</li>
 </ol>
 
-<h2>After a Rebuild &amp; Validate</h2>
+<h2>After a Rebuild &amp; Validate (rebuildSync.js)</h2>
 <ul>
 <li><strong>syncSystemStateAfterRebuild()</strong>: empties the whole manifest cache and sets
-  <code>needsUpdate</code> on every tab, so each re-initializes the next time it is shown. This is the one the
-  Commands panels use.</li>
-<li><strong>rebuildAllSystemCaches()</strong>: empties the cache, reloads every known manifest at once, resets
-  Home's grouping, and deletes every tab's <code>saved</code>. Nothing calls it at present.</li>
+  <code>needsUpdate</code> on every tab, so each re-initializes the next time it is shown. The Commands panels use it.</li>
+<li><strong>formatRebuildReportShared(report)</strong>: turns the Node service's rebuild report into the text the
+  panels show.</li>
 </ul>
 
 <h2>The Commands button and its panel</h2>
 <ul>
 <li><code>setCommandsButtonLabel(label)</code>: the button's text ("Figures Commands").</li>
-<li><code>setCommandsButtonHandler(onClick)</code>: what it does; replaces any earlier handler. Every tab uses
-  this one.</li>
-<li><code>setCommandsButton(label, onClick)</code>: an older way that replaces the button element itself;
-  not used.</li>
+<li><code>setCommandsButtonHandler(onClick)</code>: what it does; replaces any earlier handler. Every tab uses this.</li>
 <li><code>showOffcanvas({ title, buildBody | bodyHtml })</code>: shows the permanent slide-in panel
-  (<code>#offcanvasPanel</code>, Bootstrap) with a title and either a function that fills the body (Commands
-  panels, which then wire their buttons) or ready HTML. <code>showCommandsOffcanvas</code> and
-  <code>showOffcanvasPanel</code> are the old names, kept as aliases.</li>
-<li><code>formatRebuildReportShared(report)</code>: turns the Node service's rebuild report into the text the
-  panels show.</li>
+  (<code>#offcanvasPanel</code>) with a title and either a function that fills the body (Commands panels, which then
+  wire their buttons) or ready HTML. The panel slides in with a dimmed page behind it and closes on the X button,
+  a click on the dimmed area, or Escape. Bootstrap is no longer involved: <code>offcanvas.js</code> does it, and
+  the look is in <code>css/offcanvas.css</code> and <code>css/base.css</code>.</li>
+<li><code>showPanel()</code> shows the panel as it stands (for a caller that filled it in itself, such as Show
+  Script); <code>hideOffcanvas()</code> closes it (used after Help buttons and after choosing a saved setting).</li>
 </ul>
 
-<h2>Thumbnails</h2>
+<h2>Thumbnails (thumbnails.js)</h2>
 <ul>
 <li><code>renderThumbnailGrid(targetId, items, buildSrc, onClick)</code>: a grid of
   <code>img.thumb-image</code> in a <code>.thumb-panel</code> (Patterns, Gallery).</li>
@@ -68,18 +70,15 @@ slide-in panel, thumbnail grids, and the two clean-ups that follow a Rebuild &am
   small PNG, for Create Thumbnail and secondaries.</li>
 </ul>
 
-<h2>Passed through from elsewhere</h2>
-<ul>
-<li><code>buildCategoryDescriptor</code>, from <code>categories.js</code>.</li>
-<li><code>syncOverlayToCanvas(name, canvas)</code>, which is <code>syncLayerToCanvas</code> from
-  <code>canvasLayerManager.js</code>: sizes an overlay canvas to match the drawing canvas.</li>
-<li><code>escapeHtml(text)</code>: makes text safe to put into HTML.</li>
-</ul>
+<h2>Where the pass-through names went</h2>
+<p><code>buildCategoryDescriptor</code> is imported from <code>categories.js</code> and <code>syncLayerToCanvas</code>
+(formerly passed through as <code>syncOverlayToCanvas</code>) from <code>canvasLayerManager.js</code>. The old
+aliases <code>showCommandsOffcanvas</code> and <code>showOffcanvasPanel</code> are gone; everything calls
+<code>showOffcanvas</code>.</p>
 
 <h2>Removed 31 October 2026</h2>
-<p><code>clearOverlaysForTabSwitch()</code> (hid the overlay container and cleared the panels),
-<code>setCommandsButton()</code> and <code>rebuildAllSystemCaches()</code> were exported but nothing called them.
-They are gone.</p>
+<p><code>clearOverlaysForTabSwitch()</code>, <code>setCommandsButton()</code> and <code>rebuildAllSystemCaches()</code>
+were exported but nothing called them. They are gone.</p>
 
 </body>
 </html>

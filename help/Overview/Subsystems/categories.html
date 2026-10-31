@@ -213,8 +213,8 @@
 <p><strong>buildCategoryDescriptor(groups, itemLabelFn, onClickFn)</strong> builds the descriptor for the
 common case: <code>groups</code> is <code>{ category: [entries] }</code> (what
 <code>manifest.getCategoryMap()</code> returns); each entry's label comes from <code>itemLabelFn(entry)</code>; a click
-calls <code>onClickFn(category, list, entry, index)</code>. Patterns uses it. (Also re-exported from
-<code>uiUtilities.js</code>.)</p>
+calls <code>onClickFn(category, list, entry, index)</code>. Patterns uses it. (It used to be re-exported from
+<code>uiUtilities.js</code>; callers now import it from here.)</p>
 <p><strong>A quirk, removed 31 October 2026:</strong> it used to sort each list with <code>[...list].sort(itemLabelFn)</code>, passing the label function where <code>sort()</code> expects a comparison of two items. The list was left in its original order. It now takes a plain copy, <code>[...list]</code>, with the same result: the index handed to the click is the manifest order that Patterns looks up, and <code>renderCategories()</code> sorts what is shown by name. A real alphabetical sort here would still break that index.</p>
 <p><strong>secondaryAction:</strong> an item may carry <code>secondaryAction: function</code>; the item then shows a
 small separate button that runs it without selecting the item. Draw uses this for the "&gt;" that lists an

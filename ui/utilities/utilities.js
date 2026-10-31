@@ -24,7 +24,7 @@
 
 import { manifest }                          from "/ui/manifest.js";
 import { setCommandsButtonLabel, setCommandsButtonHandler } from "/ui/commandsButton.js";
-import { showCommandsOffcanvas } from "/ui/offcanvas.js";
+import { showOffcanvas } from "/ui/offcanvas.js";
 import { clearDivs } from "/ui/uiUtilities.js";
 import { formatRebuildReportShared } from "/ui/rebuildSync.js";
 import { nodeRebuildAndValidateManifests }   from "/ui/nodeLayer.js";
@@ -274,7 +274,7 @@ function buildUtilitiesOffcanvasHtml() {
 export function wireUtilitiesCommandsButton() {
 
   setCommandsButtonHandler(() => {
-    showCommandsOffcanvas({
+    showOffcanvas({
       title: "Utilities Maintenance",
       buildBody(offcanvasBodyEl) {
 

@@ -6,12 +6,6 @@
    backdrop, or the Escape key. The look comes from css/base.css and css/offcanvas.css.
    =========================================================== */
 
-/*************************************************************
-   showCommandsOffcanvas({ title, buildBody })
-   -----------------------------------------------------------
-   Uses the permanent offcanvas shell (#offcanvasPanel).
-   Dynamically populates the body and shows it.
-*************************************************************/
 /* ============================================================
    showOffcanvas({ title, buildBody?, bodyHtml? })
    ============================================================
@@ -53,21 +47,6 @@ export function showOffcanvas({ title, buildBody, bodyHtml }) {
   showPanel();
 
 } // end showOffcanvas
-
-
-/* ============================================================
-   Backward-compatibility aliases
-   ============================================================
-   showCommandsOffcanvas and showOffcanvasPanel both delegate
-   to showOffcanvas. Callers can migrate at their own pace.
-   ============================================================ */
-export function showCommandsOffcanvas({ title, buildBody }) {
-  return showOffcanvas({ title, buildBody });
-}
-
-export function showOffcanvasPanel({ title, bodyHtml }) {
-  return showOffcanvas({ title, bodyHtml });
-}
 
 
 /* ============================================================

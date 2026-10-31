@@ -441,7 +441,7 @@ if (Object.prototype.hasOwnProperty.call(manifest.cache, "home")) {
 
   <p>
     One operation wipes the entire cache rather than invalidating specific keys.
-    It is in <span class="mono">uiUtilities.js</span> and is only called after the
+    It is <span class="mono">syncSystemStateAfterRebuild()</span> in <span class="mono">rebuildSync.js</span> and is only called after the
     Node rebuild service has rewritten all manifests on disk.
   </p>
 
@@ -540,7 +540,7 @@ if (Object.prototype.hasOwnProperty.call(manifest.cache, "home")) {
             so the browser never reads stale home data after a cache clear.</td>
       </tr>
       <tr>
-        <td><span class="mono">uiUtilities.js</span></td>
+        <td><span class="mono">rebuildSync.js</span></td>
         <td>Owns the two global-reset operations (<span class="mono">clearCache()</span>)
             that follow a full Node rebuild. These do not fire callbacks.</td>
       </tr>

@@ -42,7 +42,7 @@ import { openHelpHomeOverlay }        from "/ui/help.js";
 import { nodeRebuildAndValidateManifests } from "/ui/nodeLayer.js";
 import { buildCanvasThumbnailBase64 } from "/ui/thumbnails.js";
 import { setCommandsButtonHandler } from "/ui/commandsButton.js";
-import { showCommandsOffcanvas } from "/ui/offcanvas.js";
+import { showOffcanvas } from "/ui/offcanvas.js";
 import { formatRebuildReportShared } from "/ui/rebuildSync.js";
 import { hideOffcanvas } from "/ui/offcanvas.js";
 
@@ -446,7 +446,7 @@ export async function archiveActiveSecondaryObject(menuContext) {
 export function wireDrawCommandsButton() {
 
   setCommandsButtonHandler(() => {
-    showCommandsOffcanvas({
+    showOffcanvas({
       title: "Draw Maintenance",
       buildBody(container) {
         if (!container) return;

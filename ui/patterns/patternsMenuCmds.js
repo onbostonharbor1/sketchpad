@@ -39,7 +39,7 @@ import { archiveItem } from "/ui/archiveItem.js";
 import { openEditManifestDialog } from "/ui/editManifestDialog.js";
 import { buildCanvasThumbnailBase64 } from "/ui/thumbnails.js";
 import { setCommandsButtonHandler } from "/ui/commandsButton.js";
-import { showCommandsOffcanvas, hideOffcanvas } from "/ui/offcanvas.js";
+import { showOffcanvas, hideOffcanvas } from "/ui/offcanvas.js";
 import { formatRebuildReportShared } from "/ui/rebuildSync.js";
 import { onPrev, onNext }             from "./patternsDisplay.js";
 
@@ -277,7 +277,7 @@ function buildPatternsOffcanvasHtml() {
 export function wirePatternsCommandsButton() {
 
   setCommandsButtonHandler(() => {
-    showCommandsOffcanvas({
+    showOffcanvas({
       title: "Patterns Maintenance",
       buildBody(offcanvasBodyEl) {
 
