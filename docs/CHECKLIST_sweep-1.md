@@ -69,8 +69,8 @@ Node window. Undo: `git revert c9588b5` (split) or `47fb051` (safety).
 - Open the app at `http://127.0.0.1:5173` (not localhost): the service calls fail, as before.
 
 **T3. Commands panel and thumbnails (commit `25900fd`).** On every tab (Home, Draw, Patterns, Gallery, Figures,
-Utilities) click Commands: the panel opens. In Draw, open the secondary-objects thumbnail grid (caption menu v, then the
-thumbnails item) and click one: it loads and the panel closes. Utilities > Commands > Rebuild and Validate: a report shows
+Utilities) click Commands: the panel opens. In Draw, open the saved-settings (secondary object) thumbnails for an object that
+has some, and click one: it loads and the panel closes. Utilities > Commands > Rebuild and Validate: a report shows
 and other tabs refresh when you visit them. Failure reads "does not provide an export named ..." in the console.
 Undo: `git revert 25900fd`.
 
@@ -99,9 +99,7 @@ right edge: it drags (does not click through to Prev/Next). The line fixed here 
 CSS already did, so nothing should look different.
 
 **T7. Switching tabs (commit `7e930f9`).** Visit every tab twice. Leftover content from the tab you left is gone in
-`#action` (left column), `#caption`, `#text`, the canvas area. The Figures side strip is hidden on other tabs. The canvas
-area shows only on tabs that use it (Draw, Patterns, Figures, Gallery script runs, Home canvases), and is hidden on
-Utilities' list view. Undo: `git revert 7e930f9`.
+`#action` (left column), `#caption`, `#text`, the canvas area. The Figures side strip is hidden on other tabs. Undo: `git revert 7e930f9`.
 
 **T8. Home canvas (commit `62a08cc`).** Home tab: open an item that draws on the canvas. It draws. (The code used to
 create a spare overlay div if it was missing; it now stops with an error instead, and the div is in `index.html`.)
