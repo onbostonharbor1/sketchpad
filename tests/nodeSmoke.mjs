@@ -181,6 +181,48 @@ if (entry) {
     "status " + r.status + " " + (r.json && r.json.error));
 }
 
+
+/* ---- 5b. more happy paths: the other writers, manifest edit, logs, and the dispatcher table ---- */
+r = await call("writePatternFromDrawRegistry", { category: cat, idName: "zzscript", scriptText: "// smoke\n", thumbBase64: "AAAA" });
+const added = r.json && r.json.filenameBase;
+check("writePatternFromDrawRegistry valid: files written, manifest entry added with status new",
+  r.status === 200 && added && exists("patterns", cat, added + ".js") && exists("patterns", cat, "images", "thumb_" + added + ".png") &&
+  JSON.parse(fs.readFileSync(manifestPath, "utf8")).some(e => e && e.filename === added && e.status === "new" && e.path === added + ".js"),
+  "status " + r.status + " " + (r.json && r.json.error));
+r = await call("editManifestEntry", { manifestPath: "/patterns/" + cat + "/manifest.json", matchField: "filename", matchValue: added, title: "Smoke title", status: "working" });
+const edited = JSON.parse(fs.readFileSync(manifestPath, "utf8")).find(e => e && e.filename === added);
+check("editManifestEntry valid: title and status changed", r.status === 200 && edited && edited.title === "Smoke title" && edited.status === "working",
+  "status " + r.status + " " + (r.json && r.json.error) + " " + JSON.stringify(edited));
+const galleryCat = fs.existsSync(path.join(scratch, "gallery", "Patterns"))
+  ? fs.readdirSync(path.join(scratch, "gallery", "Patterns"), { withFileTypes: true }).find(e => e.isDirectory() && exists("gallery", "Patterns", e.name, "manifest.json"))
+  : null;
+if (galleryCat) {
+  const gm = path.join(scratch, "gallery", "Patterns", galleryCat.name, "manifest.json");
+  const gBefore = JSON.parse(fs.readFileSync(gm, "utf8")).length;
+  r = await call("writeGalleryPatternPng", { category: galleryCat.name, idName: "zzpng", pngBase64: "iVBORw0KGgo=", thumbBase64: "AAAA" });
+  const gAfter = JSON.parse(fs.readFileSync(gm, "utf8"));
+  const gName = r.json && r.json.filenameBase;
+  check("writeGalleryPatternPng valid: png and thumb written, manifest entry added",
+    r.status === 200 && gName && exists("gallery", "Patterns", galleryCat.name, gName + ".png") &&
+    exists("gallery", "Patterns", galleryCat.name, "images", "thumb_" + gName + ".png") && gAfter.length === gBefore + 1,
+    "status " + r.status + " " + (r.json && r.json.error));
+}
+fs.mkdirSync(path.join(scratch, "utilities", "logfiles"), { recursive: true });
+fs.writeFileSync(path.join(scratch, "utilities", "logfiles", "smoke.txt"), "line one\n");
+r = await call("listLogFiles", {});
+check("listLogFiles lists the log file", r.status === 200 && JSON.stringify(r.json).includes("smoke.txt"), "status " + r.status);
+r = await call("readLogFile", { name: "smoke.txt" });
+check("readLogFile valid", r.status === 200 && JSON.stringify(r.json).includes("line one"), "status " + r.status);
+r = await call("readLogFile", { name: "../../package.json" });
+check("readLogFile with a path: refused", refused(r) || (r.status === 200 && !JSON.stringify(r.json).includes("sentinel")), "status " + r.status);
+// Every request name in the dispatcher table is covered by the empty-payload test above, and no name is untested.
+const serviceText = fs.readFileSync(path.join(nodeDir, "sketchpadService.mjs"), "utf8");
+const tableText = serviceText.slice(serviceText.indexOf("const HANDLERS = {"), serviceText.indexOf("};", serviceText.indexOf("const HANDLERS = {")));
+const tableNames = [...tableText.matchAll(/^\s{2}(\w+):/gm)].map(m => m[1]);
+check("dispatcher table names all appear in the test's list of request names",
+  tableNames.length > 10 && tableNames.every(n => NAMES.includes(n)) && NAMES.every(n => tableNames.includes(n)),
+  "table: " + tableNames.join(",") + " | missing from test: " + tableNames.filter(n => !NAMES.includes(n)).join(",") + " | not in table: " + NAMES.filter(n => !tableNames.includes(n)).join(","));
+
 /* ---- 6. oversized body, then is the service still alive? ---- */
 const big = await rawRequest(JSON.stringify({ requestName: "listLogFiles", payload: { pad: "x".repeat(51 * 1024 * 1024) } }));
 check("oversized body is refused (413 or closed)", big.status === 413 || big.status === 0, "status " + big.status);
