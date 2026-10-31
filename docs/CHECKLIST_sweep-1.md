@@ -41,6 +41,7 @@ revert if it fails: `git revert <commit>`.
 | `daf82c0` | Removed the unreachable "show controls" checkbox code, its state field and CSS |
 | `911c97b` | `npm audit fix`: tinymce 8.3.2 to 8.10.1, vite 7.1.12 to 7.3.7 (lock file only) |
 | `3be737d` | Ideabook: stale `029.JPG` entry removed from `possible/manifest.json` |
+| `a7f13f2` | `test:tabs` now also checks the side panel, accordion, Edit Manifest dialog, Show Script, lazy help editor and a Draw handle drag |
 
 ## 1. Gates to run first (all on Windows)
 
@@ -51,6 +52,14 @@ revert if it fails: `git revert <commit>`.
 | `npm run check:ids` | `every looked-up id is in index.html ...` |
 | `npm run test:node` | `52 passed, 0 failed` |
 | `npm run test:tabs` | a line starting `PASS:` and ending `no errors` |
+
+`test:tabs` now also does, by itself, what T9, T10, T11 and part of T5 ask for (commit `a7f13f2`): opens the side panel and closes
+it with Escape, a click on the dimmed area and the X button; opens and closes it five times and checks no dim layer is left;
+the Help button inside it; the Draw > Parametrics accordion closing and opening; the Edit Manifest dialog opening and
+cancelling; Show Script; that TinyMCE is not fetched until a help page is edited and then opens with its menu bar; and
+dragging Draw > Cycloid's first handle 30 px right and 20 px down, then leaving the tab (handle layer gone). So if
+`test:tabs` passes on your PC, do the hand versions of those only to see how they feel (animation, hover, the looks the
+test cannot judge).
 
 Checked here on Linux before you look: all five pass. Not checked anywhere: Windows, `sketchpad.bat`, real printing.
 
