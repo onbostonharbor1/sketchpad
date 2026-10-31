@@ -1172,6 +1172,100 @@ if (w.length !== 0) problems.push("[8 free not corner] a free disc was welded to
 if ((await points()).length !== 1) problems.push("[8 free not corner] a disc was added: " + JSON.stringify(await points()));
 await page.uncheck("#figureModeCheck");
 
+/* Phase 8 next pass: a handle dropped on another handle welds. */
+const params = (i) => page.evaluate((i) =>
+  structuredClone(uiState.figures.tabs[uiState.figures.activeSubtab].instances[i].params), i);
+const notice = () => page.evaluate(() => document.getElementById("figureWeldNotice")?.textContent || "");
+
+stage = "8 next: a handle dropped on another handle snaps and welds";
+await newFigure();
+await insertExact("drawLine", { pt1: { x: 200, y: 200 }, pt2: { x: 400, y: 400 } });   // layer 0
+await insertExact("drawLine", { pt1: { x: 500, y: 300 }, pt2: { x: 600, y: 600 } });   // layer 1, active
+await page.waitForTimeout(300);
+await dragTo(500, 300, 405, 404);                          // lines mode, within 10 px of layer 0's pt2
+let q1 = await params(1);
+if (!near(q1.pt1.x, 400) || !near(q1.pt1.y, 400)) problems.push("[8 next drop] the dropped handle did not snap exactly: " + JSON.stringify(q1.pt1));
+w = await welds();
+if (w.length !== 1 || w[0].members.length !== 2 || w[0].members[0].layer === w[0].members[1].layer)
+  problems.push("[8 next drop] expected one weld across the two layers: " + JSON.stringify(w));
+if ((await notice()) !== "Welded.") problems.push("[8 next drop] notice: " + (await notice()));
+// The + must show past a handle's dot (radius 5), which is drawn over it.
+if (!(await px(408, 400)).slice(0, 3).every(c => c < 80)) problems.push("[8 next drop] the weld mark's arm is not visible past the handle: " + JSON.stringify(await px(408, 400)));
+await pickLayer(0);
+await dragTo(400, 400, 450, 430);                          // the weld now moves the other line
+q1 = await params(1);
+if (Math.abs(q1.pt1.x - 450) > 1 || Math.abs(q1.pt1.y - 430) > 1) problems.push("[8 next drop] layer 1 did not follow: " + JSON.stringify(q1.pt1));
+
+stage = "8 next: dragging across a handle on the way does not weld";
+await newFigure();
+await insertExact("drawLine", { pt1: { x: 200, y: 200 }, pt2: { x: 400, y: 400 } });
+await insertExact("drawLine", { pt1: { x: 500, y: 300 }, pt2: { x: 600, y: 600 } });
+await page.waitForTimeout(300);
+{
+  const r = await rect();
+  const sx = (x) => r[0] + x * r[2] / 800, sy = (y) => r[1] + y * r[3] / 800;
+  await page.mouse.move(sx(500), sy(300));
+  await page.mouse.down();
+  await page.mouse.move(sx(402), sy(401), { steps: 4 });   // passes over layer 0's pt2
+  await page.mouse.move(sx(300), sy(500), { steps: 4 });   // and goes on
+  await page.mouse.up();
+  await page.waitForTimeout(200);
+}
+if ((await welds()).length !== 0) problems.push("[8 next across] a weld was made on the way: " + JSON.stringify(await welds()));
+if ((await points()).length !== 0) problems.push("[8 next across] discs were placed: " + JSON.stringify(await points()));
+
+stage = "8 next: the snap radius setting";
+await page.evaluate(() => { uiState.figures.snapRadius = 3; });
+await dragTo(300, 500, 406, 400);                          // 6 px away: outside 3
+if ((await welds()).length !== 0) problems.push("[8 next radius] welded outside the snap radius");
+await page.evaluate(() => { uiState.figures.snapRadius = 10; });
+await dragTo(406, 400, 404, 404);                          // inside 10
+if ((await welds()).length !== 1) problems.push("[8 next radius] no weld inside the snap radius");
+
+stage = "8 next: a handle with no infrastructure point under it gets a handle disc";
+await newFigure();
+await insertExact("drawLine", { pt1: { x: 200, y: 200 }, pt2: { x: 400, y: 400 } });   // midpoint handle at 300,300
+await insertExact("drawLine", { pt1: { x: 500, y: 300 }, pt2: { x: 600, y: 600 } });
+await page.waitForTimeout(300);
+await dragTo(500, 300, 303, 298);                          // onto layer 0's midpoint handle
+let hd = (await points()).filter(p => p.kind === "handle");
+if (hd.length !== 1 || hd[0].layer !== 0) problems.push("[8 next handle disc] expected one handle disc on layer 0: " + JSON.stringify(await points()));
+if ((await welds()).length !== 1) problems.push("[8 next handle disc] no weld: " + JSON.stringify(await welds()));
+await dragTo(300, 300, 340, 320);                          // layer 1's end, still active, pulls layer 0 along
+let q0 = await params(0);
+if (Math.abs(q0.pt1.x - 240) > 1 || Math.abs(q0.pt1.y - 220) > 1 || Math.abs(q0.pt2.x - 440) > 1 || Math.abs(q0.pt2.y - 420) > 1)
+  problems.push("[8 next handle disc] layer 0 did not slide with its midpoint: " + JSON.stringify([q0.pt1, q0.pt2]));
+
+stage = "8 next: a Parabola's corner handle dropped on its own twin ties the corner";
+await newFigure();
+await insertExact("parabola", {
+  line1_pt1: { x: 50, y: 50 },   line1_pt2: { x: 200, y: 200 },
+  line2_pt1: { x: 230, y: 230 }, line2_pt2: { x: 350, y: 350 }
+});
+await page.waitForTimeout(300);
+await dragTo(230, 230, 204, 203);
+let pq = await params(0);
+if (!near(pq.line2_pt1.x, 200) || !near(pq.line2_pt1.y, 200)) problems.push("[8 next corner] line2_pt1 did not snap: " + JSON.stringify(pq.line2_pt1));
+w = await welds();
+if (w.length !== 1 || w[0].members.length !== 2 || w[0].members.some(m => m.layer !== 0)) problems.push("[8 next corner] expected a same-layer weld of two: " + JSON.stringify(w));
+
+stage = "8 next: a right-press on the centroid does not move the layer";
+await newFigure();
+await insertExact("drawLine", { pt1: { x: 200, y: 200 }, pt2: { x: 400, y: 400 } });
+await page.waitForTimeout(300);
+{
+  const c = await centroidXY();
+  const r = await rect();
+  const sx = (x) => r[0] + x * r[2] / 800, sy = (y) => r[1] + y * r[3] / 800;
+  await page.mouse.move(sx(c.x), sy(c.y));
+  await page.mouse.down({ button: "right" });
+  await page.mouse.move(sx(c.x + 30), sy(c.y + 20), { steps: 3 });
+  await page.mouse.up({ button: "right" });
+  await page.waitForTimeout(200);
+}
+const tr = await page.evaluate(() => ({ ...uiState.figures.tabs[uiState.figures.activeSubtab].figure.layers[0].transform }));
+if (tr.tx !== 0 || tr.ty !== 0 || tr.angle !== 0) problems.push("[8 next centroid] a right-press moved the layer: " + JSON.stringify(tr));
+
 await browser.close();
 
 for (const n of notes.slice(0, 5)) console.log("note:", n);
@@ -1182,4 +1276,4 @@ if (problems.length) {
   for (const p of problems) console.log(" ", p);
   process.exit(1);
 }
-console.log("\nPASS: 6 tabs x 2 passes, plus Draw and Patterns with an open item, plus the Notes menu item, plus the Figures shell, insert, points mode and 7b centroid, move and rotate, 7c break apart, 7d infrastructure, 8 welds, no errors");
+console.log("\nPASS: 6 tabs x 2 passes, plus Draw and Patterns with an open item, plus the Notes menu item, plus the Figures shell, insert, points mode and 7b centroid, move and rotate, 7c break apart, 7d infrastructure, 8 welds, 8 next pass (handle-to-handle welds), no errors");
