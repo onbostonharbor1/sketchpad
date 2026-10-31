@@ -30,7 +30,7 @@ export function setRangeControlUnified(field, label, def, value, info, key, tabI
 
    PURPOSE
    -------
-   Match the ?EURoeblack-background?EUR? style UI shown in your reference.
+   Match the "black-background" style UI shown in your reference.
 
    REQUIRED
    --------

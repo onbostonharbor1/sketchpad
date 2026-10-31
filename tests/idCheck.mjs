@@ -17,7 +17,6 @@ const builtByCode = new Set([
   "sharedCanvas",         // draw/drawState.js
   "categories",           // ui/categories.js
   "drawControls",         // ui/controls/rendering/renderer.js
-  "canvasOverlayLayers",  // ui/home/homeResults.js (only if missing)
 ]);
 
 // Known problems, listed so the check stays green but they are not forgotten.

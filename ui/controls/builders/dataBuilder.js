@@ -108,7 +108,7 @@ export function buildScriptParameterData(sourceInfo) {
   // IMPORTANT:
   // Button controls require def.action (function or string).
   // The normalized item MUST preserve it, because it is not a
-  // ?EURoevalue?EUR? field and it may not be JSON-safe.
+  // "value" field and it may not be JSON-safe.
   // ---------------------------------------------------------
   const allControls = keys.map((key) => {
 

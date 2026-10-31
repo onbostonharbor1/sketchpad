@@ -36,10 +36,10 @@ export function setStaticTextControl(field, label, def, value, info, key, tabId)
   //
   // Display-only block of text in the Action panel.
   //
-  // ?EUR? No label
-  // ?EUR? No parameter storage
-  // ?EUR? No redraw
-  // ?EUR? Text must be provided in-memory
+  // - No label
+  // - No parameter storage
+  // - No redraw
+  // - Text must be provided in-memory
   //
   // Text source:
   //   - def.text     : string
@@ -65,7 +65,7 @@ export function setStaticTextControl(field, label, def, value, info, key, tabId)
   box.className = "ctrl-static-text";
   box.id = tabId + "-" + key;
 
-  // Make it expand to full available width (fixes the ?EURoeone word per line?EUR? collapse).
+  // Make it expand to full available width (fixes the "one word per line" collapse).
   box.style.display = "block";
   box.style.width = "100%";
   box.style.boxSizing = "border-box";

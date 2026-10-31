@@ -91,11 +91,9 @@ async function renderHomeJsEntryToCanvas(entry, token) {
   const padDiv = document.getElementById("sketchpad");
   if (!padDiv) throw new Error("renderHomeJsEntryToCanvas: #sketchpad missing");
 
-  let overlay = document.getElementById("canvasOverlayLayers");
-  if (!overlay) {
-    overlay    = document.createElement("div");
-    overlay.id = "canvasOverlayLayers";
-    padDiv.appendChild(overlay);
+  // #canvasOverlayLayers is written in index.html; this page must not create it.
+  if (!document.getElementById("canvasOverlayLayers")) {
+    throw new Error("renderHomeJsEntryToCanvas: #canvasOverlayLayers missing from index.html");
   }
 
   try {

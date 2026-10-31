@@ -27,10 +27,10 @@ export function renderParameterControls(
   // DOM TARGET RESOLUTION: ACTION AREA
   //
   // This is the ONLY required DOM anchor for this renderer.
-  // If it does not exist, the active tab?EUR(TM)s layout is broken.
+  // If it does not exist, the active tab's layout is broken.
   //
   // ENVIRONMENT:
-  //   Writes into the active tab?EUR(TM)s #action area.
+  //   Writes into the active tab's #action area.
   // ---------------------------------------------------------
   const actionDiv = document.getElementById("action");
   if (!actionDiv) throw new Error("renderParameterControls: #action not found");
@@ -152,7 +152,7 @@ export function renderParameterControls(
 
 
 /* ------------------------------------------------------------
-   buildSingleControl() ?EUR" UPDATE
+   buildSingleControl() - UPDATE
    - Add a new case: "radio"
 ------------------------------------------------------------ */
 

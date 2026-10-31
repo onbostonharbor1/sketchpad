@@ -53,12 +53,13 @@
                      ├── overlay-debug
                      └── overlay-nextprev
 
-       Built by code (not written here; to be moved here or listed
-       in one place, see NEXT_PASS.md, Branch 4):
+       Built by code (not written here). These are content wrappers or
+       popups, created inside a region that is emptied each time a tab
+       is left, so they cannot be permanent children of that region:
          • canvas#sharedCanvas        draw/drawState.js, appended to #sketchpad
-         • #categories                ui/categories.js, inside the region a tab names (usually #text)
+         • #categories                ui/categories.js, inside the region a tab
+                                      names (usually #text)
          • #drawControls              ui/controls/rendering/renderer.js, inside #action
-         • #canvasOverlayLayers       ui/home/homeResults.js creates it only if missing
          • popup menus                ui/menuManager.js, appended to #wrapper
        ============================================================ -->
 
