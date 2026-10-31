@@ -223,6 +223,16 @@ check("dispatcher table names all appear in the test's list of request names",
   tableNames.length > 10 && tableNames.every(n => NAMES.includes(n)) && NAMES.every(n => tableNames.includes(n)),
   "table: " + tableNames.join(",") + " | missing from test: " + tableNames.filter(n => !NAMES.includes(n)).join(",") + " | not in table: " + NAMES.filter(n => !tableNames.includes(n)).join(","));
 
+// Atomic writes leave no temporary files behind.
+const strayTmp = [];
+(function walk(dir) {
+  for (const e of fs.readdirSync(dir, { withFileTypes: true })) {
+    const p = path.join(dir, e.name);
+    if (e.isDirectory()) walk(p); else if (e.name.endsWith(".tmp")) strayTmp.push(p);
+  }
+})(scratch);
+check("no .tmp files left behind by the writers", strayTmp.length === 0, strayTmp.join(", "));
+
 /* ---- 6. oversized body, then is the service still alive? ---- */
 const big = await rawRequest(JSON.stringify({ requestName: "listLogFiles", payload: { pad: "x".repeat(51 * 1024 * 1024) } }));
 check("oversized body is refused (413 or closed)", big.status === 413 || big.status === 0, "status " + big.status);

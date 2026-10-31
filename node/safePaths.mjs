@@ -15,9 +15,23 @@
      assertSimpleName         one folder or file name, no slashes, no ".."
      isInside                 is this absolute path inside that folder?
      resolveInside            join a root and a relative path, stay inside
+     manifestRoots            the folders whose manifest.json files the service may touch
    ------------------------------------------------------------ */
 
 import path from "path";
+
+/* ------------------------------------------------------------
+   Where the service may find manifests. This is the one place that
+   says it. "home" holds the combined list that the Home tab shows;
+   the other three hold the real per-category manifests, and are the
+   only places a file may be archived from.
+------------------------------------------------------------ */
+export const MANIFEST_FOLDERS_ALL       = ["home", "patterns", "gallery", "utilities"];
+export const MANIFEST_FOLDERS_ORIGINALS = ["patterns", "gallery", "utilities"];
+
+export function manifestRoots(folders = MANIFEST_FOLDERS_ALL) {
+  return folders.map(name => path.resolve("./" + name));
+}
 
 export class RequestError extends Error {
   constructor(message, status = 400) {

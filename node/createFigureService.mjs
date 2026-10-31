@@ -23,6 +23,7 @@
 
 import fs   from "fs";
 import path from "path";
+import { readJsonFileSync, writeJsonFileSync, writeFileAtomicSync, assertDirectoryExists, assertFileExists } from "./serviceFileHelpers.mjs";
 
 
 /* ============================================================
@@ -66,7 +67,7 @@ export async function createFigure(payload = {}) {
     const figurePath = path.join(categoryDir, figureFilename);
     const scriptText = buildFigureScript(objects);
 
-    fs.writeFileSync(figurePath, scriptText, "utf8");
+    writeFileAtomicSync(figurePath, scriptText, "utf8");
     assertFileExists(figurePath, "createFigure: figure write failed: " + figurePath);
 
     // -- Update manifest -------------------------------------------
@@ -253,26 +254,3 @@ function toSafeName(str) {
     .replace(/[^a-z0-9-]/g, "");
 } // end toSafeName
 
-function readJsonFileSync(filePath) {
-  return JSON.parse(fs.readFileSync(filePath, "utf8"));
-} // end readJsonFileSync
-
-function writeJsonFileSync(filePath, data) {
-  fs.writeFileSync(
-    filePath,
-    JSON.stringify(data, null, 2) + "\n",
-    "utf8"
-  );
-} // end writeJsonFileSync
-
-function assertDirectoryExists(dir, message) {
-  if (!fs.existsSync(dir) || !fs.statSync(dir).isDirectory()) {
-    throw new Error(message);
-  }
-} // end assertDirectoryExists
-
-function assertFileExists(file, message) {
-  if (!fs.existsSync(file) || !fs.statSync(file).isFile()) {
-    throw new Error(message);
-  }
-} // end assertFileExists

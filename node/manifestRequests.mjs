@@ -8,25 +8,14 @@
 
 import fs from "fs";
 import path from "path";
-import { RequestError, assertSimpleName, isInside } from "./safePaths.mjs";
+import { RequestError, assertSimpleName, isInside, manifestRoots, MANIFEST_FOLDERS_ORIGINALS } from "./safePaths.mjs";
 import { readJsonFileSync, writeJsonFileSync, assertFileExists } from "./serviceFileHelpers.mjs";
 
 
 /* ============================================================
-   TASK: editManifestEntry  (FIX: do NOT overwrite status:"ok")
-=========================================================== */
-/*
-  Payload:
-    {
-      manifestPath : "/home/manifest.json" | "/patterns/.../manifest.json" | "/gallery/.../manifest.json" | "/utilities/.../manifest.json",
-      matchField   : "path" | "filename" | "file",
-      matchValue   : "<string>",
-      title        : "<string>",
-      status       : "<string>"   // "" == clear
-    }
-*/
-/* ============================================================
-   TASK: editManifestEntry  (FIX: if Home manifest is edited, update the ORIGINAL manifest)
+   TASK: editManifestEntry
+
+   Changes one entry's title and status in a manifest.
 =========================================================== */
 /*
   Payload:
@@ -38,8 +27,8 @@ import { readJsonFileSync, writeJsonFileSync, assertFileExists } from "./service
       status       : "<string>"   // "" == clear
     }
 
-  FIX BEHAVIOR
-  ------------
+  HOME MANIFEST
+  -------------
   If the UI calls editManifestEntry with manifestPath pointing to ./home/manifest.json,
   that is a *virtual* aggregate manifest.
 
@@ -63,15 +52,8 @@ export async function editManifestEntry(payload = {}) {
   if (newStatus == null) newStatus = "";
   newStatus = String(newStatus);
 
-  const allowedRoots = [
-    path.resolve("./home"),
-    path.resolve("./patterns"),
-    path.resolve("./gallery"),
-    path.resolve("./utilities")
-  ];
-
   const manifestPath = resolveManifestPathAllowed(
-    allowedRoots,
+    manifestRoots(),
     manifestPathInput,
     "editManifestEntry"
   );
@@ -298,11 +280,7 @@ function findOriginalManifestEntryByRootedPath(rootedPath) {
     throw new Error("findOriginalManifestEntryByRootedPath: rootedPath must start with '/'");
   }
 
-  const roots = [
-    path.resolve("./patterns"),
-    path.resolve("./gallery"),
-    path.resolve("./utilities")
-  ];
+  const roots = manifestRoots(MANIFEST_FOLDERS_ORIGINALS);
 
   const manifestFiles = [];
 
@@ -482,12 +460,8 @@ export async function archiveItem(payload) {
 
   assertSimpleName(filename, "archiveItem: filename");
 
-  const patternsRoot  = path.resolve("./patterns");
-  const galleryRoot   = path.resolve("./gallery");
-  const utilitiesRoot = path.resolve("./utilities");
-
   const manifestAbs = resolveManifestPathAllowed(
-    [patternsRoot, galleryRoot, utilitiesRoot],
+    manifestRoots(MANIFEST_FOLDERS_ORIGINALS),
     manifestPathInput,
     "archiveItem"
   );
@@ -547,11 +521,7 @@ export async function archiveItem(payload) {
   fs.renameSync(srcAbs, destAbs);
 
   try {
-    fs.writeFileSync(
-      manifestAbs,
-      JSON.stringify(afterList, null, 2) + "\n",
-      "utf8"
-    );
+    writeJsonFileSync(manifestAbs, afterList);
   } catch (writeErr) {
     fs.renameSync(destAbs, srcAbs);
     throw writeErr;
@@ -560,7 +530,7 @@ export async function archiveItem(payload) {
   // Mirror the removal into ./home/manifest.json so the Home tab
   // stays consistent without requiring a full rebuild.
   try {
-    const archivedEntry = list.find((e, i) => !afterList.includes(e));
+    const archivedEntry = list.find((e) => !afterList.includes(e));
     if (archivedEntry) {
       const rootedPath      = makeRootedPath(manifestDir, archivedEntry);
       const homeManifestPath = path.resolve("./home/manifest.json");

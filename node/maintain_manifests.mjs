@@ -3,6 +3,7 @@ console.log(">>> Script Loaded");
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { writeFileAtomicSync } from "./serviceFileHelpers.mjs";
 
 // --- PATH SETUP ---
 const __filename = fileURLToPath(import.meta.url);
@@ -300,7 +301,7 @@ function writeJsonIfChanged(filePath, data) {
     if (prev === next) return false;
   }
 
-  fs.writeFileSync(filePath, next, "utf8");
+  writeFileAtomicSync(filePath, next, "utf8");
   return true;
 
 } // end writeJsonIfChanged

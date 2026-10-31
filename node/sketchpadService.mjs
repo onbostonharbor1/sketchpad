@@ -122,7 +122,10 @@ export async function dispatchService(requestName, payload = {}) {
   if (typeof requestName !== "string" || requestName.trim() === "") {
     throw new Error(`dispatchService: invalid requestName: ${String(requestName)}`);
   }
-  console.log("dispatchService file:", import.meta.url, "request:", requestName);
+  // Set SKETCHPAD_QUIET=1 to stop printing each request to this window.
+  if (!process.env.SKETCHPAD_QUIET) {
+    console.log("dispatchService file:", import.meta.url, "request:", requestName);
+  }
 
   // Object.hasOwn so a name like "toString" or "constructor" is not found on the prototype.
   if (!Object.hasOwn(HANDLERS, requestName)) {

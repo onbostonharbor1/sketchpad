@@ -1,5 +1,5 @@
 /* ===========================================================
-   sketchpadServer.js  (Node.js)
+   sketchpadServer.mjs  (Node.js)
    -----------------------------------------------------------
    PURPOSE
    -------
@@ -25,10 +25,10 @@
    DIRECTORY / PLACEMENT
 
    Place this file in:
-     ./node/sketchpadServer.js
+     ./node/sketchpadServer.mjs
 
    It imports the task dispatcher from:
-     ./node/sketchpadService.js
+     ./node/sketchpadService.mjs
 
    -----------------------------------------------------------
    FAIL-FAST POLICY
@@ -207,7 +207,7 @@ async function handleDispatch(req, res) {
       return;
     }
 
-    // Call dispatcher (task logic lives in sketchpadService.js)
+    // Call dispatcher (task logic lives in sketchpadService.mjs)
     const result = await dispatchService(requestName, safePayload);
 
     sendJson(res, 200, result);
@@ -261,7 +261,7 @@ function readJsonBody(req) {
         const obj = JSON.parse(raw);
         resolve(obj);
       }
-      catch (err) {
+      catch {
         reject(new RequestError("Invalid JSON"));
       }
     });
@@ -324,7 +324,7 @@ function sendCorsPreflight(res) {
    If this file is executed directly with Node, start the server.
 
    Typical usage:
-     node ./node/sketchpadServer.js
+     node ./node/sketchpadServer.mjs
 
    =========================================================== */
 

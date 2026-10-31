@@ -7,6 +7,7 @@
    =========================================================== */
 
 import fs from "fs";
+import path from "path";
 
 
 /* ===========================================================
@@ -30,12 +31,36 @@ export function readJsonFileSync(filePath) {
    Writes formatted JSON with a trailing newline.
 ----------------------------------------------------------- */
 export function writeJsonFileSync(filePath, data) {
-  fs.writeFileSync(
-    filePath,
-    JSON.stringify(data, null, 2) + "\n",
-    "utf8"
-  );
+  writeFileAtomicSync(filePath, JSON.stringify(data, null, 2) + "\n", "utf8");
 } // end writeJsonFileSync
+
+
+/* -----------------------------------------------------------
+   writeFileAtomicSync(filePath, data, encoding?)
+
+   Writes to a temporary file in the same folder, then renames it
+   over the real file. A crash or a full disk in the middle leaves
+   the old file whole, never a half-written one. If the rename is
+   refused (Windows can refuse while another program has the target
+   open), it falls back to copying over the target.
+   data: a string (give encoding, e.g. "utf8") or a Buffer.
+----------------------------------------------------------- */
+export function writeFileAtomicSync(filePath, data, encoding) {
+  const dir  = path.dirname(filePath);
+  const tmp  = path.join(dir, "." + path.basename(filePath) + "." + process.pid + "." + Date.now() + ".tmp");
+  try {
+    fs.writeFileSync(tmp, data, encoding);
+    try {
+      fs.renameSync(tmp, filePath);
+    } catch {
+      fs.copyFileSync(tmp, filePath);
+      fs.unlinkSync(tmp);
+    }
+  } catch (err) {
+    try { fs.unlinkSync(tmp); } catch { /* no temp file to remove */ }
+    throw err;
+  }
+} // end writeFileAtomicSync
 
 
 /* -----------------------------------------------------------

@@ -9,7 +9,51 @@
 import fs from "fs";
 import path from "path";
 import { RequestError, assertSimpleName, isInside } from "./safePaths.mjs";
-import { readJsonFileSync, writeJsonFileSync, assertDirectoryExists, assertFileExists, makeTimestampForFilename } from "./serviceFileHelpers.mjs";
+import { readJsonFileSync, writeJsonFileSync, writeFileAtomicSync, assertDirectoryExists, assertFileExists, makeTimestampForFilename } from "./serviceFileHelpers.mjs";
+
+/* -----------------------------------------------------------
+   prepareCategoryFolder(rootDir, category, who)
+
+   Finds <rootDir>/<category>, makes its images/ folder if it is
+   missing, and checks its manifest.json exists. Throws a message
+   starting with "who" if anything is wrong.
+   Returns { categoryDir, imagesDir, manifestPath }.
+----------------------------------------------------------- */
+function prepareCategoryFolder(rootDir, category, who) {
+  assertDirectoryExists(rootDir, who + ": root folder missing: " + rootDir);
+
+  const categoryDir = path.join(rootDir, category);
+  assertDirectoryExists(categoryDir, who + ": category dir missing: " + categoryDir);
+
+  const imagesDir = path.join(categoryDir, "images");
+  if (!fs.existsSync(imagesDir)) {
+    fs.mkdirSync(imagesDir, { recursive: true });
+  }
+  assertDirectoryExists(imagesDir, who + ": images dir missing: " + imagesDir);
+
+  const manifestPath = path.join(categoryDir, "manifest.json");
+  assertFileExists(manifestPath, who + ": manifest missing: " + manifestPath);
+
+  return { categoryDir, imagesDir, manifestPath };
+} // end prepareCategoryFolder
+
+
+/* -----------------------------------------------------------
+   appendManifestEntry(manifestPath, entry, who)
+
+   Adds one entry to the end of a manifest (a JSON array).
+   Returns the index of the new entry.
+----------------------------------------------------------- */
+function appendManifestEntry(manifestPath, entry, who) {
+  const manifest = readJsonFileSync(manifestPath);
+  if (!Array.isArray(manifest)) {
+    throw new Error(who + ": manifest must be an array: " + manifestPath);
+  }
+  manifest.push(entry);
+  writeJsonFileSync(manifestPath, manifest);
+  return manifest.length - 1;
+} // end appendManifestEntry
+
 
 
 /* ===========================================================
@@ -86,12 +130,8 @@ export async function writePatternThumbnail(payload = {}) {
   const outName = "thumb_" + filename + ".png";
   const outPath = path.join(imagesDir, outName);
 
-  if (fs.existsSync(outPath)) {
-    fs.unlinkSync(outPath);    // fail fast if locked or read-only
-  }
-
   const buf = Buffer.from(pngBase64, "base64");
-  fs.writeFileSync(outPath, buf, { flag: "w" });
+  writeFileAtomicSync(outPath, buf);
 
   assertFileExists(outPath, "writePatternThumbnail: write failed: " + outPath);
 
@@ -157,7 +197,7 @@ export async function writeHelpFile(payload = {}) {
   assertDirectoryExists(parentDir, "writeHelpFile: parent dir missing: " + parentDir);
 
   // Write file (create or overwrite)
-  fs.writeFileSync(abs, html, "utf8");
+  writeFileAtomicSync(abs, html, "utf8");
 
   // Verify write succeeded
   assertFileExists(abs, "writeHelpFile: write failed: " + abs);
@@ -226,23 +266,8 @@ export async function writeGalleryPatternPng(payload = {}) {
     throw new Error("writeGalleryPatternPng: thumbBase64 missing or invalid");
   }
 
-  const galleryRoot = path.resolve("./gallery");
-  assertDirectoryExists(galleryRoot, "writeGalleryPatternPng: gallery root missing: " + galleryRoot);
-
-  const patternsRoot = path.join(galleryRoot, "Patterns");
-  assertDirectoryExists(patternsRoot, "writeGalleryPatternPng: ./gallery/Patterns missing: " + patternsRoot);
-
-  const categoryDir = path.join(patternsRoot, category);
-  assertDirectoryExists(categoryDir, "writeGalleryPatternPng: category dir missing: " + categoryDir);
-
-  const imagesDir = path.join(categoryDir, "images");
-  if (!fs.existsSync(imagesDir)) {
-    fs.mkdirSync(imagesDir, { recursive: true });
-  }
-  assertDirectoryExists(imagesDir, "writeGalleryPatternPng: images dir missing: " + imagesDir);
-
-  const manifestPath = path.join(categoryDir, "manifest.json");
-  assertFileExists(manifestPath, "writeGalleryPatternPng: manifest missing: " + manifestPath);
+  const { categoryDir, imagesDir, manifestPath } = prepareCategoryFolder(
+    path.join(path.resolve("./gallery"), "Patterns"), category, "writeGalleryPatternPng");
 
   const stamp = makeTimestampForFilename();
   const base  = String(idName).trim() + stamp;
@@ -253,29 +278,19 @@ export async function writeGalleryPatternPng(payload = {}) {
   const pngPath   = path.join(categoryDir, pngName);
   const thumbPath = path.join(imagesDir, thumbName);
 
-  if (fs.existsSync(pngPath)) fs.unlinkSync(pngPath);
-  fs.writeFileSync(pngPath, Buffer.from(pngBase64, "base64"), { flag: "w" });
+  writeFileAtomicSync(pngPath, Buffer.from(pngBase64, "base64"));
   assertFileExists(pngPath, "writeGalleryPatternPng: write failed: " + pngPath);
 
-  if (fs.existsSync(thumbPath)) fs.unlinkSync(thumbPath);
-  fs.writeFileSync(thumbPath, Buffer.from(thumbBase64, "base64"), { flag: "w" });
+  writeFileAtomicSync(thumbPath, Buffer.from(thumbBase64, "base64"));
   assertFileExists(thumbPath, "writeGalleryPatternPng: write failed: " + thumbPath);
 
-  const manifest = readJsonFileSync(manifestPath);
-  if (!Array.isArray(manifest)) {
-    throw new Error("writeGalleryPatternPng: manifest must be an array: " + manifestPath);
-  }
-
   const entryPath = category + "/" + pngName;
-
-  manifest.push({
+  const manifestIndexAdded = appendManifestEntry(manifestPath, {
     filename: base,
     path:     entryPath,
     title:    pngName,
     status:   "new"
-  });
-
-  writeJsonFileSync(manifestPath, manifest);
+  }, "writeGalleryPatternPng");
 
   return {
     request: "writeGalleryPatternPng",
@@ -287,7 +302,7 @@ export async function writeGalleryPatternPng(payload = {}) {
     pngPath,
     thumbPath,
     manifestPath,
-    manifestIndexAdded: manifest.length - 1
+    manifestIndexAdded
   };
 
 } // end writeGalleryPatternPng
@@ -433,20 +448,8 @@ export async function writePatternFromDrawRegistry(payload = {}) {
     throw new Error("writePatternFromDrawRegistry: thumbBase64 missing/invalid");
   }
 
-  const patternsRoot = path.resolve("./patterns");
-  assertDirectoryExists(patternsRoot, "writePatternFromDrawRegistry: patterns root missing: " + patternsRoot);
-
-  const categoryDir = path.join(patternsRoot, category);
-  assertDirectoryExists(categoryDir, "writePatternFromDrawRegistry: category dir missing: " + categoryDir);
-
-  const imagesDir = path.join(categoryDir, "images");
-  if (!fs.existsSync(imagesDir)) {
-    fs.mkdirSync(imagesDir, { recursive: true });
-  }
-  assertDirectoryExists(imagesDir, "writePatternFromDrawRegistry: images dir missing: " + imagesDir);
-
-  const manifestPath = path.join(categoryDir, "manifest.json");
-  assertFileExists(manifestPath, "writePatternFromDrawRegistry: manifest missing: " + manifestPath);
+  const { categoryDir, imagesDir, manifestPath } = prepareCategoryFolder(
+    path.resolve("./patterns"), category, "writePatternFromDrawRegistry");
 
   const stamp = makeTimestampForFilename();
   const base  = String(idName).trim() + stamp;
@@ -457,27 +460,18 @@ export async function writePatternFromDrawRegistry(payload = {}) {
   const scriptPath = path.join(categoryDir, jsName);
   const thumbPath  = path.join(imagesDir, thumbName);
 
-  if (fs.existsSync(scriptPath)) fs.unlinkSync(scriptPath);
-  fs.writeFileSync(scriptPath, scriptText, "utf8");
+  writeFileAtomicSync(scriptPath, scriptText, "utf8");
   assertFileExists(scriptPath, "writePatternFromDrawRegistry: write failed: " + scriptPath);
 
-  if (fs.existsSync(thumbPath)) fs.unlinkSync(thumbPath);
-  fs.writeFileSync(thumbPath, Buffer.from(thumbBase64, "base64"), { flag: "w" });
+  writeFileAtomicSync(thumbPath, Buffer.from(thumbBase64, "base64"));
   assertFileExists(thumbPath, "writePatternFromDrawRegistry: write failed: " + thumbPath);
 
-  const manifest = readJsonFileSync(manifestPath);
-  if (!Array.isArray(manifest)) {
-    throw new Error("writePatternFromDrawRegistry: manifest must be an array: " + manifestPath);
-  }
-
-  manifest.push({
+  const manifestIndexAdded = appendManifestEntry(manifestPath, {
     filename: base,
     path:     jsName,    // Patterns model: local filename within category folder
     title:    jsName,    // placeholder title (your documented rule)
     status:   "new"
-  });
-
-  writeJsonFileSync(manifestPath, manifest);
+  }, "writePatternFromDrawRegistry");
 
   return {
     request: "writePatternFromDrawRegistry",
@@ -489,7 +483,7 @@ export async function writePatternFromDrawRegistry(payload = {}) {
     scriptPath,
     thumbPath,
     manifestPath,
-    manifestIndexAdded: manifest.length - 1
+    manifestIndexAdded
   };
 
 } // end writePatternFromDrawRegistry

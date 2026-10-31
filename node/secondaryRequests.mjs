@@ -9,18 +9,16 @@
 import fs from "fs";
 import path from "path";
 import { assertSimpleName } from "./safePaths.mjs";
-import { readJsonFileSync, writeJsonFileSync } from "./serviceFileHelpers.mjs";
+import { readJsonFileSync, writeJsonFileSync, writeFileAtomicSync } from "./serviceFileHelpers.mjs";
 
 
 /* ===========================================================
-   FIXED: saveSecondaryObject
+   TASK: saveSecondaryObject
 
-   This is the replacement for the saveSecondaryObject function
-   in sketchpadService.mjs (around line 2441)
-
-   Changes:
-   - Now updates drawRegistry/directoryRegistry.json when creating
-     a new primaryId directory for the first time
+   Saves one set of Draw settings (a secondary object) as JSON plus a
+   thumbnail under drawRegistry/<primaryId>/, and adds it to that
+   folder's manifest. Also updates drawRegistry/directoryRegistry.json
+   when it creates a new primaryId directory for the first time.
 =========================================================== */
 
 export async function saveSecondaryObject(payload = {}) {
@@ -57,7 +55,7 @@ export async function saveSecondaryObject(payload = {}) {
 
   const thumbFilename = "thumb_" + safeName + ".png";
   const thumbPath = path.join(imagesDir, thumbFilename);
-  fs.writeFileSync(thumbPath, Buffer.from(thumbBase64, "base64"), { flag: "w" });
+  writeFileAtomicSync(thumbPath, Buffer.from(thumbBase64, "base64"));
 
   // Update Manifest
   const manifestPath = path.join(primaryDir, "manifest.json");
@@ -66,7 +64,7 @@ export async function saveSecondaryObject(payload = {}) {
     try {
       manifest = readJsonFileSync(manifestPath);
       if (!Array.isArray(manifest)) manifest = [];
-    } catch (e) { manifest = []; }
+    } catch { manifest = []; }
   }
 
   const entryIndex = manifest.findIndex(e => e.filename === safeName);
@@ -174,7 +172,7 @@ export async function getSecondaryManifest(payload = {}) {
     try {
       manifest = readJsonFileSync(manifestPath);
       if (!Array.isArray(manifest)) manifest = [];
-    } catch (e) { manifest = []; }
+    } catch { manifest = []; }
   }
 
   return {
@@ -189,7 +187,7 @@ export async function getSecondaryManifest(payload = {}) {
 /* ===========================================================
    TASK: getPrimaryObjectsWithSecondaries
 =========================================================== */
-export async function getPrimaryObjectsWithSecondaries(payload = {}) {
+export async function getPrimaryObjectsWithSecondaries() {
   const registryRoot = path.resolve("./drawRegistry");
   const registryFile = path.join(registryRoot, "directoryRegistry.json");
 
@@ -197,7 +195,7 @@ export async function getPrimaryObjectsWithSecondaries(payload = {}) {
   if (fs.existsSync(registryFile)) {
     try {
       ids = readJsonFileSync(registryFile);
-    } catch(e) {}
+    } catch {}
   }
 
   if (!Array.isArray(ids)) ids = [];
@@ -209,7 +207,7 @@ export async function getPrimaryObjectsWithSecondaries(payload = {}) {
        try {
          const m = readJsonFileSync(manifestPath);
          if (Array.isArray(m) && m.length > 0) withSecondaries.push(id);
-       } catch(e) {}
+       } catch {}
     }
   }
 
@@ -239,7 +237,7 @@ export async function readSecondaryObject(payload = {}) {
   let content = null;
   try {
     content = readJsonFileSync(filePath);
-  } catch (e) {
+  } catch {
     throw new Error("Failed to parse JSON: " + filePath);
   }
 
