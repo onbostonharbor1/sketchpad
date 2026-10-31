@@ -1,7 +1,6 @@
 ////////////////////////////////////////////////////////////////
 // overlay.js --  CLEAN FINAL VERSION
 ////////////////////////////////////////////////////////////////
-import { openHelpEditorTinyMCE} from "./help.js";
 
 export const overlayManager = {
   // Panel overlays (help / forms / debug)
@@ -123,6 +122,14 @@ export function closeOverlay() {
 
 // overlay.js  (UPDATE showHelpOverlay)
 
+// Open the help editor. TinyMCE is large, so helpEditor.js is loaded the first
+// time a help page is edited, not at start-up.
+function openHelpEditor(helpPath, titleText, options) {
+  import("./helpEditor.js").then(editor => {
+    editor.openHelpEditorTinyMCE(helpPath, titleText, options);
+  });
+}
+
 // overlay.js  (REPLACE showHelpOverlay with this version)
 
 export function showHelpOverlay(helpPath, titleText, options = {}) {
@@ -135,7 +142,7 @@ export function showHelpOverlay(helpPath, titleText, options = {}) {
   // CREATE PATH: do NOT fetch; open empty editor immediately.
   if (createIfMissing) {
     if (!titleText) throw new Error("showHelpOverlay(create): titleText missing");
-    openHelpEditorTinyMCE(helpPath, titleText, { initialBodyHtml: "" });
+    openHelpEditor(helpPath, titleText, { initialBodyHtml: "" });
     return;
   }
 
@@ -195,7 +202,7 @@ export function showHelpOverlay(helpPath, titleText, options = {}) {
         if (!editBtn) throw new Error("showHelpOverlay: #helpEditButton not found");
 
         editBtn.onclick = () => {
-          openHelpEditorTinyMCE(helpPath, pageTitle, { initialBodyHtml: bodyHtml });
+          openHelpEditor(helpPath, pageTitle, { initialBodyHtml: bodyHtml });
         }; // end onclick
       }
 
