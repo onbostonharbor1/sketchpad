@@ -159,15 +159,14 @@ where both a thumbnail grid and sliders appear (Draw with saved settings), and t
    (letters, digits, `_ . - / ` and space only), so quoting it is safe. Restart the Node window, try again, then run
    `npm run test:node`.
 2. **Active-tab shadow** (Job 1, group A). Decide; the picture for either choice is a one-line change.
-3. **Refresh the TinyMCE assets** if a help editor menu misbehaves. In a command prompt in the repo folder:
-   the five folders, one command each:
-   `robocopy node_modules\tinymce\skins public\tinymce\skins /E`, the same for `icons`, `models`, `plugins` and `themes`.
-   Then `npm run test:tabs` and open the help editor. (The program code is
-   TinyMCE 8.10.1; `public/tinymce` was copied from 8.3.x in January.)
+3. **Refresh the TinyMCE assets** if a help editor menu misbehaves. Copy five folders, in a command prompt in the repo
+   folder: `robocopy node_modules\tinymce\skins public\tinymce\skins /E`, and the same for `icons`, `models`, `plugins`
+   and `themes`. Then `npm run test:tabs` and open the help editor. (The program code is TinyMCE 8.10.1;
+   `public/tinymce` was copied from 8.3.x in January.)
 4. **Script state leak** (`NEXT_PASS.md` 1g). In Patterns, open items one after another in one long session
    (about a hundred) until `patterns/curve_stitch/curvedArcsInnerStar.js` or `patterns/figures/complicatedParabolas.js`
    throws; both work on a fresh page. In the browser console, before and after a run, type
-   `JSON.stringify(drawState)` and compare: the field that differs between a fresh page and a late run is the leak. Report
+   `JSON.stringify((await import("/draw/drawState.js")).drawState)` and compare: the field that differs between a fresh page and a late run is the leak. Report
    the field; the fix is to reset it in `resetCanvas()` in `draw/drawState.js`.
 5. **Manifest phase** (`maintain_manifests.mjs` guard). The last lines of the file are an unguarded `runManifestMaintenance().then(...).catch(... process.exit(1))`, so
    importing the file (which the Node service does) runs the whole rebuild. Wrap that call in
