@@ -35,8 +35,7 @@
 import { menuManager }                from "/ui/menuManager.js";
 import { setCaptionBar }              from "/ui/caption.js";
 import { makeHelpItem, makeNotesItem } from "/ui/menuCmds.js";
-import { createGalleryPatternPng }    from "/ui/menuCmds.js";
-import { createPatternScript }        from "/ui/menuCmds.js";
+import { createGalleryPatternPng, createPatternScript } from "/ui/draw/drawExport.js";
 import { saveSecondary, archiveSecondary } from "/ui/draw/secondaryObjects.js";
 import { uiState }                    from "/ui/uiState.js";
 import { openHelpHomeOverlay }        from "/ui/help.js";

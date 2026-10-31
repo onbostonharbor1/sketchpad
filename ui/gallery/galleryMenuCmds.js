@@ -31,15 +31,9 @@ import { setCaptionBar }                   from "/ui/caption.js";
 import { menuManager }                     from "/ui/menuManager.js";
 import { openHelpHomeOverlay }             from "/ui/help.js";
 import { nodeRebuildAndValidateManifests } from "/ui/nodeLayer.js";
-import {
-  showScriptOffcanvas,
-  openEditManifestDialog,
-  makeHelpItem,
-  makeShowScriptItem,
-  makeEditManifestItem,
-  makeNotesItem,
-  makeArchiveItem
-}                                          from "/ui/menuCmds.js";
+import { makeHelpItem, makeShowScriptItem, makeEditManifestItem, makeNotesItem, makeArchiveItem } from "/ui/menuCmds.js";
+import { showScriptOffcanvas } from "/ui/scriptView.js";
+import { openEditManifestDialog } from "/ui/editManifestDialog.js";
 import { formatRebuildReportShared } from "/ui/rebuildSync.js";
 import { setCommandsButtonHandler } from "/ui/commandsButton.js";
 import { showCommandsOffcanvas } from "/ui/offcanvas.js";
@@ -193,7 +187,7 @@ export async function archiveGalleryItem(info) {
 
   if (!window.confirm(`Archive "${info.title || info.filename}"?`)) return;
 
-  const { archiveItem } = await import("/ui/menuCmds.js");
+  const { archiveItem } = await import("/ui/archiveItem.js");
 
   const result = await archiveItem({
     payload:   { manifestPath: info.manifestPath, filename: info.filename },

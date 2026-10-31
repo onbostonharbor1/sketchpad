@@ -24,16 +24,10 @@
 
 import { setCaptionBar }          from "/ui/caption.js";
 import { menuManager }            from "/ui/menuManager.js";
-import {
-  archiveItem,
-  showScriptOffcanvas,
-  openEditManifestDialog,
-  makeHelpItem,
-  makeShowScriptItem,
-  makeNotesItem,
-  makeEditManifestItem,
-  makeArchiveItem
-}                                 from "/ui/menuCmds.js";
+import { makeHelpItem, makeShowScriptItem, makeNotesItem, makeEditManifestItem, makeArchiveItem } from "/ui/menuCmds.js";
+import { archiveItem } from "/ui/archiveItem.js";
+import { showScriptOffcanvas } from "/ui/scriptView.js";
+import { openEditManifestDialog } from "/ui/editManifestDialog.js";
 
 
 /* ============================================================

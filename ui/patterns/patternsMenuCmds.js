@@ -33,17 +33,10 @@ import { menuManager }                from "/ui/menuManager.js";
 import { setCaptionBar }              from "/ui/caption.js";
 import { openHelpHomeOverlay }        from "/ui/help.js";
 import { nodeRebuildAndValidateManifests } from "/ui/nodeLayer.js";
-import {
-  showScriptOffcanvas,
-  archiveItem,
-  openEditManifestDialog,
-  makeHelpItem,
-  makeShowScriptItem,
-  makeNotesItem,
-  makeThumbnailItem,
-  makeEditManifestItem,
-  makeArchiveItem
-}                                     from "/ui/menuCmds.js";
+import { makeHelpItem, makeShowScriptItem, makeNotesItem, makeThumbnailItem, makeEditManifestItem, makeArchiveItem } from "/ui/menuCmds.js";
+import { showScriptOffcanvas } from "/ui/scriptView.js";
+import { archiveItem } from "/ui/archiveItem.js";
+import { openEditManifestDialog } from "/ui/editManifestDialog.js";
 import { buildCanvasThumbnailBase64 } from "/ui/thumbnails.js";
 import { setCommandsButtonHandler } from "/ui/commandsButton.js";
 import { showCommandsOffcanvas } from "/ui/offcanvas.js";
