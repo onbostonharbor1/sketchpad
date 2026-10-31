@@ -37,6 +37,7 @@ revert if it fails: `git revert <commit>`.
 | `f74073f` | `css/base.css` (the Bootstrap rules the app uses) replaces the Bootstrap stylesheet link |
 | `a962472` | Bootstrap removed: own side panel and accordion code, no script, no dependency |
 | `71dd92c` | CSS: duplicate rules merged, an empty legacy rule dropped |
+| `d4982ff` | Deleted unused code (you approved): no-op `deletePackageScript`, `renamePackageScript`, unused `editPackageScript`; 3 unused radio helpers in the Edit Manifest dialog; `serializeParamsObject` and a duplicate `saveSecondaryObject` in `drawExport.js`; unused packages `@jaames/iro`, `dexie`, `sharp` |
 
 ## 1. Gates to run first (all on Windows)
 
@@ -137,7 +138,14 @@ all look and work as before. (Nothing is loaded from a CDN any more; the Help ed
 
 **T15. Pursuit scripts (commit `6443cf3`).** Gallery > Scripts: one "Pursuit Curves in Polygon" in the Pursuit group; run it.
 
-**T16. `git status` after a run** shows no unexpected changed manifests. (If `home/manifest.json` or a category manifest
+**T16. Deleted code (commit `d4982ff`).** `npm install` removes the three packages (it will take a moment). `npm run test:node`
+prints `52 passed` (3 fewer than before: the three deleted request names are no longer tested). Then use the things that
+sit next to what was removed: Edit Manifest on any item (dialog opens; pick a preset status, type a custom one, clear
+it; OK saves), Draw > caption menu v > Create Pattern, Create Gallery PNG, Save as secondary (each still works). The
+Coloris colour picker still opens in Draw (the colour picker library stays; `@jaames/iro` was a different, unused one).
+Failure reads "... is not defined" or "does not provide an export named ...". Undo: `git revert d4982ff`.
+
+**T17. `git status` after a run** shows no unexpected changed manifests. (If `home/manifest.json` or a category manifest
 changed, that is the start-up rebuild, as before. `package-lock.json` should not change by itself.)
 
 ## 3. Things you can check from the pictures
@@ -174,8 +182,8 @@ changed, that is the start-up rebuild, as before. `package-lock.json` should not
 | Draw, Figures and Patterns share one set of object settings (reproduced) | Your call (31 Oct): treat as an accident, revisit later. Item 1a in `NEXT_PASS.md`. Figure layers already work on their own copies, so dragging and welds are unaffected. |
 | Script state leak (two scripts fail after about 100 earlier scripts) | Needs a look at which `drawState` fields survive `resetCanvas()` first. |
 | `029.JPG` listed in `gallery/Ideabook/possible/manifest.json`, file missing | Remove the entry or restore the file; yours to decide. |
-| Unused packages `@jaames/iro`, `dexie`, `sharp`; TinyMCE advisories | Your confirmation. `npm audit fix` updates TinyMCE; check the help editor after (T9). |
-| Dead code the splits turned up, no-op placeholders | Not deleted. Listed in `FOLLOWUPS_node-service.md` for your yes. |
+| TinyMCE advisories | Your confirmation. `npm audit fix` updates TinyMCE; check the help editor after (T9). |
+| Dead code still listed in `FOLLOWUPS_node-service.md` | The rest of the follow-up list (comments, atomic writes, tests, further splits); the deletions you approved are done. |
 | 47 `!important` in the CSS | Removing all of them in `parameterControls.css` changed 8 screens, so each needs separate work. Not started. Listed in `NEXT_PASS.md`. |
 | `visibility held in state` (50 `.style.display` assignments), `checkboxWidget.js` child walk | Not started; changes how regions show. `NEXT_PASS.md`, Branch 4. |
 | Manifest phase: maintenance runs three times at start, import-time run with `process.exit(1)` | Belongs to the manifest phase you planned before Phase 10. |
