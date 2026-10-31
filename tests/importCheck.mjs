@@ -13,7 +13,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
-const SKIP_DIR = /^(node_modules|\.git|archive|dist|public|\.vite)$/;
+const SKIP_DIR = /^(node_modules|\.git|archive|dist|dist-static|public|\.vite)$/;
 
 const files = [];
 (function walk(dir) {
