@@ -19,7 +19,8 @@ import { nodeDispatch } from "./nodeLayer.js";
 import { overlayManager } from "./overlay.js";
 import { showHelpOverlay, showNotesOverlay, closeNotesOverlay } from "./overlay.js";
 import { extractHeaderNotes, reflowNotes } from "./notes.js";
-import { escapeHtml, buildCanvasThumbnailBase64 } from "/ui/uiUtilities.js";
+import { escapeHtml } from "/ui/htmlText.js";
+import { buildCanvasThumbnailBase64 } from "/ui/thumbnails.js";
 import { manifest } from "./manifest.js";
 
 /* ============================================================

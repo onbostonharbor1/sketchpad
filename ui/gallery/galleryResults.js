@@ -24,11 +24,8 @@
 
 import { drawState }              from "/draw/drawState.js";
 import { runScriptByPath }        from "/ui/scriptRunner.js";
-import {
-  clearDivs,
-  renderThumbnailGrid,
-  markSelectedThumbnail
-}                                 from "/ui/uiUtilities.js";
+import { clearDivs } from "/ui/uiUtilities.js";
+import { renderThumbnailGrid, markSelectedThumbnail } from "/ui/thumbnails.js";
 import {
   getCurrentList,
   getCurrentIndex,

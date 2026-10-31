@@ -22,10 +22,8 @@
    ============================================================ */
 
 import { manifest }              from "/ui/manifest.js";
-import {
-  clearDivs,
-  setCommandsButtonLabel
-}                                from "/ui/uiUtilities.js";
+import { clearDivs } from "/ui/uiUtilities.js";
+import { setCommandsButtonLabel } from "/ui/commandsButton.js";
 import {
   resetGalleryState,
   setCurrentDomain,

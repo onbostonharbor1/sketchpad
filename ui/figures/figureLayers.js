@@ -80,7 +80,7 @@
 
 import { resetCanvas, drawState }    from "/draw/drawState.js";
 import { buildParameterControls }   from "/ui/parameterControls.js";
-import { syncOverlayToCanvas }      from "/ui/uiUtilities.js";
+import { syncLayerToCanvas as syncOverlayToCanvas } from "/ui/canvasLayerManager.js";
 import { refreshPoints, drawFigurePoints } from "./figurePoints.js";
 import { activatePointsInput, deactivatePointsInput } from "./figurePointer.js";
 import { activateCentroid, centroidHit, drawCentroid } from "./figureCentroid.js";

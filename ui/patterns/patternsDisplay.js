@@ -22,7 +22,7 @@
 
 import { runScriptByPath }                      from "/ui/scriptRunner.js";
 import { manifest }                             from "/ui/manifest.js";
-import { renderThumbnailGrid, markSelectedThumbnail } from "/ui/uiUtilities.js";
+import { renderThumbnailGrid, markSelectedThumbnail } from "/ui/thumbnails.js";
 import { getCurrentCategory, getCurrentIndex,
          setCurrentCategory, setCurrentIndex }  from "./patternsState.js";
 import { updatePatternsCaption }                from "./patternsMenuCmds.js";

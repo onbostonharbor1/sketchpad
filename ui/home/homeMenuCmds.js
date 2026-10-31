@@ -36,11 +36,9 @@ import {
   makeShowScriptItem,
   makeEditManifestItem
 }                                            from "/ui/menuCmds.js";
-import {
-  formatRebuildReportShared,
-  setCommandsButtonHandler,
-  showCommandsOffcanvas
-}                                            from "/ui/uiUtilities.js";
+import { formatRebuildReportShared } from "/ui/rebuildSync.js";
+import { setCommandsButtonHandler } from "/ui/commandsButton.js";
+import { showCommandsOffcanvas } from "/ui/offcanvas.js";
 import { refreshHomeCategoriesFromManifestEdit } from "./homeManifest.js";
 import { isJsPath }                          from "./homeResults.js";
 
@@ -224,7 +222,7 @@ export function wireHomeCommandsButton() {
 
           const report = await nodeRebuildAndValidateManifests();
 
-          const { syncSystemStateAfterRebuild } = await import("/ui/uiUtilities.js");
+          const { syncSystemStateAfterRebuild } = await import("/ui/rebuildSync.js");
           await syncSystemStateAfterRebuild();
 
           const { initHomeTab } = await import("/ui/home/home.js");

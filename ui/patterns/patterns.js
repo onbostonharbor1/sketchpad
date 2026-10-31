@@ -22,7 +22,7 @@
    ============================================================ */
 
 import { manifest }                from "/ui/manifest.js";
-import { setCommandsButtonLabel }  from "/ui/uiUtilities.js";
+import { setCommandsButtonLabel } from "/ui/commandsButton.js";
 import {
   resetPatternsState,
   setCurrentCategory,

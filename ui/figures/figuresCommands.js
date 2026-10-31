@@ -33,12 +33,9 @@
 import { setCaptionBar }            from "/ui/caption.js";
 import { menuManager }              from "/ui/menuManager.js";
 import { makeHelpItem, makeNotesItem } from "/ui/menuCmds.js";
-import {
-  setCommandsButtonLabel,
-  setCommandsButtonHandler,
-  showCommandsOffcanvas,
-  formatRebuildReportShared
-}                                   from "/ui/uiUtilities.js";
+import { setCommandsButtonLabel, setCommandsButtonHandler } from "/ui/commandsButton.js";
+import { showCommandsOffcanvas } from "/ui/offcanvas.js";
+import { formatRebuildReportShared } from "/ui/rebuildSync.js";
 import { nodeRebuildAndValidateManifests } from "/ui/nodeLayer.js";
 import { openHelpHomeOverlay }      from "/ui/help.js";
 import { uiState }                  from "/ui/uiState.js";
@@ -89,7 +86,7 @@ export function wireFiguresCommandsButton() {
             // import() inside a function loads the module only when it is
             // needed, here only after a rebuild. It also avoids an import
             // loop at load time (figures.js imports this file).
-            const { syncSystemStateAfterRebuild } = await import("/ui/uiUtilities.js");
+            const { syncSystemStateAfterRebuild } = await import("/ui/rebuildSync.js");
             await syncSystemStateAfterRebuild();
 
             const { initFiguresTab } = await import("./figures.js");

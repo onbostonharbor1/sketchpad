@@ -41,12 +41,10 @@ import { saveSecondary, archiveSecondary } from "/ui/draw/secondaryObjects.js";
 import { uiState }                    from "/ui/uiState.js";
 import { openHelpHomeOverlay }        from "/ui/help.js";
 import { nodeRebuildAndValidateManifests } from "/ui/nodeLayer.js";
-import {
-  buildCanvasThumbnailBase64,
-  setCommandsButtonHandler,
-  showCommandsOffcanvas,
-  formatRebuildReportShared
-}                                     from "/ui/uiUtilities.js";
+import { buildCanvasThumbnailBase64 } from "/ui/thumbnails.js";
+import { setCommandsButtonHandler } from "/ui/commandsButton.js";
+import { showCommandsOffcanvas } from "/ui/offcanvas.js";
+import { formatRebuildReportShared } from "/ui/rebuildSync.js";
 
 
 /* ============================================================
@@ -482,7 +480,7 @@ export function wireDrawCommandsButton() {
 
             const report = await nodeRebuildAndValidateManifests();
 
-            const { syncSystemStateAfterRebuild } = await import("/ui/uiUtilities.js");
+            const { syncSystemStateAfterRebuild } = await import("/ui/rebuildSync.js");
             await syncSystemStateAfterRebuild();
 
             const { initDrawTab } = await import("/ui/draw/draw.js");

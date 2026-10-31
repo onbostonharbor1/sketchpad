@@ -14,7 +14,7 @@ import { uiState }               from "/ui/uiState.js";
 import { resetCanvas }           from "/draw/drawState.js";
 import { buildParameterControls } from "/ui/parameterControls.js";
 import { markTabDirty }           from "/ui/draw/drawNav.js";
-import { syncOverlayToCanvas }    from "/ui/uiUtilities.js";
+import { syncLayerToCanvas as syncOverlayToCanvas } from "/ui/canvasLayerManager.js";
 import { canvasLayerManager } from "/ui/canvasLayerManager.js";
 
 /**
@@ -51,7 +51,7 @@ export function drawActiveTab() {
   if (!ctx) throw new Error("drawActiveTab: global ctx missing");
   ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-  // Sync the interaction layer (and future layers) via uiUtilities
+  // Sync the interaction layer (and future layers) via canvasLayerManager
   syncOverlayToCanvas("interaction", canvas);
   syncOverlayToCanvas("guides", canvas);
 

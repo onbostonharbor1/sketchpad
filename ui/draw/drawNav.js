@@ -36,7 +36,9 @@
      loadSecondaryObjectInTab(primaryId, item, list, index)
    ============================================================ */
 
-import { clearDivs, showOffcanvasPanel, renderThumbnailGrid } from "/ui/uiUtilities.js";
+import { clearDivs } from "/ui/uiUtilities.js";
+import { showOffcanvasPanel } from "/ui/offcanvas.js";
+import { renderThumbnailGrid } from "/ui/thumbnails.js";
 import { getIDsWithSecondaries, listSecondaries, loadSecondary } from "/ui/draw/secondaryObjects.js";
 import { drawActiveTab }                                        from "/ui/draw/drawRunner.js";
 import { getIdsWithSecondaries, setIdsWithSecondaries }        from "./drawTabState.js";

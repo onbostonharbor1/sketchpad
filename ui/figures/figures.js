@@ -58,7 +58,7 @@
      "state is written through immediately").
    ============================================================ */
 
-import { setCommandsButtonLabel }    from "/ui/uiUtilities.js";
+import { setCommandsButtonLabel } from "/ui/commandsButton.js";
 import { manifest }                  from "/ui/manifest.js";
 import {
   setFiguresCaption,

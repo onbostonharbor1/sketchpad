@@ -27,7 +27,7 @@
    ============================================================ */
 
 import { renderCategories }        from "/ui/categories.js";
-import { clearDivs }               from "/ui/uiUtilities.js";
+import { clearDivs } from "/ui/uiUtilities.js";
 import {
   setCurrentDomain,
   setCurrentCategory,

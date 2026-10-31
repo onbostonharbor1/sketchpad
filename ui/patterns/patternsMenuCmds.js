@@ -44,12 +44,10 @@ import {
   makeEditManifestItem,
   makeArchiveItem
 }                                     from "/ui/menuCmds.js";
-import {
-  buildCanvasThumbnailBase64,
-  setCommandsButtonHandler,
-  showCommandsOffcanvas,
-  formatRebuildReportShared
-}                                     from "/ui/uiUtilities.js";
+import { buildCanvasThumbnailBase64 } from "/ui/thumbnails.js";
+import { setCommandsButtonHandler } from "/ui/commandsButton.js";
+import { showCommandsOffcanvas } from "/ui/offcanvas.js";
+import { formatRebuildReportShared } from "/ui/rebuildSync.js";
 import { onPrev, onNext }             from "./patternsDisplay.js";
 
 
@@ -306,7 +304,7 @@ export function wirePatternsCommandsButton() {
 
           const report = await nodeRebuildAndValidateManifests();
 
-          const { syncSystemStateAfterRebuild } = await import("/ui/uiUtilities.js");
+          const { syncSystemStateAfterRebuild } = await import("/ui/rebuildSync.js");
           await syncSystemStateAfterRebuild();
 
           const { ensurePatternsManifestLoaded, restorePatternsTab } = await import("/ui/patterns/patterns.js");

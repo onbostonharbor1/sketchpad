@@ -22,7 +22,7 @@
    ============================================================ */
 
 import { buildSubtabBar, activateSubtab } from "/ui/resultsViewController.js";
-import { setCommandsButtonLabel }         from "/ui/uiUtilities.js";
+import { setCommandsButtonLabel } from "/ui/commandsButton.js";
 import { getHasRunUtility }               from "./utilitiesState.js";
 
 

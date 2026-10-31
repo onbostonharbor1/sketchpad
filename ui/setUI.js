@@ -11,7 +11,7 @@ import { GalleryTabSpec }  from "/ui/gallery/gallery.js";
 import { UtilityTabSpec }  from "/ui/utilities/utilities.js";
 import { FiguresTabSpec }  from "/ui/figures/figures.js";
 
-import { clearDivs }        from "/ui/uiUtilities.js";
+import { clearDivs } from "/ui/uiUtilities.js";
 import { initMenuManager }  from "./menuManager.js";
 import { initOverlay }      from "./overlay.js";
 import { initCanvasLayers } from "./canvasLayerManager.js";

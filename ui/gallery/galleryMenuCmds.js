@@ -40,11 +40,9 @@ import {
   makeNotesItem,
   makeArchiveItem
 }                                          from "/ui/menuCmds.js";
-import {
-  formatRebuildReportShared,
-  setCommandsButtonHandler,
-  showCommandsOffcanvas
-}                                          from "/ui/uiUtilities.js";
+import { formatRebuildReportShared } from "/ui/rebuildSync.js";
+import { setCommandsButtonHandler } from "/ui/commandsButton.js";
+import { showCommandsOffcanvas } from "/ui/offcanvas.js";
 import { getCurrentCategory }              from "./galleryState.js";
 import {
   showPrevGalleryItem,
@@ -324,7 +322,7 @@ export function wireGalleryCommandsButton() {
 
           const report = await nodeRebuildAndValidateManifests();
 
-          const { syncSystemStateAfterRebuild } = await import("/ui/uiUtilities.js");
+          const { syncSystemStateAfterRebuild } = await import("/ui/rebuildSync.js");
           await syncSystemStateAfterRebuild();
 
           const { initGalleryTab } = await import("/ui/gallery/gallery.js");

@@ -23,13 +23,10 @@
    ============================================================ */
 
 import { manifest }                          from "/ui/manifest.js";
-import {
-  setCommandsButtonLabel,
-  setCommandsButtonHandler,
-  showCommandsOffcanvas,
-  clearDivs,
-  formatRebuildReportShared
-}                                            from "/ui/uiUtilities.js";
+import { setCommandsButtonLabel, setCommandsButtonHandler } from "/ui/commandsButton.js";
+import { showCommandsOffcanvas } from "/ui/offcanvas.js";
+import { clearDivs } from "/ui/uiUtilities.js";
+import { formatRebuildReportShared } from "/ui/rebuildSync.js";
 import { nodeRebuildAndValidateManifests }   from "/ui/nodeLayer.js";
 import { openHelpHomeOverlay }               from "/ui/help.js";
 import {
@@ -296,7 +293,7 @@ export function wireUtilitiesCommandsButton() {
 
           const report = await nodeRebuildAndValidateManifests();
 
-          const { syncSystemStateAfterRebuild } = await import("/ui/uiUtilities.js");
+          const { syncSystemStateAfterRebuild } = await import("/ui/rebuildSync.js");
           await syncSystemStateAfterRebuild();
 
           await initUtilityTab(false);

@@ -24,7 +24,8 @@
    ============================================================ */
 
 import { uiState }                    from "/ui/uiState.js";
-import { clearDivs, setCommandsButtonLabel } from "/ui/uiUtilities.js";
+import { clearDivs } from "/ui/uiUtilities.js";
+import { setCommandsButtonLabel } from "/ui/commandsButton.js";
 import { drawActiveTab, setDrawSketchpad }   from "/ui/draw/drawRunner.js";
 import {
   setDrawSubtabs,
