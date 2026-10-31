@@ -38,6 +38,9 @@ revert if it fails: `git revert <commit>`.
 | `a962472` | Bootstrap removed: own side panel and accordion code, no script, no dependency |
 | `71dd92c` | CSS: duplicate rules merged, an empty legacy rule dropped |
 | `d4982ff` | Deleted unused code (you approved): no-op `deletePackageScript`, `renamePackageScript`, unused `editPackageScript`; 3 unused radio helpers in the Edit Manifest dialog; `serializeParamsObject` and a duplicate `saveSecondaryObject` in `drawExport.js`; unused packages `@jaames/iro`, `dexie`, `sharp` |
+| `daf82c0` | Removed the unreachable "show controls" checkbox code, its state field and CSS |
+| `911c97b` | `npm audit fix`: tinymce 8.3.2 to 8.10.1, vite 7.1.12 to 7.3.7 (lock file only) |
+| `3be737d` | Ideabook: stale `029.JPG` entry removed from `possible/manifest.json` |
 
 ## 1. Gates to run first (all on Windows)
 
@@ -145,7 +148,19 @@ it; OK saves), Draw > caption menu v > Create Pattern, Create Gallery PNG, Save 
 Coloris colour picker still opens in Draw (the colour picker library stays; `@jaames/iro` was a different, unused one).
 Failure reads "... is not defined" or "does not provide an export named ...". Undo: `git revert d4982ff`.
 
-**T17. `git status` after a run** shows no unexpected changed manifests. (If `home/manifest.json` or a category manifest
+**T17. Show-controls removal, npm update, Ideabook (commits `daf82c0`, `911c97b`, `3be737d`).**
+1. `npm install`, then start the app. Draw > Parametrics: tick and untick "Show Intersection Dots": the drawing changes
+   each time (checkboxes still work without the removed code). Undo: `git revert daf82c0`.
+2. Help editor with the new TinyMCE 8.10.1: Help > open a page > Edit: the editor opens with a menu bar and toolbar, type
+   a few words, Save, reopen the page: the words are there; Cancel closes without saving. The editor's skin, plugin and icon
+   files in `public/tinymce` were copied from an older TinyMCE (January) and the program code is now newer; it opened with
+   no console errors here, but if a toolbar button or menu item is missing or broken, that is the cause and the fix is to
+   copy the files again from `node_modules/tinymce`. Undo: `git revert 911c97b` (puts the lock file back; then `npm install`).
+3. The dev server (Vite 7.3.7) starts and the app loads as before.
+4. Gallery > Ideabook: "possible" now shows one fewer picture (the missing 029 is gone); pictures 028 and 030 still show;
+   "ok" still shows 029. Undo: `git revert 3be737d`.
+
+**T18. `git status` after a run** shows no unexpected changed manifests. (If `home/manifest.json` or a category manifest
 changed, that is the start-up rebuild, as before. `package-lock.json` should not change by itself.)
 
 ## 3. Things you can check from the pictures
@@ -181,21 +196,44 @@ changed, that is the start-up rebuild, as before. `package-lock.json` should not
 |---|---|
 | Draw, Figures and Patterns share one set of object settings (reproduced) | Your call (31 Oct): treat as an accident, revisit later. Item 1a in `NEXT_PASS.md`. Figure layers already work on their own copies, so dragging and welds are unaffected. |
 | Script state leak (two scripts fail after about 100 earlier scripts) | Needs a look at which `drawState` fields survive `resetCanvas()` first. |
-| `029.JPG` listed in `gallery/Ideabook/possible/manifest.json`, file missing | Remove the entry or restore the file; yours to decide. |
-| TinyMCE advisories | Your confirmation. `npm audit fix` updates TinyMCE; check the help editor after (T9). |
+| Five moderate advisories (eslint chain, dev only) | The fix `npm audit` offers is a breaking eslint change. Left alone. |
 | Dead code still listed in `FOLLOWUPS_node-service.md` | The rest of the follow-up list (comments, atomic writes, tests, further splits); the deletions you approved are done. |
 | 47 `!important` in the CSS | Removing all of them in `parameterControls.css` changed 8 screens, so each needs separate work. Not started. Listed in `NEXT_PASS.md`. |
-| `visibility held in state` (50 `.style.display` assignments), `checkboxWidget.js` child walk | Not started; changes how regions show. `NEXT_PASS.md`, Branch 4. |
+| Visibility held in state: 46 `.style.display` assignments remain | One by one, section 7 below lists each with its own check. The checkbox walk (the one that read the page) was dead code and is gone. |
 | Manifest phase: maintenance runs three times at start, import-time run with `process.exit(1)` | Belongs to the manifest phase you planned before Phase 10. |
 | Phase items (handle-drop weld, delete layer, Phase 10, thumbnails, native color input, Phase 9 reshape, template import and welding to templates, instrumentation) | Large; each needs your design call or your eyes. |
 | Help Overview PDFs (`docs/*.pdf`) | Not regenerated; the HTML pages and the PDF builder are updated, so rebuilding gives current text. Help pages that still say "Bootstrap" were not rewritten. |
 
-## 7. A copy to look at without Node
+## 7. Show / hide code left as it is (check each one when it is converted)
+
+Today each of these sets `element.style.display` directly, so whether a thing is shown lives on the page and not in
+state. Converting one means giving it a named flag in `uiState` and one function that applies the flags. Each needs its own
+look, because the result depends on when the region is rebuilt. Count: 46 lines in `ui/`. Grouped here where one check
+covers the group.
+
+| Where (lines) | What it shows or hides | Check when converted |
+|---|---|---|
+| `ui/figures/figuresNav.js` (9) | Figures layout: `#text` versus the canvas wrapper, `#action`, the side strip, the button strip, the points-mode toggle | Figures: open the category list, open a figure, back to the list, points mode on and off, switch tabs and return; each time the right panes show |
+| `ui/figures/figurePointer.js` (2), `ui/figures/figures.js` (1) | The pointer layer and the canvas while a figure is open | Figures: weld message and layer show while pointing, gone after leaving the tab |
+| `ui/overlay.js` (7) | The popup layers: Help, Notes, forms, debug, and the container | Open and close Help, Notes (Draw item), Edit Manifest; each opens, closes, and leaves no layer showing |
+| `ui/help.js` (1), `ui/helpEditor.js` (1), `ui/editManifestDialog.js` (2) | The container the Help browser, the editor and the dialog open into | Help browser, Help editor, Edit Manifest dialog each appear and disappear |
+| `ui/nextPrevOverlay.js` (3) | The Prev / Next overlay | Patterns > First Build shows it; every other tab and item does not |
+| `ui/interactor.js` (3), `ui/canvasLayerManager.js` (1) | The interaction layer and overlay layers while handles are armed | Handles show when armed, vanish on leaving the item or tab |
+| `ui/scriptRunner.js` (1), `ui/draw/drawRunner.js` (1), `ui/home/home.js` (1) | The canvas wrapper when a script or Draw object runs | Run a Gallery script, a Draw object, a Home item: canvas appears; the next list view hides it |
+| `ui/caption.js` (1) | The caption bar | Caption shows on tabs that use it, empty on others |
+| `ui/categories.js` (1) | A category item row | Category lists show rows as before in every tab |
+| `ui/controls/rendering/renderer.js` (1) | The interface-controls strip when it has content | A Draw object with interface controls shows them; one without leaves no empty box |
+| `ui/controls/widgets/thumbnailWidget.js` (1), `textWidget.js` (2) | A thumbnail grid and a text control | Secondary thumbnails grid shows; a read-only text control shows |
+| `ui/gallery/galleryResults.js` (1), `ui/home/homeResults.js` (1) | An image in Gallery and Home results | A Gallery pattern and a Home image appear when selected |
+| `ui/setUI.js` (1) | The "failed to start" message | Only shown if start-up fails; test by breaking an import and reloading |
+| `ui/uiUtilities.js` (3) | The region table (already one list in `ui/regions.js`) | T7 covers it |
+
+## 8. A copy to look at without Node
 
 `npm run build:static` writes `dist-static/` (about 6 MB, no internet needed). Serve it from the root of a site. See
 `scripts/buildStatic.mjs` for the flags. Anything needing the Node service says so.
 
-## 8. New tools this sweep added
+## 9. New tools this sweep added
 
 - `npm run check:imports`, `npm run check:ids`, `npm run test:node`, `npm run build:static`.
 - `scripts/extractBootstrapCss.mjs`: a record of how `css/base.css` was made (needs `npm install --no-save bootstrap@5.3.3`).
