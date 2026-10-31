@@ -25,7 +25,9 @@
     "check:imports": "node tests/importCheck.mjs",
     "check:ids": "node tests/idCheck.mjs",
     "test:node": "node tests/nodeSmoke.mjs",
-    "build:static": "node scripts/buildStatic.mjs"
+    "build:static": "node scripts/buildStatic.mjs",
+    "pixels:save": "node tests/pixelShots.mjs",
+    "pixels:compare": "node tests/pixelCompare.mjs"
   },
   "dependencies": {
     "@melloware/coloris": "^0.25.0",
@@ -38,6 +40,7 @@
     "eslint": "^9.39.5",
     "globals": "^17.13.0",
     "playwright": "^1.63.0",
+    "pngjs": "^7.0.0",
     "vite": "^7.1.12",
     "wait-on": "^9.0.3"
   }

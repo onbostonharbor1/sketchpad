@@ -26,3 +26,6 @@ Thumbs.db
 #backup
 __pycache__/
 /dist-static/
+
+# Pictures from npm run pixels:save
+/pixel-refs/
