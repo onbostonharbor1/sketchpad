@@ -154,7 +154,7 @@ all look and work as before. (Nothing is loaded from a CDN any more; the Help ed
 **T15. Pursuit scripts (commit `6443cf3`).** Gallery > Scripts: one "Pursuit Curves in Polygon" in the Pursuit group; run it.
 
 **T16. Deleted code (commit `d4982ff`).** `npm install` removes the three packages (it will take a moment). `npm run test:node`
-prints `52 passed` (3 fewer than before: the three deleted request names are no longer tested). Then use the things that
+prints `60 passed` (the three deleted request names are no longer tested; later commits added more checks). Then use the things that
 sit next to what was removed: Edit Manifest on any item (dialog opens; pick a preset status, type a custom one, clear
 it; OK saves), Draw > caption menu v > Create Pattern, Create Gallery PNG, Save as secondary (each still works). The
 Coloris colour picker still opens in Draw (the colour picker library stays; `@jaames/iro` was a different, unused one).
@@ -227,7 +227,7 @@ changed, that is the start-up rebuild, as before. `package-lock.json` should not
 | Draw, Figures and Patterns share one set of object settings (reproduced) | Your call (31 Oct): treat as an accident, revisit later. Item 1a in `NEXT_PASS.md`. Figure layers already work on their own copies, so dragging and welds are unaffected. |
 | Script state leak (two scripts fail after about 100 earlier scripts) | Needs a look at which `drawState` fields survive `resetCanvas()` first. |
 | Five moderate advisories (eslint chain, dev only) | The fix `npm audit` offers is a breaking eslint change. Left alone. |
-| Dead code still listed in `FOLLOWUPS_node-service.md` | The rest of the follow-up list (comments, atomic writes, tests, further splits); the deletions you approved are done. |
+| What is left in `FOLLOWUPS_node-service.md` | Few items: confirm two Node scripts are still wanted, one possible duplicate escape function, the manifest-run guard and VS Code quoting (Runbook Job 4), splitting the Edit Manifest dialog file. Everything else on that list is done. |
 | 46 `!important` in the CSS, the 46 show/hide lines, fixed `#categories` / `#drawControls`, and the small items | Written as step-by-step jobs in `docs/RUNBOOK_deferred.md` for you to do on the PC (Jobs 1 to 4). |
 | Visibility held in state: 46 `.style.display` assignments remain | One by one, section 7 below lists each with its own check; the recipe is Job 2 in `docs/RUNBOOK_deferred.md`. The checkbox walk (the one that read the page) was dead code and is gone. |
 | Manifest phase: maintenance runs three times at start, import-time run with `process.exit(1)` | Belongs to the manifest phase you planned before Phase 10. |
