@@ -220,8 +220,7 @@ export function saveDrawState() {
       type:         info.type,
       dirty:        info.dirty,
       parameters:   structuredClone(savedParams),
-      drawRegistry: key,
-      showControls: info.showControls ?? false
+      drawRegistry: key
     };
   }
 

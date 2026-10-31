@@ -401,32 +401,6 @@ input.ctrl-text[type="text"] {
 
 
 
-/* Add this to controls.css */
-
-/* Show Controls checkbox header for secondary objects */
-#showControlsRow {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  gap: 8px;
-  padding: 8px 0 12px 0;
-  margin-bottom: 12px;
-  border-bottom: 1px solid #ccc;
-}
-
-#showControlsRow label {
-  margin: 0;
-  font-weight: 500;
-  color: #000;
-  font-size: 0.9rem;
-}
-
-#showControlsRow input[type="checkbox"] {
-  width: auto;
-  margin: 0;
-}
-
-
 /* ---- Coloris Picker Integration ---- */
 
 /* ---- Coloris Picker Integration ---- */

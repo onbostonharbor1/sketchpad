@@ -152,8 +152,7 @@ export function addDrawSubtab(item) {
       type:         "object",
       drawRegistry: entry,
       dirty:        false,
-      parameters:   entry.params,
-      showControls: false
+      parameters:   entry.params
     };
 
     uiState.draw.activeSubtab = tabId;
