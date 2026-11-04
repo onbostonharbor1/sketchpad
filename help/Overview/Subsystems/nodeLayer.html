@@ -100,7 +100,7 @@ and <code>node/sketchpadService.mjs</code> (the tasks).</p>
     The service endpoint is hard-coded:
   </p>
 
-  <pre><code>POST http://localhost:5174/dispatch</code></pre>
+  <pre><code>POST /dispatch   (Vite passes it to http://localhost:5174/dispatch; vite.config.js)</code></pre>
 
   <p>
     The request uses:
@@ -251,7 +251,7 @@ and <code>node/sketchpadService.mjs</code> (the tasks).</p>
   </p>
 
   <ul>
-    <li>The service is reachable at <span class="mono">http://localhost:5174/dispatch</span>.</li>
+    <li>The service is reachable at <span class="mono">/dispatch</span> on the page's own server, which Vite passes to <span class="mono">http://localhost:5174/dispatch</span>.</li>
     <li>The service accepts a JSON envelope with <span class="mono">requestName</span> and <span class="mono">payload</span>.</li>
     <li>On success, the service returns valid JSON.</li>
     <li>On failure, the service returns a meaningful response body (text) so <span class="mono">nodeDispatch</span> can include it in the thrown error.</li>

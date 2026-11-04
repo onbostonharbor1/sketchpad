@@ -58,8 +58,8 @@ import { RequestError } from "./safePaths.mjs";
    Server listens only on localhost.
    Pick a port that will not collide with Vite (5173).
 
-   If you change PORT here, you must also change the URL in:
-     ui/nodeLayer.js
+   If you change PORT here, set SKETCHPAD_PORT for Vite too:
+     vite.config.js passes the page's /dispatch requests to this port.
 
    =========================================================== */
 

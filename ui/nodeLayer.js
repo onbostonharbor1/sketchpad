@@ -31,7 +31,8 @@ import { timed } from "/ui/instrument.js";
    ------------
    • The Node service must be running locally.
    • A server endpoint must exist (example below):
-       POST http://localhost:5174/dispatch
+       POST /dispatch   (on the page's own server; Vite passes it to
+                         http://localhost:5174/dispatch, vite.config.js)
 
    NOTE
    ----
@@ -41,7 +42,9 @@ import { timed } from "/ui/instrument.js";
    =========================================================== */
 
 export async function nodeDispatch(requestName, payload = {}) {
-  const url = "http://localhost:5174/dispatch";
+  // The page's own server passes /dispatch on to the Node service
+  // (vite.config.js), so this works on the PC and in a Codespace alike.
+  const url = "/dispatch";
 
   let response;
   try {
@@ -65,6 +68,15 @@ export async function nodeDispatch(requestName, payload = {}) {
 
   if (!response.ok) {
     const text = await response.text();
+    // Vite answers for the service when the service is not running (its
+    // own error page, not the service's JSON); a read-only copy answers 404.
+    if (!text.trim().startsWith("{")) {
+      throw new Error(
+        "The Node service did not answer at " + url + " (HTTP " + response.status + "). Features that read " +
+        "or write files need it (start it with: npm run dev:all). A read-only copy of Sketchpad has no " +
+        "Node service, so those features are unavailable there."
+      );
+    }
     throw new Error(`nodeDispatch: HTTP ${response.status} ${response.statusText}: ${text}`);
   }
 

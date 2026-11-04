@@ -89,7 +89,9 @@ path), say so and let him decide.
   shown by the caption's Run script button. Shared routines in `gallery/Ideabook/scripts/ideabookRoutines.js`
   (StringThing style: defaults, nothing refused, all through `drawLine`); the pursuit engine is `pursuitEngine.js`
   beside it, to become a draw function. Hints, not copies; the header of each says what was guessed.
-- `node/`: the local Node service on port 5174, request shape `{requestName, payload}`.
+- `node/`: the local Node service on port 5174, request shape `{requestName, payload}`. The page posts to `/dispatch`
+  on its own server and Vite passes it on (`vite.config.js`), so it also works in a GitHub Codespace
+  (`.devcontainer/`), e.g. from the iPad.
 
 ## Running and testing
 

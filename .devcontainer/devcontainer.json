@@ -1,0 +1,18 @@
+// .devcontainer/devcontainer.json: how a GitHub Codespace sets up Sketchpad.
+// It installs the packages once, then starts Vite and the Node service (npm run dev:all)
+// whenever the Codespace is opened, and forwards port 5173, where the app is. The page
+// reaches the Node service through Vite (vite.config.js), so 5174 needs no forwarding.
+{
+  "name": "Sketchpad",
+  "image": "mcr.microsoft.com/devcontainers/javascript-node:22",
+  "postCreateCommand": "npm install",
+  "postAttachCommand": "npm run dev:all",
+  "forwardPorts": [5173],
+  "portsAttributes": {
+    "5173": { "label": "Sketchpad", "onAutoForward": "openPreview" },
+    "5174": { "label": "Node service (reached through Vite)", "onAutoForward": "silent" }
+  },
+  "customizations": {
+    "vscode": { "extensions": ["dbaeumer.vscode-eslint"] }
+  }
+}
