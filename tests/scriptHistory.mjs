@@ -40,7 +40,7 @@ const browser = await chromium.launch(executablePath ? { executablePath } : {});
 const page = await browser.newPage({ viewport: { width: 1400, height: 900 } });
 
 // Answer the history requests; pass every other request to the service.
-await page.route("http://localhost:5174/dispatch", async (route) => {
+await page.route("**/dispatch", async (route) => {
   const req = JSON.parse(route.request().postData() || "{}");
   const reply = (json) => route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(json) });
   if (req.requestName === "listScriptHistory") {
