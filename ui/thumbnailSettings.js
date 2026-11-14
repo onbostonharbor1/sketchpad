@@ -101,7 +101,10 @@ function markListsForRedraw() {
 /* ------------------------------------------------------------
    Picture paths. A name may hold spaces, so each part is encoded.
    ------------------------------------------------------------ */
-const enc = encodeURIComponent;
+// encodeURIComponent, except that "&" and "," stay as they are: they are legal in a path, and
+// Vite answers the encoded forms (%26, %2C) with the app's home page instead of the picture, so a
+// name such as "Aqua & Yellow Spiral Mandala, Modern Boho Decor" would show no thumbnail.
+const enc = (s) => encodeURIComponent(s).replace(/%26/g, "&").replace(/%2C/gi, ",");
 
 /* patternsThumb: where a pattern's thumbnail picture is. */
 export function patternsThumb(category, name) {

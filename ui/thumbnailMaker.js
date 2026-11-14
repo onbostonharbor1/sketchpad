@@ -26,7 +26,7 @@
    Exports:
      THUMB_SETS                  the set names, in the order the tools list them
      listThumbnailTargets(sets)  the targets for the chosen sets
-     regenerateThumbnails(sets, onProgress)   make and write them all
+     regenerateThumbnails(sets, onProgress, onlyTargets)   make and write them all (or only the targets given)
      findMissingThumbnails(sets, onProgress)  which picture files do not exist
    ------------------------------------------------------------ */
 
@@ -132,13 +132,15 @@ async function fetchJson(url) {
 
 /* ------------------------------------------------------------
    regenerateThumbnails(sets, onProgress)
-   Makes every picture again, replacing the old ones. onProgress is
+   Makes every picture again, replacing the old ones (or only the targets
+   handed in as onlyTargets, for "make the missing ones"). onProgress is
    called after each target as (done, total, target). Returns
    { made, skipped: [{ target, why }], failed: [{ target, message }] }.
    ------------------------------------------------------------ */
-export async function regenerateThumbnails(sets, onProgress) {
+export async function regenerateThumbnails(sets, onProgress, onlyTargets = null) {
 
-  const targets = await listThumbnailTargets(sets);
+  // onlyTargets: a list of targets (as findMissingThumbnails returns them) to make; the rest are left alone.
+  const targets = onlyTargets || await listThumbnailTargets(sets);
   const result = { made: 0, skipped: [], failed: [] };
 
   for (let i = 0; i < targets.length; i++) {
