@@ -44,8 +44,9 @@ window.drawRegistry_boxes= {
     rotate:    { widget: "range", min: 0,   max: 360, step: 5,   label: "Rotation:" },
     xScale:    { widget: "range", min: 0.5, max: 2,   step: 0.1, label: "X Scale:" },
     yScale:    { widget: "range", min: 0.5, max: 2,   step: 0.1, label: "Y Scale:" },
-    color:     { widget: "colorPicker",                          label: "Color:" },
-    midpoint:  { widget: "pointPicker",                          label: "Midpoint:" }
+    color:     { widget: "colorPicker",                          label: "Color:" }
+    // No midpoint control: the pointPicker widget no longer exists and
+    // showed as a plain text box.
   },
 
   // ==========================================================

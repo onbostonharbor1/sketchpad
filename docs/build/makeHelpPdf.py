@@ -107,14 +107,15 @@ A separate document, <em>The Figures code, commented</em>, has the Figures sourc
 
 INTRO_FOUND = """
 <p>Checking the pages against the code turned up a few things in the code itself. When this list was first
-written (27 October 2026) none of them had been changed. Rows marked <b>Fixed 31 October 2026</b> were changed
-on the branch <code>claude/sweep-1</code>; the others are still open, for a decision.</p>
+written (27 October 2026) none of them had been changed. Rows marked <b>Fixed</b> have since been changed
+(31 October 2026 on <code>claude/sweep-1</code> and the Phase 8 next pass; the last two on 14 November 2026);
+the others are still open, for a decision.</p>
 <table>
 <tr><th style="width:30%">Where</th><th>What</th><th style="width:18%">Kind</th></tr>
-<tr><td>Figures: weld mark</td><td>The + is drawn under the handle dot, so a weld on a handle shows only a white
-  ring.</td><td>Visible bug</td></tr>
-<tr><td>Figures: centroid</td><td>A right-press on the diamond starts a move (the button is not checked).</td>
-  <td>Small bug</td></tr>
+<tr><td>Figures: weld mark</td><td>The + was drawn under the handle dot, so a weld on a handle showed only a white
+  ring. The arms are now long enough to reach past the dot.</td><td>Fixed 31 October 2026</td></tr>
+<tr><td>Figures: centroid</td><td>A right-press on the diamond started a move (the button was not checked). Only the left
+  button counts now.</td><td>Fixed 31 October 2026</td></tr>
 <tr><td>Utilities</td><td>Leaving while on Result and coming back re-ran the script but hid the Result subtab
   (confirmed in the running app).</td><td>Fixed 31 October 2026</td></tr>
 <tr><td><code>setUI.js</code></td><td>No tab's <code>save()</code> is ever called; Draw, Utilities and Figures therefore
@@ -126,14 +127,14 @@ on the branch <code>claude/sweep-1</code>; the others are still open, for a deci
   it left the order unchanged, which Patterns relies on. Now a plain copy, same order.</td><td>Fixed 31 October 2026</td></tr>
 <tr><td><code>scriptRunner.js</code></td><td>Its header said <code>runPattern(ctx)</code> receives the context; the code
   never passed it. Header corrected; the unused <code>render()</code> fallback was removed too.</td><td>Fixed 31 October 2026</td></tr>
-<tr><td><code>manifest.js</code></td><td>A <code>drawRegistry</code> branch that nothing reaches and that would find
-  nothing.</td><td>Dead code</td></tr>
+<tr><td><code>manifest.js</code></td><td>A <code>drawRegistry</code> branch that nothing reached and that would find
+  nothing. Removed with its helper.</td><td>Fixed 14 November 2026</td></tr>
 <tr><td>Assorted</td><td><code>actionRegistry.js</code>'s table, <code>clearHomeCanvasAndOverlays</code>,
   <code>rebuildAllSystemCaches</code>, <code>setCommandsButton</code>, <code>clearOverlaysForTabSwitch</code>, the fileLayer
   normalizers and <code>rehydrateGalleryState</code> were exported and never called. Removed
   (<code>saveUtilityState</code> stays: it is wired into the tab but <code>setUI</code> never calls it, see above).</td><td>Fixed 31 October 2026</td></tr>
 <tr><td>Parameter controls</td><td>The point-picker widgets are switched off, but <code>boxes</code> and
-  <code>regularPursuit</code> still declare one (it shows as a plain text box).</td><td>Leftover</td></tr>
+  <code>regularPursuit</code> still declared one (it showed as a plain text box). Both declarations removed.</td><td>Fixed (<code>regularPursuit</code> 31 October, <code>boxes</code> 14 November 2026)</td></tr>
 </table>
 """
 
