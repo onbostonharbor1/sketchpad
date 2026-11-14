@@ -48,8 +48,8 @@
     "Subsystems": [
       "caption",
       "categories",
-      "combinations",
       "codespaces",
+      "combinations",
       "curvesShapes",
       "errorsChecklists",
       "fileLayer",
@@ -61,6 +61,7 @@
       "manifest",
       "menuManager",
       "nodeLayer",
+      "otherFiles",
       "overlay",
       "parameterControls",
       "parameterControls2",

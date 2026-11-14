@@ -64,8 +64,13 @@ reload still starts at Categories.</p>
 
 <h2>The manifest</h2>
 <p><code>ensurePatternsManifestLoaded()</code> asks the shared manifest system for "patterns"
-(<code>manifest.get</code>), which reads the category list and each category's <code>manifest.json</code> into
-<code>manifest.cache</code>. Everything else reads it through <code>manifest.getCategoryMap("patterns")</code>.</p>
+(<code>manifest.get</code>). Since 4 November 2026 the category list and the items come from the folders themselves:
+the Node service's <code>listLibrary</code> (<code>node/libraryIndex.mjs</code>) works them out, and each
+<code>manifest.json</code> is only a note (title, status, order). A file with no entry still appears; an entry with no
+file is ignored. Only with no service does <code>manifest.get</code> read the category list and the
+<code>manifest.json</code> files as before. Everything else reads the result through
+<code>manifest.getCategoryMap("patterns")</code>. The category list shows a picture for each pattern
+(<code>patternsThumb</code> in <code>ui/thumbnailSettings.js</code>) when thumbnails are on.</p>
 
 <h2>Commands panel</h2>
 <p>Rebuild &amp; Validate asks the Node service to rebuild every manifest, clears the cache and marks every tab

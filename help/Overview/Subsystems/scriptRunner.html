@@ -224,6 +224,15 @@ runs <code>runPattern()</code>, then arms the interactor if the script's <code>s
   </p>
 
 
+  <h2>5b. The time limit (added 6 November 2026)</h2>
+  <p>A script that draws too long no longer freezes the page. <code>executeScriptToCanvas</code> calls
+  <code>startClock("Script &lt;title&gt;")</code> before the script runs and <code>stopClock()</code> after it (in a
+  <code>finally</code>). While the clock runs, every drawing call (<code>drawLine</code>, and the canvas's own
+  <code>lineTo</code>, <code>arc</code>, <code>stroke</code> and <code>fill</code>) calls <code>checkClock()</code>, which
+  reads the time every 256th call and throws once <code>drawState.timeLimit</code> (2000 ms) has passed. The error
+  reaches the red bar; what was drawn stays. A loop that never draws is not stopped. To allow longer, raise
+  <code>drawState.timeLimit</code>. The same clock guards the Draw redraw and each figure layer.</p>
+
   <h2>6. Reset dependency: drawState.js and resetCanvas()</h2>
 
   <p>

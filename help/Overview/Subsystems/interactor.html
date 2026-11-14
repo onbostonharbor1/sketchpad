@@ -67,6 +67,10 @@ interactive scripts all use it.</p>
 <p>Listeners are on <code>window</code>, not the canvas, so a drag that strays off the canvas keeps going. All
 four are registered with one <code>AbortController</code>; disarming is one <code>abort()</code>.</p>
 
+<p><b>onRelease(i)</b> (optional, added 31 October 2026): called once when a drag ends, only if the handle really moved
+(a press that never moved is a click and selects the handle). Figures uses it for the handle-drop weld: a handle dropped
+on another handle welds there. Draw supplies none, so nothing happens on release.</p>
+
 <h2>moveHandle(i, x, y): the one place a handle moves</h2>
 <ol>
 <li><code>beforeMove()</code>, if supplied.</li>

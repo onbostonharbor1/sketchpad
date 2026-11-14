@@ -167,8 +167,9 @@
 &lt;/div&gt;</code></pre>
 
       <p>
-        If <code>hasSubitems</code> is truthy, a Bootstrap icon chevron is appended:
-        <code>&lt;i class="bi bi-chevron-right"&gt;&lt;/i&gt;</code>.
+        If <code>hasSubitems</code> is truthy, an <code>&lt;i class="bi bi-chevron-right"&gt;</code> element is appended.
+        Nothing sets it today (every list passes false), and the Bootstrap Icons font is no longer loaded, so the element
+        would show nothing. It is kept for a future use.
       </p>
     </li>
   </ul>
@@ -207,6 +208,13 @@
     Tabs provide a descriptor that defines what to show and what happens on click.
     This module validates the structure and renders it consistently, deterministically, and fail-fast.
   </p>
+
+<h2>Pictures (added 1 November 2026)</h2>
+<p>An item may carry <code>thumb: "/path.png"</code>. When <code>uiState.thumbnails.on</code> is true the picture is
+shown in place of the name, at <code>uiState.thumbnails.size</code> pixels. The item keeps its name as <code>data-key</code>
+and as hover text, and the name comes back if the picture file is missing. Tabs pass a function that works out the path
+(for example <code>patternsThumb</code> in <code>ui/thumbnailSettings.js</code>); the pictures are made by the Utilities &gt;
+Tools &gt; Thumbnails tools, Regenerate thumbnails and Check Missing Images (<code>ui/thumbnailMaker.js</code>).</p>
 
 <h2>Added 27 October 2026</h2>
 <p class="note">Checked against the current code. Everything above still holds; these are the additions.</p>

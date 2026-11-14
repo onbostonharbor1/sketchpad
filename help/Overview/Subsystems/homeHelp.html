@@ -8,7 +8,7 @@
 </head>
 <body>
 
-<h1>Home Help: Design, Reflections, Build Documents</h1>
+<h1>Home Help: Design, Reflections, Build Documents, Tutorials</h1>
 
 <p class="note">Written 5 November 2026. Code: <code>ui/home/homeHelp.js</code>, <code>node/homeListRequests.mjs</code>
 (<code>listHelpTopics</code>), <code>node/copyBuildDocs.mjs</code>.</p>
@@ -21,6 +21,7 @@
 <tr><td>Design</td><td><code>help/Overview</code></td><td>by subfolder</td><td>the Help browser's editor</td></tr>
 <tr><td>Reflections</td><td><code>help/Reflections</code></td><td>by title, A to Z</td><td>New reflection and Edit, here</td></tr>
 <tr><td>Build Documents</td><td><code>help/BuildDocs</code></td><td>A to Z</td><td><code>npm run help:builddocs</code> (never by hand)</td></tr>
+<tr><td>Tutorials</td><td><code>help/Tutorials</code></td><td>in order (titles start with the tutorial number)</td><td>the Help browser's editor</td></tr>
 </table>
 
 <h2>Reflections</h2>
@@ -36,8 +37,8 @@ headings, paragraphs, lists, tables, fenced code, quotes and the inline marks; e
 <code>docs/</code> in a frame (not copied). Run it after the docs change.</p>
 
 <h2>The lists</h2>
-<p><code>listHelpTopics { folder }</code> returns every .html under one of the three folders with its title and subfolder,
-so a new reflection appears at once.</p>
+<p><code>listHelpTopics { folder }</code> returns every .html under one of the four folders with its title and subfolder,
+so a new reflection appears at once. (Four folders now: Overview, Reflections, BuildDocs and Tutorials.)</p>
 
 </body>
 </html>

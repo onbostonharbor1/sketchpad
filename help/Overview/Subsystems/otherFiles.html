@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Other Source Files — A Short Guide</title>
+  <link rel="stylesheet" href="/help/help_treatise.css" />
+</head>
+<body>
+
+<h1>Other Source Files — A Short Guide</h1>
+
+<p class="note">Written 14 November 2026. These are the source files no other page in this Overview names. Each has a
+header or function comments of its own, and the function dictionary (<code>docs/FUNCTIONS.md</code>) lists every function.</p>
+
+<h2>Classes (<code>classes/</code>)</h2>
+<table>
+<tr><th>File</th><th>What it is</th></tr>
+<tr><td><code>curveStitchClass.js</code></td><td><code>CurveStitch</code>, the data container for the most common curve-stitch drawing: midpoint, radius, number of nodes and steps, colour, width, scales, rotation. Draw registry objects build one in <code>init()</code> and hand it to a draw function.</td></tr>
+<tr><td><code>ellipseClass.js</code></td><td><code>Ellipse</code> and its mode constants (<code>START_END</code>, <code>FULL</code>, <code>TAPER</code>, <code>START_TAPER</code>, <code>END_TAPER</code>): the parameters for drawings made around an ellipse, read by <code>draw/drawEllipse.js</code>. (Its header still says <code>drawEllipse.js</code>.)</td></tr>
+<tr><td><code>radiate.js</code></td><td><code>Radiate</code>, the container for the Radiate object (<code>drawRegistry/radiate.js</code>): start, end and radial point, steps, colour.</td></tr>
+<tr><td><code>overlayClass.js</code></td><td>Not an overlay class yet. It is a byte-for-byte copy of <code>linkedCircles.js</code>, imported by <code>main.js</code> and <code>drawMain.js</code> only for its side effect. Its own header says so. Worth deciding: make it real or drop the import.</td></tr>
+</table>
+
+<h2>Drawing (<code>draw/</code>)</h2>
+<table>
+<tr><th>File</th><th>What it is</th></tr>
+<tr><td><code>drawEllipse.js</code></td><td>The engine that draws ellipse-based patterns (<code>renderPattern</code>, <code>drawInEllipse</code>) and <code>pointAtArcLength</code>, which <code>createNodes.js</code> uses. Everything goes through <code>drawLine</code>.</td></tr>
+<tr><td><code>drawPursuit.js</code></td><td><code>drawRabbitPursuitCurve</code>: the fox always runs towards where the rabbit is now, and its path is drawn step by step.</td></tr>
+<tr><td><code>drawSpirals.js</code></td><td>The spiral functions: Euler, Fermat, logarithmic, pure (three kinds) and Theodorus. Its header lists them. (The Ideabook pursuit engine, <code>gallery/Ideabook/scripts/pursuitEngine.js</code>, is a separate, later piece.)</td></tr>
+</table>
+
+<h2>Draw tab (<code>ui/draw/</code>) and the script view</h2>
+<table>
+<tr><th>File</th><th>What it is</th></tr>
+<tr><td><code>drawExport.js</code></td><td>Draw's two export requests to the Node service: Create Gallery PNG and Create Pattern script. Both rebuild the lists afterwards (<code>rebuildAllManifests</code>).</td></tr>
+<tr><td><code>drawInstance.js</code></td><td>Makes a private copy of a Draw registry object (<code>Object.create(entry)</code> with a cloned <code>params</code>) every time one is opened, so Draw, Figures and Patterns no longer share one set of settings.</td></tr>
+<tr><td><code>../scriptView.js</code></td><td><code>showScriptOffcanvas(path, title)</code>: shows a script's source in the side panel (Show Script).</td></tr>
+</table>
+
+<h2>Parameter controls (<code>ui/controls/</code>)</h2>
+<table>
+<tr><th>File</th><th>What it is</th></tr>
+<tr><td><code>shared/constants.js</code></td><td><code>WIDGET_TYPES</code> and the control class names. <code>POINT_PICKER</code> and <code>POINT_PICKER_ARRAY</code> stay in the list, but the renderer no longer builds them (handles are dragged on the canvas).</td></tr>
+<tr><td><code>shared/helpers.js</code></td><td>Small helpers for the point-picker dots. Only used if the point-picker widgets come back.</td></tr>
+<tr><td><code>widgets/buttonWidget.js</code></td><td><code>setButtonControl</code>: a button control that runs a named action.</td></tr>
+<tr><td><code>widgets/numberWidget.js</code></td><td><code>setNumberControl</code>: a plain number box that updates the parameter, redraws, and enforces <code>min</code> and <code>max</code>.</td></tr>
+<tr><td><code>widgets/hiddenWidget.js</code></td><td><code>setHiddenControl</code>: no screen control at all. It exists so a parameter can be declared without showing it.</td></tr>
+</table>
+
+<h2>Node service and tools (<code>node/</code>)</h2>
+<table>
+<tr><th>File</th><th>What it is</th></tr>
+<tr><td><code>check_ports.mjs</code></td><td>Run by <code>predev</code>: tells you if ports 5173 or 5174 are already in use.</td></tr>
+<tr><td><code>createFigureService.mjs</code></td><td>The older <code>createFigure</code> request, which writes a generated <code>.js</code> script. Figures now saves <code>.json</code> data through <code>saveFigure</code> instead; retire this when the older Create Figure feature goes.</td></tr>
+<tr><td><code>makeHelpPdf.mjs</code></td><td><code>npm run help:pdf -- file.pdf</code>: one PDF of the Overview and Tutorials, printed by a browser from the running app.</td></tr>
+</table>
+
+</body>
+</html>

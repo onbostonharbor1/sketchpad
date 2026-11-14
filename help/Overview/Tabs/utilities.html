@@ -34,6 +34,9 @@ here.</p>
 <h2>Where the scripts are</h2>
 <pre>/utilities/Tools/&lt;Category&gt;/&lt;entry.path&gt;
 /utilities/Lab/&lt;Category&gt;/&lt;entry.path&gt;</pre>
+<p class="note">Since 4 November 2026 the Tools and Lab lists come from the folders (the Node service's
+<code>listLibrary</code>); <code>manifest.json</code> files are only notes. Read "manifest" below as the fallback used when the
+service is not running.</p>
 <p>Each group has a directory registry and per-category manifests, read through the shared manifest
 system (<code>utilities/Tools</code>, <code>utilities/Lab</code>).</p>
 
@@ -63,10 +66,9 @@ something has run (which makes the Result subtab appear), and runs it.</p>
 <p>Nothing calls <code>saveUtilityState()</code>, so <code>uiState.utilities.saved</code> stays null and
 <code>setUI.js</code> always calls <code>initUtilityTab(false)</code>. Init reloads the manifests, rebuilds the
 subtabs, and switches to <code>activeUtilityTabId</code>, which is remembered in <code>uiState</code>.</p>
-<div class="callout"><strong>Probable glitch (read from the code, not tried).</strong> Init with
-<code>restored = false</code> also resets "has anything run" to false, which hides the Result subtab. If you
-leave Utilities while on Result and come back, init switches to Result (re-running the script) while
-the Result subtab button is hidden.</div>
+<p class="note">Fixed 31 October 2026: init used to reset "has anything run" to false, so leaving Utilities on Result
+and coming back re-ran the script with the Result subtab hidden. The flag is now kept when you come back, and the last
+result is redisplayed.</p>
 
 <h2>Commands panel</h2>
 <p>Rebuild &amp; Validate goes through the Node service, clears the manifest cache and marks every tab

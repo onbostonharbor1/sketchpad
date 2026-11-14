@@ -26,15 +26,21 @@ tab should be brought up, then hands over to that tab's <em>TabSpec</em>.</p>
 <ol>
 <li>Turn off any Prev/Next overlay.</li>
 <li>Reject an unknown tab name.</li>
-<li>Write the tab name to session storage (<code>sketchpad.lastActiveTab</code>; nothing reads it back at
-  present).</li>
 <li>Apply the tab's theme class to <code>#wrapper</code>, before anything is built, so new DOM is styled
   right away.</li>
 <li><code>activateTab(tab)</code>: init or restore (below).</li>
-<li>If a launch intent is pending (<code>uiState.launch.pending</code>), clear the pending flag first, then
-  call <code>setUI(targetTab)</code> unless it is already active. Clearing first prevents a loop.</li>
+<li>If a launch intent is pending (<code>uiState.launch.pending</code>), run the target tab now, inside this
+  same switch (calling <code>setUI</code> from here would queue behind the switch that is running and never
+  finish). The target's init reads the request and clears it; whatever is left is cleared afterwards.</li>
 </ol>
-<p>Each step records its name; if anything throws, the console says which step it was.</p>
+<p>Each step records its name. The whole switch runs inside <code>reportError</code>'s net
+(<code>activateWithReport</code>): if anything throws, the red error bar and the error log say which step it was
+(<code>Switching to the draw tab (stage "activate draw")</code>). It is also timed by <code>timed("tab switch ...")</code>
+(<code>ui/instrument.js</code>), which records nothing unless Utilities &gt; Commands &gt; Record timings is on.
+Switches run one at a time; a click that is still waiting when a newer click arrives is dropped, so quick clicking
+ends on the last tab clicked.</p>
+<p class="note">Changed 4 to 6 November 2026: the session-storage write of the last tab was removed (nothing read it),
+the launch step no longer calls <code>setUI</code> again, and the error report and timing were added.</p>
 
 <h2>activateTab: init or restore</h2>
 <pre>if  uiState[tab].needsUpdate      -> clear it, clearDivs(), init(true)
@@ -71,8 +77,9 @@ A page reload always starts fresh: nothing is read back from session storage.</p
 
 <h2>The launch intent</h2>
 <p>One tab can ask for another to open with context, without calling it directly. Home does this for
-built-in Draw objects: it fills <code>uiState.launch</code> (pending, source, target, type, registry key) and
-calls <code>setUI("draw")</code>. Draw's init reads the intent, clears it, and opens the object.</p>
+built-in Draw objects: it fills <code>uiState.launch</code> (pending, source, target, type, registry key, and for a figure its file path) and
+calls <code>setUI("draw")</code> (or <code>"figures"</code> for a saved figure). The target's init reads the intent,
+clears it, and opens the object or figure.</p>
 
 </body>
 </html>

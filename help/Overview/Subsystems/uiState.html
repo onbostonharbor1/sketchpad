@@ -46,7 +46,11 @@ showing, what is selected. It is declared in <code>ui/uiState.js</code>, exporte
   figure and its instances), <code>hitRadius: 5</code>, <code>saved: null</code></td></tr>
 <tr><td><code>utilities</code></td><td>the last run: subtab, category, item, result; <code>saved: null</code></td></tr>
 <tr><td><code>overlay</code></td><td>whether an overlay is up, its type and title</td></tr>
+<tr><td><code>thumbnails</code></td><td><code>on</code> (pictures instead of names in the category lists) and <code>size</code> (50)</td></tr>
+<tr><td><code>instrument</code></td><td><code>on</code> and <code>entries</code>: the timings recorded by <code>ui/instrument.js</code></td></tr>
+<tr><td><code>homeAlert</code></td><td>which manifest log and which error log the person dismissed on Home</td></tr>
 </table>
+<p><code>launch</code> also carries <code>figurePath</code> (a saved figure to open) since 1 November 2026.</p>
 <p>Every tab area also has <code>needsUpdate</code>.</p>
 
 <h2>The three signals setUI reads</h2>

@@ -40,6 +40,10 @@ layer name) find it by those class names, after building it.</p>
 <li>Gallery: buttons, and click zones over the picture (scripts) or the image (in <code>#text</code>).</li>
 </ul>
 
+<h2>Extra buttons</h2>
+<p>The config may carry <code>extraButtons: [ { id, label, disabled, title, onClick } ]</code>. They appear after Next
+and before the menu, and each can be greyed. The Ideabook uses one for <b>Run script</b>.</p>
+
 <h2>Removed 31 October 2026</h2>
 <p><code>normalizeCaptionEntry</code>, <code>rebuildCaption</code> and <code>buildMenuHandler</code> were exported
 but nothing called them (the last passed the wrong arguments to <code>menuManager.open</code>). They are gone.
