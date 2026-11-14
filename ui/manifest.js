@@ -158,15 +158,6 @@ export class ManifestManager {
       return groups;
     }
 
-    /* ------------------------------------------------------------
-       JULES UPDATE: Special handling for drawRegistry discovery
-       ------------------------------------------------------------ */
-    if (basedir === "drawRegistry") {
-        const drawData = await this._discoverDrawRegistryItems();
-        this.cache[basedir] = drawData;
-        return drawData;
-    }
-
     // 3) No directoryRegistry --  try flat manifest.json
     const flatPath   = fileLayer.path.flatManifest(basedir);
     const hasFlat    = await fileLayer.exists(flatPath);
@@ -189,27 +180,6 @@ export class ManifestManager {
     this.cache[basedir] = [];
     return [];
   } // end get
-
-
-  /* ============================================================
-      _discoverDrawRegistryItems() (Jules)
-      ------------------------------------------------------------
-      Internal helper to scan the drawRegistry folder for
-      subdirectories and their associated template JSONs.
-   ============================================================ */
-  async _discoverDrawRegistryItems() {
-    try {
-        const items = await fileLayer.listDirectory("drawRegistry");
-        return items.filter(it => it.isDirectory).map(dir => ({
-            parentId: dir.name,
-            path: `drawRegistry/${dir.name}/`,
-            type: "directory"
-        }));
-    } catch (err) {
-        console.warn("ManifestManager: Could not discover drawRegistry items", err);
-        return [];
-    }
-  }
 
 
   /* ============================================================
