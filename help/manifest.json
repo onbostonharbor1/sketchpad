@@ -61,6 +61,7 @@
       "manifest",
       "menuManager",
       "nodeLayer",
+      "nodeService",
       "otherFiles",
       "overlay",
       "parameterControls",

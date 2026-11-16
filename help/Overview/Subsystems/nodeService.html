@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>The Node Service — What node/ Does</title>
+  <link rel="stylesheet" href="/help/help_treatise.css" />
+</head>
+<body>
+
+<h1>The Node Service — What <code>node/</code> Does</h1>
+
+<p class="note">Written 16 November 2026 from the headers and code in <code>node/</code>. The browser side of the same
+conversation is on the <i>nodeLayer.js</i> page; running Sketchpad away from your own computer is on <i>Running in a
+Codespace</i>.</p>
+
+<h2>1. Why there is a Node service at all</h2>
+<p>A web page cannot write files, list folders or start programs. Everything in Sketchpad that touches the disk beyond
+loading its own files goes through a small program that runs beside the page: saving a figure, writing a thumbnail,
+reading the log files, listing a category, opening a file in VS Code. That program is the Node service. It only listens
+on this computer (<code>127.0.0.1</code>, port 5174).</p>
+
+<h2>2. How a request travels</h2>
+<ol>
+  <li>UI code calls <code>nodeDispatch(requestName, payload)</code> (<code>ui/nodeLayer.js</code>).</li>
+  <li>The page posts <code>{requestName, payload}</code> to <code>/dispatch</code> on its own server. Vite passes it on to port 5174
+      (<code>vite.config.js</code>), which is why the same setup works in a Codespace.</li>
+  <li><code>sketchpadServer.mjs</code> checks the request came from Sketchpad's own page, reads the body and calls the dispatcher.</li>
+  <li><code>sketchpadService.mjs</code> looks the request name up and runs one handler. It does nothing else.</li>
+  <li>The handler does the file work and returns JSON. A bad request gets HTTP 400 with a plain message; a real failure
+      (a disk error, a bug) gets 500. An unknown request name is a 400, never silently ignored.</li>
+</ol>
+<p>Every path a handler builds from text the browser sent goes through <code>safePaths.mjs</code> first, so a request cannot
+reach outside the folder it is meant for.</p>
+
+<h2>3. The two servers, and starting them</h2>
+<p>Sketchpad is two programs: Vite serves the page on port 5173, and the Node service on 5174. <code>sketchpad.bat</code>
+runs <code>npm run start:sketchpad</code>, which first runs <code>check:ports</code> (it stops the start if either port is already
+in use), then starts both under <code>concurrently -k</code> so that closing one stops the other. The service also exits with a
+plain message if its own port is taken.</p>
+
+<h2>4. The files, and what each is responsible for</h2>
+
+<h3>The front door</h3>
+<table>
+<tr><th>File</th><th>Responsibility</th></tr>
+<tr><td><code>sketchpadServer.mjs</code></td><td>The HTTP server. Accepts <code>POST /dispatch</code> only, refuses pages from other sites, limits the body size (50 MB, for thumbnails and PNG uploads), turns errors into 400 or 500, and shuts down cleanly. It knows nothing about what any request means.</td></tr>
+<tr><td><code>sketchpadService.mjs</code></td><td>The dispatcher: a map from request name to handler. Its header lists every request the service accepts.</td></tr>
+<tr><td><code>safePaths.mjs</code></td><td>The guards: <code>RequestError</code> (a bad request, reported as 400), <code>assertSimpleName</code> (a name with no slashes or tricks) and <code>isInside</code> (a path stays inside its folder). Every handler uses these.</td></tr>
+<tr><td><code>serviceFileHelpers.mjs</code></td><td>Small file helpers the handlers share: read and write JSON, write a file atomically (to a temporary file, then rename, so a crash cannot leave half a file), check that a file or folder exists, make a timestamp for a file name.</td></tr>
+</table>
+
+<h3>The request files (one family each)</h3>
+<table>
+<tr><th>File</th><th>Requests</th><th>Responsibility</th></tr>
+<tr><td><code>libraryIndex.mjs</code></td><td><code>listLibrary</code>, <code>listHomeItems</code></td><td>Works out every category list and the Home list from the folders on disk. A manifest only adds titles, statuses and order; a file with no entry still appears. There is no file watcher; a new file shows up the next time the list is read.</td></tr>
+<tr><td><code>manifestRequests.mjs</code></td><td><code>editManifestEntry</code>, <code>archiveItem</code></td><td>Changes one item's title or status in its manifest, or moves an item to <code>archive/</code> and drops its entry.</td></tr>
+<tr><td><code>writerRequests.mjs</code></td><td><code>writePatternThumbnail</code>, <code>writePatternFromDrawRegistry</code>, <code>writeGalleryPatternPng</code>, <code>writeHelpFile</code></td><td>Writes files from data the browser sends: a pattern's thumbnail, a Pattern script made from a Draw object, a Gallery PNG, a help page.</td></tr>
+<tr><td><code>thumbnailRequests.mjs</code></td><td><code>writeThumbnail</code></td><td>Writes the picture shown for an item in a category list (<code>images/thumb_&lt;name&gt;.png</code>). It never creates a category folder.</td></tr>
+<tr><td><code>figureFiles.mjs</code></td><td><code>saveFigure</code></td><td>Saves a figure from the Figures tab as one JSON file in <code>figures/&lt;category&gt;/</code> with a manifest entry. If the name already exists it answers "exists" and writes nothing, unless told to overwrite. Reading a saved figure needs no request; the page fetches the file directly.</td></tr>
+<tr><td><code>createFigureService.mjs</code></td><td><code>createFigure</code></td><td>The earlier Create Figure feature: builds a figure file from a list of Draw objects.</td></tr>
+<tr><td><code>secondaryRequests.mjs</code></td><td><code>saveSecondaryObject</code>, <code>readSecondaryObject</code>, <code>archiveSecondaryObject</code>, <code>getSecondaryManifest</code>, <code>getPrimaryObjectsWithSecondaries</code></td><td>Saved Draw settings: save one, read one, archive one, and list them.</td></tr>
+<tr><td><code>logAndEditorRequests.mjs</code></td><td><code>listLogFiles</code>, <code>readLogFile</code>, <code>appendErrorLog</code>, <code>openInEditor</code></td><td>Reads the files in <code>utilities/logfiles</code>, appends errors to <code>errors_&lt;date&gt;.txt</code>, and opens a project file in VS Code.</td></tr>
+<tr><td><code>scriptHistoryRequests.mjs</code></td><td><code>listScriptHistory</code>, <code>readScriptHistoryVersion</code>, <code>listIdeabookScripts</code></td><td>Reads VS Code's local history of a script (read only) so an older version can be listed and run, and lists the Ideabook hint scripts.</td></tr>
+<tr><td><code>homeListRequests.mjs</code></td><td><code>writeChecklist</code>, <code>listHelpTopics</code></td><td>Saves Home &gt; Checklist's file and lists the topics in each Help group.</td></tr>
+<tr><td><code>maintain_manifests.mjs</code></td><td><code>manifestMaintenance</code></td><td>Rebuilds and validates every manifest. Run from Utilities &gt; Rebuild &amp; Validate; it is no longer part of start-up.</td></tr>
+</table>
+
+<h3>Tools run by hand or by a script</h3>
+<p>These are not requests. They run on their own and the running app does not depend on them.</p>
+<table>
+<tr><th>File</th><th>Responsibility</th></tr>
+<tr><td><code>check_ports.mjs</code></td><td>Says whether ports 5173 and 5174 are free; exits with an error if not.</td></tr>
+<tr><td><code>generateHelpManifest.mjs</code></td><td>Scans <code>help/</code> and writes <code>help/manifest.json</code>. Run it after adding or removing a help page.</td></tr>
+<tr><td><code>copyBuildDocs.mjs</code></td><td>Fills Home &gt; Help &gt; Build Documents from the documents in <code>docs/</code> (<code>npm run help:builddocs</code>).</td></tr>
+<tr><td><code>makeHelpPdf.mjs</code></td><td>Makes one PDF of the Help Overview and the Tutorials (<code>npm run help:pdf</code>; the app must be running).</td></tr>
+</table>
+
+<h2>5. Things worth knowing</h2>
+<ul>
+  <li><b>Atomic writes.</b> Files are written to a temporary name and renamed, so an interrupted write cannot corrupt a manifest or figure.</li>
+  <li><b>Where changes go.</b> A new kind of request needs a handler in a request file, a line in the dispatcher's map and an entry in its header list, and a call from the browser through <code>nodeDispatch</code>.</li>
+  <li><b>Requests do not delete your files.</b> Archiving moves a file to <code>archive/</code>. The only deletions in the service are its own temporary files. (The tool <code>copyBuildDocs.mjs</code> does clear <code>help/BuildDocs</code> before refilling it; that folder is made by the tool and is not edited by hand.)</li>
+  <li><b>Settings.</b> <code>SKETCHPAD_PORT</code> changes the service's port (set it for Vite too). <code>SKETCHPAD_ROOT</code> points <code>maintain_manifests.mjs</code> and <code>copyBuildDocs.mjs</code> at a scratch copy of the project, for testing. The request handlers use paths such as <code>./figures</code>, which means the folder the service was started from, so the service must be started from the project folder (<code>sketchpad.bat</code> does this).</li>
+</ul>
+
+</body>
+</html>
