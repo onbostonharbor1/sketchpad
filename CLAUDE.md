@@ -58,6 +58,10 @@ path), say so and let him decide.
   code into draw files, then he minimizes it, then it becomes a registry file.
 - Registry names are permanent API, because saved figures will refer to them. Derive a new name from the shape it draws,
   descriptive (`rose`, `rectangle`); record any ambiguous name in `docs/registryNames.md` (shown in Home > Help > Build Documents).
+- Names: readability always wins. A name says what the thing is, so he can follow the code without searching back:
+  `subtabs` or `subtabsEl`, not `el`. Generic short names (`el`, `x`, `tmp`) are fine only for a throwaway inside a few
+  lines with one candidate. Where neighbouring code already names the same thing (`container` for `#subtabs`, `bar` for its
+  `ul`), use that name.
 - Header comments at the top of each source file describe what the file does. The Notes popup reads them.
 - Some drawRegistry objects exist only as tests or variations. Do not delete them unasked.
 
