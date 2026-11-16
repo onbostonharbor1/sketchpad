@@ -99,6 +99,18 @@ function statusForError(err) {
   return 500;
 }
 
+/* reportServerError: says in plain words that the service cannot start because the port is taken (a second
+   Sketchpad is probably running), then exits so the launcher stops too instead of running half a Sketchpad. */
+function reportServerError(err) {
+  if (err.code === "EADDRINUSE") {
+    console.error(`Sketchpad service cannot start: port ${PORT} is already in use.`);
+    console.error("Another Sketchpad is probably running. Close its window (or stop its node process), then start again.");
+  } else {
+    console.error("Sketchpad service cannot start:", err.message);
+  }
+  process.exit(1);
+} // end reportServerError
+
 /* ===========================================================
    startServer()
 
@@ -113,6 +125,8 @@ function statusForError(err) {
 
 export function startServer() {
   const server = http.createServer(handleRequest);
+
+  server.on("error", reportServerError);
 
   server.listen(PORT, HOST, () => {
     console.log(`Sketchpad service listening at http://${HOST}:${PORT}`);

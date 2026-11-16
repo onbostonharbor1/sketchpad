@@ -2,7 +2,7 @@
 
 Made by `npm run dictionary` from the comments above each function (tests/functionDictionary.mjs). Do not edit by hand: change the comment, then run it again.
 
-786 functions in ui, draw, classes, drawRegistry, node; 1 without a comment above them.
+787 functions in ui, draw, classes, drawRegistry, node; 1 without a comment above them.
 
 | Function | Where | What it does |
 |---|---|---|
@@ -232,7 +232,7 @@ Made by `npm run dictionary` from the comments above each function (tests/functi
 | `drawSpiral` | draw/drawSpirals.js:217 | lines between points stepping round a set of containers (rings) at the given intervals: the general spiral routine used by spiral scripts. |
 | `drawStart` | draw/drawEllipse.js:32 | Internal Pattern Helpers (Original Logic & Comments) |
 | `drawTheodorusSpiral` | draw/drawSpirals.js:270 | FUNCTION TO DRAW A SINGLE TRIANGLE SEGMENT |
-| `drawThumb` | ui/thumbnailSettings.js:122 | where a Draw object's thumbnail picture is. |
+| `drawThumb` | ui/thumbnailSettings.js:125 | where a Draw object's thumbnail picture is. |
 | `drawTriangle` | draw/drawSpirals.js:274 | FUNCTION TO DRAW A SINGLE TRIANGLE SEGMENT |
 | `drawWeldMarks` | ui/figures/figureWeldMarks.js:36 | One mark per weld group, at any one member's position (all of a satisfied group's members coincide): a black plus on a white halo, or red while the group's m... |
 | `drawWithin` | draw/drawEllipse.js:52 | length = how many nodes to cover starting at `start` (not an index). |
@@ -268,7 +268,7 @@ Made by `npm run dictionary` from the comments above each function (tests/functi
 | `extractBodyInnerHtml` | ui/helpTree.js:25 | Returns the HTML found BETWEEN <body> ... |
 | `extractHeaderNotes` | ui/notes.js:20 | the header comment at the top of a file's text, for the Notes popup. |
 | `fetchJson` | ui/thumbnailMaker.js:123 | a JSON file's contents, or null if it cannot be read. |
-| `figureThumb` | ui/thumbnailSettings.js:117 | where a figure's thumbnail picture is. |
+| `figureThumb` | ui/thumbnailSettings.js:120 | where a figure's thumbnail picture is. |
 | `fillPanel` | ui/scriptHistory.js:81 | reads the script's saved versions from VS Code's history and lists them, each with Run and Compare. |
 | `filterControlsByActiveGroups` | ui/controls/builders/groupFilter.js:38 | Get the schema (controls definitions) |
 | `findCandidate` | ui/figures/figurePoints.js:170 | The infrastructure point nearest to (x, y) within radius, or null. |
@@ -276,13 +276,13 @@ Made by `npm run dictionary` from the comments above each function (tests/functi
 | `findHandleIndex` | ui/figures/figureWeldMove.js:100 | Matching by position (to a millionth of a pixel) rather than by name works for every object without a table of field names: an arm's a and b are the object's... |
 | `findHistory` | node/scriptHistoryRequests.mjs:71 | The history folder and entries for one file, or null when VS Code has none. |
 | `findIntersections` | draw/intersections.js:70 | see the header. |
-| `findMissingThumbnails` | ui/thumbnailMaker.js:174 | Asks for each picture file. |
+| `findMissingThumbnails` | ui/thumbnailMaker.js:176 | Asks for each picture file. |
 | `findOriginalManifestEntryByRootedPath` | node/manifestRequests.mjs:274 | Searches ALL real manifests under: ./patterns, ./gallery, ./utilities For each entry, computes its rooted path using the same |
 | `findPoint` | ui/figures/figurePoints.js:220 | The numbered point of the active layer nearest to (x, y) within radius, or null. |
 | `formatRebuildReportShared` | ui/rebuildSync.js:59 | a rebuild's report as text for the panel: problems first, then what was added. |
 | `formatTimings` | ui/instrument.js:82 | The slowest entries first, then every entry in the order it started. |
 | `fromUnits` | ui/figures/figurePrint.js:253 | A length typed in the print units, as mm. |
-| `galleryThumb` | ui/thumbnailSettings.js:112 | where a gallery item's thumbnail picture is. |
+| `galleryThumb` | ui/thumbnailSettings.js:115 | where a gallery item's thumbnail picture is. |
 | `geometry` | ui/figures/figureCentroid.js:100 | Where everything is, in canvas pixels, or null when the active layer has no centroid right now (none, hidden, nothing drawn, Show All). |
 | `getCanvasCoords` | ui/interactor.js:144 | where a mouse event is, in canvas pixels (allowing for the canvas being shown larger or smaller). |
 | `getCurrentCategory` | ui/gallery/galleryState.js:48 | the category shown. |
@@ -322,9 +322,9 @@ Made by `npm run dictionary` from the comments above each function (tests/functi
 | `groupEntriesByCategory` | ui/draw/drawCategories.js:64 | the entries grouped by category, categories and entries in alphabetical order. |
 | `groupHomeEntriesByStatus` | ui/home/homeManifest.js:98 | the Home list grouped by status ({ Queue: [...], fix: [...] }). |
 | `growingChords` | draw/connectors.js:103 | round a loop, point i joined to point i + skip0 + i*grow. |
-| `handleDispatch` | node/sketchpadServer.mjs:186 | DESCRIPTION Reads JSON request body, calls dispatchService(), and returns the result as JSON. |
+| `handleDispatch` | node/sketchpadServer.mjs:200 | DESCRIPTION Reads JSON request body, calls dispatchService(), and returns the result as JSON. |
 | `handleNameOf` | ui/figures/figurePoints.js:304 | The name of handle number h, from the object's handleNames (a list, or a prefix such as "circle" for circle1, circle2 ...). |
-| `handleRequest` | node/sketchpadServer.mjs:148 | DESCRIPTION Main HTTP router. |
+| `handleRequest` | node/sketchpadServer.mjs:162 | DESCRIPTION Main HTTP router. |
 | `handleTabChange` | ui/setUI.js:220 | --- Tab Handling Logic --- |
 | `hasUnsavedChanges` | ui/figures/figureModel.js:110 | True when closing this figure subtab would lose work. |
 | `hideHelp` | ui/overlay.js:108 | hides the help overlay. |
@@ -390,7 +390,7 @@ Made by `npm run dictionary` from the comments above each function (tests/functi
 | `loadHelpManifest` | ui/help.js:19 | the help tree (help/manifest.json), read once and kept. |
 | `loadHomeManifest` | ui/home/homeManifest.js:44 | loadHomeManifest_async without waiting for it; a failure is reported. |
 | `loadHomeManifest_async` | ui/home/homeManifest.js:60 | Home's manifest is a flat array at /home/manifest.json with no directoryRegistry.json. |
-| `loadImage` | ui/thumbnailMaker.js:273 | a picture loaded into an Image, when it has loaded. |
+| `loadImage` | ui/thumbnailMaker.js:275 | a picture loaded into an Image, when it has loaded. |
 | `loadScriptModule` | ui/scriptRunner.js:77 | imports a script file as a module, fresh each time, so it runs as saved. |
 | `loadScriptModuleFromText` | ui/scriptRunner.js:143 | Loads script text as a module, as if it were the file at path. |
 | `loadSecondary` | ui/draw/secondaryObjects.js:79 | Fetches the JSON content of a secondary object. |
@@ -478,7 +478,7 @@ Made by `npm run dictionary` from the comments above each function (tests/functi
 | `parseMaintenanceSummary` | ui/homeAlert.js:39 | the problems listed at the top of a manifest check log. |
 | `parseValueList` | ui/draw/drawSweep.js:83 | A list typed by Barry ("3, 5, 8, 13") as numbers; anything that is not a number is left out. |
 | `part` | draw/shapers.js:87 | the points from index `from` up to, but not including, index `to`. |
-| `patternsThumb` | ui/thumbnailSettings.js:107 | where a pattern's thumbnail picture is. |
+| `patternsThumb` | ui/thumbnailSettings.js:110 | where a pattern's thumbnail picture is. |
 | `pictureOf` | ui/draw/drawSweep.js:90 | One picture of the open object with some settings changed (overrides is { key: value, ... |
 | `placeOf` | ui/errorReport.js:97 | The file and line an error was raised at, from the first line of its stack that names a file of ours ("ui/figures/figureDraw.js:104"). |
 | `pointAtArcLength` | draw/drawEllipse.js:198 | Given cumulative arc-lengths (S) and corresponding points (X), returns the interpolated point at the specified arc length. |
@@ -489,7 +489,7 @@ Made by `npm run dictionary` from the comments above each function (tests/functi
 | `polyline` | ui/figures/figureMagic.js:60 | The arm as a list of canvas points, each with its t along the arm. |
 | `positionMenu` | ui/menuManager.js:66 | places the menu just below the button that opened it. |
 | `prepareCategoryFolder` | node/writerRequests.mjs:22 | Finds <rootDir>/<category>, makes its images/ folder if it is missing, and checks its manifest.json exists. |
-| `prepareSharedCanvas` | ui/thumbnailMaker.js:258 | Puts the shared canvas in #sketchpad on a white page, as running a script does. |
+| `prepareSharedCanvas` | ui/thumbnailMaker.js:260 | Puts the shared canvas in #sketchpad on a white page, as running a script does. |
 | `printCircNum` | draw/drawUtilities.js:504 | a number in a small circle at pt (in Final mode it only counts, drawState.ctr). |
 | `printTemplate` | ui/figures/figurePrint.js:396 | Opens the template in its own window, one sheet per page, ready to print. |
 | `printText` | draw/drawUtilities.js:523 | text drawn at pt. |
@@ -506,7 +506,7 @@ Made by `npm run dictionary` from the comments above each function (tests/functi
 | `purge` | ui/errorChecklist.js:86 | write "Purged: <key>" for each key, so those errors no longer appear, even with Show all. |
 | `readErrorStates` | ui/errorChecklist.js:102 | every error from every error log the service lists, read oldest first, with its state (errorStates). |
 | `readJson` | node/maintain_manifests.mjs:394 | Synchronously reads and parses a JSON file. |
-| `readJsonBody` | node/sketchpadServer.mjs:241 | DESCRIPTION Reads the entire request body and parses it as JSON. |
+| `readJsonBody` | node/sketchpadServer.mjs:255 | DESCRIPTION Reads the entire request body and parses it as JSON. |
 | `readJsonFileSync` | node/serviceFileHelpers.mjs:23 | Reads and parses a JSON file. |
 | `readJsonQuietly` | node/libraryIndex.mjs:64 | a JSON file's contents, or the fallback if it is missing or unreadable (a broken notes file must not break a list). |
 | `readLogFile` | node/logAndEditorRequests.mjs:101 | TASK: readLogFile DESCRIPTION Reads one logfile from ./utilities/logfiles and returns text. |
@@ -526,7 +526,7 @@ Made by `npm run dictionary` from the comments above each function (tests/functi
 | `refreshInteractor` | ui/interactor.js:92 | Redraws the handles of the armed object. |
 | `refreshPoints` | ui/figures/figurePoints.js:370 | Recomputes where each anchored point is from its layer's current geometry, keeping its fraction t. |
 | `refreshUtilitiesFromManifestEdit` | ui/utilities/utilities.js:217 | reads the Utilities and Home lists again after an edit. |
-| `regenerateThumbnails` | ui/thumbnailMaker.js:139 | Makes every picture again, replacing the old ones. |
+| `regenerateThumbnails` | ui/thumbnailMaker.js:140 | Makes every picture again, replacing the old ones (or only the targets handed in as onlyTargets, for "make the missing ones"). |
 | `registerTemplates` | ui/figures/figureTemplates.js:153 | adds the template objects to the draw registry (for Figures only). |
 | `registryKeyOf` | ui/draw/drawInstance.js:43 | Walks from the object to the shared copy it was made from (a copy's prototype is the shared copy), and returns that copy's registry key. |
 | `regularPolygonParabolas` | draw/drawRegular.js:288 | The parts drawRegularPolygon draws, as data instead of pixels (Phase 7c, Break apart). |
@@ -551,11 +551,12 @@ Made by `npm run dictionary` from the comments above each function (tests/functi
 | `renderPatternThumbGrid` | ui/patterns/patternsDisplay.js:36 | the pictures of one Patterns category. |
 | `renderScaffoldGuides` | ui/draw/drawRunner.js:92 | Renders the dashed scaffolding for the active drawing's primary arm. |
 | `renderSubtabs` | ui/figures/figuresNav.js:105 | Rebuilds the whole bar from uiState.figures.tabs. |
-| `renderTarget` | ui/thumbnailMaker.js:201 | Draws the target on the shared canvas and returns the canvas, or null when the target is skipped. |
+| `renderTarget` | ui/thumbnailMaker.js:203 | Draws the target on the shared canvas and returns the canvas, or null when the target is skipped. |
 | `renderThumbnailGrid` | ui/thumbnails.js:22 | a grid of pictures in a region, each running onClick when clicked. |
 | `renderTickList` | ui/home/homeTickList.js:32 | fill container with the controls and the list. |
 | `reportError` | ui/errorReport.js:56 | where: a few words naming what was running ("Figure layer 3 (parabola)"). |
 | `reportProblems` | ui/errorReport.js:90 | For a check that finds several problems (the registry check, a figure file check): each problem text is reported as its own error. |
+| `reportServerError` | node/sketchpadServer.mjs:104 | says in plain words that the service cannot start because the port is taken (a second Sketchpad is probably running), then exits so the launcher stops too in... |
 | `resampled` | draw/shapers.js:148 | n points spaced evenly by distance along the path the points make (corner to corner, not closed). |
 | `resetActiveDrawObject` | ui/draw/drawMenuCmds.js:306 | puts the open object's settings back to its defaults (Reset Parameters). |
 | `resetCanvas` | draw/drawState.js:81 | Clears the bitmap and resets the context state. |
@@ -610,8 +611,8 @@ Made by `npm run dictionary` from the comments above each function (tests/functi
 | `scanDir` | node/generateHelpManifest.mjs:67 | one folder of help/ as the manifest shape: its page names, or an object of its subfolders. |
 | `scriptFile` | node/scriptHistoryRequests.mjs:51 | An app path ("/patterns/circles/circle.js") as a file in the repo. |
 | `selectLayer` | ui/figures/figureLayers.js:307 | Makes a layer active (a click on its number in the strip). |
-| `sendCorsPreflight` | node/sketchpadServer.mjs:309 | DESCRIPTION Responds to browser CORS preflight for POST /dispatch. |
-| `sendJson` | node/sketchpadServer.mjs:286 | DESCRIPTION Writes a JSON response with the given HTTP status and includes dev CORS headers for localhost UI access. |
+| `sendCorsPreflight` | node/sketchpadServer.mjs:323 | DESCRIPTION Responds to browser CORS preflight for POST /dispatch. |
+| `sendJson` | node/sketchpadServer.mjs:300 | DESCRIPTION Writes a JSON response with the given HTTP status and includes dev CORS headers for localhost UI access. |
 | `sendSave` | ui/figures/figuresSave.js:101 | One round trip. |
 | `setAccordionControl` | ui/controls/widgets/accordionWidget.js:10 | an accordion (sections that open and close) holding buttons or items, for one control. |
 | `setActiveItem` | ui/categories.js:250 | Marks the clicked item as active within the rendered frame. |
@@ -710,7 +711,7 @@ Made by `npm run dictionary` from the comments above each function (tests/functi
 | `spacingProblems` | ui/figures/figurePrint.js:150 | { ok, message, pairs: [[nailA, nailB, mm]], nails }. |
 | `spiralPoints` | draw/curves.js:119 | an Archimedean spiral from the centre out to r, turns turns. |
 | `startClock` | draw/drawState.js:167 | the drawing named by what may run for drawState.timeLimit milliseconds from now. |
-| `startServer` | node/sketchpadServer.mjs:114 | DESCRIPTION Creates and starts the HTTP server. |
+| `startServer` | node/sketchpadServer.mjs:126 | DESCRIPTION Creates and starts the HTTP server. |
 | `startStepping` | ui/draw/drawStep.js:50 | draw everything once to count the lines, then show the controls with the last line marked. |
 | `statusForError` | node/sketchpadServer.mjs:93 | A plain Error thrown by a handler for bad input has no system error code and says what is wrong with the request. |
 | `stepLayer` | ui/draw/drawStep.js:74 | called by the figure redraw before each layer draws. |
@@ -734,7 +735,7 @@ Made by `npm run dictionary` from the comments above each function (tests/functi
 | `tableRow` | node/copyBuildDocs.mjs:57 | the cells of one Markdown table line ("\| a \| b \|"). |
 | `templatePages` | ui/figures/figurePrint.js:327 | The template as { pages: [svg text], sheets: { rows, cols }, widthMm, heightMm, nails }. |
 | `textColorOn` | ui/figures/figureLayerPanel.js:185 | Black or white, whichever reads better on the given background. |
-| `thumbFromEntryPath` | ui/thumbnailSettings.js:136 | Home lists entries from every tab, each with the path of its file: /patterns/<category>/<name>.js /gallery/<domain>/<category>/<name>.js (or an image) |
+| `thumbFromEntryPath` | ui/thumbnailSettings.js:139 | Home lists entries from every tab, each with the path of its file: /patterns/<category>/<name>.js /gallery/<domain>/<category>/<name>.js (or an image) |
 | `tick` | ui/errorReport.js:168 | Acknowledges one error in the log. |
 | `timed` | ui/instrument.js:47 | work is a function that returns a promise (or a plain value). |
 | `timesTable` | draw/connectors.js:117 | round a loop of n points, point i joined to point (i*factor) mod n. |

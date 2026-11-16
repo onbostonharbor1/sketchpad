@@ -51,7 +51,7 @@ header or function comments of its own, and the function dictionary (<code>docs/
 <h2>Node service and tools (<code>node/</code>)</h2>
 <table>
 <tr><th>File</th><th>What it is</th></tr>
-<tr><td><code>check_ports.mjs</code></td><td>Run by <code>predev</code>: tells you if ports 5173 or 5174 are already in use.</td></tr>
+<tr><td><code>check_ports.mjs</code></td><td>Run first by <code>npm run check:ports</code> (before <code>start:sketchpad</code> and <code>dev:sketchpad</code>): if port 5173 or 5174 is already in use it says so and stops the start. The service itself also stops with a plain message if its port is taken.</td></tr>
 <tr><td><code>createFigureService.mjs</code></td><td>The older <code>createFigure</code> request, which writes a generated <code>.js</code> script. Figures now saves <code>.json</code> data through <code>saveFigure</code> instead; retire this when the older Create Figure feature goes.</td></tr>
 <tr><td><code>makeHelpPdf.mjs</code></td><td><code>npm run help:pdf -- file.pdf</code>: one PDF of the Overview and Tutorials, printed by a browser from the running app.</td></tr>
 </table>
