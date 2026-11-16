@@ -213,3 +213,9 @@ you saw, and tell me.
 - [ ] CB2 Controls for: Shapes shows the shapes' sliders, Frame the frame's; a slider in each changes only its own part
 - [ ] CB3 Drag a shapes handle in the combination; then open Curve Stitch > Alternating Shapes: it is unchanged
 - [ ] CB4 Home > Help > Overview > Combinations reads clearly; gallery/Scripts/Combinations/combinable.md lists 6 scripts that can be combined
+
+## Start-up port check (16 November)
+- [ ] SP1 Start Sketchpad with sketchpad.bat as usual: it opens and works (nothing changed when no other copy is running)
+- [ ] SP2 With it running, double-click sketchpad.bat again: the second window says a port is in use (5173 and 5174) and stops; the first Sketchpad is unaffected
+- [ ] SP3 With only the Node service left running (close the Vite window), run sketchpad.bat: the check names port 5174 and stops
+- [ ] SP4 Close the first Sketchpad's window the way you normally do, then start again: it starts; if it says a port is busy, find the stray node in Task Manager and note how you closed the window (Add item)

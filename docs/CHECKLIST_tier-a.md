@@ -119,3 +119,5 @@ once to give them pictures. Failure: an object that draws nothing at its default
 discs that do not follow the curve. Undo: `git revert 76f3986`.
 
 **5 November, later.** The explicit, step-by-step version of every check, with pictures, is docs/CHECKING_GUIDE.md (Home > Help > Build Documents > Checking guide).
+
+**Start-up port check** (f055db9, 16 November). `npm run check:ports` now runs first and stops the start if port 5173 or 5174 is already in use (before, `predev` ran it beside the servers with a single `&`, which could not stop anything). The Node service also exits with a plain message if its own port is taken. Checked on Linux only (busy and free ports, exit codes, the `&&` chain); the Windows launch through `sketchpad.bat` is what SP1 to SP4 cover. Failure: the second window keeps going instead of stopping; the first Sketchpad stops working when the second is started; a stray `node` still holds 5174 after you close the window (that case is not fixed: end it in Task Manager). Undo: `git revert f055db9`.
